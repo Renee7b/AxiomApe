@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Name Picker - Randomize Any List | AxiomApe</title>
+  <meta name="description" content="Free online random name picker for giveaways, classroom draws, and raffles. Uses the Fisher-Yates algorithm for mathematically fair results. 100% private - runs in your browser." />
+  <meta name="keywords" content="random name picker, giveaway picker, classroom name picker, random draw, raffle picker, Fisher-Yates shuffle" />
+  <link rel="canonical" href="https://axiomape.com/random-name-picker/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Random Name Picker - Fair Draws for Giveaways and Classrooms" />
+  <meta property="og:description" content="Pick a random winner instantly. Uses the Fisher-Yates shuffle. 100% private - all processing happens in your browser." />
+  <meta property="og:type" content="website" />
+
+  <!-- canvas-confetti for winner celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:        #6c3fff;
+      --brand-dark:   #5228e0;
+      --brand-light:  #ede9ff;
+      --accent:       #ff5e62;
+      --accent-dark:  #d94347;
+      --bg:           #f0eeff;
+      --card:         #ffffff;
+      --text:         #1a1a2e;
+      --muted:        #6b7280;
+      --border:       #e5e7eb;
+      --success:      #10b981;
+      --radius:       14px;
+      --shadow:       0 4px 24px rgba(108,63,255,0.10);
+      --shadow-lg:    0 8px 40px rgba(108,63,255,0.16);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #e9e4ff 0%, #f0eeff 50%, #fde8ff 100%);
+      min-height: 100vh;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       SITE NAV BAR (top link)
+    ============================================= */
+    .site-nav {
+      text-align: center;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .site-nav a {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--brand);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .site-nav a:hover { color: var(--brand-dark); text-decoration: underline; }
+
+    /* =============================================
+       PAGE WRAPPER
+    ============================================= */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    /* =============================================
+       PAGE HERO TITLE
+    ============================================= */
+    .page-hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-hero h1 {
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      font-weight: 800;
+      color: var(--brand-dark);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-hero p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       AD PLACEHOLDER (top leaderboard banner)
+    ============================================= */
+    /* -----------------------------------------------
+       ADSENSE INJECTION ZONE - Leaderboard (728x90)
+       Replace this block with your AdSense <ins> tag.
+    ----------------------------------------------- */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #f3f4f6;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* =============================================
+       MAIN TOOL CARD GRID
+    ============================================= */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .tool-grid { grid-template-columns: 1fr; }
+    }
+
+    /* =============================================
+       SHARED CARD STYLE
+    ============================================= */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    /* =============================================
+       LEFT PANEL - INPUT ZONE
+    ============================================= */
+    .input-card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .input-card .subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    #namesTextarea {
+      width: 100%;
+      min-height: 240px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.97rem;
+      font-family: inherit;
+      color: var(--text);
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    #namesTextarea:focus { border-color: var(--brand); }
+    #namesTextarea::placeholder { color: #c4c8d4; }
+
+    .counter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 0.85rem;
+    }
+    .counter-label { color: var(--muted); }
+    .counter-badge {
+      background: var(--brand-light);
+      color: var(--brand-dark);
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 0.88rem;
+    }
+
+    /* Clear button */
+    .btn-clear {
+      margin-top: 14px;
+      width: 100%;
+      padding: 9px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* =============================================
+       SETTINGS PANEL
+    ============================================= */
+    .settings-panel {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .settings-panel h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .toggle-switch {
+      position: relative;
+      flex-shrink: 0;
+      width: 46px;
+      height: 26px;
+      margin-top: 2px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 26px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 3px; top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--brand); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    .toggle-text strong {
+      display: block;
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .toggle-text span {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* =============================================
+       RIGHT PANEL - WINNER DISPLAY
+    ============================================= */
+    .winner-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .winner-display {
+      width: 100%;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--brand-light) 0%, #fde8ff 100%);
+      border-radius: 12px;
+      border: 2px dashed #c4b5fd;
+      padding: 32px 20px;
+      margin-bottom: 20px;
+      transition: all 0.3s;
+    }
+    .winner-display.rolling {
+      border-style: solid;
+      border-color: var(--brand);
+      background: linear-gradient(135deg, #ede9ff 0%, #f3e8ff 100%);
+    }
+    .winner-display.has-winner {
+      border-style: solid;
+      border-color: var(--success);
+      background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
+    }
+
+    .winner-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand);
+      margin-bottom: 10px;
+    }
+    .winner-display.has-winner .winner-label { color: var(--success); }
+
+    .winner-name {
+      font-size: clamp(1.8rem, 6vw, 3.2rem);
+      font-weight: 900;
+      color: var(--brand-dark);
+      line-height: 1.1;
+      word-break: break-word;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .winner-display.has-winner .winner-name { color: #065f46; }
+    .winner-display.rolling .winner-name { color: var(--brand-dark); opacity: 0.85; }
+
+    .winner-placeholder {
+      font-size: 1rem;
+      color: #c4b5fd;
+      font-style: italic;
+    }
+
+    /* Draw button */
+    .btn-draw {
+      width: 100%;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 20px rgba(108,63,255,0.35);
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-draw:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(108,63,255,0.45);
+    }
+    .btn-draw:active:not(:disabled) { transform: translateY(0); }
+    .btn-draw:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* History panel */
+    .history-panel {
+      width: 100%;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: left;
+    }
+    .history-panel h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .history-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--text);
+      padding: 6px 10px;
+      background: var(--brand-light);
+      border-radius: 6px;
+    }
+    .history-list li .round-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: var(--brand);
+      color: white;
+      padding: 1px 7px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .history-empty {
+      font-size: 0.84rem;
+      color: #c4b5fd;
+      font-style: italic;
+    }
+
+    /* =============================================
+       HOW IT WORKS BANNER
+    ============================================= */
+    .how-it-works {
+      margin-top: 32px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .step-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      background: var(--brand-light);
+      color: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+    .step-item h4 {
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .step-item p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* =============================================
+       PRIVACY DISCLAIMER
+    ============================================= */
+    .privacy-disclaimer {
+      margin-top: 40px;
+      background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+      border: 1.5px solid #6ee7b7;
+      border-radius: var(--radius);
+      padding: 20px 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .privacy-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .privacy-disclaimer h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 4px;
+    }
+    .privacy-disclaimer p {
+      font-size: 0.9rem;
+      color: #047857;
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       SEO / EDUCATIONAL CONTENT
+    ============================================= */
+    .seo-section {
+      margin-top: 56px;
+    }
+    .seo-section > h2 {
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      font-weight: 800;
+      color: var(--brand-dark);
+      margin-bottom: 8px;
+    }
+    .seo-section > .seo-intro {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+
+    /* FAQ accordion */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .faq-item {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 20px 24px;
+      text-align: left;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: background 0.2s;
+    }
+    .faq-question:hover { background: var(--brand-light); }
+    .faq-question .faq-chevron {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--brand-light);
+      color: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: transform 0.3s;
+    }
+    .faq-question[aria-expanded="true"] .faq-chevron { transform: rotate(180deg); background: var(--brand); color: white; }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s;
+    }
+    .faq-answer.open {
+      max-height: 800px;
+      padding: 0 24px 22px;
+    }
+    .faq-answer p {
+      font-size: 0.95rem;
+      color: #374151;
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--brand-dark); }
+    .faq-answer code {
+      background: var(--brand-light);
+      color: var(--brand-dark);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    .site-footer {
+      margin-top: 60px;
+      text-align: center;
+      padding: 28px 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .footer-links a {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .footer-links a:hover { color: var(--brand); }
+    .footer-copy {
+      font-size: 0.78rem;
+      color: #c4c8d4;
+    }
+
+    /* =============================================
+       UTILITY
+    ============================================= */
+    .visually-hidden {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Scrollbar styling for history */
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- =============================================
+       SITE NAV - Back to axiomape.com
+  ============================================= -->
+  <nav class="site-nav" aria-label="Site navigation">
+    <a href="/" title="Back to AxiomApe">axiomape.com</a>
+  </nav>
+
+  <div class="page-wrapper">
+
+    <!-- =============================================
+         PAGE HERO TITLE
+    ============================================= -->
+    <div class="page-hero">
+      <h1>Random Name Picker</h1>
+      <p>Randomize any list instantly. Perfect for giveaways, classroom draws, and raffles. Powered by the Fisher-Yates shuffle algorithm for mathematically fair results.</p>
+    </div>
+
+    <!-- =============================================
+         AD LEADERBOARD PLACEHOLDER
+         Replace the div below with your AdSense <ins> tag.
+         Standard dimensions: 728x90 (Leaderboard Banner)
+    ============================================= -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement (728x90)
+    </div>
+
+    <!-- =============================================
+         MAIN TOOL GRID
+    ============================================= -->
+    <div class="tool-grid">
+
+      <!-- LEFT: Input zone -->
+      <div class="card input-card">
+        <h2>Enter Names</h2>
+        <p class="subtitle">Paste or type one name per line. Any blank lines are ignored automatically.</p>
+
+        <textarea
+          id="namesTextarea"
+          aria-label="Enter participant names, one per line"
+          placeholder="Alice Johnson&#10;Bob Smith&#10;Carol White&#10;David Lee&#10;..."
+          spellcheck="false"
+        ></textarea>
+
+        <div class="counter-row">
+          <span class="counter-label">Total Entries:</span>
+          <span class="counter-badge" id="entryCount">0</span>
+        </div>
+
+        <button class="btn-clear" id="btnClear" type="button" aria-label="Clear all names">
+          Clear All Names
+        </button>
+
+        <!-- Settings -->
+        <div class="settings-panel" role="region" aria-label="Draw settings">
+          <h3>Settings</h3>
+          <div class="toggle-row">
+            <label class="toggle-switch" for="removeWinnerToggle" aria-label="Remove winner from list after draw">
+              <input type="checkbox" id="removeWinnerToggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="toggle-text">
+              <strong>Remove Winner After Draw</strong>
+              <span>When enabled, the selected winner is removed from the list so they cannot win a second round. Ideal for multi-round giveaways where each person wins only once.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Winner display -->
+      <div class="card winner-card">
+
+        <!-- Winner Display Box -->
+        <div class="winner-display" id="winnerDisplay" role="status" aria-live="polite" aria-atomic="true">
+          <div class="winner-label" id="winnerLabel">Awaiting Draw</div>
+          <div class="winner-name" id="winnerName">
+            <span class="winner-placeholder">Your winner appears here</span>
+          </div>
+        </div>
+
+        <!-- Draw Button -->
+        <button class="btn-draw" id="btnDraw" type="button" aria-label="Draw a random name from the list" disabled>
+          Draw Random Name!
+        </button>
+
+        <!-- Draw History -->
+        <div class="history-panel">
+          <h3>Draw History</h3>
+          <ul class="history-list" id="historyList" aria-label="Previous draw results">
+            <li class="history-empty" id="historyEmpty">No draws yet. Winners appear here.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================
+         HOW IT WORKS - QUICK STEPS
+    ============================================= -->
+    <div class="how-it-works" role="region" aria-label="How to use this tool">
+      <div class="step-item">
+        <div class="step-icon" aria-hidden="true">1</div>
+        <h4>Add Your Names</h4>
+        <p>Paste or type your participant list into the text box - one name per line. The entry counter updates live.</p>
+      </div>
+      <div class="step-item">
+        <div class="step-icon" aria-hidden="true">2</div>
+        <h4>Configure the Draw</h4>
+        <p>Toggle "Remove Winner" on to run multi-round giveaways where each person can only win once.</p>
+      </div>
+      <div class="step-item">
+        <div class="step-icon" aria-hidden="true">3</div>
+        <h4>Draw a Winner</h4>
+        <p>Hit the big button. A slot-machine animation builds suspense before revealing your randomly selected winner.</p>
+      </div>
+      <div class="step-item">
+        <div class="step-icon" aria-hidden="true">4</div>
+        <h4>Repeat or Reset</h4>
+        <p>Run as many rounds as you need. The draw history panel tracks every winner so you stay organized.</p>
+      </div>
+    </div>
+
+    <!-- =============================================
+         PRIVACY DISCLAIMER
+    ============================================= -->
+    <div class="privacy-disclaimer" role="note" aria-label="Privacy notice">
+      <div class="privacy-icon" aria-hidden="true">&#128274;</div>
+      <div>
+        <h3>Privacy First</h3>
+        <p>All name shuffling and random draws take place entirely within your local web browser. Your participant lists and giveaway data are never uploaded, stored, or transmitted to external servers.</p>
+      </div>
+    </div>
+
+    <!-- =============================================
+         SEO / EDUCATIONAL CONTENT
+    ============================================= -->
+    <section class="seo-section" aria-label="Guide to random draws and fairness">
+      <h2>The Ultimate Guide to Random Number Generation and Fair Giveaways</h2>
+      <p class="seo-intro">Whether you are a teacher, streamer, event host, or marketing professional, understanding how random selection actually works helps you run draws your audience will trust. Below we answer the most important questions in plain language.</p>
+
+      <div class="faq-list" id="faqList">
+
+        <!-- FAQ 1 -->
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq1-answer">
+            How does this tool ensure a mathematically fair draw?
+            <span class="faq-chevron" aria-hidden="true">&#8963;</span>
+          </button>
+          <div class="faq-answer" id="faq1-answer" role="region">
+            <p>Fairness in a random draw comes down to one guarantee: every participant must have an equal probability of being selected. This tool achieves that guarantee through two mechanisms working together.</p>
+            <p>First, the list of names is shuffled using the <strong>Fisher-Yates algorithm</strong> (explained in detail below) before any selection is made. This produces a completely randomized ordering of all entries. The winner is then drawn from that pre-shuffled array, meaning the pick is never influenced by the original input order - whether you entered names alphabetically, by date of entry, or at random.</p>
+            <p>Second, the tool uses JavaScript's built-in <strong>Math.random()</strong> function as its source of randomness. This is a <strong>Pseudorandom Number Generator (PRNG)</strong> - a software algorithm that produces a sequence of numbers so statistically unpredictable that they are indistinguishable from true randomness for everyday use cases like giveaways, classroom draws, and raffles. The result: every participant has exactly a 1-in-N chance, where N is the total number of entries in your list.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq2-answer">
+            What is the Fisher-Yates Shuffle Algorithm, and why does it matter?
+            <span class="faq-chevron" aria-hidden="true">&#8963;</span>
+          </button>
+          <div class="faq-answer" id="faq2-answer" role="region">
+            <p>The <strong>Fisher-Yates Shuffle Algorithm</strong> (also called the Knuth Shuffle after computer scientist Donald Knuth) is the gold standard method for randomly reordering a list. It was originally described by Ronald Fisher and Frank Yates in 1938 and was formalized for computers by Knuth in 1969.</p>
+            <p>Here is how it works in plain language: the algorithm starts at the last item in the list and swaps it with a randomly chosen item from anywhere in the list (including itself). It then moves to the second-to-last item and does the same thing, but now only considering the portion of the list that has not been finalized yet. This continues down to the first item. The result is a perfectly uniform shuffle - every possible ordering of the list is equally likely.</p>
+            <p>Why does this matter? A naive approach - sorting the array using <code>Math.random()</code> as a comparator - is actually <strong>mathematically biased</strong>. It does not produce uniform results because sorting algorithms make assumptions about comparisons (like transitivity) that random outputs violate. The Fisher-Yates method makes no such assumptions, giving every arrangement exactly equal probability. For a giveaway with 500 participants, this difference is the gap between a defensible, fair process and one that quietly favors certain names.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq3-answer">
+            Are these picks truly random, or pseudorandom? What is the difference?
+            <span class="faq-chevron" aria-hidden="true">&#8963;</span>
+          </button>
+          <div class="faq-answer" id="faq3-answer" role="region">
+            <p><strong>True randomness</strong> requires a physical, unpredictable source - like radioactive decay, atmospheric noise, or quantum events. Hardware devices and services like random.org use these physical phenomena. By definition, no computer program running pure mathematical instructions can be truly random, because math is deterministic.</p>
+            <p><strong>Pseudorandomness</strong> is what almost all software uses, including this tool. A <strong>Pseudorandom Number Generator (PRNG)</strong> is a mathematical formula that takes a starting value (called a "seed") and produces a long sequence of numbers that look statistically random - passing all standard statistical tests for uniformity and unpredictability. JavaScript's <code>Math.random()</code> is seeded by the system clock and other environmental entropy at the moment it is called, making its output practically impossible to predict or reproduce.</p>
+            <p>For giveaways, raffles, classroom name pickers, and team assignments, pseudorandomness is entirely sufficient and universally accepted. The distinction matters primarily in cryptography and scientific simulation - contexts where an adversary might try to exploit the predictability of a known seed. For picking a winner from your subscriber list, pseudorandom is exactly what you need, and it is exactly what this tool delivers.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq4-answer">
+            Why is offline, browser-based processing safer for my student or customer data?
+            <span class="faq-chevron" aria-hidden="true">&#8963;</span>
+          </button>
+          <div class="faq-answer" id="faq4-answer" role="region">
+            <p>Most online tools work by sending your data to a remote server, processing it there, and returning the result. This means your participant list - which may contain real names belonging to students, customers, or subscribers - travels over the internet and is processed by hardware you do not control. Each transmission is a potential exposure point, and many server-side services retain logs of submitted data by default.</p>
+            <p>This tool uses <strong>Client-Side Execution</strong>: every calculation - the array parsing, the Fisher-Yates shuffle, the animation, the winner selection - runs inside your own web browser on your own device. Your list of names is never sent anywhere. It exists only in your browser's memory for the duration of your session and is discarded the moment you close the tab. This architecture is not just a marketing claim - you can verify it yourself by opening your browser's Network tab in Developer Tools while using the tool. You will see zero outbound data requests triggered by the draw.</p>
+            <p>For teachers handling student names, this means FERPA-conscious operation without any paperwork. For marketers running subscriber giveaways, it means your customer list never touches a third-party server. For streamers picking viewer winners, it means your audience list stays private. Client-side tools like this one represent a meaningful privacy improvement over server-dependent alternatives, and that distinction is worth understanding before you paste sensitive names into any online utility.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item">
+          <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq5-answer">
+            Best practices for running a fair and transparent public giveaway
+            <span class="faq-chevron" aria-hidden="true">&#8963;</span>
+          </button>
+          <div class="faq-answer" id="faq5-answer" role="region">
+            <p>Running a giveaway that your audience genuinely trusts requires more than just picking a random name - it requires a transparent process they can follow. Here are the practices that professional streamers, marketers, and teachers rely on.</p>
+            <p><strong>Screen-share the draw live.</strong> The most powerful trust signal is letting your audience watch the draw happen in real time. Because this tool's Winner Display uses large, bold typography, it is designed to be clearly readable even when projected onto a classroom screen or shared via a livestream. Run the tool while screen-sharing and your audience sees the same result you see, simultaneously.</p>
+            <p><strong>Announce the entry rules before the draw, not after.</strong> State clearly who is eligible (e.g., "all comments posted before noon," "all verified subscribers") before you pull the list. Changing eligibility rules after a winner is drawn is the fastest way to lose audience trust, regardless of how fairly the technical draw was conducted.</p>
+            <p><strong>Keep a screenshot of the full list.</strong> Before pressing Draw, take a screenshot of the complete name list in the input box. If a winner disputes the result or a follower asks for verification, you have a record of exactly who was entered. Pair this with the Draw History panel, which logs every winner from the current session, and you have a clean audit trail for multi-round draws.</p>
+            <p><strong>Use the "Remove Winner" toggle for multi-round events.</strong> If you are running several rounds of prizes, enabling this setting guarantees each person can win a maximum of one prize - a critical fairness requirement for most formal giveaway regulations. This tool enforces it automatically by removing the winner from the entry pool after each successful draw.</p>
+          </div>
+        </div>
+
+      </div><!-- end faq-list -->
+    </section>
+
+    <!-- =============================================
+         FOOTER
+    ============================================= -->
+    <footer class="site-footer" role="contentinfo">
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/about.html">About</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/contact.html">Contact</a>
+      </nav>
+      <p class="footer-copy">&copy; <span id="footerYear"></span> AxiomApe. All rights reserved.</p>
+    </footer>
+
+  </div><!-- end page-wrapper -->
+
+  <!-- =============================================
+       JAVASCRIPT
+  ============================================= -->
+  <script>
+    /* =============================================
+       ELEMENT REFERENCES
+    ============================================= */
+    const textarea       = document.getElementById('namesTextarea');
+    const entryCount     = document.getElementById('entryCount');
+    const btnDraw        = document.getElementById('btnDraw');
+    const btnClear       = document.getElementById('btnClear');
+    const winnerDisplay  = document.getElementById('winnerDisplay');
+    const winnerLabel    = document.getElementById('winnerLabel');
+    const winnerName     = document.getElementById('winnerName');
+    const removeToggle   = document.getElementById('removeWinnerToggle');
+    const historyList    = document.getElementById('historyList');
+    const historyEmpty   = document.getElementById('historyEmpty');
+
+    /* =============================================
+       STATE
+    ============================================= */
+    let isRolling   = false;  // Is the suspense animation currently running?
+    let drawRound   = 0;      // Tracks how many winners have been drawn this session
+    let rollInterval = null;  // Reference to the setInterval used for animation
+
+    /* =============================================
+       FOOTER YEAR
+    ============================================= */
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+    /* =============================================
+       PARSE NAMES FROM TEXTAREA
+       Splits by newline, trims whitespace, and filters
+       out any blank or whitespace-only lines.
+    ============================================= */
+    function getNames() {
+      return textarea.value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+    }
+
+    /* =============================================
+       UPDATE ENTRY COUNTER + BUTTON STATE
+    ============================================= */
+    function updateUI() {
+      const names = getNames();
+      entryCount.textContent = names.length;
+      btnDraw.disabled = names.length < 1 || isRolling;
+    }
+
+    textarea.addEventListener('input', updateUI);
+    updateUI();
+
+    /* =============================================
+       CLEAR BUTTON
+    ============================================= */
+    btnClear.addEventListener('click', function () {
+      if (!confirm('Clear all names from the list?')) return;
+      textarea.value = '';
+      winnerDisplay.className = 'winner-display';
+      winnerLabel.textContent = 'Awaiting Draw';
+      winnerName.innerHTML = '<span class="winner-placeholder">Your winner appears here</span>';
+      updateUI();
+    });
+
+    /* =============================================
+       FISHER-YATES SHUFFLE ALGORITHM
+       -----------------------------------------------
+       This is the industry-standard method for
+       producing an unbiased, uniformly random
+       permutation of an array.
+
+       How it works:
+       1. Start at the last index (i = array.length - 1)
+       2. Pick a random index j between 0 and i (inclusive)
+       3. Swap array[i] with array[j]
+       4. Decrement i and repeat until i = 0
+
+       Every possible ordering of the array is equally
+       likely, unlike the naive Math.random() sort trick
+       which is statistically biased.
+    ============================================= */
+    function fisherYatesShuffle(arr) {
+      const a = arr.slice(); // Work on a copy - do not mutate the original
+      for (let i = a.length - 1; i > 0; i--) {
+        // Pick a random index from 0 to i (inclusive)
+        const j = Math.floor(Math.random() * (i + 1));
+        // Swap elements at i and j using destructuring
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    /* =============================================
+       PICK A RANDOM WINNER
+       Uses Fisher-Yates to shuffle first, then takes
+       the first element. This is equivalent to a
+       perfectly uniform random selection.
+    ============================================= */
+    function pickWinner(names) {
+      const shuffled = fisherYatesShuffle(names);
+      return shuffled[0];
+    }
+
+    /* =============================================
+       CONFETTI CELEBRATION
+       Fires canvas-confetti from both bottom corners
+       for a satisfying burst when a winner is revealed.
+    ============================================= */
+    function launchConfetti() {
+      const count = 200;
+      const defaults = { origin: { y: 0.8 }, zIndex: 9999 };
+
+      function fire(particleRatio, opts) {
+        confetti(Object.assign({}, defaults, opts, {
+          particleCount: Math.floor(count * particleRatio)
+        }));
+      }
+
+      fire(0.25, { spread: 26, startVelocity: 55, colors: ['#6c3fff', '#ff5e62', '#fbbf24'] });
+      fire(0.20, { spread: 60, colors: ['#6c3fff', '#10b981', '#f472b6'] });
+      fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, colors: ['#ff5e62', '#6c3fff'] });
+      fire(0.10, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+      fire(0.10, { spread: 120, startVelocity: 45 });
+    }
+
+    /* =============================================
+       REMOVE WINNER FROM TEXTAREA
+       Finds the winner name in the current list
+       and removes exactly one occurrence of it.
+    ============================================= */
+    function removeWinnerFromList(winner) {
+      const lines = textarea.value.split('\n');
+      let removed = false;
+      const newLines = lines.filter(line => {
+        if (!removed && line.trim() === winner) {
+          removed = true;
+          return false; // Drop this line
+        }
+        return true;
+      });
+      textarea.value = newLines.join('\n');
+      updateUI();
+    }
+
+    /* =============================================
+       ADD TO DRAW HISTORY PANEL
+    ============================================= */
+    function addToHistory(winner, round) {
+      // Remove the "no draws yet" placeholder if present
+      if (historyEmpty) historyEmpty.remove();
+
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="round-badge">Round ${round}</span> ${escapeHtml(winner)}`;
+      // Prepend so newest is always at top
+      historyList.insertBefore(li, historyList.firstChild);
+    }
+
+    /* =============================================
+       ESCAPE HTML - prevent XSS when inserting
+       user-supplied names into the DOM
+    ============================================= */
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    /* =============================================
+       MAIN DRAW FUNCTION
+       Implements a slot-machine style suspense
+       animation using setInterval, gradually
+       slowing down before revealing the winner.
+    ============================================= */
+    btnDraw.addEventListener('click', function () {
+      const names = getNames();
+      if (names.length === 0 || isRolling) return;
+
+      // Determine the actual winner now using Fisher-Yates
+      const winner = pickWinner(names);
+
+      // Lock the UI during animation
+      isRolling = true;
+      btnDraw.disabled = true;
+
+      // Update display to "rolling" state
+      winnerDisplay.className = 'winner-display rolling';
+      winnerLabel.textContent = 'Selecting...';
+
+      /* ----- SUSPENSE ANIMATION SETUP -----
+         We use setInterval to rapidly swap displayed
+         names, then progressively slow the interval
+         to create a slot-machine deceleration effect.
+
+         Total animation target: ~2.5 seconds.
+         - Phase 1 (0-1.2s): Fast cycling at 60ms
+         - Phase 2 (1.2-2.0s): Medium at 120ms
+         - Phase 3 (2.0-2.5s): Slow at 250ms
+         - Final: Stop and reveal the real winner
+      ----------------------------------------- */
+      const startTime = Date.now();
+      const TOTAL_DURATION = 2500; // Total animation in milliseconds
+
+      // Starting interval speed (milliseconds between name swaps)
+      let currentInterval = 60;
+
+      function getIntervalForElapsed(elapsed) {
+        const progress = elapsed / TOTAL_DURATION; // 0.0 to 1.0
+        if (progress < 0.50) return 60;   // Phase 1: fast
+        if (progress < 0.80) return 140;  // Phase 2: medium
+        return 280;                        // Phase 3: slow
+      }
+
+      function runRoll() {
+        const elapsed = Date.now() - startTime;
+
+        if (elapsed >= TOTAL_DURATION) {
+          // ---- ANIMATION COMPLETE: Reveal winner ----
+          clearInterval(rollInterval);
+          isRolling = false;
+
+          // Show the actual winner
+          winnerDisplay.className = 'winner-display has-winner';
+          winnerLabel.textContent = 'Winner!';
+          winnerName.textContent = winner;
+
+          // Confetti celebration
+          launchConfetti();
+
+          // Increment round counter and log to history
+          drawRound++;
+          addToHistory(winner, drawRound);
+
+          // Remove winner from list if toggle is enabled
+          if (removeToggle.checked) {
+            removeWinnerFromList(winner);
+          }
+
+          // Re-enable the draw button (list may now be smaller)
+          updateUI();
+          return;
+        }
+
+        // Show a random name during the rolling animation
+        const randomIndex = Math.floor(Math.random() * names.length);
+        winnerName.textContent = names[randomIndex];
+
+        // Dynamically adjust speed as animation progresses
+        const newInterval = getIntervalForElapsed(elapsed);
+        if (newInterval !== currentInterval) {
+          clearInterval(rollInterval);
+          currentInterval = newInterval;
+          rollInterval = setInterval(runRoll, currentInterval);
+        }
+      }
+
+      // Kick off the animation
+      rollInterval = setInterval(runRoll, currentInterval);
+    });
+
+    /* =============================================
+       FAQ ACCORDION
+    ============================================= */
+    document.querySelectorAll('.faq-question').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const isOpen = this.getAttribute('aria-expanded') === 'true';
+        const answerId = this.getAttribute('aria-controls');
+        const answer = document.getElementById(answerId);
+
+        // Close all open FAQs first
+        document.querySelectorAll('.faq-question').forEach(function (b) {
+          b.setAttribute('aria-expanded', 'false');
+        });
+        document.querySelectorAll('.faq-answer').forEach(function (a) {
+          a.classList.remove('open');
+        });
+
+        // If it was closed, open this one
+        if (!isOpen) {
+          this.setAttribute('aria-expanded', 'true');
+          answer.classList.add('open');
+        }
+      });
+    });
+
+  </script>
+
+</body>
+</html>

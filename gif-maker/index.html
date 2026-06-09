@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GIF Maker - Turn Any Short Video Clip Into a Looping GIF Animation | AxiomApe</title>
+  <meta name="description" content="Free browser-based GIF Maker. Convert MP4, MOV, or WEBM video clips into high-quality looping GIF animations. 100% local processing - your files never leave your device." />
+  <meta name="keywords" content="gif maker, video to gif, mp4 to gif, gif converter, looping animation, ffmpeg wasm, browser gif tool" />
+
+  <!-- FFmpeg.wasm - WebAssembly-powered video processing library that runs entirely in the browser -->
+  <!-- WebAssembly (WASM) is a binary instruction format that lets high-performance C/C++ code run natively in a web browser -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d27;
+      --card: #ffffff;
+      --card-border: #e2e8f0;
+      --accent: #6c3cff;
+      --accent-light: #8b5cf6;
+      --accent-glow: rgba(108, 60, 255, 0.25);
+      --text-dark: #1e293b;
+      --text-mid: #475569;
+      --text-light: #94a3b8;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --terminal-bg: #0a0c10;
+      --terminal-text: #4ade80;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.18);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.28);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-bar {
+      text-align: center;
+      padding: 12px 20px;
+      background: var(--bg2);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .top-bar a {
+      color: var(--accent-light);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .top-bar a:hover { color: #fff; }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      padding: 48px 20px 32px;
+      background: linear-gradient(160deg, #12142a 0%, var(--bg) 100%);
+    }
+
+    .page-header .badge {
+      display: inline-block;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--accent-light);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 16px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .page-header h1 span { color: var(--accent-light); }
+
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-light);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       MAIN LAYOUT
+    ============================================================ */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER
+    ============================================================ */
+    /* Google AdSense Leaderboard Banner - 728x90 standard dimensions
+       Replace this div with your AdSense <ins> tag when ready */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 28px auto 0;
+      background: rgba(255,255,255,0.04);
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.2);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .main-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 36px;
+      margin-top: 28px;
+    }
+
+    /* ============================================================
+       DROP ZONE
+    ============================================================ */
+    .drop-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #f8fafc;
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #f5f3ff;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .drop-zone h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+
+    .drop-zone p {
+      font-size: 0.85rem;
+      color: var(--text-mid);
+    }
+
+    .drop-zone .formats {
+      display: inline-flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .drop-zone .formats span {
+      background: var(--card-border);
+      color: var(--text-mid);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    /* ============================================================
+       VIDEO PREVIEW SECTION
+    ============================================================ */
+    #editor-section { display: none; }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-light);
+      margin-bottom: 10px;
+    }
+
+    .video-wrapper {
+      background: #000;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-height: 360px;
+    }
+
+    .video-wrapper video {
+      width: 100%;
+      max-height: 360px;
+      display: block;
+      object-fit: contain;
+    }
+
+    /* ============================================================
+       TIMELINE SCRUBBER
+    ============================================================ */
+    .timeline-section {
+      margin-top: 24px;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .timeline-header .title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .time-badges {
+      display: flex;
+      gap: 12px;
+    }
+
+    .time-badge {
+      background: var(--bg2);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .time-badge span { color: var(--text-light); font-weight: 400; margin-right: 4px; }
+
+    /* Dual range slider track */
+    .slider-wrapper {
+      position: relative;
+      height: 52px;
+      display: flex;
+      align-items: center;
+    }
+
+    .slider-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+    }
+
+    .slider-fill {
+      position: absolute;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .slider-wrapper input[type="range"] {
+      position: absolute;
+      width: 100%;
+      height: 6px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      pointer-events: none;
+      outline: none;
+    }
+
+    .slider-wrapper input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(108,60,255,0.5);
+      cursor: pointer;
+      pointer-events: auto;
+      transition: transform 0.15s;
+    }
+
+    .slider-wrapper input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .slider-wrapper input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(108,60,255,0.5);
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .slider-labels span {
+      font-size: 0.72rem;
+      color: var(--text-light);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Duration info bar */
+    .duration-info {
+      margin-top: 10px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .duration-chip {
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      color: var(--text-mid);
+    }
+
+    .duration-chip strong { color: var(--accent); }
+
+    /* ============================================================
+       TWO-COLUMN LAYOUT: Config + Generate
+    ============================================================ */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 28px;
+    }
+
+    @media (max-width: 640px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       CONFIG PANEL
+    ============================================================ */
+    .config-panel {
+      background: #f8fafc;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .config-panel h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .field-group { margin-bottom: 20px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .field-hint {
+      font-size: 0.73rem;
+      color: var(--text-light);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .field-group select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      color: var(--text-dark);
+      background: #fff;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: border-color 0.2s;
+    }
+
+    .field-group select:focus { border-color: var(--accent); }
+
+    /* ============================================================
+       GENERATE PANEL
+    ============================================================ */
+    .generate-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .btn-generate {
+      width: 100%;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      transition: transform 0.15s, box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .btn-generate:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      display: none;
+    }
+
+    .progress-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-mid);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
+    /* Terminal output */
+    .terminal {
+      background: var(--terminal-bg);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      height: 160px;
+      overflow-y: auto;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 0.72rem;
+      color: var(--terminal-text);
+      line-height: 1.6;
+      display: none;
+      border: 1px solid rgba(74, 222, 128, 0.15);
+    }
+
+    .terminal .t-line { opacity: 0.85; }
+    .terminal .t-line.warn { color: var(--warn); }
+    .terminal .t-line.info { color: #60a5fa; }
+    .terminal .t-line.done { color: var(--success); font-weight: 700; }
+
+    /* GIF preview output */
+    .gif-output {
+      display: none;
+      text-align: center;
+    }
+
+    .gif-output img {
+      max-width: 100%;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--accent);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .gif-output .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 10px 22px;
+      background: var(--success);
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .gif-output .download-btn:hover { opacity: 0.88; }
+
+    .gif-output .file-meta {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--text-mid);
+    }
+
+    /* ============================================================
+       DIVIDER
+    ============================================================ */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--card-border);
+      margin: 36px 0;
+    }
+
+    /* ============================================================
+       DISCLAIMER BANNER
+    ============================================================ */
+    .disclaimer {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: var(--radius);
+      padding: 20px 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin: 36px 0 0;
+    }
+
+    .disclaimer-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .disclaimer h4 {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--success);
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .disclaimer p {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       EDUCATIONAL / SEO SECTION
+    ============================================================ */
+    .edu-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 36px;
+      margin-top: 32px;
+    }
+
+    .edu-section h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .edu-section .subtitle {
+      font-size: 0.88rem;
+      color: var(--text-mid);
+      margin-bottom: 28px;
+    }
+
+    .edu-section p {
+      font-size: 0.92rem;
+      color: var(--text-mid);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    .edu-section p strong { color: var(--text-dark); }
+
+    /* FAQ accordion */
+    .faq-list { margin-top: 28px; }
+
+    .faq-item {
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-item.open { border-color: var(--accent); }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .faq-question:hover { background: #f8fafc; }
+
+    .faq-chevron {
+      color: var(--accent);
+      font-size: 1rem;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.25s;
+      padding: 0 20px;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+      padding: 0 20px 20px;
+    }
+
+    .faq-answer p {
+      font-size: 0.88rem;
+      color: var(--text-mid);
+      line-height: 1.75;
+      margin: 0;
+    }
+
+    .faq-answer p strong { color: var(--text-dark); }
+
+    .faq-answer ul {
+      margin: 10px 0 0 18px;
+    }
+
+    .faq-answer ul li {
+      font-size: 0.87rem;
+      color: var(--text-mid);
+      margin-bottom: 6px;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 28px 20px;
+      text-align: center;
+      margin-top: 48px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: #fff; }
+
+    footer p {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .mt-20 { margin-top: 20px; }
+    .mt-28 { margin-top: 28px; }
+
+    /* Responsive tweaks */
+    @media (max-width: 700px) {
+      .main-card, .edu-section { padding: 24px 18px; }
+      .disclaimer { flex-direction: column; gap: 10px; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/gif-maker/" />
+</head>
+<body>
+
+  <!-- TOP NAVIGATION BAR -->
+  <div class="top-bar">
+    <a href="/">axiomape.com</a>
+  </div>
+
+  <!-- PAGE HEADER -->
+  <header class="page-header">
+    <div class="badge">Free Browser Tool</div>
+    <h1>GIF Maker<br><span>Turn Any Short Video Clip Into a Looping GIF</span></h1>
+    <p>Upload an MP4, MOV, or WEBM file. Trim, configure quality, and generate a crisp looping GIF. Everything runs privately inside your browser.</p>
+  </header>
+
+  <!-- AD PLACEHOLDER: Standard Leaderboard 728x90 - replace with AdSense <ins> tag when ready -->
+  <div class="ad-placeholder">Advertisement - 728 x 90</div>
+
+  <div class="container">
+
+    <!-- MAIN TOOL CARD -->
+    <div class="main-card">
+
+      <!-- STEP 1: DROP ZONE -->
+      <p class="section-label">Step 1 - Upload Your Video</p>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/webm" />
+        <div class="drop-icon">🎬</div>
+        <h2>Drag and Drop Your Video Here</h2>
+        <p>or click anywhere in this box to browse your files</p>
+        <div class="formats">
+          <span>MP4</span>
+          <span>MOV</span>
+          <span>WEBM</span>
+        </div>
+      </div>
+
+      <!-- STEP 2: EDITOR (shown after upload) -->
+      <div id="editor-section">
+
+        <!-- VIDEO PREVIEW -->
+        <div class="mt-28">
+          <p class="section-label">Step 2 - Preview Your Clip</p>
+          <div class="video-wrapper">
+            <video id="videoPlayer" controls playsinline muted></video>
+          </div>
+        </div>
+
+        <!-- TIMELINE SCRUBBER -->
+        <div class="timeline-section mt-20">
+          <div class="timeline-header">
+            <span class="title">Trim Your GIF Duration</span>
+            <div class="time-badges">
+              <div class="time-badge"><span>Start:</span><span id="startLabel">0.00s</span></div>
+              <div class="time-badge"><span>End:</span><span id="endLabel">0.00s</span></div>
+            </div>
+          </div>
+
+          <!-- Dual range slider -->
+          <div class="slider-wrapper">
+            <div class="slider-track"></div>
+            <div class="slider-fill" id="sliderFill"></div>
+            <input type="range" id="rangeStart" min="0" max="100" value="0" step="0.1" />
+            <input type="range" id="rangeEnd"   min="0" max="100" value="100" step="0.1" />
+          </div>
+          <div class="slider-labels">
+            <span>0s</span>
+            <span id="durationLabel">0s</span>
+          </div>
+
+          <div class="duration-info">
+            <div class="duration-chip">Selected Duration: <strong id="selDuration">0.00s</strong></div>
+            <div class="duration-chip">Tip: Keep your GIF under <strong>8 seconds</strong> for a manageable file size.</div>
+          </div>
+        </div>
+
+        <!-- CONFIGURATION + GENERATE GRID -->
+        <div class="workspace-grid">
+
+          <!-- CONFIGURATION PANEL -->
+          <div class="config-panel">
+            <h3>&#9881;&#65039; Quality Settings</h3>
+
+            <!-- FPS -->
+            <div class="field-group">
+              <label class="field-label" for="fpsSelect">Framerate (FPS)</label>
+              <p class="field-hint">
+                FPS stands for "Frames Per Second." It controls how many still images are shown each second to create the illusion of movement.
+                Higher FPS = smoother motion but a larger file size.
+                Lower FPS = smaller file but slightly choppy motion.
+              </p>
+              <select id="fpsSelect">
+                <option value="10">10 FPS - Smaller file, slightly choppy</option>
+                <option value="15" selected>15 FPS - Standard web quality</option>
+                <option value="24">24 FPS - Smooth, but larger file</option>
+              </select>
+            </div>
+
+            <!-- OUTPUT WIDTH -->
+            <div class="field-group">
+              <label class="field-label" for="widthSelect">Output Width (Resolution)</label>
+              <p class="field-hint">
+                Resolution is the pixel dimension of the output image. A narrower width shrinks
+                the file size dramatically because there are fewer pixels to store.
+                Height is scaled automatically to preserve your video's original aspect ratio.
+              </p>
+              <select id="widthSelect">
+                <option value="320">320px - Compact (smallest file)</option>
+                <option value="480" selected>480px - Balanced quality</option>
+                <option value="640">640px - Full quality (largest file)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- GENERATE PANEL -->
+          <div class="generate-panel">
+
+            <div>
+              <p class="section-label">Step 3 - Generate Your GIF</p>
+              <p style="font-size:0.82rem; color:var(--text-mid); margin-bottom:14px; line-height:1.55;">
+                This tool uses <strong>FFmpeg via WebAssembly</strong> - a technology that lets
+                high-performance video processing software run directly inside your web browser
+                without any server connection. A two-step color palette is generated to ensure your
+                GIF looks sharp and professional.
+              </p>
+            </div>
+
+            <button class="btn-generate" id="btnGenerate">
+              <span>&#127775;</span> Generate High-Quality GIF
+            </button>
+
+            <!-- Progress bar -->
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress-label">
+                <span id="progressText">Processing frames...</span>
+                <span id="progressPct">0%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressFill"></div>
+              </div>
+            </div>
+
+            <!-- Terminal output -->
+            <div class="terminal" id="terminal"></div>
+
+            <!-- GIF output preview -->
+            <div class="gif-output" id="gifOutput">
+              <img id="gifPreview" src="" alt="Generated GIF preview" />
+              <br>
+              <a class="download-btn" id="downloadLink" href="#" download>
+                &#8681; Download GIF
+              </a>
+              <p class="file-meta" id="fileMeta"></p>
+            </div>
+
+          </div><!-- end generate-panel -->
+        </div><!-- end workspace-grid -->
+
+      </div><!-- end editor-section -->
+
+    </div><!-- end main-card -->
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer">
+      <div class="disclaimer-icon">&#128274;</div>
+      <div>
+        <h4>Total Privacy Guarantee</h4>
+        <p>
+          This GIF compilation process operates entirely locally inside your web browser.
+          Your private videos and generated animations are never uploaded, cached, or
+          transmitted to external servers. All processing happens on your own device using
+          WebAssembly technology. When you close this tab, no trace of your files remains.
+        </p>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL / SEO SECTION -->
+    <div class="edu-section">
+      <h2>The Ultimate Technical Guide to GIF Creation and File Optimization</h2>
+      <p class="subtitle">Deep-dive explainers for content marketers, designers, and engineers who want to master the art of the animated GIF.</p>
+
+      <p>
+        The <strong>Graphics Interchange Format (GIF)</strong> was introduced in 1987 by CompuServe and remains one of the most
+        universally supported image formats on the web today. Unlike video formats such as MP4, a GIF file is
+        a self-contained looping animation that requires no media player or plugin. It loads inline inside any
+        webpage, email client, or social media post without any additional configuration. The trade-off for this
+        portability is file size efficiency: the GIF format is far less space-efficient than modern video codecs
+        like H.264 or VP9, which is why optimizing every parameter during conversion is critical for
+        anyone publishing animated content professionally.
+      </p>
+
+      <p>
+        <strong>Color Palette Generation</strong> is the single most impactful factor in GIF visual quality.
+        The GIF format is technically limited to a palette of a maximum of 256 colors per frame. When a source
+        video contains millions of colors, a naive conversion tool picks a single generic 256-color palette to
+        represent the entire clip. The result is visible color banding, grainy dithering artifacts, and washed-out
+        gradients. The professional solution - used by this tool - is a <strong>two-pass palette generation process</strong>
+        via FFmpeg's <code>palettegen</code> and <code>paletteuse</code> filters. In the first pass, FFmpeg analyzes the
+        actual color histogram of your specific clip and generates a custom 256-color palette perfectly tuned to
+        the dominant colors in your footage. In the second pass, it maps every pixel to that tailored palette,
+        producing visually rich output with dramatically less visible degradation.
+      </p>
+
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            What is the best framerate (FPS) for a web GIF?
+            <span class="faq-chevron">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              For most web use cases, <strong>15 FPS is the sweet spot</strong>. Human perception of smooth motion
+              begins around 12-15 frames per second, so a 15 FPS GIF feels fluid for everyday reaction clips,
+              product demos, and social posts while keeping file sizes manageable. Jump to 24 FPS when your
+              source footage contains fast-moving content like sports, particle effects, or dance clips where
+              smoothness is critical to the message. Drop to 10 FPS for simple looping backgrounds,
+              typography animations, or logo reveals where the slight choppiness is imperceptible and the
+              bandwidth savings are significant - particularly for mobile users on constrained data plans.
+              One important nuance: the GIF format does not support fractional frame timings the way video
+              containers do, so 24 FPS is stored as approximately 41.6ms per frame delay, which most
+              browsers round to the nearest whole millisecond. This is generally invisible to viewers.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Why do GIFs sometimes look grainy, and how does color palette generation fix it?
+            <span class="faq-chevron">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              Graininess in GIFs is caused by a process called <strong>dithering</strong>. When a conversion
+              tool cannot accurately represent a color from your video using the limited 256-color GIF palette,
+              it uses a checkerboard-like pattern of nearby colors to simulate the missing shade. With a
+              poorly chosen palette, this dithering becomes visually coarse and distracting - especially in
+              smooth gradients like sky backgrounds, skin tones, or motion-blurred objects.
+            </p>
+            <p>
+              The fix is a scene-specific palette generated by <strong>FFmpeg's <code>palettegen</code> filter</strong>.
+              Instead of using a single universal palette, this filter scans every pixel in your chosen clip
+              segment and applies a statistical algorithm (median-cut color quantization) to find the 256 colors
+              that minimizes color error across the entire animation. When the <code>paletteuse</code> filter then applies
+              this tailored palette, each pixel is mapped to its statistically nearest color, resulting in
+              dramatically smoother gradients, richer saturation, and far less visible dithering noise.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Why is it safer to convert personal videos to GIF locally in the browser?
+            <span class="faq-chevron">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              Most online video conversion tools work by uploading your file to a remote server where the
+              processing happens. This means your private video content - which may include personal footage,
+              unreleased product demos, proprietary brand materials, or sensitive event recordings - is
+              transmitted over the internet and temporarily stored on hardware you have no control over.
+              Many of these services retain files for days or longer for compliance reasons, and their
+              privacy policies may allow use of content for service improvement or advertising purposes.
+            </p>
+            <p>
+              This tool uses <strong>WebAssembly (WASM)</strong>, which compiles the FFmpeg video processing
+              engine into a format that runs natively inside your browser's secure sandbox. No network
+              request containing your file is ever made. Processing happens entirely on your own CPU using
+              allocated browser memory, and when you close the tab that memory is released. This is the same
+              privacy guarantee as offline desktop software, achieved entirely in-browser. It is the
+              technically correct approach for any scenario where file confidentiality matters.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            How does lowering the resolution save website bandwidth?
+            <span class="faq-chevron">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              A GIF file's byte size is proportional to the total number of pixels it must store across all
+              frames. A 640px wide GIF contains exactly <strong>4x as many pixels</strong> per frame as a 320px wide GIF
+              (640 x 360 = 230,400 pixels vs 320 x 180 = 57,600 pixels). Multiply this across every frame
+              in a 5-second, 15 FPS animation and you have 75 frames - meaning the 640px version must
+              encode roughly 17.3 million pixels versus only 4.3 million in the 320px version.
+              LZW compression (the algorithm GIF uses internally) helps reduce redundancy but cannot
+              compensate for raw pixel count at scale. For blog embeds, social media thumbnails, or
+              email newsletters where recipients may be on mobile data, a 480px output delivers a visually
+              sharp result at a fraction of the bandwidth cost. Reserve 640px output for hero images
+              on high-resolution desktop layouts where the full pixel density is actually visible to viewers.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            What is WebAssembly (WASM) and why does this tool use it?
+            <span class="faq-chevron">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              <strong>WebAssembly</strong> is a low-level binary instruction format standardized by the W3C
+              that allows code written in C, C++, Rust, and other compiled languages to run inside a web
+              browser at near-native CPU speed. Traditionally, JavaScript was the only language browsers
+              could execute, which limited the computational complexity of browser-based applications.
+              WebAssembly removes that barrier.
+            </p>
+            <p>
+              <strong>FFmpeg</strong> is the world's most widely used open-source multimedia processing library,
+              written in C and used by YouTube, VLC, HandBrake, and thousands of other professional tools.
+              The <code>ffmpeg.wasm</code> project compiles the entire FFmpeg engine to WebAssembly so it
+              can run directly in your browser. When you click "Generate GIF" on this page, the browser
+              loads the FFmpeg WASM binary (cached after first load), mounts your video file into a virtual
+              in-memory filesystem, executes the same powerful filtergraph commands a professional engineer
+              would run on a terminal, and writes the output GIF back into that in-memory filesystem where
+              JavaScript reads it and hands you the download. No servers. No uploads. No waiting.
+            </p>
+          </div>
+        </div>
+
+      </div><!-- end faq-list -->
+
+    </div><!-- end edu-section -->
+
+  </div><!-- end container -->
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <p>&copy; 2025 AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT - GIF MAKER ENGINE
+  ============================================================ -->
+  <script>
+    // ----------------------------------------------------------------
+    // STATE
+    // ----------------------------------------------------------------
+    let videoDuration = 0;       // Total duration of the loaded video in seconds
+    let startTime = 0;           // Trim start time in seconds
+    let endTime = 0;             // Trim end time in seconds
+    let originalFileName = '';   // Used to build the output filename
+
+    // ----------------------------------------------------------------
+    // DOM REFERENCES
+    // ----------------------------------------------------------------
+    const dropZone      = document.getElementById('dropZone');
+    const fileInput     = document.getElementById('fileInput');
+    const editorSection = document.getElementById('editor-section');
+    const videoPlayer   = document.getElementById('videoPlayer');
+    const rangeStart    = document.getElementById('rangeStart');
+    const rangeEnd      = document.getElementById('rangeEnd');
+    const sliderFill    = document.getElementById('sliderFill');
+    const startLabel    = document.getElementById('startLabel');
+    const endLabel      = document.getElementById('endLabel');
+    const durationLabel = document.getElementById('durationLabel');
+    const selDuration   = document.getElementById('selDuration');
+    const fpsSelect     = document.getElementById('fpsSelect');
+    const widthSelect   = document.getElementById('widthSelect');
+    const btnGenerate   = document.getElementById('btnGenerate');
+    const progressWrap  = document.getElementById('progressWrap');
+    const progressFill  = document.getElementById('progressFill');
+    const progressText  = document.getElementById('progressText');
+    const progressPct   = document.getElementById('progressPct');
+    const terminal      = document.getElementById('terminal');
+    const gifOutput     = document.getElementById('gifOutput');
+    const gifPreview    = document.getElementById('gifPreview');
+    const downloadLink  = document.getElementById('downloadLink');
+    const fileMeta      = document.getElementById('fileMeta');
+
+    // ----------------------------------------------------------------
+    // DRAG AND DROP HANDLING
+    // ----------------------------------------------------------------
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleVideoFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleVideoFile(file);
+    });
+
+    // ----------------------------------------------------------------
+    // VIDEO FILE HANDLER
+    // ----------------------------------------------------------------
+    function handleVideoFile(file) {
+      // Validate the file type
+      const validTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a valid video file: MP4, MOV, or WEBM.');
+        return;
+      }
+
+      originalFileName = file.name.replace(/\.[^/.]+$/, ''); // strip extension
+
+      // Create a local object URL and load it into the video element
+      const objectURL = URL.createObjectURL(file);
+      videoPlayer.src = objectURL;
+
+      videoPlayer.onloadedmetadata = () => {
+        videoDuration = videoPlayer.duration;
+        durationLabel.textContent = formatTime(videoDuration);
+
+        // Initialize the sliders to cover the full video
+        rangeStart.max = videoDuration;
+        rangeEnd.max   = videoDuration;
+        rangeEnd.value = videoDuration;
+        startTime = 0;
+        endTime   = videoDuration;
+
+        updateSliderUI();
+        editorSection.style.display = 'block';
+
+        // Scroll the editor into view smoothly
+        editorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
+      // Store the file reference for FFmpeg to read later
+      window._videoFile = file;
+
+      // Reset any previous output
+      gifOutput.style.display = 'none';
+      terminal.style.display  = 'none';
+      progressWrap.style.display = 'none';
+    }
+
+    // ----------------------------------------------------------------
+    // DUAL RANGE SLIDER LOGIC
+    // ----------------------------------------------------------------
+    // Convert slider value (0-duration) to a percentage for CSS fill
+    function toPercent(val) {
+      return (val / videoDuration) * 100;
+    }
+
+    function updateSliderUI() {
+      startTime = parseFloat(rangeStart.value);
+      endTime   = parseFloat(rangeEnd.value);
+
+      // Prevent start from overtaking end
+      if (startTime >= endTime) {
+        startTime = endTime - 0.1;
+        rangeStart.value = startTime;
+      }
+
+      const leftPct  = toPercent(startTime);
+      const rightPct = toPercent(endTime);
+
+      sliderFill.style.left  = leftPct  + '%';
+      sliderFill.style.width = (rightPct - leftPct) + '%';
+
+      startLabel.textContent   = formatTime(startTime);
+      endLabel.textContent     = formatTime(endTime);
+      selDuration.textContent  = formatTime(endTime - startTime);
+
+      // Sync video playhead to the start time
+      if (!videoPlayer.paused) return;
+      videoPlayer.currentTime = startTime;
+    }
+
+    rangeStart.addEventListener('input', updateSliderUI);
+    rangeEnd.addEventListener('input',   updateSliderUI);
+
+    // ----------------------------------------------------------------
+    // TIME FORMATTER - converts seconds to "X.XXs" display
+    // ----------------------------------------------------------------
+    function formatTime(s) {
+      return s.toFixed(2) + 's';
+    }
+
+    // ----------------------------------------------------------------
+    // TERMINAL LOGGER - appends colored lines to the terminal box
+    // ----------------------------------------------------------------
+    function logTerminal(msg, type = 'normal') {
+      const line = document.createElement('div');
+      line.className = 't-line' + (type !== 'normal' ? ' ' + type : '');
+      line.textContent = '> ' + msg;
+      terminal.appendChild(line);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function clearTerminal() {
+      terminal.innerHTML = '';
+    }
+
+    // ----------------------------------------------------------------
+    // PROGRESS BAR UPDATER
+    // ----------------------------------------------------------------
+    function setProgress(pct, label) {
+      progressFill.style.width = pct + '%';
+      progressPct.textContent  = Math.round(pct) + '%';
+      if (label) progressText.textContent = label;
+    }
+
+    // ----------------------------------------------------------------
+    // MAIN GIF GENERATION - async so the browser stays responsive
+    // ----------------------------------------------------------------
+    btnGenerate.addEventListener('click', generateGIF);
+
+    async function generateGIF() {
+      if (!window._videoFile) {
+        alert('Please upload a video file first.');
+        return;
+      }
+
+      // Validate trim selection
+      const duration = endTime - startTime;
+      if (duration <= 0.1) {
+        alert('Please select a trim range of at least 0.1 seconds.');
+        return;
+      }
+
+      if (duration > 30) {
+        const confirmed = confirm(
+          'You have selected ' + duration.toFixed(1) + ' seconds of video.\n' +
+          'GIFs longer than 30 seconds can be very large files.\n\n' +
+          'Continue anyway?'
+        );
+        if (!confirmed) return;
+      }
+
+      // UI state: processing
+      btnGenerate.disabled = true;
+      progressWrap.style.display = 'block';
+      terminal.style.display     = 'block';
+      gifOutput.style.display    = 'none';
+      clearTerminal();
+      setProgress(2, 'Loading FFmpeg engine...');
+
+      const fps   = parseInt(fpsSelect.value, 10);
+      const width = parseInt(widthSelect.value, 10);
+
+      logTerminal('GIF Maker started', 'info');
+      logTerminal('Source file: ' + window._videoFile.name, 'info');
+      logTerminal('Start time: ' + startTime.toFixed(3) + 's | End time: ' + endTime.toFixed(3) + 's', 'info');
+      logTerminal('FPS: ' + fps + ' | Output width: ' + width + 'px (height auto-scaled)', 'info');
+      logTerminal('Initializing FFmpeg WebAssembly engine...', 'info');
+
+      try {
+        // Load FFmpeg - the createFFmpeg factory is exposed by the CDN build
+        const { createFFmpeg, fetchFile } = FFmpeg;
+
+        const ffmpeg = createFFmpeg({
+          log: true,
+          progress: ({ ratio }) => {
+            // FFmpeg reports progress as a 0-1 ratio during long operations
+            // We map this to the second half of our progress bar (50%-95%)
+            const mapped = 50 + (ratio * 45);
+            setProgress(mapped, 'Encoding frames...');
+          },
+          logger: ({ message }) => {
+            // Pipe every FFmpeg log line into our terminal window
+            if (message && message.trim().length > 0) {
+              logTerminal(message);
+            }
+          }
+        });
+
+        setProgress(10, 'Loading FFmpeg engine...');
+        await ffmpeg.load();
+        logTerminal('FFmpeg engine loaded successfully.', 'done');
+        setProgress(20, 'Reading video file...');
+
+        // Mount the video file into FFmpeg's virtual in-memory filesystem
+        ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(window._videoFile));
+        logTerminal('Video file mounted to virtual filesystem.', 'done');
+        setProgress(30, 'Generating color palette (Pass 1 of 2)...');
+
+        // ------------------------------------------------------------
+        // PASS 1: Generate an optimized color palette for this specific clip
+        // -ss = start time, -t = duration, -vf = video filter
+        // The palettegen filter analyzes color histograms to produce the
+        // best possible 256-color palette for this exact footage segment.
+        // ------------------------------------------------------------
+        logTerminal('Pass 1: Analyzing colors and generating optimized palette...', 'info');
+        await ffmpeg.run(
+          '-ss', String(startTime),
+          '-t',  String(duration),
+          '-i',  'input.mp4',
+          '-vf', `fps=${fps},scale=${width}:-1:flags=lanczos,palettegen=max_colors=256:stats_mode=diff`,
+          '-y',  'palette.png'
+        );
+        logTerminal('Palette generated.', 'done');
+        setProgress(55, 'Encoding GIF frames (Pass 2 of 2)...');
+
+        // ------------------------------------------------------------
+        // PASS 2: Encode the GIF using the custom palette
+        // The paletteuse filter maps each pixel to the nearest color in
+        // the generated palette, using dithering=sierra2_4a for optimal quality
+        // ------------------------------------------------------------
+        logTerminal('Pass 2: Encoding GIF with optimized palette...', 'info');
+        await ffmpeg.run(
+          '-ss', String(startTime),
+          '-t',  String(duration),
+          '-i',  'input.mp4',
+          '-i',  'palette.png',
+          '-filter_complex', `fps=${fps},scale=${width}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=sierra2_4a`,
+          '-loop', '0',
+          '-y',   'output.gif'
+        );
+        logTerminal('GIF encoding complete.', 'done');
+        setProgress(98, 'Finalizing...');
+
+        // Read the output GIF from the virtual filesystem
+        const gifData = ffmpeg.FS('readFile', 'output.gif');
+        const blob    = new Blob([gifData.buffer], { type: 'image/gif' });
+        const gifURL  = URL.createObjectURL(blob);
+
+        // Compute file size for the metadata display
+        const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+        const sizeKB = (blob.size / 1024).toFixed(0);
+
+        logTerminal('Output file size: ' + sizeKB + ' KB (' + sizeMB + ' MB)', 'done');
+        logTerminal('Download ready.', 'done');
+
+        setProgress(100, 'Done!');
+
+        // Build the output filename: originalname-animated.gif
+        const outputFilename = originalFileName + '-animated.gif';
+
+        // Update the download link and image preview
+        downloadLink.href          = gifURL;
+        downloadLink.download      = outputFilename;
+        gifPreview.src             = gifURL;
+        fileMeta.textContent       = outputFilename + ' - ' + sizeKB + ' KB';
+
+        // Show the GIF output area
+        gifOutput.style.display    = 'block';
+
+        // Clean up the virtual filesystem to free browser memory
+        try {
+          ffmpeg.FS('unlink', 'input.mp4');
+          ffmpeg.FS('unlink', 'palette.png');
+          ffmpeg.FS('unlink', 'output.gif');
+        } catch (cleanupErr) {
+          // Cleanup errors are non-critical - ignore silently
+        }
+
+      } catch (err) {
+        logTerminal('ERROR: ' + err.message, 'warn');
+        setProgress(0, 'An error occurred. See terminal for details.');
+        alert('GIF generation failed. Please try a shorter clip, lower FPS, or smaller resolution.');
+        console.error(err);
+      }
+
+      btnGenerate.disabled = false;
+    }
+
+    // ----------------------------------------------------------------
+    // FAQ ACCORDION TOGGLE
+    // ----------------------------------------------------------------
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+
+      // Close all open items first
+      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+
+      // If it was not open, open it
+      if (!isOpen) item.classList.add('open');
+    }
+  </script>
+
+</body>
+</html>

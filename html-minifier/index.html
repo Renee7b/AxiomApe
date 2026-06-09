@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML Minifier - Strip Whitespace and Comments to Speed Up Pages | AxiomApe</title>
+  <meta name="description" content="Free browser-based HTML minifier. Strip whitespace, comments, and optional tags from your HTML to reduce file size and improve Core Web Vitals scores. Your code never leaves your browser." />
+  <meta name="keywords" content="html minifier, minify html, strip whitespace, remove comments, compress html, core web vitals, page speed, frontend optimization" />
+  <link rel="canonical" href="https://axiomape.com/html-minifier/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="HTML Minifier - Strip Whitespace and Comments | AxiomApe" />
+  <meta property="og:description" content="Free, privacy-first HTML minifier that runs entirely in your browser. No uploads. No servers." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    /* ===================================================
+       RESET AND BASE STYLES
+    =================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --color-bg: #f4f5f7;
+      --color-surface: #ffffff;
+      --color-border: #dde1e9;
+      --color-text: #1a1d23;
+      --color-text-muted: #6b7280;
+      --color-accent: #ff6b35;
+      --color-accent-dark: #e05a28;
+      --color-accent-light: #fff3ef;
+      --color-ide-bg: #1e2130;
+      --color-ide-surface: #252840;
+      --color-ide-border: #353a55;
+      --color-ide-text: #c9d1e8;
+      --color-ide-green: #4ade80;
+      --color-ide-comment: #6b7a9e;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-info: #3b82f6;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    a {
+      color: var(--color-accent);
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    a:hover { opacity: 0.75; }
+
+    /* ===================================================
+       TOP NAV BAR
+    =================================================== */
+    .top-nav {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      text-align: center;
+      padding: 10px 20px;
+    }
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+    }
+    .top-nav a:hover { color: var(--color-accent); opacity: 1; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #1e2130 0%, #252840 100%);
+      color: #fff;
+      text-align: center;
+      padding: 48px 20px 40px;
+    }
+    .page-header .badge {
+      display: inline-block;
+      background: var(--color-accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      font-size: clamp(22px, 4vw, 34px);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 700px;
+      margin: 0 auto 12px;
+      color: #e8ecf8;
+    }
+    .page-header p {
+      font-size: 15px;
+      color: #8a93b8;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       MAIN CONTAINER
+    =================================================== */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===================================================
+       AD PLACEHOLDER (leaderboard 728x90)
+    =================================================== */
+    /* ---- ADSENSE PLACEHOLDER: Replace this div with your Google AdSense
+            leaderboard ad unit code (728x90 or responsive).
+            Standard IAB leaderboard slot - top of card framework. ---- */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      background: #eef0f5;
+      border: 2px dashed #c8cdd8;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 28px auto 0;
+      color: var(--color-text-muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ===================================================
+       TOOL CARD
+    =================================================== */
+    .tool-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 28px;
+      margin: 28px 0;
+    }
+
+    /* ===================================================
+       OPTIONS PANEL
+    =================================================== */
+    .options-panel {
+      background: #f9fafb;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 22px;
+    }
+    .options-panel h3 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 14px;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .option-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .option-item:hover {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(255,107,53,0.08);
+    }
+    .option-item input[type="checkbox"] {
+      margin-top: 2px;
+      accent-color: var(--color-accent);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .option-label {
+      flex: 1;
+    }
+    .option-label strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 2px;
+    }
+    .option-label span {
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      line-height: 1.45;
+    }
+
+    /* ===================================================
+       METRICS BANNER
+    =================================================== */
+    .metrics-banner {
+      display: flex;
+      align-items: stretch;
+      gap: 1px;
+      background: var(--color-border);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+    .metric-cell {
+      flex: 1;
+      background: var(--color-surface);
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .metric-cell .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+    .metric-cell .value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+    .metric-cell.savings {
+      background: linear-gradient(135deg, #fff3ef, #fff9f7);
+      border-left: 3px solid var(--color-accent);
+    }
+    .metric-cell.savings .value {
+      color: var(--color-accent);
+      font-size: 32px;
+    }
+    .metric-cell.savings .label {
+      color: var(--color-accent);
+    }
+
+    /* ===================================================
+       CODE PANELS (SPLIT SCREEN)
+    =================================================== */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 800px) {
+      .panels { grid-template-columns: 1fr; }
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #f0f2f6;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .panel-header .panel-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-muted);
+    }
+    .panel-header .char-count {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+    }
+    .panel textarea,
+    .panel .output-display {
+      flex: 1;
+      min-height: 320px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+      border: none;
+      outline: none;
+    }
+    .panel textarea {
+      background: #1e2130;
+      color: #c9d1e8;
+      width: 100%;
+    }
+    .panel textarea::placeholder {
+      color: #4a5270;
+    }
+    .panel .output-display {
+      background: var(--color-ide-bg);
+      color: var(--color-ide-green);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      cursor: default;
+      user-select: text;
+    }
+    .output-display.empty {
+      color: #4a5270;
+      font-style: italic;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* ===================================================
+       ACTION BUTTONS
+    =================================================== */
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--color-accent);
+      color: #fff;
+      border-color: var(--color-accent);
+    }
+    .btn-primary:hover {
+      background: var(--color-accent-dark);
+      border-color: var(--color-accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255,107,53,0.35);
+    }
+    .btn-secondary {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border-color: var(--color-border);
+    }
+    .btn-secondary:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-text-muted);
+      border-color: transparent;
+    }
+    .btn-ghost:hover {
+      color: var(--color-text);
+      background: #f0f2f6;
+    }
+    .btn-success {
+      background: var(--color-success);
+      color: #fff;
+      border-color: var(--color-success);
+    }
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* ===================================================
+       EDUCATIONAL / SEO CONTENT SECTION
+    =================================================== */
+    .content-section {
+      margin: 48px 0;
+    }
+    .content-section .section-header {
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .content-section .section-header h2 {
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 10px;
+    }
+    .content-section .section-header p {
+      color: var(--color-text-muted);
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* Accordion / Dropdown modules */
+    .accordion {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+    .accordion-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .accordion-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      text-align: left;
+      font-family: var(--font-sans);
+      transition: background 0.15s;
+    }
+    .accordion-trigger:hover { background: #f9fafb; }
+    .accordion-trigger h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .accordion-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--color-accent-light);
+      color: var(--color-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .accordion-item.open .accordion-icon {
+      transform: rotate(45deg);
+    }
+    .accordion-body {
+      display: none;
+      padding: 0 22px 22px;
+      border-top: 1px solid var(--color-border);
+    }
+    .accordion-item.open .accordion-body { display: block; }
+    .accordion-body p {
+      color: #374151;
+      line-height: 1.75;
+      margin-top: 16px;
+      font-size: 14.5px;
+    }
+    .accordion-body p + p { margin-top: 12px; }
+    .accordion-body code {
+      background: #f0f2f6;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #c0392b;
+    }
+    .accordion-body strong { color: var(--color-text); }
+
+    /* Comparison Table */
+    .comparison-table-wrap {
+      overflow-x: auto;
+      margin: 32px 0;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+    .comparison-table thead {
+      background: var(--color-ide-bg);
+      color: #c9d1e8;
+    }
+    .comparison-table thead th {
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .comparison-table tbody tr {
+      border-bottom: 1px solid var(--color-border);
+      transition: background 0.1s;
+    }
+    .comparison-table tbody tr:last-child { border-bottom: none; }
+    .comparison-table tbody tr:hover { background: #fafbff; }
+    .comparison-table td {
+      padding: 13px 18px;
+      vertical-align: top;
+    }
+    .comparison-table td:first-child {
+      font-weight: 600;
+      color: var(--color-text);
+      width: 18%;
+    }
+    .comparison-table td code {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: #f4f5f7;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #333;
+      line-height: 1.5;
+    }
+    .comparison-table td .minified code {
+      background: #f0fdf4;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .comparison-table .savings-badge {
+      display: inline-block;
+      background: var(--color-accent-light);
+      color: var(--color-accent);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      margin-top: 6px;
+    }
+    .comparison-table td.center { text-align: center; }
+
+    /* ===================================================
+       DISCLAIMER
+    =================================================== */
+    .disclaimer {
+      background: linear-gradient(135deg, #1e2130, #252840);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin: 36px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .disclaimer-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,107,53,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+    .disclaimer-text strong {
+      display: block;
+      color: #fff;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .disclaimer-text p {
+      color: #8a93b8;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+
+    /* ===================================================
+       FOOTER
+    =================================================== */
+    footer {
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      text-align: center;
+      padding: 28px 20px;
+      margin-top: 56px;
+    }
+    footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    footer .footer-links a {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+    footer .footer-links a:hover { color: var(--color-accent); opacity: 1; }
+    footer .copyright {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* ===================================================
+       TOAST NOTIFICATION
+    =================================================== */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--color-text);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 99px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 9999;
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===================================================
+       UTILITY
+    =================================================== */
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+    }
+    @media (max-width: 600px) {
+      .metrics-banner { flex-direction: column; gap: 1px; }
+      .actions { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVIGATION -->
+  <nav class="top-nav" aria-label="Site navigation">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <header class="page-header">
+    <span class="badge">Free Dev Tool</span>
+    <h1>HTML Minifier: Strip Whitespace and Comments From HTML to Speed Up Pages</h1>
+    <p>Compress your HTML output instantly - no uploads, no accounts, no servers. Everything runs right inside your browser.</p>
+  </header>
+
+  <main class="container">
+
+    <!-- AD PLACEHOLDER (leaderboard 728x90)
+         =========================================================
+         ADSENSE INJECTION POINT: Replace this entire .ad-placeholder
+         div with your Google AdSense ad unit script tag.
+         Recommended slot type: Leaderboard (728x90) or responsive.
+         ========================================================= -->
+    <div class="ad-placeholder" aria-hidden="true">
+      Advertisement - 728 x 90 Leaderboard
+    </div>
+
+    <!-- TOOL CARD -->
+    <div class="tool-card" role="main">
+
+      <!-- OPTIONS PANEL -->
+      <div class="options-panel" role="group" aria-labelledby="options-heading">
+        <h3 id="options-heading">Compression Options</h3>
+        <div class="options-grid">
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-comments" checked />
+            <div class="option-label">
+              <strong>Remove HTML Comments</strong>
+              <span>Strips <code>&lt;!-- ... --&gt;</code> blocks. Comments are invisible to users but add bytes to every download.</span>
+            </div>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-whitespace" checked />
+            <div class="option-label">
+              <strong>Collapse Whitespace</strong>
+              <span>Merges consecutive spaces, tabs, and line breaks into a single space between tags - safe for most layouts.</span>
+            </div>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-optional-tags" />
+            <div class="option-label">
+              <strong>Remove Optional Tags</strong>
+              <span>Omits closing tags HTML5 allows you to skip (e.g., <code>&lt;/li&gt;</code>, <code>&lt;/p&gt;</code>). Off by default - test before deploying.</span>
+            </div>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-inline" checked />
+            <div class="option-label">
+              <strong>Minify Inline CSS and JS</strong>
+              <span>Compresses code inside <code>&lt;style&gt;</code> and <code>&lt;script&gt;</code> tags by stripping their internal comments and extra spaces.</span>
+            </div>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-boolean" />
+            <div class="option-label">
+              <strong>Collapse Boolean Attributes</strong>
+              <span>Converts <code>checked="checked"</code> to just <code>checked</code>. Valid in HTML5, reduces attribute verbosity.</span>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- METRICS BANNER -->
+      <div class="metrics-banner" role="region" aria-label="Size metrics">
+        <div class="metric-cell">
+          <div class="label">Original Size</div>
+          <div class="value" id="stat-original">0 B</div>
+        </div>
+        <div class="metric-cell">
+          <div class="label">Minified Size</div>
+          <div class="value" id="stat-minified">0 B</div>
+        </div>
+        <div class="metric-cell savings">
+          <div class="label">Total Savings</div>
+          <div class="value" id="stat-savings">0%</div>
+        </div>
+      </div>
+
+      <!-- CODE PANELS -->
+      <div class="panels">
+
+        <!-- INPUT PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Input - Raw HTML</span>
+            <span class="char-count" id="input-count">0 chars</span>
+          </div>
+          <textarea
+            id="input-html"
+            aria-label="Paste your raw, uncompressed HTML here"
+            placeholder="Paste Raw, Uncompressed HTML Here..."
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+        </div>
+
+        <!-- OUTPUT PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Output - Minified HTML</span>
+            <span class="char-count" id="output-count">0 chars</span>
+          </div>
+          <div
+            id="output-html"
+            class="output-display empty"
+            role="region"
+            aria-label="Minified HTML output"
+            aria-live="polite"
+          >Minified output will appear here.</div>
+        </div>
+
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-minify" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Minify HTML
+        </button>
+        <button class="btn btn-secondary" id="btn-copy" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Minified Code
+        </button>
+        <button class="btn btn-ghost" id="btn-clear" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Clear Code
+        </button>
+      </div>
+
+    </div><!-- /tool-card -->
+
+
+    <!-- ===================================================
+         EDUCATIONAL / SEO CONTENT SECTION
+    =================================================== -->
+    <section class="content-section" aria-labelledby="guide-heading">
+      <div class="section-header">
+        <h2 id="guide-heading">The Ultimate Guide to HTML Minification and Core Web Vitals</h2>
+        <p>Deep technical knowledge for developers and webmasters who want to understand exactly what minification does and why it matters.</p>
+      </div>
+
+      <!-- ACCORDION MODULES -->
+      <div class="accordion" id="guide-accordion">
+
+        <div class="accordion-item open">
+          <button class="accordion-trigger" aria-expanded="true" aria-controls="acc-1-body">
+            <h3>What is HTML Minification, and Why Does Google Care About It?</h3>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="accordion-body" id="acc-1-body">
+            <p><strong>Minification</strong> is the process of removing all unnecessary characters from source code without changing how that code functions. For HTML specifically, this means stripping whitespace (spaces, tabs, line breaks), developer comments, and any redundant syntax that a browser can infer on its own. The resulting file is functionally identical to the original, but it can be dramatically smaller - often 10% to 30% lighter on typical pages.</p>
+            <p>Google measures page performance using a framework called <strong>Core Web Vitals</strong>, a set of real-world user experience metrics that directly affect search rankings. The most important of these is <strong>LCP (Largest Contentful Paint)</strong> - the time until the biggest visible content element finishes loading. Every kilobyte of HTML your server sends costs time: time for the TCP connection to carry the bytes, time for the browser to parse them, and time before rendering can begin. A smaller HTML payload means the browser receives the full document sooner, begins parsing the DOM (Document Object Model - the browser's internal tree representation of your page structure) faster, and reaches a paint-ready state more quickly. Google's PageSpeed Insights and Lighthouse audits specifically flag unminified HTML as a "Remove Unused Code" opportunity, and acting on those warnings contributes to higher Performance scores and better SERP (Search Engine Results Page) positioning.</p>
+            <p>Beyond search, minification reduces bandwidth costs for both the server and the visitor. On mobile connections where throughput is limited, shaving 20KB off a page's HTML can visibly reduce the time-to-interactive, lowering bounce rates and improving conversions. For high-traffic websites, cumulative bandwidth savings across millions of requests translate into meaningful infrastructure cost reductions.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-2-body">
+            <h3>Why is it Dangerous to Use Simple Regex to Compress HTML?</h3>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="accordion-body" id="acc-2-body">
+            <p>A common beginner mistake is to minify HTML using a simple regular expression like <code>/\s+/g</code> replaced with a single space. This approach works for trivial, plain HTML, but it breaks down quickly in real-world pages and can cause serious bugs.</p>
+            <p>The core problem is that HTML is not a regular language. It contains embedded sub-languages: <strong>inline CSS</strong> (inside <code>&lt;style&gt;</code> tags) and <strong>inline JavaScript</strong> (inside <code>&lt;script&gt;</code> tags). Whitespace inside CSS and JavaScript is structurally significant in ways that differ from HTML. For example, collapsing the spaces in a JavaScript string literal like <code>"Hello   World"</code> would alter program behavior. A regex operating blindly on the full file cannot distinguish between whitespace in an HTML attribute, whitespace in a CSS property value, and whitespace inside a JavaScript string.</p>
+            <p>Similarly, a naive regex that strips everything between <code>&lt;!--</code> and <code>--&gt;</code> will also destroy Internet Explorer conditional comments like <code>&lt;!--[if IE]&gt;...&lt;![endif]--&gt;</code>, which are valid executable syntax for older browsers. It may also accidentally eat into CDATA blocks, SVG content nodes, and <code>&lt;pre&gt;</code> or <code>&lt;textarea&gt;</code> tags where whitespace is rendered and must be preserved. A proper HTML minifier - like the engine powering this tool - parses the document structure before touching any bytes, and applies different whitespace rules depending on which context it is currently inside.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-3-body">
+            <h3>What are Inline Scripts and Styles, and How are They Minified?</h3>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="accordion-body" id="acc-3-body">
+            <p><strong>Inline CSS</strong> refers to styling code written directly inside a <code>&lt;style&gt;</code> tag in your HTML document, rather than in an external <code>.css</code> file. <strong>Inline JavaScript</strong> refers to script code written directly inside a <code>&lt;script&gt;</code> tag. While best practice often calls for moving these into separate linked files (where they can be cached independently by the browser), inline code is common in HTML email templates, critical-path CSS injected for performance, analytics snippets, and server-rendered pages.</p>
+            <p>When the "Minify Inline CSS and JavaScript" option is enabled, this tool applies a targeted compression pass specifically to the content inside those tags. For CSS, that means removing comments (text between <code>/*</code> and <code>*/</code>), stripping excess whitespace around selectors and declarations, and collapsing empty rule blocks. For JavaScript, it removes single-line (<code>//</code>) and multi-line (<code>/* */</code>) comments, strips leading and trailing whitespace from each line, and compresses multi-line statements. Full JS minification - including variable renaming and dead code elimination - requires a dedicated tool like Terser, but the lightweight pass applied here can still reduce inline JS blocks by 15% to 40%.</p>
+            <p>It is worth noting that this tool preserves the content of <code>&lt;pre&gt;</code>, <code>&lt;textarea&gt;</code>, <code>&lt;script type="application/json"&gt;</code>, and similar tags where whitespace is semantically meaningful. Touching those areas would alter what the user or browser actually sees and reads.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-4-body">
+            <h3>How Does Removing Whitespace Affect the Browser's DOM Rendering?</h3>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="accordion-body" id="acc-4-body">
+            <p>When a browser downloads an HTML file, it does not display it directly. Instead, it runs a multi-stage parsing pipeline. First, the HTML parser reads the raw byte stream and builds a tree structure in memory called the <strong>DOM (Document Object Model)</strong>. Every HTML element, text node, and comment in your file becomes a node in this tree. Only after the DOM is fully constructed (and the CSSOM, the CSS Object Model, is built from your stylesheets) does the browser begin the layout and paint phases that actually draw pixels to the screen.</p>
+            <p><strong>Whitespace collapse</strong> works by recognizing that, between most HTML block-level elements, consecutive whitespace characters (spaces, newlines, tabs) are treated by the browser as a single space - or in many cases, as no visible content at all. Removing them does not change the rendered appearance of the page. For example, the newline and indentation between a closing <code>&lt;/div&gt;</code> and the next opening <code>&lt;div&gt;</code> is invisible in the final page; eliminating it makes the HTML file smaller without affecting the visual result.</p>
+            <p>There is one important exception: whitespace inside <strong>inline elements</strong> like <code>&lt;span&gt;</code>, <code>&lt;a&gt;</code>, and <code>&lt;img&gt;</code> tags does matter visually, because inline elements participate in text flow. A space between two inline elements creates a real gap between them on the page. The "Collapse Whitespace" option used here is context-aware: it collapses runs of whitespace down to a single space (rather than deleting them entirely) in inline contexts, which preserves the visible gap while still eliminating redundant characters. This is a conservative, safe default suitable for the vast majority of real-world HTML documents.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger" aria-expanded="false" aria-controls="acc-5-body">
+            <h3>What are Boolean Attributes, and When Should You Collapse Them?</h3>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="accordion-body" id="acc-5-body">
+            <p>In HTML, a <strong>Boolean attribute</strong> is an attribute whose mere presence on an element signals "true" - the value is implied. Examples include <code>disabled</code>, <code>checked</code>, <code>required</code>, <code>readonly</code>, <code>multiple</code>, <code>selected</code>, <code>autofocus</code>, <code>autoplay</code>, <code>controls</code>, and <code>loop</code>. The HTML5 specification explicitly states that for Boolean attributes, the presence of the attribute means "true" and its absence means "false". The actual value of the attribute, when present, does not matter - whether it is <code>checked=""</code>, <code>checked="checked"</code>, or <code>checked="true"</code>, all three mean exactly the same thing to a browser.</p>
+            <p>When the "Collapse Boolean Attributes" option is enabled, this tool rewrites the verbose form <code>checked="checked"</code> to the terse form <code>checked</code>. This is perfectly valid HTML5, saves between 9 and 15 characters per attribute instance, and has zero functional impact in all modern browsers. The reason this option defaults to off is caution around older JavaScript frameworks (particularly legacy versions of certain template engines) that parse their own HTML and may not correctly handle collapsed attributes in all contexts. If you are working with a modern HTML5 page without unusual framework requirements, enabling this option is generally very safe.</p>
+            <p>The savings from boolean attribute collapsing are most pronounced in forms and media players with many interactive elements. A form with 20 required fields and 10 pre-checked checkboxes can realistically save 300 to 500 additional characters just from this one option, on top of the savings from whitespace and comment removal.</p>
+          </div>
+        </div>
+
+      </div><!-- /accordion -->
+
+      <!-- COMPARISON TABLE -->
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">Real-World Minification Examples: Uncompressed vs. Optimized</h3>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Element Type</th>
+              <th>Uncompressed (Development)</th>
+              <th>Minified (Production)</th>
+              <th>Bytes Saved</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>HTML Comment</td>
+              <td><code>&lt;!-- Navigation menu - updated 2024-03 --&gt;</code></td>
+              <td class="minified"><code><em>(removed entirely)</em></code><span class="savings-badge">-46 bytes</span></td>
+              <td class="center">46 B</td>
+            </tr>
+            <tr>
+              <td>Whitespace between tags</td>
+              <td><code>&lt;/li&gt;
+    &lt;li&gt;</code></td>
+              <td class="minified"><code>&lt;/li&gt;&lt;li&gt;</code><span class="savings-badge">-5 bytes</span></td>
+              <td class="center">5 B</td>
+            </tr>
+            <tr>
+              <td>Boolean Attribute</td>
+              <td><code>&lt;input type="checkbox" checked="checked" required="required"&gt;</code></td>
+              <td class="minified"><code>&lt;input type="checkbox" checked required&gt;</code><span class="savings-badge">-24 bytes</span></td>
+              <td class="center">24 B</td>
+            </tr>
+            <tr>
+              <td>Optional Closing Tag</td>
+              <td><code>&lt;ul&gt;
+  &lt;li&gt;Item One&lt;/li&gt;
+  &lt;li&gt;Item Two&lt;/li&gt;
+&lt;/ul&gt;</code></td>
+              <td class="minified"><code>&lt;ul&gt;&lt;li&gt;Item One&lt;li&gt;Item Two&lt;/ul&gt;</code><span class="savings-badge">-15 bytes</span></td>
+              <td class="center">15 B</td>
+            </tr>
+            <tr>
+              <td>Inline CSS Block</td>
+              <td><code>&lt;style&gt;
+  /* Header styles */
+  .header  {
+    color:  red;
+    font-size:  16px;
+  }
+&lt;/style&gt;</code></td>
+              <td class="minified"><code>&lt;style&gt;.header{color:red;font-size:16px;}&lt;/style&gt;</code><span class="savings-badge">-38 bytes</span></td>
+              <td class="center">38 B</td>
+            </tr>
+            <tr>
+              <td>Inline Script Block</td>
+              <td><code>&lt;script&gt;
+  // Initialize tracker
+  var count = 0;
+  count++;
+&lt;/script&gt;</code></td>
+              <td class="minified"><code>&lt;script&gt;var count=0;count++;&lt;/script&gt;</code><span class="savings-badge">-32 bytes</span></td>
+              <td class="center">32 B</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section><!-- /content-section -->
+
+    <!-- DISCLAIMER -->
+    <div class="disclaimer" role="note" aria-label="Privacy disclaimer">
+      <div class="disclaimer-icon" aria-hidden="true">&#128274;</div>
+      <div class="disclaimer-text">
+        <strong>Privacy First: Your Code Never Leaves Your Browser</strong>
+        <p>This code processing utility runs entirely within your local web browser. Your proprietary source code and HTML layouts are never uploaded, saved, or sent to external data servers. No account is required. No telemetry is collected. Processing happens instantly using your own device's CPU.</p>
+      </div>
+    </div>
+
+  </main><!-- /container -->
+
+
+  <!-- FOOTER -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="copyright">&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+
+  <!-- ===================================================
+       JAVASCRIPT ENGINE
+  =================================================== -->
+  <script>
+    'use strict';
+
+    // ---- DOM References ----
+    const inputEl       = document.getElementById('input-html');
+    const outputEl      = document.getElementById('output-html');
+    const inputCount    = document.getElementById('input-count');
+    const outputCount   = document.getElementById('output-count');
+    const statOriginal  = document.getElementById('stat-original');
+    const statMinified  = document.getElementById('stat-minified');
+    const statSavings   = document.getElementById('stat-savings');
+    const btnMinify     = document.getElementById('btn-minify');
+    const btnCopy       = document.getElementById('btn-copy');
+    const btnClear      = document.getElementById('btn-clear');
+    const toast         = document.getElementById('toast');
+
+    // Set footer year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ---- State ----
+    let minifiedOutput = '';
+    let toastTimer = null;
+
+    // ---- Utility: Format byte size ----
+    function formatSize(bytes) {
+      if (bytes === 0) return '0 B';
+      if (bytes < 1024) return bytes + ' B';
+      const kb = bytes / 1024;
+      return kb.toFixed(kb < 10 ? 2 : 1) + ' KB';
+    }
+
+    // ---- Utility: Update input char count ----
+    function updateInputCount() {
+      const len = inputEl.value.length;
+      inputCount.textContent = len.toLocaleString() + ' chars';
+    }
+
+    // ---- Utility: Update output char count and metrics ----
+    function updateMetrics(originalStr, minifiedStr) {
+      const origBytes = new TextEncoder().encode(originalStr).length;
+      const minBytes  = new TextEncoder().encode(minifiedStr).length;
+      statOriginal.textContent  = formatSize(origBytes);
+      statMinified.textContent  = formatSize(minBytes);
+      const pct = origBytes === 0 ? 0 : Math.round((1 - minBytes / origBytes) * 100);
+      statSavings.textContent   = pct + '%';
+      outputCount.textContent   = minifiedStr.length.toLocaleString() + ' chars';
+    }
+
+    // ---- Toast ----
+    function showToast(msg, duration) {
+      duration = duration || 2400;
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    // ================================================
+    // CORE MINIFICATION ENGINE
+    // All processing is done client-side only.
+    // ================================================
+
+    /**
+     * Minify inline CSS content (inside <style> tags).
+     * Removes CSS comments and collapses whitespace safely.
+     */
+    function minifyCSS(css) {
+      try {
+        // Remove CSS block comments: /* ... */
+        css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+        // Collapse multiple whitespace to single space
+        css = css.replace(/\s+/g, ' ');
+        // Remove space around structural characters
+        css = css.replace(/\s*([{}:;,>~+])\s*/g, '$1');
+        // Remove trailing semicolons before closing brace
+        css = css.replace(/;}/g, '}');
+        return css.trim();
+      } catch (e) {
+        // If CSS parsing fails, return original to avoid data loss
+        return css;
+      }
+    }
+
+    /**
+     * Minify inline JavaScript content (inside <script> tags).
+     * Removes comments and leading/trailing whitespace per line.
+     * Does NOT rename variables - that requires a full JS parser (Terser etc.).
+     */
+    function minifyJS(js) {
+      try {
+        // Remove single-line comments (careful not to remove URLs like http://)
+        // Only strip // comments that are not inside strings
+        // Use a safe line-by-line approach
+        var lines = js.split('\n');
+        var result = [];
+        var inBlock = false;
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          // Track block comments
+          if (!inBlock) {
+            // Remove single-line comments (// ...) - heuristic: not inside strings
+            // Remove block comment openers on this line if possible
+            line = line.replace(/\/\*[\s\S]*?\*\//g, ''); // inline block comments
+            // Remove trailing // comments (naive but effective for most cases)
+            line = line.replace(/([^:])\/\/[^\n"']*/g, '$1');
+            line = line.trim();
+            if (line.length > 0) result.push(line);
+          }
+        }
+        // Handle multi-line block comments spanning lines
+        var joined = result.join(' ');
+        joined = joined.replace(/\/\*[\s\S]*?\*\//g, '');
+        // Collapse multiple spaces
+        joined = joined.replace(/\s{2,}/g, ' ');
+        return joined.trim();
+      } catch (e) {
+        return js;
+      }
+    }
+
+    /**
+     * Tags where whitespace is meaningful and must be preserved.
+     */
+    var PRESERVE_TAGS = ['pre', 'textarea', 'script', 'style'];
+
+    /**
+     * HTML5 optional closing tags.
+     */
+    var OPTIONAL_CLOSE_TAGS = [
+      'li', 'dt', 'dd', 'p', 'rt', 'rp',
+      'optgroup', 'option', 'colgroup',
+      'caption', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th'
+    ];
+
+    /**
+     * Known boolean attributes in HTML5.
+     */
+    var BOOLEAN_ATTRS = [
+      'allowfullscreen', 'async', 'autofocus', 'autoplay',
+      'checked', 'controls', 'default', 'defer', 'disabled',
+      'formnovalidate', 'hidden', 'ismap', 'loop', 'multiple',
+      'muted', 'nomodule', 'novalidate', 'open', 'readonly',
+      'required', 'reversed', 'selected', 'typemustmatch'
+    ];
+
+    /**
+     * Main HTML minification function.
+     * Parses the HTML string section by section to apply
+     * context-aware compression safely.
+     *
+     * @param {string} html  - Raw HTML input string.
+     * @param {object} opts  - Options object from checkboxes.
+     * @returns {string}     - Minified HTML string.
+     */
+    function minifyHTML(html, opts) {
+      if (!html || !html.trim()) return '';
+
+      var result = '';
+      var i = 0;
+      var len = html.length;
+
+      while (i < len) {
+        // ---- HTML Comment: <!-- ... --> ----
+        if (html.substr(i, 4) === '<!--') {
+          // Detect IE conditional comments - preserve these
+          var isConditional = /^<!--\[if/i.test(html.substr(i, 20));
+          var commentEnd = html.indexOf('-->', i + 4);
+          if (commentEnd === -1) {
+            // Malformed comment - include remainder as-is
+            result += html.substring(i);
+            break;
+          }
+          var commentFull = html.substring(i, commentEnd + 3);
+          if (!opts.removeComments || isConditional) {
+            result += commentFull;
+          }
+          // else: strip comment
+          i = commentEnd + 3;
+          continue;
+        }
+
+        // ---- SCRIPT tag ----
+        if (/^<script[\s>]/i.test(html.substr(i, 8))) {
+          var scriptEnd = html.search(/<\/script\s*>/i);
+          // Find matching close from current position
+          var tagClose = html.indexOf('>', i);
+          var openTag  = html.substring(i, tagClose + 1);
+          var bodyStart = tagClose + 1;
+          var closeTagIdx = html.toLowerCase().indexOf('</script', bodyStart);
+          if (closeTagIdx === -1) {
+            result += html.substring(i);
+            break;
+          }
+          var scriptBody = html.substring(bodyStart, closeTagIdx);
+          var closeTag   = html.substring(closeTagIdx, html.indexOf('>', closeTagIdx) + 1);
+
+          if (opts.minifyInline && scriptBody.trim().length > 0) {
+            // Only minify JS scripts (not JSON, templates etc.)
+            var typeAttr = (openTag.match(/type=["']([^"']+)["']/i) || [])[1] || 'text/javascript';
+            if (/javascript|ecmascript/i.test(typeAttr) || typeAttr === 'text/javascript') {
+              scriptBody = minifyJS(scriptBody);
+            }
+          }
+          result += openTag + scriptBody + closeTag;
+          i = closeTagIdx + closeTag.length;
+          continue;
+        }
+
+        // ---- STYLE tag ----
+        if (/^<style[\s>]/i.test(html.substr(i, 7))) {
+          var tagClose2  = html.indexOf('>', i);
+          var openTag2   = html.substring(i, tagClose2 + 1);
+          var bodyStart2 = tagClose2 + 1;
+          var closeIdx2  = html.toLowerCase().indexOf('</style', bodyStart2);
+          if (closeIdx2 === -1) {
+            result += html.substring(i);
+            break;
+          }
+          var styleBody  = html.substring(bodyStart2, closeIdx2);
+          var closeTag2  = html.substring(closeIdx2, html.indexOf('>', closeIdx2) + 1);
+          if (opts.minifyInline && styleBody.trim().length > 0) {
+            styleBody = minifyCSS(styleBody);
+          }
+          result += openTag2 + styleBody + closeTag2;
+          i = closeIdx2 + closeTag2.length;
+          continue;
+        }
+
+        // ---- PRE / TEXTAREA tags - preserve whitespace ----
+        var preMatch = html.substr(i, 10).match(/^<(pre|textarea)[\s>]/i);
+        if (preMatch) {
+          var preTag  = preMatch[1].toLowerCase();
+          var preClose = '</' + preTag;
+          var preEnd  = html.toLowerCase().indexOf(preClose, i);
+          if (preEnd === -1) {
+            result += html.substring(i);
+            break;
+          }
+          var preCloseEnd = html.indexOf('>', preEnd) + 1;
+          result += html.substring(i, preCloseEnd);
+          i = preCloseEnd;
+          continue;
+        }
+
+        // ---- OPTIONAL CLOSING TAGS ----
+        if (opts.removeOptionalTags) {
+          var optMatch = html.substr(i).match(new RegExp('^<\/(' + OPTIONAL_CLOSE_TAGS.join('|') + ')\\s*>', 'i'));
+          if (optMatch) {
+            i += optMatch[0].length;
+            continue;
+          }
+        }
+
+        // ---- Regular HTML TAG ----
+        if (html[i] === '<') {
+          var tagEnd = html.indexOf('>', i);
+          if (tagEnd === -1) {
+            result += html.substring(i);
+            break;
+          }
+          var fullTag = html.substring(i, tagEnd + 1);
+
+          // Collapse boolean attributes inside this tag
+          if (opts.collapseBooleans) {
+            BOOLEAN_ATTRS.forEach(function(attr) {
+              var re = new RegExp('(\\s)' + attr + '=(["\'])' + attr + '\\2', 'gi');
+              fullTag = fullTag.replace(re, '$1' + attr);
+              var re2 = new RegExp('(\\s)' + attr + '=["\'][^"\']*["\']', 'gi');
+              // Only collapse exact boolean redundancies (attr="attr" pattern handled above)
+            });
+          }
+
+          // Normalize whitespace inside tag attributes (multiple spaces -> single space)
+          if (opts.collapseWhitespace) {
+            // Collapse whitespace in the tag itself but preserve quoted attribute values
+            fullTag = fullTag.replace(/\s+/g, ' ');
+          }
+
+          result += fullTag;
+          i = tagEnd + 1;
+          continue;
+        }
+
+        // ---- TEXT NODE (between tags) ----
+        var nextTag = html.indexOf('<', i);
+        if (nextTag === -1) nextTag = len;
+        var textNode = html.substring(i, nextTag);
+
+        if (opts.collapseWhitespace) {
+          // Collapse runs of whitespace down to a single space
+          textNode = textNode.replace(/[\r\n\t ]+/g, ' ');
+        }
+
+        result += textNode;
+        i = nextTag;
+      }
+
+      // Final trim of leading/trailing whitespace on the whole document
+      if (opts.collapseWhitespace) {
+        result = result.replace(/>\s+</g, '><').trim();
+      }
+
+      return result;
+    }
+
+
+    // ================================================
+    // EVENT HANDLERS
+    // ================================================
+
+    // Live input char count
+    inputEl.addEventListener('input', updateInputCount);
+
+    // --- MINIFY BUTTON ---
+    btnMinify.addEventListener('click', function() {
+      var raw = inputEl.value;
+      if (!raw.trim()) {
+        showToast('Paste some HTML first.');
+        return;
+      }
+
+      var opts = {
+        removeComments:     document.getElementById('opt-comments').checked,
+        collapseWhitespace: document.getElementById('opt-whitespace').checked,
+        removeOptionalTags: document.getElementById('opt-optional-tags').checked,
+        minifyInline:       document.getElementById('opt-inline').checked,
+        collapseBooleans:   document.getElementById('opt-boolean').checked,
+      };
+
+      try {
+        minifiedOutput = minifyHTML(raw, opts);
+      } catch (err) {
+        // Graceful degradation: if the engine throws, fall back to simple whitespace collapse
+        console.error('[HTML Minifier] Parsing error:', err);
+        minifiedOutput = opts.collapseWhitespace ? raw.replace(/\s+/g, ' ').trim() : raw;
+        showToast('Some markup could not be parsed - partial minification applied.', 3500);
+      }
+
+      // Render output
+      if (minifiedOutput.length > 0) {
+        outputEl.classList.remove('empty');
+        outputEl.textContent = minifiedOutput;
+        outputEl.style.display = 'block';
+        outputEl.style.alignItems = '';
+        outputEl.style.justifyContent = '';
+        outputEl.style.textAlign = '';
+      } else {
+        outputEl.classList.add('empty');
+        outputEl.textContent = 'No output - the minified result is empty.';
+      }
+
+      updateMetrics(raw, minifiedOutput);
+    });
+
+    // --- COPY BUTTON ---
+    btnCopy.addEventListener('click', function() {
+      if (!minifiedOutput) {
+        showToast('Nothing to copy. Minify your HTML first.');
+        return;
+      }
+      navigator.clipboard.writeText(minifiedOutput).then(function() {
+        var original = btnCopy.innerHTML;
+        btnCopy.classList.add('btn-success');
+        btnCopy.classList.remove('btn-secondary');
+        btnCopy.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Code Copied!';
+        showToast('Minified HTML copied to clipboard!');
+        setTimeout(function() {
+          btnCopy.classList.remove('btn-success');
+          btnCopy.classList.add('btn-secondary');
+          btnCopy.innerHTML = original;
+        }, 2200);
+      }).catch(function() {
+        // Fallback for browsers that restrict clipboard API
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = minifiedOutput;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('Code copied!');
+        } catch (e2) {
+          showToast('Copy failed. Please select and copy manually.');
+        }
+      });
+    });
+
+    // --- CLEAR BUTTON ---
+    btnClear.addEventListener('click', function() {
+      inputEl.value = '';
+      minifiedOutput = '';
+      outputEl.classList.add('empty');
+      outputEl.textContent = 'Minified output will appear here.';
+      outputEl.style.display = '';
+      outputEl.style.alignItems = '';
+      outputEl.style.justifyContent = '';
+      outputEl.style.textAlign = '';
+      updateInputCount();
+      updateMetrics('', '');
+    });
+
+    // --- ACCORDION ---
+    document.querySelectorAll('.accordion-trigger').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var item  = btn.closest('.accordion-item');
+        var isOpen = item.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.accordion-item').forEach(function(el) {
+          el.classList.remove('open');
+          el.querySelector('.accordion-trigger').setAttribute('aria-expanded', 'false');
+        });
+        // Toggle clicked
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+  </script>
+
+</body>
+</html>

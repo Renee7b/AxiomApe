@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Card Validator: Verify a Card Number's Structure With the Luhn Algorithm | AxiomApe</title>
+  <meta name="description" content="Free, instant, 100% private credit card number validator. Verify any card number's mathematical structure using the Luhn Algorithm (Modulus 10) right in your browser. No data is ever sent to a server." />
+  <meta name="keywords" content="credit card validator, Luhn algorithm, Modulus 10, card number checker, BIN lookup, IIN, card verification, developer tool, Stripe test cards, PayPal test cards" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://axiomape.com/credit-card-validator/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Credit Card Validator - Luhn Algorithm Checker | AxiomApe" />
+  <meta property="og:description" content="Instantly verify any credit card number's mathematical structure using the Luhn Algorithm. 100% private - runs entirely in your browser." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    /* ============================================================
+       ROOT VARIABLES - FinTech Workspace color palette
+    ============================================================ */
+    :root {
+      --bg-deep:       #0f172a;
+      --bg-mid:        #1e293b;
+      --bg-card:       #ffffff;
+      --accent-blue:   #2563eb;
+      --accent-light:  #3b82f6;
+      --accent-dark:   #1d4ed8;
+      --green:         #16a34a;
+      --green-light:   #dcfce7;
+      --red:           #dc2626;
+      --red-light:     #fee2e2;
+      --yellow:        #d97706;
+      --text-primary:  #0f172a;
+      --text-secondary:#475569;
+      --text-muted:    #94a3b8;
+      --border:        #e2e8f0;
+      --border-focus:  #2563eb;
+      --shadow-card:   0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+      --shadow-deep:   0 20px 40px rgba(0,0,0,.4);
+      --radius:        12px;
+      --radius-sm:     8px;
+      --font-sans:     'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono:     'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-nav {
+      text-align: center;
+      padding: 10px 20px;
+      background: var(--bg-mid);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .top-nav a {
+      color: #94a3b8;
+      font-size: .85rem;
+      letter-spacing: .05em;
+      font-weight: 600;
+      transition: color .2s;
+    }
+    .top-nav a:hover { color: #fff; text-decoration: none; }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 16px 60px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: #94a3b8;
+      font-size: .95rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - Standard Leaderboard (728x90)
+       Replace this div's contents with your Google AdSense code
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: rgba(255,255,255,.04);
+      border: 2px dashed rgba(255,255,255,.12);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #475569;
+      font-size: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    /* END AD PLACEHOLDER */
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .main-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-deep);
+      overflow: hidden;
+    }
+
+    /* ---- Card Header ---- */
+    .card-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+      padding: 28px 32px 24px;
+    }
+    .card-header-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .card-icon {
+      width: 48px; height: 48px;
+      background: rgba(255,255,255,.15);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .card-header h2 {
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .card-header p {
+      color: rgba(255,255,255,.7);
+      font-size: .82rem;
+      margin-top: 2px;
+    }
+
+    /* ---- Input Row ---- */
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+    .network-badge {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.3rem;
+      width: 28px;
+      text-align: center;
+      pointer-events: none;
+      transition: all .2s;
+    }
+    #cardInput {
+      width: 100%;
+      height: 58px;
+      padding: 0 16px 0 52px;
+      font-size: 1.35rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: .12em;
+      border: 2px solid rgba(255,255,255,.25);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    #cardInput::placeholder { color: rgba(255,255,255,.4); letter-spacing: .08em; font-size: 1rem; }
+    #cardInput:focus {
+      border-color: rgba(255,255,255,.7);
+      background: rgba(255,255,255,.18);
+    }
+    .btn-clear {
+      height: 58px;
+      padding: 0 20px;
+      background: rgba(255,255,255,.15);
+      border: 2px solid rgba(255,255,255,.25);
+      border-radius: var(--radius-sm);
+      color: rgba(255,255,255,.8);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .btn-clear:hover { background: rgba(255,255,255,.25); }
+
+    /* ---- Network Pill ---- */
+    .network-info {
+      margin-top: 10px;
+      min-height: 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .network-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.15);
+      border-radius: 100px;
+      padding: 3px 12px 3px 8px;
+      font-size: .78rem;
+      color: rgba(255,255,255,.9);
+      font-weight: 600;
+    }
+    .network-pill.hidden { display: none; }
+
+    /* ---- Card Body ---- */
+    .card-body { padding: 28px 32px; }
+
+    /* ============================================================
+       STATUS BANNER
+    ============================================================ */
+    .status-banner {
+      border-radius: var(--radius-sm);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      transition: all .3s;
+      background: #f1f5f9;
+      border: 2px solid var(--border);
+    }
+    .status-banner.valid {
+      background: var(--green-light);
+      border-color: #86efac;
+    }
+    .status-banner.invalid {
+      background: var(--red-light);
+      border-color: #fca5a5;
+    }
+    .status-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .status-text-wrap {}
+    .status-label {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+    .status-banner.valid  .status-label { color: var(--green); }
+    .status-banner.invalid .status-label { color: var(--red); }
+    .status-sub {
+      font-size: .82rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       CARD META INFO GRID
+    ============================================================ */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .meta-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .meta-label {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 4px;
+    }
+    .meta-value {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+    .meta-value.empty { color: var(--text-muted); font-family: var(--font-sans); font-weight: 400; font-size:.85rem; }
+
+    /* ============================================================
+       LUHN BREAKDOWN PANEL
+    ============================================================ */
+    .breakdown-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 14px 18px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      transition: background .2s;
+      text-align: left;
+    }
+    .breakdown-toggle:hover { background: #e2e8f0; }
+    .breakdown-toggle .chevron {
+      transition: transform .3s;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .breakdown-toggle.open .chevron { transform: rotate(180deg); }
+
+    .breakdown-panel {
+      display: none;
+      margin-top: 12px;
+    }
+    .breakdown-panel.open { display: block; }
+
+    .breakdown-intro {
+      font-size: .85rem;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding: 12px 16px;
+      background: #eff6ff;
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    /* Luhn table */
+    .luhn-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+    .luhn-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+    }
+    .luhn-table th {
+      background: var(--bg-mid);
+      color: #e2e8f0;
+      padding: 8px 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: .72rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .luhn-table td {
+      padding: 8px 12px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+    }
+    .luhn-table tr:nth-child(even) td { background: #f8fafc; }
+    .luhn-table .col-doubled { color: var(--accent-blue); font-weight: 700; }
+    .luhn-table .col-sum    { color: var(--green); font-weight: 700; }
+    .luhn-table .col-check  { background: #fef9c3 !important; font-weight: 800; }
+
+    .luhn-summary {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: .85rem;
+      line-height: 1.7;
+    }
+    .luhn-summary span { font-family: var(--font-mono); font-weight: 700; color: var(--accent-dark); }
+
+    /* ============================================================
+       TEST CARD SECTION
+    ============================================================ */
+    .section { margin-top: 40px; }
+    .section-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,.1);
+    }
+
+    .test-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .test-card-item {
+      background: var(--bg-mid);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .test-card-item:hover {
+      border-color: var(--accent-light);
+      background: rgba(37,99,235,.12);
+    }
+    .test-card-item:active { transform: scale(.98); }
+    .test-card-logo { font-size: 1.4rem; flex-shrink: 0; }
+    .test-card-info {}
+    .test-card-num {
+      font-family: var(--font-mono);
+      font-size: .9rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: .06em;
+    }
+    .test-card-label { font-size: .72rem; color: #64748b; margin-top: 1px; }
+    .test-card-copied {
+      margin-left: auto;
+      font-size: .7rem;
+      color: var(--green);
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .test-card-item.copied .test-card-copied { opacity: 1; }
+
+    /* ============================================================
+       EDUCATIONAL / SEO CONTENT
+    ============================================================ */
+    .edu-section {
+      margin-top: 48px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+    .edu-header {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      padding: 28px 32px;
+    }
+    .edu-header h2 {
+      color: #f1f5f9;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+    .edu-header p {
+      color: #64748b;
+      font-size: .85rem;
+      margin-top: 4px;
+    }
+    .edu-body { padding: 28px 32px; }
+
+    /* FAQ Accordions */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border: none;
+      cursor: pointer;
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: left;
+      transition: background .2s;
+    }
+    .faq-question:hover { background: #f1f5f9; }
+    .faq-question .faq-chevron { transition: transform .3s; color: var(--text-muted); flex-shrink: 0; }
+    .faq-question.open .faq-chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 16px 20px;
+      font-size: .88rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      border-top: 1px solid var(--border);
+    }
+    .faq-answer.open { display: block; }
+    .faq-answer p { margin-bottom: 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--text-primary); }
+    .faq-answer code {
+      font-family: var(--font-mono);
+      font-size: .82rem;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      margin-top: 40px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-left: 4px solid var(--accent-blue);
+      border-radius: var(--radius-sm);
+      padding: 20px 24px;
+    }
+    .disclaimer-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .9rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+    .disclaimer p {
+      font-size: .83rem;
+      color: #94a3b8;
+      line-height: 1.65;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      margin-top: 48px;
+      text-align: center;
+      padding: 24px 16px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: #64748b;
+      font-size: .82rem;
+      transition: color .2s;
+    }
+    .footer-links a:hover { color: #94a3b8; text-decoration: none; }
+    .footer-copy {
+      margin-top: 10px;
+      color: #334155;
+      font-size: .75rem;
+    }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 600px) {
+      .card-header, .card-body, .edu-body, .edu-header { padding: 20px 18px; }
+      .input-row { flex-direction: column; }
+      .btn-clear { height: 46px; }
+      #cardInput { height: 54px; font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP NAV - Back link to main site
+  ============================================================ -->
+  <nav class="top-nav" aria-label="Site navigation">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- ============================================================
+       MAIN PAGE WRAPPER
+  ============================================================ -->
+  <main class="page-wrapper">
+
+    <!-- Page Title -->
+    <header class="page-header">
+      <h1>Credit Card Validator</h1>
+      <p>Verify any card number's mathematical structure instantly using the Luhn Algorithm. 100% private - runs entirely in your browser.</p>
+    </header>
+
+    <!-- ============================================================
+         AD PLACEHOLDER - Leaderboard (728x90)
+         Replace the inner content with your Google AdSense snippet.
+         Example:
+           <script async src="https://pagead2.googlesyndication.com/..."></script>
+           <ins class="adsbygoogle" ...></ins>
+    ============================================================ -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement - 728 x 90 Leaderboard
+    </div>
+    <!-- END AD PLACEHOLDER -->
+
+    <!-- ============================================================
+         MAIN TOOL CARD
+    ============================================================ -->
+    <div class="main-card" role="main">
+
+      <!-- Blue Header with Input -->
+      <div class="card-header">
+        <div class="card-header-top">
+          <div class="card-icon" aria-hidden="true">💳</div>
+          <div>
+            <h2>Card Number Validator</h2>
+            <p>Enter or paste any card number below - spaces and hyphens are stripped automatically</p>
+          </div>
+        </div>
+
+        <!-- Input Row -->
+        <div class="input-row">
+          <div class="input-wrapper">
+            <!-- Network icon updates live as user types -->
+            <span class="network-badge" id="networkBadge" aria-hidden="true">🔢</span>
+            <input
+              type="text"
+              id="cardInput"
+              inputmode="numeric"
+              autocomplete="cc-number"
+              placeholder="4111 1111 1111 1111"
+              maxlength="23"
+              spellcheck="false"
+              aria-label="Enter credit card number"
+            />
+          </div>
+          <button class="btn-clear" id="btnClear" aria-label="Clear input">Clear</button>
+        </div>
+
+        <!-- Live network detection pill -->
+        <div class="network-info" aria-live="polite">
+          <span class="network-pill hidden" id="networkPill">
+            <span id="networkPillIcon" aria-hidden="true"></span>
+            <span id="networkPillName"></span>
+          </span>
+          <span id="digitCount" style="font-size:.75rem;color:rgba(255,255,255,.45);"></span>
+        </div>
+      </div>
+
+      <!-- White Card Body -->
+      <div class="card-body">
+
+        <!-- ====================================================
+             STATUS BANNER
+        ==================================================== -->
+        <div class="status-banner" id="statusBanner" role="status" aria-live="polite">
+          <div class="status-icon" id="statusIcon">🔷</div>
+          <div class="status-text-wrap">
+            <div class="status-label" id="statusLabel">Awaiting Input</div>
+            <div class="status-sub" id="statusSub">Enter a card number above to begin validation</div>
+          </div>
+        </div>
+
+        <!-- ====================================================
+             META INFO BOXES
+        ==================================================== -->
+        <div class="meta-grid" id="metaGrid" aria-label="Card details">
+          <div class="meta-box">
+            <div class="meta-label">Network / Issuer</div>
+            <div class="meta-value empty" id="metaNetwork">-</div>
+          </div>
+          <div class="meta-box">
+            <div class="meta-label">Digits Entered</div>
+            <div class="meta-value empty" id="metaLength">0</div>
+          </div>
+          <div class="meta-box">
+            <div class="meta-label">BIN / IIN (First 6)</div>
+            <div class="meta-value empty" id="metaBin">-</div>
+          </div>
+          <div class="meta-box">
+            <div class="meta-label">Check Digit (Last)</div>
+            <div class="meta-value empty" id="metaCheck">-</div>
+          </div>
+        </div>
+
+        <!-- ====================================================
+             LUHN BREAKDOWN PANEL (Collapsible)
+        ==================================================== -->
+        <button class="breakdown-toggle" id="breakdownToggle" aria-expanded="false" aria-controls="breakdownPanel">
+          <span>&#128202; How it Works: Luhn Algorithm Step-by-Step Breakdown</span>
+          <span class="chevron" aria-hidden="true">&#9660;</span>
+        </button>
+
+        <div class="breakdown-panel" id="breakdownPanel" aria-hidden="true">
+          <div class="breakdown-intro">
+            The <strong>Luhn Algorithm</strong> (also called <strong>Modulus 10</strong> or <strong>Mod 10</strong>) is a simple checksum formula invented by IBM scientist Hans Peter Luhn in 1954. Starting from the <em>rightmost digit</em> (the Check Digit), every second digit moving left is doubled. If doubling produces a number greater than 9, subtract 9. All digits are then summed. If the total is divisible by 10 (i.e., total mod 10 = 0), the number passes the Luhn check.
+          </div>
+          <div class="luhn-table-wrap">
+            <table class="luhn-table" id="luhnTable" aria-label="Luhn algorithm step-by-step">
+              <thead>
+                <tr>
+                  <th>Position (R to L)</th>
+                  <th>Original Digit</th>
+                  <th>Action</th>
+                  <th class="col-doubled">Result</th>
+                  <th class="col-sum">Digit Sum</th>
+                </tr>
+              </thead>
+              <tbody id="luhnTableBody">
+                <tr><td colspan="5" style="color:#94a3b8;font-family:var(--font-sans);">Enter a number above to see the calculation.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="luhn-summary" id="luhnSummary">
+            Enter a card number to see the full calculation summary.
+          </div>
+        </div>
+
+      </div><!-- /card-body -->
+    </div><!-- /main-card -->
+
+    <!-- ============================================================
+         TEST CARD NUMBERS
+    ============================================================ -->
+    <section class="section" aria-label="Test card numbers">
+      <div class="section-title">Common Test Card Numbers - Click to Load</div>
+      <div class="test-card-grid" id="testCardGrid">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- ============================================================
+         EDUCATIONAL / SEO CONTENT
+    ============================================================ -->
+    <section class="edu-section" aria-label="Educational content about the Luhn Algorithm">
+      <div class="edu-header">
+        <h2>The Complete Guide to Credit Card Validation and the Luhn Algorithm</h2>
+        <p>Everything developers, QA engineers, and curious users need to know</p>
+      </div>
+      <div class="edu-body">
+
+        <div class="faq-item">
+          <button class="faq-question" data-faq="0" aria-expanded="false">
+            What is the Luhn Algorithm and why was it invented?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-0">
+            <p>The <strong>Luhn Algorithm</strong> - also formally known as the <strong>Modulus 10</strong> (or Mod 10) algorithm - was created by Hans Peter Luhn, a computer scientist at IBM, in 1954. Luhn's original goal was straightforward: design a fast, simple mathematical formula that could detect the most common type of data-entry error, a single mistyped digit, without requiring access to a database.</p>
+            <p>The algorithm was patented by IBM but was quickly placed into the public domain, allowing it to be freely adopted across industries. Today it is the universal standard for validating not just credit card numbers, but also IMEI numbers on mobile phones, Canadian Social Insurance Numbers, and many other identification codes that require a built-in self-check.</p>
+            <p>The core insight is elegant: by encoding a <strong>check digit</strong> (the last digit of every card number) based on all the preceding digits, any system can instantly verify whether a number is plausibly valid before even contacting a bank. This prevents simple typos from generating unnecessary and expensive bank authorization attempts. It is worth emphasizing that Luhn validation is a <em>mathematical filter</em>, not a security measure. A randomly generated number that passes the Luhn check is still completely fake and useless for any real transaction.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" data-faq="1" aria-expanded="false">
+            What is the difference between Luhn validation and actual bank authorization?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-1">
+            <p>This is the most critical distinction for any developer or merchant to understand. <strong>Luhn validation</strong> only checks whether a number's digits follow the correct mathematical pattern. It answers one narrow question: "Is this sequence of digits structurally possible for a payment card?" It says nothing about whether that card account exists, has sufficient funds, has not expired, has not been reported stolen, or has not been frozen.</p>
+            <p><strong>Bank authorization</strong> (also called a payment authorization or auth) is an entirely separate process. When a merchant submits a transaction, the payment gateway (such as Stripe or Braintree) encrypts the card data and sends it through the card network (Visa, Mastercard, etc.) directly to the cardholder's issuing bank. The bank checks the account in real time against its live records and returns an approval or a decline code. This process typically takes under two seconds but involves multiple secure server-to-server calls across multiple organizations.</p>
+            <p>In a production eCommerce system, a smart implementation runs Luhn validation <em>client-side</em> (in the browser, instantly, as the user types) to catch obvious typos before the form is even submitted. This improves user experience and reduces wasted API calls. The actual bank authorization is then handled <em>server-side</em> (or via a tokenized client-side SDK like Stripe.js) after the user submits the form. Think of Luhn validation as the bouncer at the front door checking if a guest is on the list - it is fast but only a first filter. The bank is the final authority inside.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" data-faq="2" aria-expanded="false">
+            How do the first digits identify the card network? (BIN and IIN explained)
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-2">
+            <p>Every payment card number is structured according to the <strong>ISO/IEC 7812</strong> standard. The leading digits of a card number are not random - they encode metadata about the issuer and network. The first 6 digits are called the <strong>BIN (Bank Identification Number)</strong> or, using newer terminology, the <strong>IIN (Issuer Identification Number)</strong>. The IIN term is preferred by modern standards bodies because it is more accurate: the prefix identifies the issuing institution, which may or may not be a traditional bank (it could be a credit union, a prepaid card provider, a fintech company, etc.).</p>
+            <p>The very first digit of a card is called the <strong>MII (Major Industry Identifier)</strong> and gives a broad category. For example, <code>4</code> indicates banking and financial services (which is why all Visa cards start with 4). The BIN/IIN lookup logic used in this tool follows the well-known public detection rules: <strong>Visa</strong> starts with <code>4</code> (16 digits). <strong>Mastercard</strong> starts with <code>51-55</code> or <code>2221-2720</code> (16 digits). <strong>American Express</strong> starts with <code>34</code> or <code>37</code> (15 digits). <strong>Discover</strong> starts with <code>6011</code>, <code>622126-622925</code>, <code>644-649</code>, or <code>65</code> (16 digits). <strong>JCB</strong> starts with <code>3528-3589</code>. <strong>Diners Club</strong> starts with <code>300-305</code> or <code>36</code>.</p>
+            <p>Full BIN database lookups (which map a BIN to a specific bank, card type like debit or credit, country of issuance, and card level like Platinum or Signature) require subscriptions to commercial BIN databases maintained by the networks. This tool uses the publicly known prefix rules only, which are sufficient for identifying the network in real time.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" data-faq="3" aria-expanded="false">
+            Why is it safe to type card numbers into this specific browser tool?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-3">
+            <p>This is an entirely legitimate concern and you are right to ask it before using any online tool that handles payment data. The answer here is architectural: this tool is built as a <strong>static HTML/JavaScript page</strong> that runs entirely inside your own web browser. There is no backend server, no API call, and no network request of any kind triggered when you type a number into the input field.</p>
+            <p>You can verify this yourself using your browser's built-in developer tools. Open the Network tab in DevTools (F12), then type a card number. You will see zero outgoing requests. Every calculation - the Luhn check, the BIN detection, the step-by-step breakdown - is performed by JavaScript code that was downloaded to your device when the page first loaded and then executes locally, in memory, in your browser's sandboxed JavaScript environment.</p>
+            <p>Additionally, best security practice recommends using <strong>test card numbers</strong> (like those listed in the section below) rather than real card numbers when testing any tool of this nature. Test numbers are mathematically valid (they pass the Luhn check) but are not tied to any real account and cannot be used to conduct transactions. Real card numbers should only ever be entered into payment forms served by a PCI-DSS-compliant payment processor using tokenization (like Stripe.js or Braintree.js), which encrypts the number before it even leaves your browser.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" data-faq="4" aria-expanded="false">
+            How is this tool useful for developers and QA engineers?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-4">
+            <p>For <strong>frontend developers</strong> building checkout forms, this tool is a quick sanity check while writing or debugging client-side card validation logic. You can paste a number and instantly confirm whether your own implementation would accept or reject it, and compare against the step-by-step breakdown to find where your logic diverges from the standard Luhn spec.</p>
+            <p>For <strong>QA engineers and testers</strong>, the test card section below provides a curated list of standard test numbers from major payment gateways (Stripe, PayPal). These numbers will pass Luhn validation and are recognized by sandbox/test environments, but they will always be declined in production. Running them through this tool before a testing session ensures they still check out structurally.</p>
+            <p>For <strong>backend developers</strong> and security engineers, this tool illustrates why Luhn validation alone is never sufficient as a fraud prevention measure. Any fraudster knows the Luhn algorithm and can generate valid-looking numbers programmatically. Robust fraud prevention requires velocity checks, address verification (AVS), card security code verification (CVV/CVC), 3-D Secure authentication (Visa Secure, Mastercard Identity Check), and machine-learning-based risk scoring, all of which happen at the payment processor level after the Luhn pre-filter passes.</p>
+          </div>
+        </div>
+
+      </div><!-- /edu-body -->
+    </section>
+
+    <!-- ============================================================
+         DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer" role="complementary" aria-label="Privacy and legal disclaimer">
+      <div class="disclaimer-title">
+        <span aria-hidden="true">🔒</span> Total Privacy Guarantee
+      </div>
+      <p>This validator operates 100% locally in your web browser. We do not save, log, or transmit the numbers you enter. This tool only verifies the mathematical structure of the number (Luhn check); it does not check if the card is active, has funds, or is authorized by a bank. For testing purposes, always prefer the standard test numbers listed above rather than real card numbers.</p>
+    </div>
+
+  </main><!-- /page-wrapper -->
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="footer-copy">&copy; <span id="footerYear"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    /* ============================================================
+       CONFIGURATION: Card Networks
+       Each entry defines how to detect a card type from its prefix.
+       ranges: array of objects with start/end (inclusive) prefix ranges
+       lengths: accepted total digit lengths
+       icon: emoji used as a quick visual identifier
+    ============================================================ */
+    const NETWORKS = [
+      {
+        name: 'American Express',
+        shortName: 'Amex',
+        icon: '🟦',
+        color: '#007bc1',
+        lengths: [15],
+        prefixTest: (d) => d.startsWith('34') || d.startsWith('37')
+      },
+      {
+        name: 'Mastercard',
+        shortName: 'Mastercard',
+        icon: '🔴',
+        color: '#eb001b',
+        lengths: [16],
+        prefixTest: (d) => {
+          if (d.length < 2) return false;
+          const p2 = parseInt(d.substring(0, 2), 10);
+          if (p2 >= 51 && p2 <= 55) return true;
+          if (d.length >= 4) {
+            const p4 = parseInt(d.substring(0, 4), 10);
+            if (p4 >= 2221 && p4 <= 2720) return true;
+          }
+          return false;
+        }
+      },
+      {
+        name: 'Visa',
+        shortName: 'Visa',
+        icon: '🔵',
+        color: '#1a1f71',
+        lengths: [13, 16, 19],
+        prefixTest: (d) => d.startsWith('4')
+      },
+      {
+        name: 'Discover',
+        shortName: 'Discover',
+        icon: '🟠',
+        color: '#ff6600',
+        lengths: [16, 19],
+        prefixTest: (d) => {
+          if (d.startsWith('6011') || d.startsWith('65')) return true;
+          if (d.length >= 3) {
+            const p3 = parseInt(d.substring(0, 3), 10);
+            if (p3 >= 644 && p3 <= 649) return true;
+          }
+          if (d.length >= 6) {
+            const p6 = parseInt(d.substring(0, 6), 10);
+            if (p6 >= 622126 && p6 <= 622925) return true;
+          }
+          return false;
+        }
+      },
+      {
+        name: 'JCB',
+        shortName: 'JCB',
+        icon: '🟩',
+        color: '#003087',
+        lengths: [16],
+        prefixTest: (d) => {
+          if (d.length < 4) return false;
+          const p4 = parseInt(d.substring(0, 4), 10);
+          return p4 >= 3528 && p4 <= 3589;
+        }
+      },
+      {
+        name: 'Diners Club',
+        shortName: 'Diners',
+        icon: '⚫',
+        color: '#004b87',
+        lengths: [14],
+        prefixTest: (d) => {
+          if (d.startsWith('36')) return true;
+          if (d.length >= 3) {
+            const p3 = parseInt(d.substring(0, 3), 10);
+            if (p3 >= 300 && p3 <= 305) return true;
+          }
+          return false;
+        }
+      },
+      {
+        name: 'UnionPay',
+        shortName: 'UnionPay',
+        icon: '🔴',
+        color: '#c0252d',
+        lengths: [16, 17, 18, 19],
+        prefixTest: (d) => d.startsWith('62') && !d.startsWith('6211')
+      }
+    ];
+
+    /* ============================================================
+       TEST CARD DATA
+       Source: Stripe and PayPal standard test cards (public documentation)
+    ============================================================ */
+    const TEST_CARDS = [
+      { num: '4242424242424242', network: 'Visa',       icon: '🔵', label: 'Stripe test - Generic Visa' },
+      { num: '4000056655665556', network: 'Visa',       icon: '🔵', label: 'Stripe test - Visa Debit' },
+      { num: '5555555555554444', network: 'Mastercard', icon: '🔴', label: 'Stripe test - Generic Mastercard' },
+      { num: '5200828282828210', network: 'Mastercard', icon: '🔴', label: 'Stripe test - Mastercard Debit' },
+      { num: '378282246310005',  network: 'Amex',       icon: '🟦', label: 'Stripe test - American Express' },
+      { num: '371449635398431',  network: 'Amex',       icon: '🟦', label: 'Stripe test - Amex (alt)' },
+      { num: '6011111111111117', network: 'Discover',   icon: '🟠', label: 'Stripe test - Discover' },
+      { num: '3530111333300000', network: 'JCB',        icon: '🟩', label: 'Stripe test - JCB' },
+      { num: '4111111111111111', network: 'Visa',       icon: '🔵', label: 'Generic Visa (widely used)' },
+      { num: '5105105105105100', network: 'Mastercard', icon: '🔴', label: 'Generic Mastercard (widely used)' },
+    ];
+
+    /* ============================================================
+       LUHN ALGORITHM
+       Returns: { valid: bool, total: number, steps: array }
+       steps[i] = { position, original, doubled, digitSum, action }
+    ============================================================ */
+    function luhnCheck(numStr) {
+      if (!numStr || numStr.length === 0) return { valid: false, total: 0, steps: [] };
+
+      const digits = numStr.split('').map(Number);
+      const steps = [];
+      let total = 0;
+      const len = digits.length;
+
+      // Traverse right-to-left (position 1 = rightmost = check digit)
+      for (let i = 0; i < len; i++) {
+        const posFromRight = i + 1;              // 1-based, 1 = rightmost
+        const digit = digits[len - 1 - i];       // actual digit at this position
+        let result = digit;
+        let action = 'Keep as-is';
+        let doubled = null;
+
+        if (posFromRight % 2 === 0) {
+          // Every second digit from the right gets doubled
+          doubled = digit * 2;
+          action = `Double (${digit} x 2 = ${doubled})`;
+          if (doubled > 9) {
+            result = doubled - 9;
+            action += `, subtract 9 (${doubled} - 9 = ${result})`;
+          } else {
+            result = doubled;
+          }
+        }
+
+        total += result;
+        steps.push({
+          posFromRight,
+          original: digit,
+          doubled,
+          digitSum: result,
+          action
+        });
+      }
+
+      return {
+        valid: total % 10 === 0,
+        total,
+        remainder: total % 10,
+        steps
+      };
+    }
+
+    /* ============================================================
+       NETWORK DETECTION
+       Returns the matching NETWORKS entry or null
+    ============================================================ */
+    function detectNetwork(numStr) {
+      if (!numStr || numStr.length === 0) return null;
+      for (const net of NETWORKS) {
+        if (net.prefixTest(numStr)) return net;
+      }
+      return null;
+    }
+
+    /* ============================================================
+       FORMAT digit string with spaces (groups of 4, or 4-6-5 for Amex)
+    ============================================================ */
+    function formatDisplay(numStr, network) {
+      if (!numStr) return '';
+      if (network && network.shortName === 'Amex') {
+        // Amex: 4-6-5
+        return [numStr.slice(0,4), numStr.slice(4,10), numStr.slice(10,15)]
+          .filter(Boolean).join(' ');
+      }
+      return numStr.match(/.{1,4}/g)?.join(' ') || numStr;
+    }
+
+    /* ============================================================
+       DOM REFERENCES
+    ============================================================ */
+    const cardInput        = document.getElementById('cardInput');
+    const networkBadge     = document.getElementById('networkBadge');
+    const networkPill      = document.getElementById('networkPill');
+    const networkPillIcon  = document.getElementById('networkPillIcon');
+    const networkPillName  = document.getElementById('networkPillName');
+    const digitCount       = document.getElementById('digitCount');
+    const statusBanner     = document.getElementById('statusBanner');
+    const statusIcon       = document.getElementById('statusIcon');
+    const statusLabel      = document.getElementById('statusLabel');
+    const statusSub        = document.getElementById('statusSub');
+    const metaNetwork      = document.getElementById('metaNetwork');
+    const metaLength       = document.getElementById('metaLength');
+    const metaBin          = document.getElementById('metaBin');
+    const metaCheck        = document.getElementById('metaCheck');
+    const breakdownToggle  = document.getElementById('breakdownToggle');
+    const breakdownPanel   = document.getElementById('breakdownPanel');
+    const luhnTableBody    = document.getElementById('luhnTableBody');
+    const luhnSummary      = document.getElementById('luhnSummary');
+    const btnClear         = document.getElementById('btnClear');
+    const testCardGrid     = document.getElementById('testCardGrid');
+
+    /* ============================================================
+       UPDATE UI - Called on every keystroke
+    ============================================================ */
+    function updateUI(rawValue) {
+      /* --- Sanitize: strip spaces, hyphens, non-digits --- */
+      const digits = rawValue.replace(/[\s\-]/g, '').replace(/\D/g, '');
+
+      /* --- Network Detection --- */
+      const network = detectNetwork(digits);
+
+      /* --- Update network badge (icon in input) --- */
+      networkBadge.textContent = network ? network.icon : '🔢';
+
+      /* --- Update network pill below input --- */
+      if (network && digits.length > 0) {
+        networkPillIcon.textContent = network.icon;
+        networkPillName.textContent = network.name;
+        networkPill.classList.remove('hidden');
+      } else {
+        networkPill.classList.add('hidden');
+      }
+
+      /* --- Digit count label --- */
+      digitCount.textContent = digits.length > 0 ? `${digits.length} digit${digits.length !== 1 ? 's' : ''} entered` : '';
+
+      /* --- Meta boxes --- */
+      metaLength.textContent = digits.length || '0';
+      metaLength.className = 'meta-value' + (digits.length === 0 ? ' empty' : '');
+
+      if (network) {
+        metaNetwork.textContent = network.name;
+        metaNetwork.className = 'meta-value';
+      } else {
+        metaNetwork.textContent = digits.length > 0 ? 'Unknown' : '-';
+        metaNetwork.className = 'meta-value' + (digits.length === 0 ? ' empty' : '');
+      }
+
+      if (digits.length >= 6) {
+        metaBin.textContent = digits.substring(0, 6);
+        metaBin.className = 'meta-value';
+      } else {
+        metaBin.textContent = '-';
+        metaBin.className = 'meta-value empty';
+      }
+
+      if (digits.length >= 1) {
+        metaCheck.textContent = digits[digits.length - 1];
+        metaCheck.className = 'meta-value';
+      } else {
+        metaCheck.textContent = '-';
+        metaCheck.className = 'meta-value empty';
+      }
+
+      /* --- Handle empty state --- */
+      if (digits.length === 0) {
+        setStatus('idle', '🔷', 'Awaiting Input', 'Enter a card number above to begin validation');
+        clearBreakdown();
+        return;
+      }
+
+      /* --- Need at least a few digits to validate meaningfully --- */
+      if (digits.length < 8) {
+        setStatus('idle', '⌨️', 'Keep Typing...', `${digits.length} digit${digits.length !== 1 ? 's' : ''} entered - standard cards are 13 to 19 digits`);
+        clearBreakdown();
+        return;
+      }
+
+      /* --- Run Luhn Check --- */
+      const result = luhnCheck(digits);
+
+      if (result.valid) {
+        const netMsg = network ? ` Detected network: ${network.name}.` : '';
+        setStatus('valid', '✅', 'Mathematically Valid', `This number passes the Luhn Algorithm (Mod 10) check.${netMsg} Note: this does not confirm the card is real or active.`);
+      } else {
+        setStatus('invalid', '❌', 'Invalid Structure', `This number fails the Luhn Algorithm check (total sum mod 10 = ${result.remainder}, not 0). It may contain a typo, or it is not a valid card number format.`);
+      }
+
+      /* --- Populate Luhn breakdown table --- */
+      buildBreakdownTable(result, digits);
+    }
+
+    /* ============================================================
+       SET STATUS BANNER APPEARANCE
+    ============================================================ */
+    function setStatus(type, icon, label, sub) {
+      statusBanner.className = 'status-banner' + (type === 'valid' ? ' valid' : type === 'invalid' ? ' invalid' : '');
+      statusIcon.textContent = icon;
+      statusLabel.textContent = label;
+      statusSub.textContent = sub;
+    }
+
+    /* ============================================================
+       BUILD LUHN STEP-BY-STEP TABLE
+    ============================================================ */
+    function buildBreakdownTable(result, digits) {
+      const rows = result.steps.map((step, idx) => {
+        const isCheckDigit = step.posFromRight === 1;
+        const isDoubled = step.posFromRight % 2 === 0;
+        return `
+          <tr${isCheckDigit ? ' class="col-check"' : ''}>
+            <td>${step.posFromRight}${isCheckDigit ? ' (check)' : ''}</td>
+            <td>${step.original}</td>
+            <td style="font-size:.78rem;color:var(--text-secondary);font-family:var(--font-sans);">${step.action}</td>
+            <td class="${isDoubled ? 'col-doubled' : ''}">${step.digitSum}</td>
+            <td class="col-sum">+${step.digitSum}</td>
+          </tr>
+        `;
+      });
+
+      luhnTableBody.innerHTML = rows.join('');
+
+      /* Summary line */
+      luhnSummary.innerHTML = `
+        <strong>Grand Total of all digit sums:</strong> <span>${result.total}</span><br>
+        <strong>Modulo 10 check:</strong> <span>${result.total}</span> mod 10 = <span>${result.remainder}</span>
+        &nbsp;&rarr;&nbsp;
+        ${result.valid
+          ? `<span style="color:var(--green);font-weight:800;">0 - VALID (divisible by 10)</span>`
+          : `<span style="color:var(--red);font-weight:800;">${result.remainder} - INVALID (not divisible by 10)</span>`
+        }<br>
+        <span style="font-size:.78rem;color:var(--text-muted);">
+          Digits analyzed: <span>${digits}</span> &nbsp;|&nbsp; Total digits: <span>${digits.length}</span>
+        </span>
+      `;
+    }
+
+    /* ============================================================
+       CLEAR BREAKDOWN
+    ============================================================ */
+    function clearBreakdown() {
+      luhnTableBody.innerHTML = '<tr><td colspan="5" style="color:#94a3b8;font-family:var(--font-sans);">Enter a number above to see the calculation.</td></tr>';
+      luhnSummary.textContent = 'Enter a card number to see the full calculation summary.';
+    }
+
+    /* ============================================================
+       INPUT EVENT LISTENER
+       Strips non-digit chars on every keystroke, then re-runs UI update
+    ============================================================ */
+    cardInput.addEventListener('input', function() {
+      /* Keep cursor position sane after sanitization */
+      const cursorPos = this.selectionStart;
+      const rawBefore = this.value;
+      const cleanDigits = rawBefore.replace(/\D/g, '');
+
+      /* Detect the current network for formatting */
+      const network = detectNetwork(cleanDigits);
+
+      /* Format with spaces for readability */
+      const formatted = formatDisplay(cleanDigits, network);
+
+      /* Only update value if it changed (avoids cursor-jump in some browsers) */
+      if (this.value !== formatted) {
+        this.value = formatted;
+      }
+
+      updateUI(this.value);
+    });
+
+    /* Also handle paste events */
+    cardInput.addEventListener('paste', function() {
+      /* Let the default paste happen, then sanitize on next tick */
+      setTimeout(() => {
+        const digits = this.value.replace(/\D/g, '');
+        const network = detectNetwork(digits);
+        this.value = formatDisplay(digits, network);
+        updateUI(this.value);
+      }, 0);
+    });
+
+    /* ============================================================
+       CLEAR BUTTON
+    ============================================================ */
+    btnClear.addEventListener('click', () => {
+      cardInput.value = '';
+      cardInput.focus();
+      updateUI('');
+    });
+
+    /* ============================================================
+       BREAKDOWN TOGGLE (accordion)
+    ============================================================ */
+    breakdownToggle.addEventListener('click', () => {
+      const isOpen = breakdownPanel.classList.contains('open');
+      breakdownPanel.classList.toggle('open');
+      breakdownToggle.classList.toggle('open');
+      breakdownToggle.setAttribute('aria-expanded', String(!isOpen));
+      breakdownPanel.setAttribute('aria-hidden', String(isOpen));
+    });
+
+    /* ============================================================
+       BUILD TEST CARD GRID
+    ============================================================ */
+    TEST_CARDS.forEach(card => {
+      const item = document.createElement('div');
+      item.className = 'test-card-item';
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label', `Load test card: ${card.num} (${card.label})`);
+      item.innerHTML = `
+        <span class="test-card-logo" aria-hidden="true">${card.icon}</span>
+        <div class="test-card-info">
+          <div class="test-card-num">${card.num.match(/.{1,4}/g).join(' ')}</div>
+          <div class="test-card-label">${card.label}</div>
+        </div>
+        <span class="test-card-copied" aria-live="polite">Loaded!</span>
+      `;
+
+      const loadCard = () => {
+        /* Load the number into the input and run validation */
+        const network = detectNetwork(card.num);
+        cardInput.value = formatDisplay(card.num, network);
+        updateUI(cardInput.value);
+
+        /* Scroll to top of tool */
+        document.querySelector('.main-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        /* Flash "Loaded!" indicator */
+        item.classList.add('copied');
+        setTimeout(() => item.classList.remove('copied'), 1800);
+      };
+
+      item.addEventListener('click', loadCard);
+      item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadCard(); } });
+
+      testCardGrid.appendChild(item);
+    });
+
+    /* ============================================================
+       FAQ ACCORDIONS
+    ============================================================ */
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = btn.dataset.faq;
+        const answer = document.getElementById(`faq-${idx}`);
+        const isOpen = answer.classList.contains('open');
+
+        /* Close all others */
+        document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+        document.querySelectorAll('.faq-question').forEach(b => {
+          b.classList.remove('open');
+          b.setAttribute('aria-expanded', 'false');
+        });
+
+        if (!isOpen) {
+          answer.classList.add('open');
+          btn.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    /* ============================================================
+       FOOTER YEAR - keeps copyright current automatically
+    ============================================================ */
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+    /* ============================================================
+       INITIAL STATE
+    ============================================================ */
+    updateUI('');
+  </script>
+
+</body>
+</html>

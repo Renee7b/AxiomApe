@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Count - Real-Time Count of Words, Characters, Sentences, and Reading Time | AxiomApe</title>
+  <meta name="description" content="Free real-time word counter. Instantly count words, characters, sentences, paragraphs, reading time, speaking time, and keyword density. No data is stored or transmitted." />
+  <meta name="robots" content="index, follow" />
+
+  <style>
+    /* ============================================================
+       GLOBAL RESET AND BASE STYLES
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --color-primary:    #1e3a5f;   /* deep navy blue */
+      --color-primary-light: #2a5298;
+      --color-accent:     #3b82f6;
+      --color-bg:         #f0f2f5;
+      --color-card:       #ffffff;
+      --color-border:     #e2e6ea;
+      --color-text:       #1a202c;
+      --color-text-muted: #718096;
+      --color-success:    #22c55e;
+      --shadow-sm:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md:        0 4px 16px rgba(0,0,0,.10);
+      --shadow-lg:        0 8px 32px rgba(0,0,0,.12);
+      --radius:           10px;
+      --radius-sm:        6px;
+      --font-main:        'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: var(--color-accent);
+    }
+
+    /* ============================================================
+       TOP NAV BAR
+       ============================================================ */
+    .top-nav {
+      background: var(--color-primary);
+      text-align: center;
+      padding: 10px 20px;
+    }
+
+    .top-nav a {
+      color: #a8c4e8;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .top-nav a:hover {
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+       ============================================================ */
+    .page-header {
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+      color: white;
+      text-align: center;
+      padding: 40px 20px 36px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      opacity: 0.85;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       MAIN LAYOUT WRAPPER
+       ============================================================ */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .main-wrapper {
+      padding: 32px 20px 48px;
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - LEADERBOARD (728x90)
+       Top of primary card framework, reserved for Google AdSense.
+       Replace the inner content with your AdSense <ins> tag.
+       ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      min-height: 90px;
+      margin: 0 auto 28px;
+      background: #f7f8fa;
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       METRICS DASHBOARD - TOP STRIP
+       ============================================================ */
+    .metrics-dashboard {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 860px) {
+      .metrics-dashboard {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .metrics-dashboard {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .metric-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 18px 14px 16px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .metric-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      line-height: 1;
+      margin-bottom: 6px;
+      letter-spacing: -0.03em;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ============================================================
+       TWO-COLUMN LAYOUT: TEXTAREA + SIDEBAR
+       ============================================================ */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       TEXTAREA CARD
+       ============================================================ */
+    .editor-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+      background: #fafbfc;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .editor-toolbar-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .toolbar-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-light);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--color-text-muted);
+      border-color: var(--color-border);
+    }
+
+    .btn-outline:hover {
+      background: #f0f2f5;
+      color: var(--color-text);
+    }
+
+    /* The copy button shows a brief "Copied!" state */
+    .btn-copy.copied {
+      background: var(--color-success);
+      color: #fff;
+      border-color: var(--color-success);
+    }
+
+    #main-textarea {
+      width: 100%;
+      min-height: 380px;
+      padding: 20px;
+      border: none;
+      outline: none;
+      resize: vertical;
+      font-family: var(--font-main);
+      font-size: 1rem;
+      line-height: 1.75;
+      color: var(--color-text);
+      background: var(--color-card);
+    }
+
+    #main-textarea::placeholder {
+      color: #b0bcc8;
+    }
+
+    /* ============================================================
+       SIDEBAR PANEL
+       ============================================================ */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+    }
+
+    .panel-card h3 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--color-primary);
+      display: inline-block;
+    }
+
+    /* Reading and Speaking time rows */
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f2f5;
+    }
+
+    .time-row:last-child {
+      border-bottom: none;
+    }
+
+    .time-label {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+
+    .time-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    /* Tooltip-style explanation tags */
+    .explain-tag {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.4;
+    }
+
+    /* Keyword density list */
+    .keyword-list {
+      list-style: none;
+    }
+
+    .keyword-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 0.9rem;
+    }
+
+    .keyword-item:last-child {
+      border-bottom: none;
+    }
+
+    .keyword-word {
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .keyword-badge {
+      background: var(--color-primary);
+      color: white;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .keyword-empty {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+
+    /* Explanation note inside panel */
+    .panel-note {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      margin-top: 10px;
+      line-height: 1.5;
+      border-top: 1px solid var(--color-border);
+      padding-top: 10px;
+    }
+
+    /* ============================================================
+       DISCLAIMER BANNER
+       ============================================================ */
+    .disclaimer {
+      background: #eef4ff;
+      border: 1px solid #bdd4f5;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-top: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .disclaimer-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .disclaimer p {
+      font-size: 0.88rem;
+      color: #2a4a7f;
+      line-height: 1.55;
+    }
+
+    .disclaimer strong {
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       SEO EDUCATIONAL CONTENT SECTION
+       ============================================================ */
+    .seo-section {
+      margin-top: 56px;
+      padding-top: 48px;
+      border-top: 2px solid var(--color-border);
+    }
+
+    .seo-section h2 {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      font-weight: 800;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .seo-section .section-intro {
+      font-size: 1rem;
+      color: var(--color-text-muted);
+      margin-bottom: 36px;
+      max-width: 720px;
+    }
+
+    /* FAQ accordion */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 860px;
+    }
+
+    .faq-item {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 18px 20px;
+      font-family: var(--font-main);
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+
+    .faq-question:hover {
+      background: #f7f9fc;
+    }
+
+    .faq-chevron {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.25s;
+      padding: 0 20px;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+      padding: 0 20px 20px;
+    }
+
+    .faq-answer p {
+      font-size: 0.93rem;
+      color: #374151;
+      line-height: 1.75;
+    }
+
+    .faq-answer p + p {
+      margin-top: 12px;
+    }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    footer {
+      background: var(--color-primary);
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      padding: 26px 20px;
+      margin-top: 64px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: #a8c4e8;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    footer p {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* ============================================================
+       UTILITY
+       ============================================================ */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/word-count/" />
+</head>
+
+<body>
+
+  <!-- ============================================================
+       TOP NAV - BACK LINK TO AXIOMAPE.COM
+       ============================================================ -->
+  <nav class="top-nav" aria-label="Site navigation">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- ============================================================
+       PAGE HEADER
+       ============================================================ -->
+  <header class="page-header">
+    <h1>Word Count</h1>
+    <p>Real-time count of words, characters, sentences, and reading time. Free, instant, and 100% private.</p>
+  </header>
+
+  <!-- ============================================================
+       MAIN APPLICATION AREA
+       ============================================================ -->
+  <main class="main-wrapper" id="main">
+
+    <!-- AD PLACEHOLDER: Leaderboard (728x90)
+         Insert your Google AdSense <ins> tag inside this div.
+         Example:
+         <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px"
+              data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+              data-ad-slot="XXXXXXXXXX"></ins>
+    -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement (728 x 90)
+    </div>
+
+    <!-- METRICS DASHBOARD - 5 key stats, always visible -->
+    <div class="metrics-dashboard" role="region" aria-label="Live text metrics">
+
+      <div class="metric-card">
+        <div class="metric-value" id="stat-words">0</div>
+        <div class="metric-label">Words</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value" id="stat-chars">0</div>
+        <div class="metric-label">Characters</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value" id="stat-chars-no-spaces">0</div>
+        <div class="metric-label">Chars (no spaces)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value" id="stat-sentences">0</div>
+        <div class="metric-label">Sentences</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-value" id="stat-paragraphs">0</div>
+        <div class="metric-label">Paragraphs</div>
+      </div>
+
+    </div><!-- /.metrics-dashboard -->
+
+    <!-- EDITOR LAYOUT: textarea on left, sidebar on right -->
+    <div class="editor-layout">
+
+      <!-- TEXTAREA CARD -->
+      <div class="editor-card">
+        <div class="editor-toolbar">
+          <span class="editor-toolbar-title">Your Text</span>
+          <div class="toolbar-btns">
+            <button class="btn btn-outline btn-copy" id="btn-copy" aria-label="Copy all text to clipboard">Copy Text</button>
+            <button class="btn btn-outline" id="btn-clear" aria-label="Clear all text">Clear Text</button>
+          </div>
+        </div>
+        <textarea
+          id="main-textarea"
+          placeholder="Start typing or paste your text here..."
+          aria-label="Main text input area"
+          spellcheck="true"
+        ></textarea>
+      </div><!-- /.editor-card -->
+
+      <!-- SIDEBAR PANEL -->
+      <aside class="sidebar" aria-label="Advanced analytics">
+
+        <!-- READING + SPEAKING TIME PANEL -->
+        <div class="panel-card">
+          <h3>Time Estimates</h3>
+
+          <div class="time-row">
+            <div>
+              <div class="time-label">Reading Time</div>
+              <span class="explain-tag">At 225 words per minute (avg. adult silent reading speed)</span>
+            </div>
+            <div class="time-value" id="stat-read-time">0 sec</div>
+          </div>
+
+          <div class="time-row">
+            <div>
+              <div class="time-label">Speaking Time</div>
+              <span class="explain-tag">At 130 words per minute (avg. presentation pace)</span>
+            </div>
+            <div class="time-value" id="stat-speak-time">0 sec</div>
+          </div>
+
+          <p class="panel-note">
+            <strong>Why the difference?</strong> Reading is a silent, internal process - your eyes absorb text faster than your mouth can form words. Speaking aloud, especially in a presentation, requires pauses, emphasis, and breath, which slows your pace considerably.
+          </p>
+        </div>
+
+        <!-- KEYWORD DENSITY PANEL -->
+        <div class="panel-card">
+          <h3>Keyword Density</h3>
+
+          <ul class="keyword-list" id="keyword-list" aria-live="polite">
+            <li class="keyword-empty" id="keyword-empty-msg">Type some text to see your top keywords.</li>
+          </ul>
+
+          <p class="panel-note">
+            <strong>What is keyword density?</strong> It is the number of times a specific word appears in your text. Common filler words (called "stop words") like <em>the, and, a, to, is</em> are excluded so only meaningful words are shown. High keyword density for a specific term signals to search engines that your content is focused on that topic.
+          </p>
+        </div>
+
+      </aside><!-- /.sidebar -->
+
+    </div><!-- /.editor-layout -->
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer" role="note">
+      <div class="disclaimer-icon">&#128274;</div>
+      <p>
+        <strong>Your privacy is protected.</strong> This tool processes all text locally in your browser. We do not store, save, or transmit your sensitive documents or writing. Nothing you type ever leaves your device.
+      </p>
+    </div>
+
+    <!-- ============================================================
+         SEO AND EDUCATIONAL CONTENT SECTION
+         ============================================================ -->
+    <section class="seo-section" aria-labelledby="guide-heading">
+
+      <h2 id="guide-heading">The Ultimate Guide to Word Counts, Readability, and Writing Optimization</h2>
+      <p class="section-intro">
+        Whether you are crafting a novel, polishing a blog post, or optimizing landing page copy for search engines, understanding the metrics behind your text is a powerful skill. Here is everything you need to know.
+      </p>
+
+      <div class="faq-list" role="list">
+
+        <!-- FAQ 1 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-1-body">
+            What is the standard reading speed for adults, and why does it matter for your content?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-1-body" role="region">
+            <p>
+              Research consistently shows that the average adult reads silently at approximately 200 to 250 words per minute, with many studies centering on 225 WPM as a reliable benchmark. This tool uses 225 WPM to calculate your estimated reading time. However, it is worth noting that reading speed varies significantly based on the complexity of the vocabulary, the density of ideas per sentence, and the reader's familiarity with the subject matter. Technical or academic content is often processed at 150 to 180 WPM, while light fiction can be consumed at 300 WPM or faster.
+            </p>
+            <p>
+              Why does this matter? For web content and blog posts, knowing your reading time lets you set accurate expectations for your audience. Tools like Medium display reading time prominently because readers use it to decide whether to commit to an article. Shorter reading times (under 5 minutes) tend to see higher completion rates. For email newsletters, most marketing data suggests a sweet spot of 2 to 3 minutes of reading time - long enough to convey value, short enough to respect a busy inbox.
+            </p>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-2-body">
+            Why do characters without spaces matter for social media, SEO, and metadata?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-2-body" role="region">
+            <p>
+              The "characters without spaces" count strips all whitespace from your text and counts only the visible, typeable characters - letters, numbers, and punctuation. This metric is critical in several professional contexts. Twitter (now X) enforces a 280-character limit on posts; that limit counts every character including spaces. Meta descriptions in SEO, which are the short summary lines that appear under your page title in Google search results, are ideally kept under 155 to 160 characters total to avoid being truncated. SMS messages have a hard limit of 160 characters per segment.
+            </p>
+            <p>
+              From a pure linguistics and linguistics-adjacent perspective, characters without spaces is also a useful proxy for the "information density" of your writing. Academic writing styles that favor long compound words will show a very different characters-to-words ratio compared to conversational writing that uses short, punchy words. Tracking this metric can help you calibrate whether your writing style is accessible to a general audience or skewing toward specialized jargon. For international SEO, it is also worth noting that languages like Japanese and Chinese carry far more semantic meaning per character than English, making this count even more critical for developers working with multi-lingual platforms.
+            </p>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-3-body">
+            How does keyword density impact search engine rankings, and what is a safe target?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-3-body" role="region">
+            <p>
+              Keyword density is the percentage of times a specific word or phrase appears relative to the total word count of a piece of content. It was one of the earliest signals used by search engines in the 1990s and 2000s to determine what a page was "about." In the early internet era, some webmasters abused this by "keyword stuffing" - repeating a target phrase dozens of times in a single page to game the algorithm. Google's Panda algorithm update (2011) severely penalized this practice.
+            </p>
+            <p>
+              Today, modern search engines use natural language processing and semantic understanding to evaluate content relevance, rather than simply counting keyword occurrences. That said, keyword density still plays a supporting role. Most SEO practitioners recommend a natural density of 1% to 2% for your primary keyword - meaning a 1,000-word article should contain your main keyword roughly 10 to 20 times. The more important factor is semantic richness: using related terms, synonyms, and contextually relevant vocabulary signals to Google that your content thoroughly covers a topic. This tool's keyword density feature helps you spot if you are over-relying on a single word, or if a key term you intended to emphasize is barely appearing in your text at all.
+            </p>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-4-body">
+            What is the difference between reading time and speaking time, and when does each matter?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-4-body" role="region">
+            <p>
+              Reading time and speaking time measure the same text through two very different lenses. Reading time (calculated at 225 WPM) represents how long it takes a person to silently process your words on a screen or page. Speaking time (calculated at 130 WPM) represents how long it would take someone to read that same text aloud at a comfortable, professional presentation pace.
+            </p>
+            <p>
+              The gap between these two numbers is practically significant. A 500-word blog introduction takes roughly 2 minutes and 13 seconds to read silently, but would take about 3 minutes and 51 seconds if delivered as a spoken introduction. For public speakers, podcast script writers, and presenters preparing TED-style talks, the speaking time estimate is essential for hitting time targets. A 15-minute keynote at 130 WPM requires approximately 1,950 words of scripted content. For narrated explainer videos and YouTube scripts, speaking time is the operative number - not reading time. Knowing both lets you write with precision, whether your audience is reading your content or hearing it.
+            </p>
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-5-body">
+            What are stop words, and why are they excluded from keyword analysis?
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-5-body" role="region">
+            <p>
+              Stop words are the high-frequency, low-meaning words that appear in almost every sentence in the English language. They include articles (a, an, the), conjunctions (and, but, or), prepositions (in, on, at, to, for), and common verbs (is, are, was, be, have). If you counted every word in any piece of English writing, these words would almost certainly dominate the list, drowning out the words that actually carry the meaning of your text.
+            </p>
+            <p>
+              By excluding stop words from keyword analysis, this tool surfaces the words that are genuinely distinctive to your specific content - the nouns, verbs, and descriptors that define your topic. This is the same principle used by search engine indexers, text summarization algorithms, and natural language processing pipelines. For a writer, seeing your top non-stop-word keywords is a quick gut-check: if the words that appear most often are not the ones you intended to emphasize, it is a signal to revise. If you are writing an article about "content marketing strategy" but your top keywords are "company," "things," and "people," your content may lack the topical focus and specificity that both readers and search algorithms reward.
+            </p>
+          </div>
+        </div>
+
+      </div><!-- /.faq-list -->
+
+    </section><!-- /.seo-section -->
+
+  </main><!-- /#main -->
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p>&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT - ALL LOGIC INLINE, NO EXTERNAL DEPENDENCIES
+       ============================================================ -->
+  <script>
+    /* ============================================================
+       STOP WORDS LIST
+       Common English words excluded from keyword density analysis
+       so that only meaningful, topic-specific words are surfaced.
+       ============================================================ */
+    const STOP_WORDS = new Set([
+      'a','about','above','after','again','against','all','am','an','and',
+      'any','are','as','at','be','because','been','before','being','below',
+      'between','both','but','by','can','did','do','does','doing','down',
+      'during','each','few','for','from','further','get','got','had','has',
+      'have','having','he','her','here','him','his','how','i','if','in',
+      'into','is','it','its','itself','just','like','me','more','most',
+      'my','no','not','now','of','off','on','once','only','or','other',
+      'our','out','own','s','same','she','should','so','some','such',
+      'than','that','the','their','them','then','there','these','they',
+      'this','those','through','to','too','under','until','up','us',
+      'very','was','we','were','what','when','where','which','while',
+      'who','will','with','you','your','been','would','could','also',
+      'its','may','might','much','many','still','even','back','way',
+      'well','new','one','two','three','use','used','using','said',
+      'make','made','take','come','go','see','know','get','think',
+      't','ve','re','ll','d','m','don','doesn','didn','isn','aren',
+      'wasn','weren','hasn','haven','hadn','won','wouldn','couldn',
+      'shouldn','mustn','needn'
+    ]);
+
+    /* ============================================================
+       UTILITY FUNCTIONS
+       ============================================================ */
+
+    /**
+     * Formats a time duration (in seconds) as a human-readable string.
+     * Examples: "30 sec", "1 min 15 sec", "2 min"
+     * @param {number} totalSeconds - Raw seconds to format
+     * @returns {string} Formatted time string
+     */
+    function formatTime(totalSeconds) {
+      if (totalSeconds < 1) return '0 sec';
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = Math.round(totalSeconds % 60);
+      if (mins === 0) return secs + ' sec';
+      if (secs === 0) return mins + ' min';
+      return mins + ' min ' + secs + ' sec';
+    }
+
+    /**
+     * Counts words in a string.
+     * Splits on whitespace, filters out empty tokens.
+     * @param {string} text
+     * @returns {number}
+     */
+    function countWords(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\s+/).filter(Boolean).length;
+    }
+
+    /**
+     * Counts total characters (including spaces, newlines, etc.).
+     * @param {string} text
+     * @returns {number}
+     */
+    function countChars(text) {
+      return text.length;
+    }
+
+    /**
+     * Counts characters excluding all whitespace (spaces, tabs, newlines).
+     * Useful for social media limits and information density analysis.
+     * @param {string} text
+     * @returns {number}
+     */
+    function countCharsNoSpaces(text) {
+      return text.replace(/\s/g, '').length;
+    }
+
+    /**
+     * Counts sentences.
+     * A sentence is defined as ending with a '.', '!', or '?' character,
+     * optionally followed by closing quotes or brackets.
+     * @param {string} text
+     * @returns {number}
+     */
+    function countSentences(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      const matches = trimmed.match(/[^.!?]*[.!?]+["')]*\s*/g);
+      return matches ? matches.length : (trimmed.length > 0 ? 1 : 0);
+    }
+
+    /**
+     * Counts paragraphs.
+     * A paragraph is any block of non-empty text separated by
+     * one or more blank lines (double newlines).
+     * @param {string} text
+     * @returns {number}
+     */
+    function countParagraphs(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\n\s*\n+/).filter(p => p.trim().length > 0).length;
+    }
+
+    /**
+     * Calculates reading time in seconds at 225 WPM.
+     * 225 WPM is the widely cited average silent reading speed for adults.
+     * @param {number} wordCount
+     * @returns {number} Seconds
+     */
+    function calcReadingTime(wordCount) {
+      return (wordCount / 225) * 60;
+    }
+
+    /**
+     * Calculates speaking time in seconds at 130 WPM.
+     * 130 WPM approximates a comfortable, clear presentation delivery pace.
+     * @param {number} wordCount
+     * @returns {number} Seconds
+     */
+    function calcSpeakingTime(wordCount) {
+      return (wordCount / 130) * 60;
+    }
+
+    /**
+     * Extracts the top N most frequent keywords from text,
+     * filtering out stop words and single-character tokens.
+     * Returns an array of { word, count } objects sorted by frequency.
+     * @param {string} text
+     * @param {number} topN - How many top keywords to return
+     * @returns {Array<{word: string, count: number}>}
+     */
+    function getTopKeywords(text, topN) {
+      if (!text.trim()) return [];
+
+      // Lowercase and split on non-alphabetic characters
+      const tokens = text.toLowerCase().match(/[a-z]+/g);
+      if (!tokens) return [];
+
+      // Build frequency map, ignoring stop words and short tokens
+      const freq = {};
+      for (const token of tokens) {
+        if (token.length < 2) continue;
+        if (STOP_WORDS.has(token)) continue;
+        freq[token] = (freq[token] || 0) + 1;
+      }
+
+      // Sort by frequency descending, return top N
+      return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, topN)
+        .map(([word, count]) => ({ word, count }));
+    }
+
+    /* ============================================================
+       DOM REFERENCES
+       ============================================================ */
+    const textarea       = document.getElementById('main-textarea');
+    const statWords      = document.getElementById('stat-words');
+    const statChars      = document.getElementById('stat-chars');
+    const statCharsNS    = document.getElementById('stat-chars-no-spaces');
+    const statSentences  = document.getElementById('stat-sentences');
+    const statParagraphs = document.getElementById('stat-paragraphs');
+    const statReadTime   = document.getElementById('stat-read-time');
+    const statSpeakTime  = document.getElementById('stat-speak-time');
+    const keywordList    = document.getElementById('keyword-list');
+    const keywordEmpty   = document.getElementById('keyword-empty-msg');
+    const btnCopy        = document.getElementById('btn-copy');
+    const btnClear       = document.getElementById('btn-clear');
+
+    /* ============================================================
+       REAL-TIME METRICS ENGINE
+       Called on every keystroke - updates all stats immediately.
+       ============================================================ */
+    function updateMetrics() {
+      const text = textarea.value;
+
+      const words      = countWords(text);
+      const chars      = countChars(text);
+      const charsNS    = countCharsNoSpaces(text);
+      const sentences  = countSentences(text);
+      const paragraphs = countParagraphs(text);
+      const readSecs   = calcReadingTime(words);
+      const speakSecs  = calcSpeakingTime(words);
+      const keywords   = getTopKeywords(text, 3);
+
+      // Update metric dashboard numbers
+      statWords.textContent      = words.toLocaleString();
+      statChars.textContent      = chars.toLocaleString();
+      statCharsNS.textContent    = charsNS.toLocaleString();
+      statSentences.textContent  = sentences.toLocaleString();
+      statParagraphs.textContent = paragraphs.toLocaleString();
+
+      // Update time estimates
+      statReadTime.textContent  = formatTime(readSecs);
+      statSpeakTime.textContent = formatTime(speakSecs);
+
+      // Update keyword density list
+      if (keywords.length === 0) {
+        keywordList.innerHTML = '';
+        keywordList.appendChild(keywordEmpty);
+        keywordEmpty.style.display = 'block';
+      } else {
+        keywordEmpty.style.display = 'none';
+        keywordList.innerHTML = '';
+        keywords.forEach(({ word, count }) => {
+          const li = document.createElement('li');
+          li.className = 'keyword-item';
+          li.innerHTML =
+            '<span class="keyword-word">' + escapeHTML(word) + '</span>' +
+            '<span class="keyword-badge">' + count + 'x</span>';
+          keywordList.appendChild(li);
+        });
+      }
+    }
+
+    /**
+     * Escapes HTML special characters to prevent XSS when injecting
+     * user text into the DOM as innerHTML.
+     * @param {string} str
+     * @returns {string}
+     */
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Bind real-time update to the textarea input event
+    textarea.addEventListener('input', updateMetrics);
+
+    /* ============================================================
+       COPY TEXT BUTTON
+       Uses the modern Clipboard API with a fallback for older browsers.
+       Shows a brief "Copied!" confirmation state on the button.
+       ============================================================ */
+    btnCopy.addEventListener('click', function() {
+      const text = textarea.value;
+      if (!text) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopied).catch(function() {
+          fallbackCopy(text);
+        });
+      } else {
+        fallbackCopy(text);
+      }
+    });
+
+    function fallbackCopy(text) {
+      // Create a temporary textarea, select its content, copy, then remove it
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      temp.style.position = 'fixed';
+      temp.style.opacity = '0';
+      document.body.appendChild(temp);
+      temp.focus();
+      temp.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch (e) {
+        // Silent fail - clipboard access denied
+      }
+      document.body.removeChild(temp);
+    }
+
+    function showCopied() {
+      btnCopy.textContent = 'Copied!';
+      btnCopy.classList.add('copied');
+      // Revert the button label after 2 seconds
+      setTimeout(function() {
+        btnCopy.textContent = 'Copy Text';
+        btnCopy.classList.remove('copied');
+      }, 2000);
+    }
+
+    /* ============================================================
+       CLEAR TEXT BUTTON
+       Clears the textarea and resets all metrics to zero.
+       ============================================================ */
+    btnClear.addEventListener('click', function() {
+      textarea.value = '';
+      updateMetrics();
+      textarea.focus();
+    });
+
+    /* ============================================================
+       FAQ ACCORDION
+       Opens and closes FAQ answers on button click.
+       Only one item open at a time for cleaner UX.
+       ============================================================ */
+    document.querySelectorAll('.faq-question').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const item    = btn.closest('.faq-item');
+        const isOpen  = item.classList.contains('open');
+
+        // Close all open items first
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+          openItem.classList.remove('open');
+          openItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+
+        // If the clicked item was not already open, open it
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    /* ============================================================
+       FOOTER YEAR - Automatically updates the copyright year
+       ============================================================ */
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    /* ============================================================
+       INITIAL STATE
+       Run metrics once on page load to set all values to zero.
+       ============================================================ */
+    updateMetrics();
+
+  </script>
+
+</body>
+</html>

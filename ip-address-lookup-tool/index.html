@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IP Address Lookup Tool - Instantly See Your Public IP and Location | AxiomApe</title>
+  <meta name="description" content="Instantly detect your public IP address, ISP, city, region, country, timezone, and ASN. Look up any IP address or domain name for free. No logs. No tracking." />
+  <meta name="keywords" content="IP address lookup, what is my IP, IP geolocation, ISP lookup, ASN lookup, domain IP lookup, public IP address, IPv4, IPv6" />
+
+  <!-- Leaflet.js CSS - open-source interactive map library (no Google API key needed) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet.js JavaScript -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* =========================================================
+       GLOBAL RESET & BASE STYLES
+    ========================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-page: #f4f6f9;
+      --bg-white: #ffffff;
+      --terminal-bg: #0d1117;
+      --terminal-text: #58d68d;
+      --accent-blue: #1a73e8;
+      --accent-blue-dark: #1558b0;
+      --accent-teal: #00bcd4;
+      --text-primary: #1a1a2e;
+      --text-secondary: #555f71;
+      --text-muted: #8a94a6;
+      --border: #e2e8f0;
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* =========================================================
+       TOP NAV LINK
+    ========================================================= */
+    .top-nav {
+      text-align: center;
+      padding: 12px 0 8px;
+      background: var(--bg-white);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .top-nav a {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .top-nav a:hover {
+      text-decoration: underline;
+    }
+
+    /* =========================================================
+       PAGE WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      padding: 36px 20px 20px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* =========================================================
+       AD PLACEHOLDER - leaderboard banner (728x90)
+       Replace this div with your Google AdSense <ins> tag
+    ========================================================= */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 16px auto 24px;
+      background: #e8edf4;
+      border: 2px dashed #c2cfe0;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* =========================================================
+       SEARCH BAR
+    ========================================================= */
+    .search-section {
+      margin-bottom: 24px;
+    }
+
+    .search-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 14px 18px;
+      font-size: 1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-white);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn {
+      padding: 14px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--accent-blue-dark); }
+
+    .btn-secondary {
+      background: #e8edf4;
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover { background: #d4dce8; }
+
+    /* =========================================================
+       HERO IP BANNER - terminal dark card
+    ========================================================= */
+    .hero-card {
+      background: var(--terminal-bg);
+      border-radius: var(--radius);
+      padding: 32px 36px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle grid overlay for tech aesthetic */
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(88,214,141,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88,214,141,0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+
+    .hero-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #58d68d;
+      margin-bottom: 8px;
+      opacity: 0.75;
+    }
+
+    .hero-ip-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero-ip {
+      font-family: 'Courier New', 'Lucida Console', monospace;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 700;
+      color: var(--terminal-text);
+      letter-spacing: 0.04em;
+      word-break: break-all;
+    }
+
+    .btn-copy {
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(88,214,141,0.15);
+      color: var(--terminal-text);
+      border: 1px solid rgba(88,214,141,0.4);
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-copy:hover { background: rgba(88,214,141,0.28); }
+    .btn-copy.copied { color: #fff; border-color: #fff; }
+
+    .hero-ip-type {
+      font-size: 0.75rem;
+      color: #8ec7ff;
+      background: rgba(142,199,255,0.12);
+      border: 1px solid rgba(142,199,255,0.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    /* =========================================================
+       LOADING SPINNER
+    ========================================================= */
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(88,214,141,0.2);
+      border-top-color: var(--terminal-text);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner-text {
+      color: var(--terminal-text);
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      opacity: 0.85;
+    }
+
+    /* =========================================================
+       MAIN CONTENT GRID - metadata cards + map
+    ========================================================= */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 700px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .search-row { flex-direction: column; }
+    }
+
+    /* =========================================================
+       METADATA CARDS PANEL
+    ========================================================= */
+    .metadata-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .meta-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: box-shadow 0.2s;
+    }
+
+    .meta-card:hover { box-shadow: var(--shadow-md); }
+
+    .meta-icon {
+      font-size: 1.4rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .meta-content { flex: 1; min-width: 0; }
+
+    .meta-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .meta-value {
+      font-size: 1.0rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .meta-value.loading {
+      background: linear-gradient(90deg, #e8edf4 25%, #f4f6f9 50%, #e8edf4 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      height: 1.1em;
+      width: 70%;
+      color: transparent;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .meta-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+      line-height: 1.3;
+    }
+
+    /* =========================================================
+       MAP CONTAINER
+    ========================================================= */
+    .map-container {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      min-height: 380px;
+      position: relative;
+    }
+
+    .map-header {
+      padding: 12px 16px;
+      background: var(--bg-white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .map-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .map-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    #map {
+      height: 340px;
+      width: 100%;
+      background: #e8edf4;
+    }
+
+    .map-loading-overlay {
+      position: absolute;
+      inset: 48px 0 0 0;
+      background: #e8edf4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      z-index: 10;
+    }
+
+    /* =========================================================
+       ERROR STATE
+    ========================================================= */
+    .error-banner {
+      background: #fff3f3;
+      border: 1px solid #f5c2c2;
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: #c0392b;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* =========================================================
+       DISCLAIMER / PRIVACY NOTICE
+    ========================================================= */
+    .disclaimer {
+      background: #fffbeb;
+      border: 1px solid #f6d860;
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      font-size: 0.88rem;
+      color: #7a5c00;
+      margin-bottom: 40px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .disclaimer-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* =========================================================
+       EDUCATIONAL CONTENT SECTION
+    ========================================================= */
+    .guide-section {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 44px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 600px) {
+      .guide-section { padding: 28px 20px; }
+      .hero-card { padding: 24px 20px; }
+    }
+
+    .guide-section h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .guide-section .guide-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      max-width: 680px;
+    }
+
+    /* FAQ accordion */
+    .faq-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: #f8fafc;
+      border: none;
+      padding: 16px 20px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+
+    .faq-question:hover { background: #eef2f7; }
+
+    .faq-arrow {
+      font-size: 0.85rem;
+      color: var(--accent-blue);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 18px 20px 20px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      border-top: 1px solid var(--border);
+      background: var(--bg-white);
+    }
+
+    .faq-item.open .faq-answer { display: block; }
+
+    .faq-answer strong { color: var(--text-primary); }
+
+    .faq-answer .term-highlight {
+      display: inline-block;
+      background: #eef5ff;
+      color: var(--accent-blue-dark);
+      border-radius: 4px;
+      padding: 0 5px;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    footer {
+      text-align: center;
+      padding: 24px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--accent-blue);
+      text-decoration: none;
+      margin: 0 10px;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    .footer-copy {
+      margin-top: 8px;
+      font-size: 0.78rem;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/ip-address-lookup-tool/" />
+</head>
+<body>
+
+  <!-- =========================================================
+       TOP NAVIGATION LINK
+  ========================================================= -->
+  <div class="top-nav">
+    <a href="/">axiomape.com</a>
+  </div>
+
+  <div class="page-wrapper">
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================= -->
+    <header class="page-header">
+      <h1>IP Address Lookup Tool</h1>
+      <p>Instantly see your public IP address, exact location metadata, ISP, ASN, and timezone - or look up any IP or domain name below.</p>
+    </header>
+
+    <!-- =========================================================
+         AD PLACEHOLDER - 728x90 leaderboard banner
+         Replace this entire div with your Google AdSense <ins> tag
+    ========================================================= -->
+    <div class="ad-placeholder">
+      Advertisement - 728 x 90
+    </div>
+
+    <!-- =========================================================
+         SEARCH BAR - Mode 2: look up any IP or domain
+    ========================================================= -->
+    <section class="search-section">
+      <label class="search-label" for="search-input">Look Up Any IP Address or Domain</label>
+      <div class="search-row">
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="e.g., 8.8.8.8 or github.com"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button class="btn btn-primary" id="btn-lookup" onclick="handleLookup()">Look Up</button>
+        <button class="btn btn-secondary" id="btn-my-ip" onclick="detectMyIP()" title="Detect my IP again">My IP</button>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         ERROR BANNER (hidden by default)
+    ========================================================= -->
+    <div class="error-banner" id="error-banner"></div>
+
+    <!-- =========================================================
+         HERO CARD - large IP display
+    ========================================================= -->
+    <div class="hero-card" id="hero-card">
+      <div class="hero-label">Your Public IP Address</div>
+      <!-- Spinner shown during loading -->
+      <div class="spinner-wrap" id="hero-spinner">
+        <div class="spinner"></div>
+        <span class="spinner-text">Detecting network...</span>
+      </div>
+      <!-- IP display shown after load -->
+      <div class="hero-ip-row" id="hero-ip-row" style="display:none;">
+        <div class="hero-ip" id="hero-ip-display">--</div>
+        <span class="hero-ip-type" id="hero-ip-type">IPv4</span>
+        <button class="btn-copy" id="btn-copy" onclick="copyIP()">Copy</button>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         MAIN GRID - metadata cards + interactive map
+    ========================================================= -->
+    <div class="main-grid">
+
+      <!-- Left column: metadata cards -->
+      <div class="metadata-panel" id="metadata-panel">
+
+        <div class="meta-card">
+          <div class="meta-icon">🏢</div>
+          <div class="meta-content">
+            <div class="meta-label">ISP - Internet Service Provider</div>
+            <div class="meta-value loading" id="meta-isp">Loading...</div>
+            <div class="meta-sub">The company that provides your internet connection (e.g., Comcast, AT&T, Verizon)</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">🏙️</div>
+          <div class="meta-content">
+            <div class="meta-label">City</div>
+            <div class="meta-value loading" id="meta-city">Loading...</div>
+            <div class="meta-sub">Approximate city based on your ISP's local hub</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">🗺️</div>
+          <div class="meta-content">
+            <div class="meta-label">Region / State</div>
+            <div class="meta-value loading" id="meta-region">Loading...</div>
+            <div class="meta-sub" id="meta-region-sub">State or province on record</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">🌍</div>
+          <div class="meta-content">
+            <div class="meta-label">Country</div>
+            <div class="meta-value loading" id="meta-country">Loading...</div>
+            <div class="meta-sub" id="meta-country-sub">Country associated with this IP</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">📮</div>
+          <div class="meta-content">
+            <div class="meta-label">ZIP / Postal Code</div>
+            <div class="meta-value loading" id="meta-zip">Loading...</div>
+            <div class="meta-sub">Approximate postal zone (may reflect ISP hub, not your home)</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">🕐</div>
+          <div class="meta-content">
+            <div class="meta-label">Timezone</div>
+            <div class="meta-value loading" id="meta-timezone">Loading...</div>
+            <div class="meta-sub">UTC-based timezone identifier for this IP's region</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">🔢</div>
+          <div class="meta-content">
+            <div class="meta-label">ASN - Autonomous System Number</div>
+            <div class="meta-value loading" id="meta-asn">Loading...</div>
+            <div class="meta-sub">A unique number assigned to each ISP or large network operator by a global registry</div>
+          </div>
+        </div>
+
+        <div class="meta-card">
+          <div class="meta-icon">📍</div>
+          <div class="meta-content">
+            <div class="meta-label">Coordinates (Lat / Lon)</div>
+            <div class="meta-value loading" id="meta-coords">Loading...</div>
+            <div class="meta-sub">Approximate geographic coordinates used to place the map pin</div>
+          </div>
+        </div>
+
+      </div><!-- /metadata-panel -->
+
+      <!-- Right column: interactive map -->
+      <div class="map-container">
+        <div class="map-header">
+          <div class="map-dot"></div>
+          <span class="map-title">Geolocation Map</span>
+        </div>
+        <div id="map-loading-overlay" class="map-loading-overlay">Waiting for location data...</div>
+        <div id="map"></div>
+      </div>
+
+    </div><!-- /main-grid -->
+
+    <!-- =========================================================
+         PRIVACY DISCLAIMER
+    ========================================================= -->
+    <div class="disclaimer">
+      <span class="disclaimer-icon">🔒</span>
+      <span>
+        <strong>Privacy Notice:</strong> IP geolocation is approximate and generally resolves to your Internet Service Provider's local hub, not your exact physical street address. We do not log your IP data.
+      </span>
+    </div>
+
+    <!-- =========================================================
+         EDUCATIONAL / SEO CONTENT SECTION
+    ========================================================= -->
+    <section class="guide-section">
+      <h2>The Ultimate Guide to IP Addresses, Geolocation, and Online Privacy</h2>
+      <p class="guide-subtitle">Demystifying the technology that connects every device on the internet - written for beginners and power users alike.</p>
+
+      <div class="faq-list">
+
+        <!-- FAQ 1 -->
+        <div class="faq-item open">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            What is an IP address, and why does every device have one?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>An <strong>IP address</strong> (Internet Protocol address) is a unique numerical label assigned to every device that connects to the internet or a local network. Think of it the same way you think of a postal address for your home: just as mail needs a specific destination to be delivered correctly, data packets traveling across the internet need a precise numeric address so they know where to go and where to return the response.</p>
+            <p style="margin-top: 12px;">Every router, smartphone, laptop, server, and smart TV connected to the internet has at least one IP address. Your <strong>public IP</strong> is the address that websites, apps, and online services actually see when you connect to them. It is assigned to you by your ISP and can change over time (this is called a <em>dynamic IP</em>) or remain fixed (a <em>static IP</em>, common for business accounts). Your <strong>private IP</strong> is the internal address your router assigns to each device on your home network - these are invisible to the outside world and typically look like <span class="term-highlight">192.168.x.x</span> or <span class="term-highlight">10.0.x.x</span>.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            What is the difference between IPv4 and IPv6?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>IPv4</strong> (Internet Protocol version 4) is the original addressing system, introduced in 1983. It uses a 32-bit format written as four groups of numbers separated by periods, like <span class="term-highlight">192.168.1.1</span>. This format allows for approximately 4.3 billion unique addresses. As the internet exploded in size over the decades, those 4.3 billion addresses were almost entirely consumed, which created a critical shortage.</p>
+            <p style="margin-top: 12px;"><strong>IPv6</strong> (Internet Protocol version 6) was designed specifically to solve that shortage. It uses a 128-bit format written as eight groups of four hexadecimal digits, like <span class="term-highlight">2001:0db8:85a3:0000:0000:8a2e:0370:7334</span>. This format provides approximately 340 undecillion unique addresses - a number so astronomically large that every grain of sand on Earth could have billions of IP addresses assigned to it. IPv6 also includes built-in improvements to security, routing efficiency, and auto-configuration. Most modern internet infrastructure now supports both protocols simultaneously, a setup called <em>dual stack</em>.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            How accurate is IP geolocation? Can it find my exact home address?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>IP geolocation</strong> is the process of estimating a physical location based on an IP address. It works by cross-referencing your IP against large commercial and public databases that map IP address ranges to approximate geographic regions. These databases are maintained by organizations like MaxMind, IP2Location, and various regional internet registries.</p>
+            <p style="margin-top: 12px;">The accuracy varies significantly by level of detail. At the <strong>country level</strong>, geolocation is extremely accurate - roughly 95 to 99 percent correct. At the <strong>city or region level</strong>, accuracy drops to somewhere between 50 and 80 percent. At the <strong>street address level</strong>, IP geolocation simply cannot reliably identify where you physically live. When you see a map pin on your city, it typically reflects the location of your ISP's nearest data center or routing hub - not your home. A cable company may serve an entire metropolitan area from a single hub in one part of town, meaning every customer in that area appears to be located at that hub's coordinates. This is an important privacy point: while your ISP knows exactly who you are and which address you pay your bills from, websites and tools using geolocation alone cannot determine your precise location.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            What is an ISP and what is an ASN? How do they relate to my IP address?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>An <strong>ISP (Internet Service Provider)</strong> is the company that sells you internet access. Examples include Comcast, AT&T, Verizon, T-Mobile, Charter Spectrum, and Cox. Your ISP owns a large block of IP addresses, which it then leases to its customers. When you connect to the internet, your ISP's router assigns one of those addresses to your modem or router, effectively giving your household a temporary identity on the global network. Your ISP can see all traffic flowing through your connection and is legally required to respond to law-enforcement subpoenas identifying who held a particular IP address at a specific time.</p>
+            <p style="margin-top: 12px;">An <strong>ASN (Autonomous System Number)</strong> is a unique identifier assigned to each large network operator - typically ISPs, universities, major corporations, cloud providers, and content delivery networks. The global internet is essentially a collection of thousands of these autonomous systems, each controlling its own block of IP addresses and routing policies. ASNs are assigned by regional internet registries (RIRs) such as ARIN in North America, RIPE NCC in Europe, and APNIC in Asia-Pacific. When you see an ASN like <span class="term-highlight">AS15169</span> next to an IP address, that number identifies Google's network. ASNs are crucial for network engineers and cybersecurity analysts when tracing the origin of traffic or diagnosing routing problems.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            How does a VPN hide my real location, and what is DNS leaking?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">
+            <p>A <strong>VPN (Virtual Private Network)</strong> works by creating an encrypted tunnel between your device and a server operated by the VPN company. When you enable a VPN, all of your internet traffic is first routed to that VPN server before being sent out to the wider internet. The result is that websites and services you visit see the VPN server's IP address - not your real public IP assigned by your ISP. This is why a tool like this one will display your VPN's IP address and show a map pin in whatever city the VPN server is located in, rather than your actual location.</p>
+            <p style="margin-top: 12px;">However, VPNs are not a perfect privacy shield. One significant vulnerability is called a <strong>DNS leak</strong>. DNS (Domain Name System) is the internet's phonebook: every time you type a website address like <span class="term-highlight">github.com</span>, your device must first query a DNS server to translate that human-readable name into a numeric IP address. If your device is configured to use your ISP's DNS servers instead of the VPN provider's DNS servers, those DNS requests may travel outside the encrypted tunnel - revealing to your ISP (and potentially to observers) which websites you are visiting, even while your VPN connection is active. A well-configured VPN will route all DNS queries through its own servers to prevent this. You can test for DNS leaks using dedicated tools that show you which DNS servers your queries are actually being sent to. Additionally, technologies like <strong>WebRTC</strong> can sometimes reveal your real IP address to websites even when a VPN is in use, a vulnerability known as a WebRTC IP leak.</p>
+          </div>
+        </div>
+
+      </div><!-- /faq-list -->
+    </section><!-- /guide-section -->
+
+  </div><!-- /page-wrapper -->
+
+  <!-- =========================================================
+       PRIVACY NOTICE + FOOTER
+  ========================================================= -->
+  <footer>
+    <div>
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div class="footer-copy">&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <!-- =========================================================
+       JAVASCRIPT - core application logic
+  ========================================================= -->
+  <script>
+    // -------------------------------------------------------
+    // STATE
+    // -------------------------------------------------------
+    let map = null;           // Leaflet map instance
+    let mapMarker = null;     // Current marker on the map
+    let currentIP = '';       // IP currently displayed in the hero
+
+    // -------------------------------------------------------
+    // INIT
+    // -------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set footer year
+      document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+      // Initialize the Leaflet map at a world-level zoom before we have coords
+      initMap();
+
+      // Allow pressing Enter in the search box to trigger lookup
+      document.getElementById('search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleLookup();
+      });
+
+      // Auto-detect user's public IP on page load
+      detectMyIP();
+    });
+
+    // -------------------------------------------------------
+    // MAP INITIALIZATION
+    // Leaflet is an open-source library - no API key needed.
+    // Tile imagery comes from OpenStreetMap contributors.
+    // -------------------------------------------------------
+    function initMap() {
+      map = L.map('map', {
+        center: [20, 0],
+        zoom: 2,
+        zoomControl: true,
+        scrollWheelZoom: true
+      });
+
+      // OpenStreetMap tile layer - free and open-source
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+      }).addTo(map);
+    }
+
+    // -------------------------------------------------------
+    // DETECT MY OWN IP (Mode 1 - auto-detect on load)
+    // We call ipapi.co with no target to get the caller's IP.
+    // -------------------------------------------------------
+    async function detectMyIP() {
+      setLoadingState(true, 'Your Public IP Address');
+      clearError();
+
+      try {
+        // ipapi.co returns JSON with full metadata for the calling IP
+        const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+
+        if (!res.ok) throw new Error(`API responded with status ${res.status}`);
+
+        const data = await res.json();
+
+        if (data.error) {
+          // ipapi.co returns an error field when rate-limited or blocked
+          throw new Error(data.reason || 'Could not retrieve IP information.');
+        }
+
+        renderData(data, 'Your Public IP Address');
+
+      } catch (err) {
+        // Primary API failed - try fallback to ip-api.com
+        await fallbackDetect(null, err.message);
+      }
+    }
+
+    // -------------------------------------------------------
+    // LOOK UP A CUSTOM IP OR DOMAIN (Mode 2)
+    // -------------------------------------------------------
+    async function handleLookup() {
+      const raw = document.getElementById('search-input').value.trim();
+
+      if (!raw) {
+        detectMyIP();
+        return;
+      }
+
+      // Sanitize: strip http(s):// and trailing slashes so users can paste URLs
+      const target = raw
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .trim();
+
+      setLoadingState(true, `Looking up: ${target}`);
+      clearError();
+
+      try {
+        const res = await fetch(`https://ipapi.co/${encodeURIComponent(target)}/json/`, { cache: 'no-store' });
+
+        if (!res.ok) throw new Error(`API responded with status ${res.status}`);
+
+        const data = await res.json();
+
+        if (data.error) {
+          throw new Error(data.reason || `Could not look up "${target}". Check that it is a valid IP or domain.`);
+        }
+
+        renderData(data, `Lookup: ${target}`);
+
+      } catch (err) {
+        // Try fallback API
+        await fallbackDetect(target, err.message);
+      }
+    }
+
+    // -------------------------------------------------------
+    // FALLBACK API - ip-api.com
+    // Called if ipapi.co fails (rate limit, network error, etc.)
+    // Note: ip-api.com does not support HTTPS on its free tier,
+    // but most modern browsers allow mixed content from APIs.
+    // -------------------------------------------------------
+    async function fallbackDetect(target, previousError) {
+      try {
+        const endpoint = target
+          ? `https://ip-api.com/json/${encodeURIComponent(target)}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query`
+          : 'https://ip-api.com/json/?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query';
+
+        const res = await fetch(endpoint, { cache: 'no-store' });
+
+        if (!res.ok) throw new Error(`Fallback API status ${res.status}`);
+
+        const d = await res.json();
+
+        if (d.status !== 'success') {
+          throw new Error(d.message || 'Lookup failed on fallback API.');
+        }
+
+        // Normalize ip-api.com response to match ipapi.co shape
+        const normalized = {
+          ip: d.query,
+          org: d.isp || d.org,
+          city: d.city,
+          region: d.regionName,
+          country_name: d.country,
+          country_code: d.countryCode,
+          postal: d.zip,
+          timezone: d.timezone,
+          asn: d.as ? d.as.split(' ')[0] : 'N/A',
+          latitude: d.lat,
+          longitude: d.lon
+        };
+
+        const label = target ? `Lookup: ${target}` : 'Your Public IP Address';
+        renderData(normalized, label);
+
+      } catch (err) {
+        setLoadingState(false, '');
+        showError(`Unable to retrieve IP data. ${previousError || err.message}. Please try again in a moment.`);
+      }
+    }
+
+    // -------------------------------------------------------
+    // RENDER DATA - populate the hero + all metadata cards + map
+    // -------------------------------------------------------
+    function renderData(data, heroLabel) {
+      currentIP = data.ip || '--';
+
+      // Determine IPv4 vs IPv6 by checking for colons in the address
+      const isIPv6 = currentIP.includes(':');
+
+      // Update hero card
+      setLoadingState(false, heroLabel);
+      document.getElementById('hero-ip-display').textContent = currentIP;
+      document.getElementById('hero-ip-type').textContent = isIPv6 ? 'IPv6' : 'IPv4';
+
+      // Populate metadata cards
+      setText('meta-isp', data.org || 'Not available');
+      setText('meta-city', data.city || 'Not available');
+      setText('meta-region', data.region || 'Not available');
+      setText('meta-country', `${data.country_name || 'Not available'} ${data.country_code ? '(' + data.country_code + ')' : ''}`);
+      setText('meta-zip', data.postal || 'Not available');
+      setText('meta-timezone', data.timezone || 'Not available');
+      setText('meta-asn', data.asn || 'Not available');
+
+      const lat = parseFloat(data.latitude);
+      const lon = parseFloat(data.longitude);
+      const hasCoords = !isNaN(lat) && !isNaN(lon);
+
+      if (hasCoords) {
+        setText('meta-coords', `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        updateMap(lat, lon, currentIP, data.city, data.country_name);
+      } else {
+        setText('meta-coords', 'Not available');
+      }
+    }
+
+    // -------------------------------------------------------
+    // UPDATE MAP - move the Leaflet map and marker to new coords
+    // -------------------------------------------------------
+    function updateMap(lat, lon, ip, city, country) {
+      // Hide the loading overlay
+      const overlay = document.getElementById('map-loading-overlay');
+      if (overlay) overlay.style.display = 'none';
+
+      // Fly the map view smoothly to the new location
+      map.flyTo([lat, lon], 10, { duration: 1.2 });
+
+      // Remove old marker if present
+      if (mapMarker) {
+        map.removeLayer(mapMarker);
+      }
+
+      // Build a clean popup label
+      const popupLines = [
+        `<strong>${ip}</strong>`,
+        city ? city : '',
+        country ? country : ''
+      ].filter(Boolean).join('<br/>');
+
+      // Create a custom marker with a pulsing blue circle
+      const pulseIcon = L.divIcon({
+        className: '',
+        html: `
+          <div style="
+            width: 20px; height: 20px;
+            background: #1a73e8;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(26,115,232,0.35), 0 2px 8px rgba(0,0,0,0.3);
+          "></div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -14]
+      });
+
+      mapMarker = L.marker([lat, lon], { icon: pulseIcon })
+        .addTo(map)
+        .bindPopup(popupLines, { closeButton: false })
+        .openPopup();
+    }
+
+    // -------------------------------------------------------
+    // COPY IP TO CLIPBOARD
+    // -------------------------------------------------------
+    function copyIP() {
+      if (!currentIP || currentIP === '--') return;
+
+      navigator.clipboard.writeText(currentIP).then(() => {
+        const btn = document.getElementById('btn-copy');
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1800);
+      }).catch(() => {
+        // Fallback for browsers that block clipboard API without user gesture
+        const ta = document.createElement('textarea');
+        ta.value = currentIP;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      });
+    }
+
+    // -------------------------------------------------------
+    // UI HELPERS
+    // -------------------------------------------------------
+
+    // Show or hide the loading spinner inside the hero card
+    function setLoadingState(isLoading, label) {
+      const spinner = document.getElementById('hero-spinner');
+      const ipRow = document.getElementById('hero-ip-row');
+      const heroLabel = document.querySelector('.hero-label');
+
+      if (heroLabel && label) heroLabel.textContent = label;
+
+      if (isLoading) {
+        spinner.style.display = 'flex';
+        ipRow.style.display = 'none';
+        // Reset metadata cards to skeleton loading state
+        const metaValues = document.querySelectorAll('.meta-value');
+        metaValues.forEach(el => {
+          el.classList.add('loading');
+          el.textContent = '';
+        });
+        // Show map loading overlay again
+        const overlay = document.getElementById('map-loading-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      } else {
+        spinner.style.display = 'none';
+        ipRow.style.display = 'flex';
+      }
+    }
+
+    // Set a metadata card value and remove the skeleton animation
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('loading');
+      el.textContent = value;
+    }
+
+    // Show an error banner below the search bar
+    function showError(msg) {
+      const banner = document.getElementById('error-banner');
+      banner.textContent = msg;
+      banner.style.display = 'block';
+    }
+
+    // Clear any visible error banner
+    function clearError() {
+      const banner = document.getElementById('error-banner');
+      banner.textContent = '';
+      banner.style.display = 'none';
+    }
+
+    // -------------------------------------------------------
+    // FAQ ACCORDION TOGGLE
+    // -------------------------------------------------------
+    function toggleFAQ(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+      // Toggle clicked one
+      if (!isOpen) item.classList.add('open');
+    }
+
+  </script>
+</body>
+</html>

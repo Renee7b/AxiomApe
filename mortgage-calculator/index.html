@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mortgage Payment Calculator - Axiom Ape</title>
+  <meta name="description" content="Estimate your monthly mortgage payment based on home price, interest rate, and loan term. Includes taxes, insurance, HOA, and PMI." />
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a2e4a;
+      --navy-mid:   #243d5f;
+      --navy-light: #2f5185;
+      --accent:     #2e7d52;
+      --accent-lt:  #3a9966;
+      --sky:        #3b82f6;
+      --red:        #d9534f;
+      --warn:       #f59e0b;
+      --gray-50:    #f8f9fb;
+      --gray-100:   #f1f3f6;
+      --gray-200:   #e4e8ef;
+      --gray-400:   #9ca3af;
+      --gray-600:   #4b5563;
+      --gray-800:   #1f2937;
+      --white:      #ffffff;
+      --shadow-sm:  0 1px 4px rgba(0,0,0,.07);
+      --shadow-md:  0 4px 20px rgba(0,0,0,.10);
+      --shadow-lg:  0 8px 40px rgba(0,0,0,.13);
+      --radius:     12px;
+      --radius-sm:  8px;
+      --transition: .2s ease;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ============================================================
+       SITE HEADER BAR
+    ============================================================ */
+    .site-header {
+      background: var(--navy);
+      text-align: center;
+      padding: 10px 16px;
+    }
+    .site-header a {
+      color: #a8c4e8;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color var(--transition);
+    }
+    .site-header a:hover { color: var(--white); }
+
+    /* ============================================================
+       PAGE HERO
+    ============================================================ */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      color: var(--white);
+      text-align: center;
+      padding: 44px 20px 36px;
+    }
+    .hero h1 {
+      font-size: clamp(1.4rem, 4vw, 2.1rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -.02em;
+    }
+    .hero p {
+      margin-top: 10px;
+      font-size: .97rem;
+      color: #a8c4e8;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - TOP (leaderboard 728x90)
+    ============================================================ */
+    /* ---- ADSENSE INJECTION POINT - TOP ----
+       Replace the inner content of #ad-top with your AdSense
+       <ins class="adsbygoogle"> block when ready.
+       Standard leaderboard: 728x90 desktop / 320x50 mobile.
+    ---- */
+    .ad-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 16px 12px 0;
+    }
+    .ad-placeholder {
+      background: var(--gray-100);
+      border: 2px dashed var(--gray-200);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: .78rem;
+      font-weight: 500;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+    }
+    @media (max-width: 600px) { .ad-placeholder { height: 50px; } }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .card-wrap {
+      max-width: 780px;
+      margin: 24px auto 0;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       FORM SECTION
+    ============================================================ */
+    .form-section {
+      padding: 32px 32px 24px;
+    }
+    @media (max-width: 600px) { .form-section { padding: 24px 18px 20px; } }
+
+    .section-title {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 18px;
+    }
+
+    /* --- Input grid --- */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 24px;
+    }
+    @media (max-width: 560px) { .input-grid { grid-template-columns: 1fr; } }
+
+    .input-group { display: flex; flex-direction: column; gap: 5px; }
+    .input-group.full { grid-column: 1 / -1; }
+
+    /* --- Label with tooltip --- */
+    .field-label {
+      font-size: .84rem;
+      font-weight: 600;
+      color: var(--gray-600);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Tooltip component */
+    .tip-wrap { position: relative; display: inline-flex; }
+    .tip-icon {
+      width: 15px; height: 15px;
+      background: var(--gray-200);
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: .65rem; font-weight: 700;
+      color: var(--gray-600);
+      cursor: default;
+      flex-shrink: 0;
+    }
+    .tip-bubble {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 7px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--navy);
+      color: var(--white);
+      font-size: .76rem;
+      font-weight: 400;
+      line-height: 1.45;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      width: 230px;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: var(--shadow-md);
+    }
+    .tip-bubble::after {
+      content: "";
+      position: absolute;
+      top: 100%; left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--navy);
+    }
+    .tip-wrap:hover .tip-bubble,
+    .tip-wrap:focus-within .tip-bubble { display: block; }
+
+    /* --- Input styling --- */
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      background: var(--white);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      overflow: hidden;
+    }
+    .input-wrap:focus-within {
+      border-color: var(--navy-light);
+      box-shadow: 0 0 0 3px rgba(47,81,133,.12);
+    }
+    .input-prefix, .input-suffix {
+      padding: 0 11px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--gray-400);
+      background: var(--gray-50);
+      align-self: stretch;
+      display: flex; align-items: center;
+      border-right: 1.5px solid var(--gray-200);
+      white-space: nowrap;
+    }
+    .input-suffix { border-right: none; border-left: 1.5px solid var(--gray-200); }
+    .input-wrap input,
+    .input-wrap select {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 11px 12px;
+      font-size: .95rem;
+      font-family: inherit;
+      color: var(--gray-800);
+      background: transparent;
+      width: 100%;
+      min-width: 0;
+    }
+    .input-wrap select { cursor: pointer; }
+
+    /* Down payment dual input */
+    .dp-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Helper text below field */
+    .field-hint {
+      font-size: .75rem;
+      color: var(--gray-400);
+      margin-top: 3px;
+    }
+
+    /* PMI hidden field */
+    .pmi-row {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .pmi-row.visible { display: flex; }
+    .pmi-warn {
+      font-size: .76rem;
+      color: var(--warn);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+    .pmi-success {
+      font-size: .76rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-top: 6px;
+      display: none;
+    }
+    .pmi-success.visible { display: block; }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 24px 0;
+    }
+
+    /* ============================================================
+       CALCULATE BUTTON
+    ============================================================ */
+    .btn-calc {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      color: var(--white);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      padding: 15px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition);
+      margin-top: 24px;
+    }
+    .btn-calc:hover { opacity: .9; }
+    .btn-calc:active { transform: scale(.99); }
+
+    /* ============================================================
+       RESULTS SECTION
+    ============================================================ */
+    .results-section {
+      border-top: 1px solid var(--gray-200);
+      background: var(--gray-50);
+      padding: 32px 32px 36px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .35s ease, transform .35s ease;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) { .results-section { padding: 24px 18px 28px; } }
+
+    .results-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Big number */
+    .payment-hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .payment-label {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 6px;
+    }
+    .payment-amount {
+      font-size: clamp(2.4rem, 8vw, 3.6rem);
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -.03em;
+      line-height: 1;
+    }
+    .payment-amount span { font-size: .55em; font-weight: 600; vertical-align: top; margin-top: .3em; display: inline-block; }
+    .payment-sub {
+      font-size: .84rem;
+      color: var(--gray-400);
+      margin-top: 6px;
+    }
+
+    /* Breakdown bar */
+    .breakdown-title {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 12px;
+    }
+    .breakdown-bar {
+      display: flex;
+      height: 18px;
+      border-radius: 9px;
+      overflow: hidden;
+      margin-bottom: 18px;
+      background: var(--gray-200);
+    }
+    .bar-seg { transition: width .4s ease; height: 100%; }
+    .seg-pi   { background: var(--navy); }
+    .seg-tax  { background: #3b82f6; }
+    .seg-ins  { background: #8b5cf6; }
+    .seg-hoa  { background: var(--warn); }
+    .seg-pmi  { background: var(--red); }
+
+    /* Breakdown legend */
+    .breakdown-legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px 20px;
+      margin-bottom: 28px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: .88rem;
+    }
+    .legend-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-name { color: var(--gray-600); flex: 1; }
+    .legend-val  { font-weight: 700; color: var(--gray-800); }
+
+    /* Loan summary pills */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .summary-pill {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .summary-pill-label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 6px;
+    }
+    .summary-pill-val {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -.02em;
+    }
+    .summary-pill-val.red  { color: var(--red); }
+    .summary-pill-val.green { color: var(--accent); }
+
+    /* ============================================================
+       AD PLACEHOLDER - BOTTOM
+    ============================================================ */
+    /* ---- ADSENSE INJECTION POINT - BOTTOM ----
+       Replace inner content of #ad-bottom with your AdSense block.
+    ---- */
+    .ad-bottom-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 28px 16px 0;
+    }
+
+    /* ============================================================
+       FOOTNOTE / DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      max-width: 780px;
+      margin: 20px auto 0;
+      padding: 0 16px;
+      font-size: .75rem;
+      color: var(--gray-400);
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    /* ============================================================
+       UTILITIES
+    ============================================================ */
+    .visually-hidden { position: absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/mortgage-calculator/" />
+</head>
+<body>
+
+  <!-- ============================================================
+       SITE HEADER - Back link to axiomape.com
+  ============================================================ -->
+  <header class="site-header">
+    <a href="/" title="Back to Axiom Ape">axiomape.com</a>
+  </header>
+
+  <!-- ============================================================
+       HERO
+  ============================================================ -->
+  <section class="hero">
+    <h1>Mortgage Payment Calculator</h1>
+    <p>Estimate your monthly payment based on home price, interest rate, and loan term - including taxes, insurance, HOA, and PMI.</p>
+  </section>
+
+  <!-- ============================================================
+       AD PLACEHOLDER - TOP (leaderboard 728x90)
+       Replace inner div content with AdSense <ins> tag when ready.
+  ============================================================ -->
+  <div class="ad-wrap">
+    <div id="ad-top" class="ad-placeholder">Advertisement</div>
+  </div>
+
+  <!-- ============================================================
+       MAIN CARD
+  ============================================================ -->
+  <main class="card-wrap" role="main">
+    <div class="card">
+
+      <!-- ---- INPUTS ---- -->
+      <div class="form-section">
+
+        <!-- Primary Inputs -->
+        <p class="section-title">Loan Details</p>
+
+        <div class="input-grid">
+
+          <!-- Home Price -->
+          <div class="input-group">
+            <label class="field-label" for="homePrice">
+              Home Price
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Home Price?">?</span>
+                <span class="tip-bubble">The total purchase price of the home you want to buy before any down payment is subtracted.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="text" id="homePrice" placeholder="400,000" inputmode="numeric" autocomplete="off" />
+            </div>
+          </div>
+
+          <!-- Loan Term -->
+          <div class="input-group">
+            <label class="field-label" for="loanTerm">
+              Loan Term
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Loan Term?">?</span>
+                <span class="tip-bubble">The number of years you have to repay the loan. Shorter terms mean higher monthly payments but far less interest paid overall.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <select id="loanTerm">
+                <option value="30">30-year fixed</option>
+                <option value="20">20-year fixed</option>
+                <option value="15">15-year fixed</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Down Payment -->
+          <div class="input-group full">
+            <label class="field-label">
+              Down Payment
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Down Payment?">?</span>
+                <span class="tip-bubble">The upfront cash you pay toward the home purchase. The remainder becomes your loan (principal). Putting down at least 20% lets you avoid PMI.</span>
+              </span>
+            </label>
+            <div class="dp-row">
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="text" id="dpDollar" placeholder="80,000" inputmode="numeric" autocomplete="off" aria-label="Down payment in dollars" />
+              </div>
+              <div class="input-wrap">
+                <input type="number" id="dpPercent" placeholder="20" min="0" max="100" step="0.1" autocomplete="off" aria-label="Down payment as percent" />
+                <span class="input-suffix">%</span>
+              </div>
+            </div>
+            <!-- PMI status messages -->
+            <div id="pmiSuccess" class="pmi-success">
+              - You are putting down 20% or more - no PMI required. Good work!
+            </div>
+          </div>
+
+          <!-- Interest Rate -->
+          <div class="input-group">
+            <label class="field-label" for="interestRate">
+              Interest Rate
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Interest Rate?">?</span>
+                <span class="tip-bubble">The annual percentage the lender charges on the outstanding loan balance. Even a 0.5% difference can cost or save tens of thousands of dollars over the life of the loan.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <input type="number" id="interestRate" placeholder="6.75" min="0" max="30" step="0.01" autocomplete="off" />
+              <span class="input-suffix">%</span>
+            </div>
+          </div>
+
+        </div><!-- /input-grid -->
+
+        <hr class="divider" />
+
+        <!-- Advanced Cost Inputs -->
+        <p class="section-title">Monthly Costs (Optional)</p>
+
+        <div class="input-grid">
+
+          <!-- Property Tax -->
+          <div class="input-group">
+            <label class="field-label" for="propTax">
+              Property Taxes (Annual)
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Property Tax?">?</span>
+                <span class="tip-bubble">A tax levied by local government based on your home's assessed value. Typically 0.5%-2.5% of the home's value per year. Check your county assessor's website for your rate.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="text" id="propTax" placeholder="5,000" inputmode="numeric" autocomplete="off" />
+            </div>
+            <span class="field-hint">Divided by 12 for monthly portion</span>
+          </div>
+
+          <!-- Homeowners Insurance -->
+          <div class="input-group">
+            <label class="field-label" for="hoInsurance">
+              Homeowners Insurance (Annual)
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is Homeowners Insurance?">?</span>
+                <span class="tip-bubble">Protects your home and belongings against damage or theft. Lenders require it. The national average is roughly $1,500-$2,500 per year depending on location and home value.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="text" id="hoInsurance" placeholder="1,800" inputmode="numeric" autocomplete="off" />
+            </div>
+            <span class="field-hint">Divided by 12 for monthly portion</span>
+          </div>
+
+          <!-- HOA Fees -->
+          <div class="input-group">
+            <label class="field-label" for="hoaFees">
+              HOA Fees (Monthly)
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is HOA?">?</span>
+                <span class="tip-bubble">Homeowners Association fees paid to a governing body in planned communities (condos, townhomes, subdivisions). They cover shared amenities and maintenance. Not all homes have HOA fees.</span>
+              </span>
+            </label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="text" id="hoaFees" placeholder="0" inputmode="numeric" autocomplete="off" />
+            </div>
+          </div>
+
+          <!-- PMI (dynamic) -->
+          <div class="input-group" id="pmiGroup">
+            <label class="field-label">
+              PMI - Private Mortgage Insurance
+              <span class="tip-wrap">
+                <span class="tip-icon" aria-label="What is PMI?">?</span>
+                <span class="tip-bubble">Required by lenders when your down payment is less than 20% of the home price. It protects the lender (not you) if you default. PMI typically costs 0.5%-1% of the loan amount per year and can be removed once you reach 20% equity.</span>
+              </span>
+            </label>
+            <div class="pmi-row" id="pmiRow">
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="text" id="pmiMonthly" readonly tabindex="-1" aria-label="Estimated monthly PMI" />
+                <span class="input-suffix">/ mo. (est.)</span>
+              </div>
+              <span class="pmi-warn">- Your down payment is under 20%. PMI is automatically estimated at 0.85% annually.</span>
+            </div>
+            <div id="pmiRowHidden" class="field-hint" style="display:none; color: var(--accent); font-weight:600;">
+              - No PMI required (20%+ down payment).
+            </div>
+          </div>
+
+        </div><!-- /input-grid -->
+
+        <!-- CALCULATE BUTTON -->
+        <button class="btn-calc" id="calcBtn" type="button">Calculate Monthly Payment</button>
+
+      </div><!-- /form-section -->
+
+      <!-- ============================================================
+           RESULTS SECTION
+      ============================================================ -->
+      <div class="results-section" id="resultsSection" aria-live="polite">
+
+        <!-- Big monthly number -->
+        <div class="payment-hero">
+          <div class="payment-label">Estimated Monthly Payment</div>
+          <div class="payment-amount"><span>$</span><span id="totalMonthly">0</span></div>
+          <div class="payment-sub" id="paymentSub">Principal + Interest + Taxes + Insurance</div>
+        </div>
+
+        <!-- Breakdown bar -->
+        <p class="breakdown-title">Payment Breakdown</p>
+        <div class="breakdown-bar" id="breakdownBar" role="img" aria-label="Payment breakdown bar chart">
+          <div class="bar-seg seg-pi"  id="barPI"  style="width:0%"></div>
+          <div class="bar-seg seg-tax" id="barTax" style="width:0%"></div>
+          <div class="bar-seg seg-ins" id="barIns" style="width:0%"></div>
+          <div class="bar-seg seg-hoa" id="barHOA" style="width:0%"></div>
+          <div class="bar-seg seg-pmi" id="barPMI" style="width:0%"></div>
+        </div>
+
+        <!-- Legend -->
+        <div class="breakdown-legend" id="breakdownLegend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:var(--navy)"></div>
+            <span class="legend-name">
+              Principal &amp; Interest
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Principal and Interest?">?</span>
+                <span class="tip-bubble">Principal is the original loan amount you borrowed. Interest is the fee the lender charges. This combined payment is calculated using the standard amortization formula.</span>
+              </span>
+            </span>
+            <span class="legend-val" id="legPI">$0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:var(--sky)"></div>
+            <span class="legend-name">Property Taxes</span>
+            <span class="legend-val" id="legTax">$0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#8b5cf6"></div>
+            <span class="legend-name">Homeowners Insurance</span>
+            <span class="legend-val" id="legIns">$0</span>
+          </div>
+          <div class="legend-item" id="legHOAItem">
+            <div class="legend-dot" style="background:var(--warn)"></div>
+            <span class="legend-name">HOA Fees</span>
+            <span class="legend-val" id="legHOA">$0</span>
+          </div>
+          <div class="legend-item" id="legPMIItem" style="display:none;">
+            <div class="legend-dot" style="background:var(--red)"></div>
+            <span class="legend-name">
+              PMI
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is PMI?">?</span>
+                <span class="tip-bubble">Private Mortgage Insurance is required because your down payment is under 20%. Once your equity reaches 20%, you can request PMI removal - saving you this monthly cost.</span>
+              </span>
+            </span>
+            <span class="legend-val" id="legPMI">$0</span>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Loan Summary Pills -->
+        <p class="breakdown-title">Loan Summary</p>
+        <div class="summary-row">
+          <div class="summary-pill">
+            <div class="summary-pill-label">
+              Loan Amount
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Loan Amount?">?</span>
+                <span class="tip-bubble">The amount you are borrowing: Home Price minus your Down Payment. This is also called the Principal of the loan.</span>
+              </span>
+            </div>
+            <div class="summary-pill-val" id="sumLoanAmt">$0</div>
+          </div>
+          <div class="summary-pill">
+            <div class="summary-pill-label">Total Principal Paid</div>
+            <div class="summary-pill-val green" id="sumPrincipal">$0</div>
+          </div>
+          <div class="summary-pill">
+            <div class="summary-pill-label">
+              Total Interest Paid
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Total Interest?">?</span>
+                <span class="tip-bubble">The total amount you will pay the lender on top of the loan balance over the entire life of the loan. This is why shorter terms and lower rates save so much money.</span>
+              </span>
+            </div>
+            <div class="summary-pill-val red" id="sumInterest">$0</div>
+          </div>
+          <div class="summary-pill">
+            <div class="summary-pill-label">
+              Total Cost of Loan
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Total Cost?">?</span>
+                <span class="tip-bubble">Total Principal plus Total Interest. This is the actual total amount you will repay to the lender over the life of the loan, excluding taxes, insurance, and fees.</span>
+              </span>
+            </div>
+            <div class="summary-pill-val" id="sumTotal">$0</div>
+          </div>
+          <div class="summary-pill">
+            <div class="summary-pill-label">
+              Amortization
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Amortization?">?</span>
+                <span class="tip-bubble">The process of gradually paying off a debt through regular scheduled payments. Early in the loan, most of each payment is interest. Over time, more goes toward the principal balance.</span>
+              </span>
+            </div>
+            <div class="summary-pill-val" id="sumPayments">0 payments</div>
+          </div>
+          <div class="summary-pill">
+            <div class="summary-pill-label">
+              Escrow (Monthly)
+              <span class="tip-wrap" style="vertical-align:middle; margin-left:3px;">
+                <span class="tip-icon" aria-label="What is Escrow?">?</span>
+                <span class="tip-bubble">An escrow account is managed by your lender and holds your property tax and insurance payments. Each month a portion is collected with your mortgage payment, and the lender pays the bills on your behalf.</span>
+              </span>
+            </div>
+            <div class="summary-pill-val" id="sumEscrow">$0</div>
+          </div>
+        </div>
+
+      </div><!-- /results-section -->
+
+    </div><!-- /card -->
+  </main><!-- /card-wrap -->
+
+  <!-- ============================================================
+       AD PLACEHOLDER - BOTTOM (leaderboard 728x90)
+       Replace inner div content with AdSense <ins> tag when ready.
+  ============================================================ -->
+  <div class="ad-bottom-wrap">
+    <div id="ad-bottom" class="ad-placeholder">Advertisement</div>
+  </div>
+
+  <!-- ============================================================
+       DISCLAIMER
+  ============================================================ -->
+  <p class="disclaimer">
+    This calculator provides estimates for educational purposes only. Results are not guaranteed and do not constitute financial advice. Actual mortgage payments may vary based on lender terms, credit score, local tax rates, and other factors. Consult a licensed mortgage professional before making any financial decisions.
+  </p>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    /* ============================================================
+       UTILITIES
+    ============================================================ */
+
+    // Format a number with commas (e.g., 400000 -> "400,000")
+    function fmtComma(val) {
+      const num = parseFloat(String(val).replace(/,/g, ""));
+      if (isNaN(num)) return "";
+      return Math.round(num).toLocaleString("en-US");
+    }
+
+    // Format as currency string (e.g., "$1,234")
+    function fmtCurrency(val) {
+      return "$" + parseFloat(val).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      });
+    }
+
+    // Parse a formatted string back to a number
+    function parseNum(str) {
+      const n = parseFloat(String(str).replace(/,/g, "").replace(/\$/g, ""));
+      return isNaN(n) ? 0 : n;
+    }
+
+    /* ============================================================
+       INPUT FORMATTING - auto-comma on dollar fields
+    ============================================================ */
+    ["homePrice", "dpDollar", "propTax", "hoInsurance", "hoaFees"].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", function() {
+        const raw = this.value.replace(/[^0-9]/g, "");
+        if (raw === "") { this.value = ""; return; }
+        const cursor = this.selectionStart;
+        const prevLen = this.value.length;
+        this.value = Number(raw).toLocaleString("en-US");
+        // Adjust cursor position to compensate for added commas
+        const diff = this.value.length - prevLen;
+        this.setSelectionRange(cursor + diff, cursor + diff);
+      });
+    });
+
+    /* ============================================================
+       DOWN PAYMENT - sync dollar <-> percent
+    ============================================================ */
+    let dpSyncLock = false; // prevents circular updates
+
+    document.getElementById("dpDollar").addEventListener("input", function() {
+      if (dpSyncLock) return;
+      dpSyncLock = true;
+      const hp = parseNum(document.getElementById("homePrice").value);
+      const dpD = parseNum(this.value);
+      if (hp > 0) {
+        document.getElementById("dpPercent").value = ((dpD / hp) * 100).toFixed(1);
+      }
+      dpSyncLock = false;
+      checkPMI();
+    });
+
+    document.getElementById("dpPercent").addEventListener("input", function() {
+      if (dpSyncLock) return;
+      dpSyncLock = true;
+      const hp = parseNum(document.getElementById("homePrice").value);
+      const pct = parseFloat(this.value) || 0;
+      const dollar = (hp * pct) / 100;
+      document.getElementById("dpDollar").value = dollar > 0 ? fmtComma(dollar) : "";
+      dpSyncLock = false;
+      checkPMI();
+    });
+
+    // Also update dpDollar if homePrice changes while a percent is already set
+    document.getElementById("homePrice").addEventListener("input", function() {
+      const hp = parseNum(this.value);
+      const pct = parseFloat(document.getElementById("dpPercent").value) || 0;
+      if (pct > 0 && hp > 0) {
+        document.getElementById("dpDollar").value = fmtComma((hp * pct) / 100);
+      }
+      checkPMI();
+    });
+
+    /* ============================================================
+       PMI LOGIC - show/hide based on down payment vs 20%
+    ============================================================ */
+    function checkPMI() {
+      const hp    = parseNum(document.getElementById("homePrice").value);
+      const dpD   = parseNum(document.getElementById("dpDollar").value);
+      const dpPct = hp > 0 ? (dpD / hp) * 100 : 0;
+
+      const pmiRow     = document.getElementById("pmiRow");
+      const pmiSuccess = document.getElementById("pmiSuccess");
+      const pmiHidden  = document.getElementById("pmiRowHidden");
+
+      if (hp <= 0) {
+        pmiRow.classList.remove("visible");
+        pmiSuccess.classList.remove("visible");
+        pmiHidden.style.display = "none";
+        return;
+      }
+
+      if (dpPct < 20) {
+        // Show PMI row with estimate at 0.85% annually
+        const loanAmt   = hp - dpD;
+        const pmiAnnual = loanAmt * 0.0085;
+        const pmiMo     = pmiAnnual / 12;
+        document.getElementById("pmiMonthly").value = fmtComma(pmiMo.toFixed(0));
+        pmiRow.classList.add("visible");
+        pmiSuccess.classList.remove("visible");
+        pmiHidden.style.display = "none";
+      } else {
+        // 20%+ - no PMI
+        document.getElementById("pmiMonthly").value = "0";
+        pmiRow.classList.remove("visible");
+        pmiSuccess.classList.add("visible");
+        pmiHidden.style.display = "block";
+      }
+    }
+
+    // Trigger PMI check when interest rate or term changes too (affects nothing here,
+    // but hook all inputs to auto-recalculate on Enter)
+    ["interestRate", "loanTerm"].forEach(id => {
+      document.getElementById(id).addEventListener("change", checkPMI);
+    });
+
+    /* ============================================================
+       AMORTIZATION FORMULA
+       M = P [ i(1+i)^n ] / [ (1+i)^n - 1 ]
+       P = principal (loan amount)
+       i = monthly interest rate (annual rate / 12 / 100)
+       n = total number of payments (years x 12)
+    ============================================================ */
+    function calcPI(principal, annualRatePct, termYears) {
+      const i = (annualRatePct / 100) / 12;
+      const n = termYears * 12;
+      if (i === 0) return principal / n; // edge case: 0% interest
+      const factor = Math.pow(1 + i, n);
+      return principal * (i * factor) / (factor - 1);
+    }
+
+    /* ============================================================
+       MAIN CALCULATE FUNCTION
+    ============================================================ */
+    function calculate() {
+      // --- Read inputs ---
+      const homePrice  = parseNum(document.getElementById("homePrice").value);
+      const dpDollar   = parseNum(document.getElementById("dpDollar").value);
+      const termYears  = parseInt(document.getElementById("loanTerm").value);
+      const rate       = parseFloat(document.getElementById("interestRate").value) || 0;
+      const taxAnnual  = parseNum(document.getElementById("propTax").value);
+      const insAnnual  = parseNum(document.getElementById("hoInsurance").value);
+      const hoaMo      = parseNum(document.getElementById("hoaFees").value);
+
+      // --- Validate essentials ---
+      if (homePrice <= 0 || rate <= 0) {
+        alert("Please enter a valid Home Price and Interest Rate to calculate.");
+        return;
+      }
+
+      const loanAmt    = Math.max(homePrice - dpDollar, 0);
+      const dpPct      = homePrice > 0 ? (dpDollar / homePrice) * 100 : 0;
+
+      // --- Principal & Interest (amortization formula) ---
+      const piMonthly  = calcPI(loanAmt, rate, termYears);
+
+      // --- Taxes & Insurance (monthly slices) ---
+      const taxMo      = taxAnnual / 12;
+      const insMo      = insAnnual / 12;
+
+      // --- PMI (0.85% annually if < 20% down) ---
+      let pmiMo = 0;
+      if (dpPct < 20 && loanAmt > 0) {
+        pmiMo = (loanAmt * 0.0085) / 12;
+      }
+
+      // --- Total monthly payment ---
+      const totalMo = piMonthly + taxMo + insMo + hoaMo + pmiMo;
+
+      // --- Lifetime loan figures ---
+      const n           = termYears * 12;
+      const totalRepaid = piMonthly * n;
+      const totalInt    = totalRepaid - loanAmt;
+      const escrowMo    = taxMo + insMo;
+
+      /* ============================================================
+         UPDATE DOM
+      ============================================================ */
+
+      // Big number
+      document.getElementById("totalMonthly").textContent =
+        totalMo.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+      // Sub label
+      const parts = ["P&I"];
+      if (taxMo > 0)  parts.push("Taxes");
+      if (insMo > 0)  parts.push("Insurance");
+      if (hoaMo > 0)  parts.push("HOA");
+      if (pmiMo > 0)  parts.push("PMI");
+      document.getElementById("paymentSub").textContent = parts.join(" + ");
+
+      // Breakdown bar widths (percentages of total)
+      function pct(val) { return totalMo > 0 ? ((val / totalMo) * 100).toFixed(2) + "%" : "0%"; }
+      document.getElementById("barPI").style.width  = pct(piMonthly);
+      document.getElementById("barTax").style.width = pct(taxMo);
+      document.getElementById("barIns").style.width = pct(insMo);
+      document.getElementById("barHOA").style.width = pct(hoaMo);
+      document.getElementById("barPMI").style.width = pct(pmiMo);
+
+      // Legend values
+      document.getElementById("legPI").textContent  = fmtCurrency(piMonthly);
+      document.getElementById("legTax").textContent = fmtCurrency(taxMo);
+      document.getElementById("legIns").textContent = fmtCurrency(insMo);
+      document.getElementById("legHOA").textContent = fmtCurrency(hoaMo);
+      document.getElementById("legPMI").textContent = fmtCurrency(pmiMo);
+
+      // Show/hide PMI legend row
+      document.getElementById("legPMIItem").style.display = pmiMo > 0 ? "flex" : "none";
+
+      // Summary pills
+      document.getElementById("sumLoanAmt").textContent   = fmtCurrency(loanAmt);
+      document.getElementById("sumPrincipal").textContent = fmtCurrency(loanAmt);
+      document.getElementById("sumInterest").textContent  = fmtCurrency(totalInt);
+      document.getElementById("sumTotal").textContent     = fmtCurrency(totalRepaid);
+      document.getElementById("sumPayments").textContent  = n + " payments";
+      document.getElementById("sumEscrow").textContent    = fmtCurrency(escrowMo);
+
+      // Reveal results block with smooth transition
+      const resultsEl = document.getElementById("resultsSection");
+      resultsEl.classList.add("visible");
+      resultsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    /* ============================================================
+       BUTTON CLICK + Enter key in any input field
+    ============================================================ */
+    document.getElementById("calcBtn").addEventListener("click", calculate);
+
+    document.querySelectorAll("input, select").forEach(el => {
+      el.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") calculate();
+      });
+    });
+  </script>
+
+</body>
+</html>

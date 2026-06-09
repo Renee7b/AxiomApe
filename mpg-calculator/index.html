@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare MPG: Calculate MPG, Trip Fuel Cost, and Compare Vehicles Side-By-Side</title>
+  <meta name="description" content="Free MPG calculator and vehicle fuel cost comparison tool. Calculate trip fuel cost, find your real-world MPG, and compare two vehicles side-by-side to see annual savings." />
+  <meta name="keywords" content="MPG calculator, fuel cost calculator, compare vehicles MPG, gas mileage calculator, trip cost calculator, annual fuel cost, hybrid vs gas savings" />
+
+  <!-- MathJax for LaTeX rendering -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:        #1a6b3c;   /* Deep highway green */
+      --primary-dark:   #134f2d;
+      --primary-light:  #e8f5ee;
+      --accent:         #27ae60;
+      --accent-bright:  #2ecc71;
+      --savings-bg:     #fff8e1;
+      --savings-border: #f59e0b;
+      --savings-text:   #92400e;
+      --danger:         #e74c3c;
+      --text-dark:      #1a202c;
+      --text-mid:       #4a5568;
+      --text-light:     #718096;
+      --border:         #e2e8f0;
+      --bg-page:        #f0f4f8;
+      --bg-card:        #ffffff;
+      --bg-input:       #f7fafc;
+      --shadow-sm:      0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md:      0 4px 16px rgba(0,0,0,0.10);
+      --shadow-lg:      0 8px 32px rgba(0,0,0,0.12);
+      --radius:         12px;
+      --radius-sm:      8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-dark);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-nav {
+      background: var(--primary-dark);
+      text-align: center;
+      padding: 10px 16px;
+    }
+    .top-nav a {
+      color: #a7f3c2;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .top-nav a:hover { color: #ffffff; }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 0;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER (leaderboard 728x90)
+       Replace this div content with your AdSense snippet.
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #edf2f7;
+      border: 2px dashed #cbd5e0;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-light);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: var(--primary-dark);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-header p {
+      color: var(--text-mid);
+      font-size: 1rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .main-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 36px;
+    }
+
+    /* ============================================================
+       TABS
+    ============================================================ */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      background: #f8fafc;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 16px 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-light);
+      transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+      position: relative;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .tab-btn span.tab-label-small {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 400;
+      margin-top: 3px;
+      opacity: 0.75;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      background: var(--bg-card);
+      box-shadow: inset 0 -3px 0 var(--primary);
+    }
+    .tab-btn:hover:not(.active) {
+      background: #edf2f7;
+      color: var(--text-dark);
+    }
+
+    /* ============================================================
+       TAB PANELS
+    ============================================================ */
+    .tab-panel { display: none; padding: 28px 28px 24px; }
+    .tab-panel.active { display: block; }
+
+    /* ============================================================
+       SECTION HEADINGS
+    ============================================================ */
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+    .section-desc {
+      font-size: 0.83rem;
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    /* ============================================================
+       FORM ELEMENTS
+    ============================================================ */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-group .field-hint {
+      font-size: 0.72rem;
+      color: var(--text-light);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-top: 1px;
+    }
+    .form-group input,
+    .form-group select {
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      font-size: 1rem;
+      color: var(--text-dark);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,107,60,0.12);
+      background: #fff;
+    }
+    .form-group input::placeholder { color: #b0bec5; }
+
+    /* ============================================================
+       RESULT CARDS
+    ============================================================ */
+    .result-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .result-card {
+      background: var(--primary-light);
+      border: 1.5px solid #b2dfcb;
+      border-radius: var(--radius-sm);
+      padding: 16px 14px;
+      text-align: center;
+    }
+    .result-card .result-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+    .result-card .result-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+    .result-card .result-unit {
+      font-size: 0.78rem;
+      color: var(--primary-dark);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .result-card.empty .result-value { color: #b0bec5; font-size: 1.4rem; }
+
+    /* ============================================================
+       SAVINGS HIGHLIGHT BOX
+    ============================================================ */
+    .savings-box {
+      background: var(--savings-bg);
+      border: 2px solid var(--savings-border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      margin-top: 4px;
+      text-align: center;
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .savings-box p {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--savings-text);
+      line-height: 1.4;
+    }
+    .savings-box p span.savings-amount {
+      font-size: 1.35rem;
+      color: var(--primary);
+    }
+    .savings-box.equal { background: #f0f4f8; border-color: var(--border); }
+    .savings-box.equal p { color: var(--text-mid); font-weight: 600; }
+
+    /* ============================================================
+       COMPARISON COLUMNS
+    ============================================================ */
+    .compare-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 580px) {
+      .compare-columns { grid-template-columns: 1fr; }
+    }
+    .vehicle-col {
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px;
+    }
+    .vehicle-col h3 {
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--primary-dark);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    .vehicle-col .result-card { background: #ffffff; border-color: var(--border); }
+    .vehicle-col .result-card .result-value { font-size: 1.7rem; }
+
+    /* ============================================================
+       SHARED INPUTS ROW (annual mileage)
+    ============================================================ */
+    .shared-inputs {
+      background: var(--primary-light);
+      border: 1.5px solid #b2dfcb;
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .shared-inputs .form-group { flex: 1; min-width: 180px; }
+
+    /* ============================================================
+       CLEAR BUTTON
+    ============================================================ */
+    .btn-clear {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-mid);
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      margin-top: 4px;
+    }
+    .btn-clear:hover {
+      background: #fee2e2;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* ============================================================
+       DIVIDER
+    ============================================================ */
+    .divider {
+      border: none;
+      border-top: 1.5px solid var(--border);
+      margin: 24px 0;
+    }
+
+    /* ============================================================
+       TOOLTIP / INFO CHIPS
+    ============================================================ */
+    .info-chip {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-left: 5px;
+      vertical-align: middle;
+      cursor: help;
+      border: 1px solid #b2dfcb;
+    }
+
+    /* ============================================================
+       SEO / EDUCATIONAL SECTION
+    ============================================================ */
+    .edu-section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      padding: 36px 36px 32px;
+      margin-bottom: 36px;
+    }
+    .edu-section h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+    .edu-section .edu-intro {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      max-width: 680px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: #f8fafc;
+      border: none;
+      text-align: left;
+      padding: 16px 18px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+    .faq-question:hover { background: var(--primary-light); }
+    .faq-question .faq-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 800;
+      transition: transform 0.3s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s ease;
+      padding: 0 18px;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 900px;
+      padding: 16px 18px 20px;
+    }
+    .faq-answer p { color: var(--text-mid); font-size: 0.93rem; margin-bottom: 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer .math-block {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 12px 16px;
+      margin: 14px 0;
+      font-size: 1rem;
+      overflow-x: auto;
+    }
+    .faq-answer ul {
+      margin: 8px 0 10px 20px;
+      color: var(--text-mid);
+      font-size: 0.93rem;
+    }
+    .faq-answer ul li { margin-bottom: 5px; }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: #fffbeb;
+      border: 1.5px solid #fcd34d;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 0 auto 28px;
+      max-width: 900px;
+    }
+    .disclaimer p {
+      font-size: 0.85rem;
+      color: #78350f;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .disclaimer strong { color: #92400e; }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      background: var(--primary-dark);
+      padding: 20px 16px;
+      text-align: center;
+    }
+    footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    footer .footer-links a {
+      color: #a7f3c2;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    footer .footer-links a:hover { color: #ffffff; }
+    footer .footer-copy {
+      color: #6b9e81;
+      font-size: 0.75rem;
+    }
+
+    /* ============================================================
+       RESPONSIVE TWEAKS
+    ============================================================ */
+    @media (max-width: 600px) {
+      .tab-panel { padding: 20px 16px 18px; }
+      .edu-section { padding: 24px 18px 22px; }
+      .result-card .result-value { font-size: 1.6rem; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/mpg-calculator/" />
+</head>
+
+<body>
+
+  <!-- ============================================================
+       TOP NAV - Back to main site
+  ============================================================ -->
+  <div class="top-nav">
+    <a href="/" title="Return to Axiom Ape home">&#8592; axiomape.com</a>
+  </div>
+
+  <div class="page-wrapper">
+
+    <!-- ============================================================
+         AD LEADERBOARD PLACEHOLDER
+         Replace inner content with your Google AdSense <ins> tag.
+    ============================================================ -->
+    <div class="ad-leaderboard" aria-label="Advertisement space">
+      <!-- ADSENSE LEADERBOARD (728 x 90) - INSERT AD CODE HERE -->
+      Ad Space (728 x 90)
+    </div>
+
+    <!-- ============================================================
+         PAGE HEADER
+    ============================================================ -->
+    <header class="page-header">
+      <h1>Compare MPG: Calculate Fuel Cost and Compare Vehicles</h1>
+      <p>Calculate your real-world gas mileage, find the cost of any trip, and compare two vehicles side-by-side to see exactly how much you could save each year.</p>
+    </header>
+
+    <!-- ============================================================
+         MAIN CALCULATOR CARD
+    ============================================================ -->
+    <main class="main-card" id="calculator">
+
+      <!-- TAB BAR -->
+      <div class="tab-bar" role="tablist">
+        <button class="tab-btn active" role="tab" aria-selected="true"
+                aria-controls="panel-mode1" id="tab-mode1"
+                onclick="switchTab('mode1')">
+          Mode 1: Trip Cost and MPG
+          <span class="tab-label-small">Find your real MPG or cost</span>
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false"
+                aria-controls="panel-mode2" id="tab-mode2"
+                onclick="switchTab('mode2')">
+          Mode 2: Compare Two Vehicles
+          <span class="tab-label-small">See annual savings side-by-side</span>
+        </button>
+      </div>
+
+      <!-- ====================================================
+           MODE 1: TRIP COST + RAW MPG CALCULATOR
+      ==================================================== -->
+      <div class="tab-panel active" id="panel-mode1" role="tabpanel" aria-labelledby="tab-mode1">
+
+        <p class="section-title">Trip Cost and MPG Calculator</p>
+        <p class="section-desc">
+          Fill in any two of the first three fields to instantly calculate the third.
+          MPG (Miles Per Gallon) tells you how far your vehicle travels on a single gallon of fuel.
+          A higher MPG means better fuel efficiency and lower costs.
+        </p>
+
+        <div class="form-grid">
+          <!-- Distance -->
+          <div class="form-group">
+            <label for="m1-distance">
+              Distance Driven
+              <span class="info-chip" title="Total miles traveled on this trip or over a tank of gas">What is this?</span>
+            </label>
+            <span class="field-hint">How many miles did you (or will you) drive?</span>
+            <input type="number" id="m1-distance" placeholder="e.g. 350" min="0" step="0.1"
+                   oninput="calcMode1()" aria-label="Distance in miles" />
+          </div>
+
+          <!-- Gallons Used -->
+          <div class="form-group">
+            <label for="m1-gallons">
+              Gallons of Fuel Used
+              <span class="info-chip" title="How many gallons your tank held, or how many you pumped at the station">What is this?</span>
+            </label>
+            <span class="field-hint">Check your fill-up receipt for this number.</span>
+            <input type="number" id="m1-gallons" placeholder="e.g. 12.5" min="0" step="0.01"
+                   oninput="calcMode1()" aria-label="Gallons of fuel used" />
+          </div>
+
+          <!-- Price Per Gallon -->
+          <div class="form-group">
+            <label for="m1-price">
+              Price Per Gallon ($)
+              <span class="info-chip" title="The price shown on the gas pump, usually between $2.50 and $5.00 in the US">What is this?</span>
+            </label>
+            <span class="field-hint">Check the sign at your nearest gas station.</span>
+            <input type="number" id="m1-price" placeholder="e.g. 3.49" min="0" step="0.01"
+                   oninput="calcMode1()" aria-label="Price per gallon in dollars" />
+          </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div class="result-row">
+          <div class="result-card" id="m1-mpg-card">
+            <div class="result-label">Calculated MPG</div>
+            <div class="result-value" id="m1-mpg-val">--</div>
+            <div class="result-unit">miles per gallon</div>
+          </div>
+          <div class="result-card" id="m1-cost-card">
+            <div class="result-label">Total Trip Cost</div>
+            <div class="result-value" id="m1-cost-val">--</div>
+            <div class="result-unit">US dollars</div>
+          </div>
+          <div class="result-card" id="m1-cpm-card">
+            <div class="result-label">Cost Per Mile</div>
+            <div class="result-value" id="m1-cpm-val">--</div>
+            <div class="result-unit">dollars per mile</div>
+          </div>
+        </div>
+
+        <!-- Explanation of results -->
+        <p style="font-size:0.78rem; color: var(--text-light); margin-bottom:16px;">
+          Results update automatically as you type. MPG is calculated from Distance and Gallons. Trip Cost is calculated from Gallons and Price Per Gallon.
+        </p>
+
+        <button class="btn-clear" onclick="clearMode1()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          Clear All Fields
+        </button>
+      </div>
+
+      <!-- ====================================================
+           MODE 2: SIDE-BY-SIDE VEHICLE COMPARISON
+      ==================================================== -->
+      <div class="tab-panel" id="panel-mode2" role="tabpanel" aria-labelledby="tab-mode2">
+
+        <p class="section-title">Side-By-Side Vehicle Comparison</p>
+        <p class="section-desc">
+          Enter the MPG and fuel price for two vehicles to compare their annual operating costs.
+          "Annual Mileage" is how many total miles you drive per year - the US average is about 14,000 miles.
+        </p>
+
+        <!-- SHARED: ANNUAL MILEAGE -->
+        <div class="shared-inputs">
+          <div class="form-group">
+            <label for="m2-mileage">
+              Estimated Annual Mileage
+              <span class="info-chip" title="The total number of miles you expect to drive in one full year. The US national average is approximately 14,000 miles per year.">What is this?</span>
+            </label>
+            <span class="field-hint">US average: ~14,000 miles/year. Adjust to your own driving habits.</span>
+            <input type="number" id="m2-mileage" value="14000" min="0" step="100"
+                   oninput="calcMode2()" aria-label="Annual miles driven" />
+          </div>
+        </div>
+
+        <!-- VEHICLE COLUMNS -->
+        <div class="compare-columns">
+
+          <!-- VEHICLE A -->
+          <div class="vehicle-col">
+            <h3>Vehicle A</h3>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label for="m2-a-name">Vehicle Label (optional)</label>
+              <span class="field-hint">e.g. "2023 Honda Civic" or "Current Car"</span>
+              <input type="text" id="m2-a-name" placeholder="Vehicle A" oninput="calcMode2()" />
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label for="m2-a-mpg">
+                Average MPG
+                <span class="info-chip" title="Use the EPA combined MPG estimate from fueleconomy.gov, or calculate your own from Mode 1 above.">What is this?</span>
+              </label>
+              <span class="field-hint">Find EPA estimates at fueleconomy.gov or check your window sticker.</span>
+              <input type="number" id="m2-a-mpg" placeholder="e.g. 32" min="1" step="0.1"
+                     oninput="calcMode2()" aria-label="Vehicle A MPG" />
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label for="m2-a-price">Fuel Price Per Gallon ($)</label>
+              <span class="field-hint">Use regular unleaded, premium, or diesel price as applicable.</span>
+              <input type="number" id="m2-a-price" placeholder="e.g. 3.49" min="0.01" step="0.01"
+                     oninput="calcMode2()" aria-label="Vehicle A fuel price" />
+            </div>
+            <div class="result-card" id="m2-a-result">
+              <div class="result-label">Annual Fuel Cost</div>
+              <div class="result-value" id="m2-a-cost">--</div>
+              <div class="result-unit">per year</div>
+            </div>
+          </div>
+
+          <!-- VEHICLE B -->
+          <div class="vehicle-col">
+            <h3>Vehicle B</h3>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label for="m2-b-name">Vehicle Label (optional)</label>
+              <span class="field-hint">e.g. "2024 Toyota Camry Hybrid" or "New Car"</span>
+              <input type="text" id="m2-b-name" placeholder="Vehicle B" oninput="calcMode2()" />
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label for="m2-b-mpg">
+                Average MPG
+                <span class="info-chip" title="Use the EPA combined MPG estimate from fueleconomy.gov, or calculate your own from Mode 1 above.">What is this?</span>
+              </label>
+              <span class="field-hint">Find EPA estimates at fueleconomy.gov or check your window sticker.</span>
+              <input type="number" id="m2-b-mpg" placeholder="e.g. 48" min="1" step="0.1"
+                     oninput="calcMode2()" aria-label="Vehicle B MPG" />
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label for="m2-b-price">Fuel Price Per Gallon ($)</label>
+              <span class="field-hint">Hybrids still use gasoline; EVs use electricity (kWh cost) instead.</span>
+              <input type="number" id="m2-b-price" placeholder="e.g. 3.49" min="0.01" step="0.01"
+                     oninput="calcMode2()" aria-label="Vehicle B fuel price" />
+            </div>
+            <div class="result-card" id="m2-b-result">
+              <div class="result-label">Annual Fuel Cost</div>
+              <div class="result-value" id="m2-b-cost">--</div>
+              <div class="result-unit">per year</div>
+            </div>
+          </div>
+
+        </div><!-- end compare-columns -->
+
+        <!-- SAVINGS HIGHLIGHT -->
+        <div class="savings-box equal" id="savings-box" style="margin-top:20px;">
+          <p id="savings-text">Enter MPG and fuel price for both vehicles to see your annual savings comparison.</p>
+        </div>
+
+        <!-- BREAK-EVEN NOTE -->
+        <div id="breakeven-row" style="margin-top:12px; display:none;">
+          <p style="font-size:0.82rem; color:var(--text-mid); text-align:center;">
+            <strong>Break-Even Point:</strong>
+            <span id="breakeven-text"></span>
+            <span class="info-chip" style="cursor:default;" title="The Break-Even Point is the number of years it takes for the fuel savings of the more efficient vehicle to offset any higher purchase price. Enter a price difference below to calculate it.">What is this?</span>
+          </p>
+        </div>
+
+        <!-- OPTIONAL: Break-even purchase price difference input -->
+        <div id="breakeven-inputs" style="margin-top:14px; padding:14px 16px; background:#f8fafc; border:1.5px solid var(--border); border-radius:8px; display:none;">
+          <div class="form-group">
+            <label for="m2-price-diff">
+              Extra Purchase Price of More Efficient Vehicle ($)
+              <span class="info-chip" title="If the more fuel-efficient vehicle costs more upfront, enter that difference here to calculate how many years of driving it takes to break even on fuel savings alone.">What is this?</span>
+            </label>
+            <span class="field-hint">How much more does the efficient vehicle cost to buy? Enter 0 if the prices are the same.</span>
+            <input type="number" id="m2-price-diff" placeholder="e.g. 3000" min="0" step="100"
+                   oninput="calcMode2()" aria-label="Price difference between vehicles" />
+          </div>
+          <p id="breakeven-calc" style="font-size:0.88rem; color:var(--primary-dark); font-weight:600; margin-top:10px;"></p>
+        </div>
+
+        <hr class="divider" />
+
+        <button class="btn-clear" onclick="clearMode2()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          Clear All Fields
+        </button>
+
+      </div><!-- end panel-mode2 -->
+
+    </main><!-- end main-card -->
+
+
+    <!-- ============================================================
+         SEO EDUCATIONAL SECTION
+    ============================================================ -->
+    <section class="edu-section" aria-label="Guide to fuel economy and MPG">
+      <h2>The Ultimate Guide to Fuel Economy, MPG, and Trip Planning</h2>
+      <p class="edu-intro">
+        Whether you are shopping for a new vehicle, trying to stretch your gas budget, or simply curious about how fuel economy works, this guide breaks down everything you need to know in plain language - complete with the real math behind the numbers.
+      </p>
+
+      <!-- FAQ 1 -->
+      <div class="faq-item open" id="faq1">
+        <button class="faq-question" onclick="toggleFaq('faq1')" aria-expanded="true">
+          How do you calculate your actual MPG manually?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            MPG - short for <strong>Miles Per Gallon</strong> - is the single most important number for understanding your vehicle's fuel efficiency. It tells you how many miles your car can travel on one gallon of gasoline. The higher the number, the more efficient the vehicle and the less you spend on fuel.
+          </p>
+          <p>To measure your own real-world MPG accurately, follow this process:</p>
+          <ul>
+            <li>Fill your tank completely until the pump clicks off.</li>
+            <li>Reset your trip odometer to zero (or note your current odometer reading).</li>
+            <li>Drive normally until your tank is low, then fill up again completely.</li>
+            <li>Record the number of gallons it took to refill the tank and the miles driven.</li>
+          </ul>
+          <p>The formula is straightforward:</p>
+          <div class="math-block">
+            $$MPG = \frac{\text{Miles Driven}}{\text{Gallons Used}}$$
+          </div>
+          <p>
+            For example, if you drove 320 miles and used 11.5 gallons to refill:
+            $MPG = 320 \div 11.5 \approx 27.8$ miles per gallon.
+          </p>
+          <p>
+            This real-world MPG will almost always differ from the official <strong>EPA Estimate</strong> (the number on a vehicle's window sticker). EPA testing is done under controlled laboratory conditions, so real-world driving - with traffic, hills, air conditioning, and varying speeds - typically reduces efficiency by 10 to 20 percent.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 2 -->
+      <div class="faq-item" id="faq2">
+        <button class="faq-question" onclick="toggleFaq('faq2')" aria-expanded="false">
+          What is the fuel cost formula and how is trip cost calculated?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Once you know your MPG and the current price of gas, calculating the cost of any trip is simple algebra.
+            The core formula used by this calculator is:
+          </p>
+          <div class="math-block">
+            $$\text{Trip Cost} = \left( \frac{\text{Distance (miles)}}{\text{MPG}} \right) \times \text{Price Per Gallon}$$
+          </div>
+          <p>
+            The first part of the equation, $\frac{Distance}{MPG}$, gives you the number of gallons your trip will consume.
+            Multiplying that by the price per gallon converts gallons into dollars.
+          </p>
+          <p>
+            Example: A 400-mile road trip in a vehicle averaging 28 MPG, with gas at $3.60 per gallon:
+          </p>
+          <div class="math-block">
+            $$\text{Trip Cost} = \left( \frac{400}{28} \right) \times 3.60 = 14.29 \times 3.60 \approx \$51.43$$
+          </div>
+          <p>
+            The <strong>Annual Fuel Cost</strong> formula used in Mode 2 of this calculator applies the same logic over an entire year:
+          </p>
+          <div class="math-block">
+            $$\text{Annual Fuel Cost} = \left( \frac{\text{Annual Mileage}}{\text{MPG}} \right) \times \text{Price Per Gallon}$$
+          </div>
+          <p>
+            The <strong>Price Per Gallon</strong> used in these calculations is a static snapshot - it does not adjust for future price changes. For long-range financial planning, consider averaging several months of local gas prices together to get a more realistic annual cost estimate.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 3 -->
+      <div class="faq-item" id="faq3">
+        <button class="faq-question" onclick="toggleFaq('faq3')" aria-expanded="false">
+          Why does city driving get worse gas mileage than highway driving?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            This is one of the most common questions about fuel economy, and the answer comes down to physics.
+            When your car sits at a red light or crawls in traffic, the engine is still running - burning fuel
+            to idle and power accessories - while moving zero miles. This is pure waste from an MPG perspective.
+          </p>
+          <p>
+            Highway driving, by contrast, lets you cruise at a steady speed. Modern engines are most efficient
+            when operating at a consistent throttle position, which is exactly what highway cruising provides.
+            Frequent stopping and starting forces the engine to repeatedly accelerate the full weight of the car
+            from rest, which is extremely energy-intensive.
+          </p>
+          <p>
+            This is why EPA window stickers show two separate figures - a <strong>City MPG</strong>
+            and a <strong>Highway MPG</strong>. A typical midsize sedan might show 26 MPG city and 36 MPG
+            highway. The <strong>Combined MPG</strong> (the most commonly quoted figure) is a weighted average
+            that assumes approximately 55 percent city and 45 percent highway driving, reflecting a typical
+            American's driving mix.
+          </p>
+          <p>
+            Hybrid vehicles narrow this gap dramatically. Their regenerative braking systems capture energy
+            that would otherwise be lost as heat every time you slow down, and their electric motors handle
+            low-speed acceleration efficiently. This is why hybrids often achieve their best fuel economy
+            in stop-and-go city traffic - the opposite of gasoline-only vehicles.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 4 -->
+      <div class="faq-item" id="faq4">
+        <button class="faq-question" onclick="toggleFaq('faq4')" aria-expanded="false">
+          Are hybrid vehicles always more cost-effective? Understanding the break-even point.
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Hybrids are almost always more fuel-efficient, but "more fuel-efficient" does not automatically
+            mean "more cost-effective." The key concept is the <strong>Break-Even Point</strong> - the number
+            of years it takes for cumulative fuel savings to offset the higher upfront purchase price of the
+            more efficient vehicle.
+          </p>
+          <div class="math-block">
+            $$\text{Break-Even (years)} = \frac{\text{Price Difference}}{\text{Annual Fuel Savings}}$$
+          </div>
+          <p>
+            Example: A hybrid costs $4,000 more than its gasoline equivalent but saves $700 per year in
+            fuel. The break-even point is $4000 \div 700 \approx 5.7$ years. If you plan to keep the vehicle
+            longer than that, the hybrid wins financially. If you trade in after three years, the gasoline
+            version may be cheaper overall.
+          </p>
+          <p>
+            Several factors can shift this calculation significantly:
+          </p>
+          <ul>
+            <li><strong>Gas prices:</strong> Higher fuel prices accelerate the break-even point in the hybrid's favor.</li>
+            <li><strong>Annual mileage:</strong> High-mileage drivers save more fuel per year, reaching break-even faster.</li>
+            <li><strong>Depreciation:</strong> Hybrids sometimes retain resale value better, improving their long-term economics.</li>
+            <li><strong>Incentives:</strong> Federal and state tax credits can reduce the effective price difference significantly.</li>
+            <li><strong>Maintenance:</strong> Hybrids generally have lower brake maintenance costs due to regenerative braking, though battery replacement (if needed after 150,000 to 200,000 miles) is a significant expense.</li>
+          </ul>
+          <p>
+            Use the Mode 2 comparison above with the optional price difference field to calculate the exact
+            break-even point for any two vehicles you are considering.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 5 -->
+      <div class="faq-item" id="faq5">
+        <button class="faq-question" onclick="toggleFaq('faq5')" aria-expanded="false">
+          How do tire pressure, driving habits, and maintenance affect fuel economy?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Your vehicle's EPA estimate is a theoretical best case measured under optimal conditions.
+            Real-world fuel economy is a moving target influenced by dozens of controllable variables.
+            Understanding them can help you meaningfully improve your MPG without spending a dollar.
+          </p>
+          <ul>
+            <li>
+              <strong>Tire Pressure:</strong> Under-inflated tires increase rolling resistance - the friction
+              between the tire and the road. The US Department of Energy estimates that for every 1 PSI drop
+              below the recommended pressure across all four tires, fuel economy decreases by approximately
+              0.2 percent. Tires that are 10 PSI low can reduce MPG by 2 to 3 percent. Check your door jamb
+              sticker (not the tire sidewall) for the correct pressure.
+            </li>
+            <li>
+              <strong>Speed:</strong> Aerodynamic drag increases with the <em>square</em> of velocity.
+              Driving at 75 mph instead of 65 mph can reduce fuel economy by 10 to 15 percent.
+              The formula for aerodynamic drag force is $F_d = \frac{1}{2} \rho v^2 C_d A$, where $v$
+              is velocity - doubling speed quadruples drag force.
+            </li>
+            <li>
+              <strong>Aggressive Acceleration and Braking:</strong> Every hard acceleration burns extra fuel
+              to push the vehicle up to speed, and every hard brake discards that kinetic energy as heat.
+              Smooth, gradual acceleration and coasting to decelerate can improve real-world MPG by 10 to 30
+              percent in city driving.
+            </li>
+            <li>
+              <strong>Air Conditioning:</strong> A/C can reduce fuel economy by 5 to 25 percent depending
+              on ambient temperature and system load. At highway speeds, using A/C is generally more
+              efficient than opening windows (which increases drag); at city speeds the opposite is true.
+            </li>
+            <li>
+              <strong>Engine Maintenance:</strong> A clogged air filter, worn spark plugs, degraded motor oil,
+              or a failing oxygen sensor can each reduce MPG by 2 to 10 percent individually.
+              Regular tune-ups keep the engine running at its designed efficiency.
+            </li>
+            <li>
+              <strong>Cargo and Weight:</strong> Every extra 100 pounds in your vehicle reduces fuel economy
+              by about 1 percent. Roof cargo boxes add significant aerodynamic drag at highway speeds.
+            </li>
+          </ul>
+          <p>
+            Combining these improvements - properly inflated tires, moderate highway speeds, smooth driving,
+            and regular maintenance - can realistically recover 20 to 30 percent of the gap between your
+            real-world MPG and the EPA estimate.
+          </p>
+        </div>
+      </div>
+
+    </section><!-- end edu-section -->
+
+    <!-- ============================================================
+         DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer" role="note">
+      <p>
+        <strong>Disclaimer:</strong> This calculator provides financial estimates based on static fuel prices and optimal vehicle performance. Actual real-world MPG will vary based on driving habits, traffic, and vehicle maintenance.
+      </p>
+    </div>
+
+  </div><!-- end page-wrapper -->
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="footer-copy">&copy; 2025 Axiom Ape. All rights reserved.</p>
+  </footer>
+
+
+  <!-- ============================================================
+       JAVASCRIPT - All calculations run locally in real-time.
+       No page reloads. No external dependencies.
+  ============================================================ -->
+  <script>
+    'use strict';
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    function switchTab(mode) {
+      // Deactivate all tabs and panels
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+
+      // Activate the selected tab and its panel
+      document.getElementById('tab-' + mode).classList.add('active');
+      document.getElementById('tab-' + mode).setAttribute('aria-selected', 'true');
+      document.getElementById('panel-' + mode).classList.add('active');
+    }
+
+
+    // ============================================================
+    // UTILITY HELPERS
+    // ============================================================
+
+    /**
+     * Safely parse a number from an input field.
+     * Returns null if the value is empty, zero, or not a valid positive number.
+     */
+    function getVal(id, allowZero) {
+      const raw = document.getElementById(id).value.trim();
+      if (raw === '') return null;
+      const n = parseFloat(raw);
+      if (isNaN(n)) return null;
+      if (!allowZero && n <= 0) return null;
+      return n;
+    }
+
+    /**
+     * Format a dollar amount with 2 decimal places and $ prefix.
+     */
+    function fmtDollar(n) {
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /**
+     * Format an MPG value with 1 decimal place.
+     */
+    function fmtMpg(n) {
+      return n.toFixed(1);
+    }
+
+
+    // ============================================================
+    // MODE 1: TRIP COST + MPG CALCULATOR
+    // ============================================================
+    function calcMode1() {
+      const distance = getVal('m1-distance');
+      const gallons  = getVal('m1-gallons');
+      const price    = getVal('m1-price');
+
+      // --- Calculate MPG ---
+      let mpg = null;
+      if (distance !== null && gallons !== null) {
+        mpg = distance / gallons;
+      }
+
+      // --- Calculate Trip Cost ---
+      let cost = null;
+      if (gallons !== null && price !== null) {
+        cost = gallons * price;
+      }
+
+      // --- Calculate Cost Per Mile ---
+      let cpm = null;
+      if (cost !== null && distance !== null) {
+        cpm = cost / distance;
+      } else if (mpg !== null && price !== null) {
+        // Alternative path: price / mpg
+        cpm = price / mpg;
+      }
+
+      // --- Update MPG result card ---
+      const mpgEl = document.getElementById('m1-mpg-val');
+      const mpgCard = document.getElementById('m1-mpg-card');
+      if (mpg !== null && isFinite(mpg)) {
+        mpgEl.textContent = fmtMpg(mpg);
+        mpgCard.classList.remove('empty');
+      } else {
+        mpgEl.textContent = '--';
+        mpgCard.classList.add('empty');
+      }
+
+      // --- Update Trip Cost result card ---
+      const costEl   = document.getElementById('m1-cost-val');
+      const costCard = document.getElementById('m1-cost-card');
+      if (cost !== null && isFinite(cost)) {
+        costEl.textContent = fmtDollar(cost);
+        costCard.classList.remove('empty');
+      } else {
+        costEl.textContent = '--';
+        costCard.classList.add('empty');
+      }
+
+      // --- Update Cost Per Mile result card ---
+      const cpmEl   = document.getElementById('m1-cpm-val');
+      const cpmCard = document.getElementById('m1-cpm-card');
+      if (cpm !== null && isFinite(cpm)) {
+        cpmEl.textContent = '$' + cpm.toFixed(3);
+        cpmCard.classList.remove('empty');
+      } else {
+        cpmEl.textContent = '--';
+        cpmCard.classList.add('empty');
+      }
+    }
+
+    function clearMode1() {
+      ['m1-distance', 'm1-gallons', 'm1-price'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      calcMode1();
+    }
+
+
+    // ============================================================
+    // MODE 2: SIDE-BY-SIDE VEHICLE COMPARISON
+    // ============================================================
+    function calcMode2() {
+      const mileage = getVal('m2-mileage');
+      const aMpg    = getVal('m2-a-mpg');
+      const aPrice  = getVal('m2-a-price');
+      const bMpg    = getVal('m2-b-mpg');
+      const bPrice  = getVal('m2-b-price');
+      const priceDiff = getVal('m2-price-diff', true); // allow zero
+
+      // Read optional vehicle labels
+      const aName = document.getElementById('m2-a-name').value.trim() || 'Vehicle A';
+      const bName = document.getElementById('m2-b-name').value.trim() || 'Vehicle B';
+
+      // --- Annual Fuel Costs ---
+      let aCost = null;
+      let bCost = null;
+
+      if (mileage !== null && aMpg !== null && aPrice !== null) {
+        aCost = (mileage / aMpg) * aPrice;
+      }
+      if (mileage !== null && bMpg !== null && bPrice !== null) {
+        bCost = (mileage / bMpg) * bPrice;
+      }
+
+      // --- Update Vehicle A result ---
+      const aCostEl   = document.getElementById('m2-a-cost');
+      const aResultEl = document.getElementById('m2-a-result');
+      if (aCost !== null && isFinite(aCost)) {
+        aCostEl.textContent = fmtDollar(aCost);
+        aResultEl.classList.remove('empty');
+      } else {
+        aCostEl.textContent = '--';
+        aResultEl.classList.add('empty');
+      }
+
+      // --- Update Vehicle B result ---
+      const bCostEl   = document.getElementById('m2-b-cost');
+      const bResultEl = document.getElementById('m2-b-result');
+      if (bCost !== null && isFinite(bCost)) {
+        bCostEl.textContent = fmtDollar(bCost);
+        bResultEl.classList.remove('empty');
+      } else {
+        bCostEl.textContent = '--';
+        bResultEl.classList.add('empty');
+      }
+
+      // --- Savings Highlight ---
+      const savingsBox  = document.getElementById('savings-box');
+      const savingsText = document.getElementById('savings-text');
+
+      if (aCost !== null && bCost !== null) {
+        const diff = Math.abs(aCost - bCost);
+
+        if (diff < 0.01) {
+          // Essentially equal
+          savingsBox.className = 'savings-box equal';
+          savingsText.innerHTML = aName + ' and ' + bName + ' cost approximately the same to fuel each year.';
+        } else if (aCost < bCost) {
+          // A is cheaper
+          savingsBox.className = 'savings-box';
+          savingsText.innerHTML =
+            '<strong>' + aName + '</strong> will save you <span class="savings-amount">' +
+            fmtDollar(diff) + '</span> per year in fuel costs compared to <strong>' + bName + '</strong>.';
+        } else {
+          // B is cheaper
+          savingsBox.className = 'savings-box';
+          savingsText.innerHTML =
+            '<strong>' + bName + '</strong> will save you <span class="savings-amount">' +
+            fmtDollar(diff) + '</span> per year in fuel costs compared to <strong>' + aName + '</strong>.';
+        }
+
+        // Show break-even inputs section once we have a valid annual savings
+        if (diff > 0.01) {
+          document.getElementById('breakeven-inputs').style.display = 'block';
+
+          // Calculate break-even if price difference entered
+          if (priceDiff !== null) {
+            const years = priceDiff / diff;
+            const calcEl = document.getElementById('breakeven-calc');
+            if (priceDiff === 0) {
+              calcEl.textContent = 'No price difference - the more efficient vehicle is immediately the cheaper choice.';
+            } else if (!isFinite(years)) {
+              calcEl.textContent = '';
+            } else {
+              const cheaperName = aCost < bCost ? aName : bName;
+              calcEl.textContent =
+                'Break-Even Point: You would recoup the extra purchase cost of ' +
+                cheaperName + ' in approximately ' + years.toFixed(1) + ' years of driving at ' +
+                (mileage || 14000).toLocaleString() + ' miles/year.';
+            }
+          } else {
+            document.getElementById('breakeven-calc').textContent = '';
+          }
+        } else {
+          document.getElementById('breakeven-inputs').style.display = 'none';
+        }
+
+      } else {
+        // Not enough data yet
+        savingsBox.className = 'savings-box equal';
+        savingsText.textContent = 'Enter MPG and fuel price for both vehicles to see your annual savings comparison.';
+        document.getElementById('breakeven-inputs').style.display = 'none';
+      }
+    }
+
+    function clearMode2() {
+      ['m2-a-name', 'm2-a-mpg', 'm2-a-price', 'm2-b-name', 'm2-b-mpg', 'm2-b-price', 'm2-price-diff'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      // Reset annual mileage to default
+      document.getElementById('m2-mileage').value = '14000';
+      calcMode2();
+    }
+
+
+    // ============================================================
+    // FAQ ACCORDION
+    // ============================================================
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      const btn  = item.querySelector('.faq-question');
+      const isOpen = item.classList.contains('open');
+
+      if (isOpen) {
+        item.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+
+    // ============================================================
+    // INITIAL RENDER - Run calculations on page load with defaults
+    // ============================================================
+    calcMode1();
+    calcMode2();
+
+  </script>
+
+</body>
+</html>

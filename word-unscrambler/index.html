@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Unscrambler: Unscramble Letters to Find Valid Words - Perfect for Scrabble and Wordle</title>
+  <meta name="description" content="Instantly unscramble letters to find every valid English word. Perfect for Scrabble, Wordle, and anagram puzzles. Supports wildcard blank tiles. Results grouped by length. 100% private - runs in your browser." />
+  <meta name="keywords" content="word unscrambler, unscramble letters, scrabble helper, wordle solver, anagram finder, word finder, blank tile, wildcard" />
+
+  <style>
+    /* =====================================================
+       RESET & BASE
+    ===================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:       #2563eb;
+      --brand-dark:  #1d4ed8;
+      --brand-light: #eff6ff;
+      --accent:      #7c3aed;
+      --success:     #059669;
+      --bg:          #f8fafc;
+      --card:        #ffffff;
+      --border:      #e2e8f0;
+      --text:        #1e293b;
+      --muted:       #64748b;
+      --tag-bg:      #f1f5f9;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.08);
+      --shadow-md:   0 4px 16px rgba(0,0,0,.10);
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =====================================================
+       TOP NAV BAR
+    ===================================================== */
+    .top-bar {
+      text-align: center;
+      padding: 10px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: .85rem;
+      color: var(--muted);
+    }
+    .top-bar a {
+      font-weight: 600;
+      color: var(--brand);
+      letter-spacing: .02em;
+    }
+
+    /* =====================================================
+       PAGE WRAPPER
+    ===================================================== */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    /* =====================================================
+       AD PLACEHOLDER - leaderboard 728x90
+       (Replace this block with your AdSense <ins> tag)
+    ===================================================== */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #f1f5f9;
+      border: 2px dashed #cbd5e1;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: .8rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    /* =====================================================
+       HERO HEADER
+    ===================================================== */
+    .hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .hero h1 span { color: var(--brand); }
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* =====================================================
+       MAIN CARD
+    ===================================================== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      padding: 28px 28px 24px;
+      margin-bottom: 28px;
+    }
+
+    /* =====================================================
+       INPUT ROW
+    ===================================================== */
+    .input-section label {
+      display: block;
+      font-weight: 700;
+      font-size: .95rem;
+      margin-bottom: 6px;
+    }
+    .input-hint {
+      font-size: .8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .input-hint strong { color: var(--accent); }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #letterInput {
+      flex: 1;
+      min-width: 200px;
+      padding: 13px 16px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color .2s;
+      color: var(--text);
+    }
+    #letterInput:focus { border-color: var(--brand); }
+    #letterInput::placeholder { font-weight: 400; letter-spacing: 0; font-size: 1rem; color: #94a3b8; text-transform: none; }
+
+    .btn {
+      padding: 13px 26px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover { background: var(--brand-dark); }
+    .btn-clear { background: var(--tag-bg); color: var(--muted); border: 1px solid var(--border); }
+    .btn-clear:hover { background: #e2e8f0; }
+
+    /* =====================================================
+       CONTROLS ROW (min length + sort)
+    ===================================================== */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 18px;
+      align-items: flex-end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    .control-group label { font-size: .82rem; font-weight: 600; color: var(--muted); }
+    .control-group select, .control-group input[type=range] {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--tag-bg);
+      font-size: .9rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .range-row { display: flex; align-items: center; gap: 10px; }
+    #minLenVal {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--brand);
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .sort-toggles { display: flex; gap: 8px; }
+    .sort-btn {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--tag-bg);
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .sort-btn.active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    /* =====================================================
+       STATUS / STATS BAR
+    ===================================================== */
+    .stats-bar {
+      margin-top: 18px;
+      padding: 10px 14px;
+      background: var(--brand-light);
+      border-radius: 8px;
+      font-size: .85rem;
+      color: var(--brand-dark);
+      font-weight: 600;
+      display: none;
+    }
+    .stats-bar.visible { display: block; }
+
+    /* =====================================================
+       RESULTS AREA
+    ===================================================== */
+    #resultsArea { margin-top: 8px; }
+
+    .length-group { margin-bottom: 20px; }
+    .length-heading {
+      font-size: .88rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--brand-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .length-count {
+      background: var(--brand-light);
+      color: var(--brand);
+      border-radius: 99px;
+      padding: 1px 9px;
+      font-size: .78rem;
+    }
+
+    .word-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .word-chip {
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 13px;
+      font-size: .92rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      user-select: none;
+      position: relative;
+    }
+    .word-chip:hover {
+      background: var(--brand-light);
+      border-color: var(--brand);
+      color: var(--brand);
+      transform: translateY(-1px);
+    }
+    .word-chip.copied {
+      background: #d1fae5;
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .no-results .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .no-results h3 { font-size: 1.1rem; margin-bottom: 6px; color: var(--text); }
+    .no-results p { font-size: .9rem; }
+
+    /* =====================================================
+       DIAGRAM SECTION
+    ===================================================== */
+    .diagram-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 28px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .diagram-card h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      color: var(--text);
+      text-align: center;
+    }
+    .diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: .9rem;
+    }
+    .diag-box {
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+    }
+    .diag-box .diag-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .diag-letters {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .diag-tile {
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+    .tile-input  { background: var(--brand); color: #fff; }
+    .tile-sorted { background: var(--accent); color: #fff; }
+    .tile-word   { background: var(--success); color: #fff; }
+    .tile-sorted-word { background: #7c3aed99; color: #fff; }
+    .diag-arrow {
+      font-size: 1.4rem;
+      color: var(--brand);
+      font-weight: 900;
+    }
+    .diag-check {
+      font-size: 1.8rem;
+      color: var(--success);
+    }
+    .diag-match-label {
+      font-size: .78rem;
+      color: var(--success);
+      font-weight: 700;
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    /* =====================================================
+       GUIDE / FAQ SECTION
+    ===================================================== */
+    .guide-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 36px 32px;
+      margin-bottom: 28px;
+    }
+    .guide-section h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .guide-section .subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 28px;
+    }
+
+    .guide-prose p {
+      color: #334155;
+      font-size: .97rem;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+    .guide-prose p:last-child { margin-bottom: 0; }
+
+    /* FAQ Accordions */
+    .faq-list { margin-top: 32px; }
+    .faq-list h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    details {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    summary {
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: .95rem;
+      cursor: pointer;
+      background: var(--tag-bg);
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; font-size: 1.2rem; color: var(--brand); transition: transform .2s; }
+    details[open] summary::after { transform: rotate(45deg); }
+    details[open] summary { background: var(--brand-light); color: var(--brand-dark); }
+    .faq-body {
+      padding: 16px 18px;
+      font-size: .92rem;
+      line-height: 1.8;
+      color: #334155;
+    }
+    .faq-body p { margin-bottom: 10px; }
+    .faq-body p:last-child { margin-bottom: 0; }
+    .faq-body strong { color: var(--text); }
+
+    /* =====================================================
+       GLOSSARY PILLS
+    ===================================================== */
+    .glossary-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 24px 0;
+    }
+    .glossary-pill {
+      background: var(--brand-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--brand-dark);
+    }
+    .glossary-pill span {
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    /* =====================================================
+       DISCLAIMER
+    ===================================================== */
+    .disclaimer {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: .88rem;
+      color: #166534;
+    }
+    .disclaimer-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .disclaimer strong { display: block; font-size: .92rem; margin-bottom: 3px; }
+
+    /* =====================================================
+       FOOTER
+    ===================================================== */
+    footer {
+      text-align: center;
+      padding: 24px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      font-size: .85rem;
+      color: var(--muted);
+    }
+    .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; }
+    .footer-links a { color: var(--muted); font-weight: 600; }
+    .footer-links a:hover { color: var(--brand); }
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+    @media (max-width: 600px) {
+      .card, .guide-section, .diagram-card { padding: 20px 16px; }
+      .input-row { flex-direction: column; }
+      .btn { width: 100%; }
+      .diagram { flex-direction: column; }
+      .diag-arrow { transform: rotate(90deg); }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/word-unscrambler/" />
+</head>
+
+<body>
+
+  <!-- TOP NAV -->
+  <div class="top-bar">
+    <a href="/">axiomape.com</a>
+  </div>
+
+  <div class="page-wrapper">
+
+    <!-- AD LEADERBOARD PLACEHOLDER -->
+    <!-- =====================================================
+         ADSENSE INJECTION POINT
+         Replace this div with your AdSense <ins> tag.
+         Standard leaderboard: 728x90
+    ===================================================== -->
+    <div class="ad-leaderboard">Advertisement - 728x90 leaderboard</div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Word <span>Unscrambler</span></h1>
+      <p>Unscramble any set of letters into every valid English word. Grouped by length, sorted your way. Built for Scrabble, Wordle, and every word game in between.</p>
+    </div>
+
+    <!-- MAIN TOOL CARD -->
+    <div class="card">
+      <div class="input-section">
+        <label for="letterInput">Enter Your Letters</label>
+        <p class="input-hint">
+          Type up to 15 letters then press Enter or click Search.
+          Use <strong>?</strong> for blank tiles or wildcards - for example, entering
+          <strong>CAT?</strong> will find words like CATS, CHAT, COAT, and CART.
+        </p>
+
+        <div class="input-row">
+          <input
+            type="text"
+            id="letterInput"
+            maxlength="20"
+            placeholder="e.g.  AELRST  or  AELRS?"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+          />
+          <button class="btn btn-primary" id="searchBtn" onclick="runSearch()">Search</button>
+          <button class="btn btn-clear" onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="controls-row">
+          <!-- Minimum word length -->
+          <div class="control-group">
+            <label for="minLen">Minimum Word Length</label>
+            <div class="range-row">
+              <input type="range" id="minLen" min="2" max="8" value="2" step="1"
+                     oninput="document.getElementById('minLenVal').textContent=this.value" />
+              <span id="minLenVal">2</span> <span style="font-size:.8rem;color:var(--muted)">letters</span>
+            </div>
+          </div>
+
+          <!-- Sort toggle -->
+          <div class="control-group">
+            <label>Sort Results By</label>
+            <div class="sort-toggles">
+              <button class="sort-btn active" id="sortLength" onclick="setSort('length')">Length</button>
+              <button class="sort-btn" id="sortAlpha" onclick="setSort('alpha')">A to Z</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS BAR -->
+      <div class="stats-bar" id="statsBar"></div>
+
+      <!-- RESULTS -->
+      <div id="resultsArea"></div>
+    </div>
+
+    <!-- HOW IT WORKS - VISUAL DIAGRAM -->
+    <div class="diagram-card">
+      <h2>How the Unscrambling Engine Works</h2>
+      <div class="diagram">
+        <!-- Step 1: input letters -->
+        <div class="diag-box">
+          <div class="diag-label">Your Input</div>
+          <div class="diag-letters">
+            <div class="diag-tile tile-input">T</div>
+            <div class="diag-tile tile-input">A</div>
+            <div class="diag-tile tile-input">C</div>
+            <div class="diag-tile tile-input">E</div>
+          </div>
+        </div>
+
+        <div class="diag-arrow">&#8594;</div>
+
+        <!-- Step 2: sorted input -->
+        <div class="diag-box">
+          <div class="diag-label">Sort Alphabetically</div>
+          <div class="diag-letters">
+            <div class="diag-tile tile-sorted">A</div>
+            <div class="diag-tile tile-sorted">C</div>
+            <div class="diag-tile tile-sorted">E</div>
+            <div class="diag-tile tile-sorted">T</div>
+          </div>
+        </div>
+
+        <div class="diag-arrow">&#8644;</div>
+
+        <!-- Step 3: dictionary word sorted -->
+        <div class="diag-box">
+          <div class="diag-label">Dictionary Word "ACET" = CATE</div>
+          <div class="diag-letters">
+            <div class="diag-tile tile-sorted-word">A</div>
+            <div class="diag-tile tile-sorted-word">C</div>
+            <div class="diag-tile tile-sorted-word">E</div>
+            <div class="diag-tile tile-sorted-word">T</div>
+          </div>
+        </div>
+
+        <div class="diag-arrow">&#8594;</div>
+
+        <!-- Step 4: match confirmed -->
+        <div class="diag-box">
+          <div class="diag-label">Match Confirmed</div>
+          <div class="diag-check">&#10003;</div>
+          <div class="diag-letters" style="margin-top:4px;">
+            <div class="diag-tile tile-word">C</div>
+            <div class="diag-tile tile-word">A</div>
+            <div class="diag-tile tile-word">T</div>
+            <div class="diag-tile tile-word">E</div>
+          </div>
+          <div class="diag-match-label">Valid word added to results</div>
+        </div>
+      </div>
+
+      <p style="text-align:center;margin-top:18px;font-size:.83rem;color:var(--muted);">
+        The engine sorts both your letters and each dictionary entry alphabetically, then checks whether the dictionary word's letters are a subset of your available pool. Wildcard tiles (?) fill any letter gap.
+      </p>
+    </div>
+
+    <!-- GUIDE SECTION -->
+    <div class="guide-section">
+      <h2>The Ultimate Guide to Anagrams and Word Games</h2>
+      <p class="subtitle">Deep strategies, clear explanations, and expert techniques for competitive word game players.</p>
+
+      <!-- Key term glossary pills -->
+      <div class="glossary-row">
+        <div class="glossary-pill">Anagram <span>- a word formed by rearranging all the letters of another word</span></div>
+        <div class="glossary-pill">Permutation <span>- any ordered arrangement of a set of letters</span></div>
+        <div class="glossary-pill">Wildcard <span>- a blank tile (?) that can represent any letter</span></div>
+        <div class="glossary-pill">Subset Matching <span>- checking whether word letters fit within your available pool</span></div>
+        <div class="glossary-pill">Regex <span>- short for Regular Expression: a pattern-matching syntax used in code to find text</span></div>
+      </div>
+
+      <div class="guide-prose">
+        <p>
+          Word unscramblers are fundamentally about two things: a comprehensive reference list of valid English words (called a dictionary array - a simple collection of words stored in computer memory), and a fast algorithm for deciding which of those words can be formed from your specific set of letters. Rather than testing every possible ordering of your letters (a process called brute-force permutation, which becomes impossibly slow beyond about 8 letters), this tool uses a sorting-based comparison. Every word in the dictionary is stored in a pre-sorted form alongside its original spelling. When you enter your letters, the engine sorts your input the same way and then checks, letter by letter, whether each pre-sorted dictionary word is a subset of your sorted pool. Because comparing two sorted lists is extremely fast, the entire dictionary of tens of thousands of words can be scanned in a fraction of a second.
+        </p>
+
+        <p>
+          The difference between an anagram and a permutation is often confused, even by experienced word game players. A permutation is any possible ordered arrangement of a set of items - if you have the letters A, C, and T, the permutations include ACT, ATC, CAT, CTA, TAC, and TCA. Most permutations are not real words. An anagram is a specific permutation that happens to form a valid word - so ACT, CAT, and TAC (British English) are all anagrams of each other. When this tool unscrambles your letters, it is finding all valid anagrams of subsets of your letter pool: not just full rearrangements, but shorter words that can be formed from any portion of your available tiles. This is why a 7-letter input might return dozens of results from 2 to 7 letters long.
+        </p>
+
+        <p>
+          Wildcard tiles - represented here by the question mark character (?) - are one of the most powerful and most misunderstood elements in competitive Scrabble. In official Scrabble rules, a blank tile scores zero points but can represent any letter of the alphabet. The unscrambling strategy changes significantly when you hold a blank. Without a blank, your options are strictly limited to words formable from your exact letters. With one blank, every dictionary word up to one letter longer than your non-blank count becomes a candidate, provided those letters appear in your rack. With two blanks, the possibilities expand even further. This tool handles wildcards by tracking how many question marks you entered and allowing that many letter substitutions during the subset-matching step. The wildcard letters are not shown in a special color in the results, because any of the result words could use the blank in multiple positions - your strategic awareness determines which placement scores highest on the board.
+        </p>
+
+        <p>
+          Filtering results by minimum word length is not simply a matter of convenience - it is a core competitive technique. In Scrabble, playing all 7 tiles in a single turn (called a bingo) earns a 50-point bonus, so advanced players scan the longest results first. In Wordle, the answer is always exactly 5 letters, so filtering to exactly 5-letter words eliminates noise and lets you focus. Even in casual word games, shorter words like two-letter combinations (QI, ZA, AA, OX) are tactically valuable for parallel plays or clearing difficult tiles. The minimum length filter in this tool lets you dial your results to exactly the word-length strategy your current game situation demands. Start with the longest results when you need maximum points, and lower the filter when you need to offload a difficult tile combination.
+        </p>
+
+        <p>
+          Regular Expressions (often abbreviated as Regex) are a pattern-matching language used inside software to find, test, and manipulate text. While this tool does not require you to know any Regex to use it, the underlying matching logic is conceptually similar - it defines rules about which character sequences count as valid matches. Understanding that the tool uses rule-based pattern logic (rather than a simple word list search) helps explain why it is both fast and accurate. The dictionary embedded in this page is a curated list of standard English words drawn from common competitive word game references. Because all lookups happen entirely within your web browser using JavaScript, your inputs never leave your device - there is no server call, no data logging, and no network delay.
+        </p>
+      </div>
+
+      <!-- FAQ Accordions -->
+      <div class="faq-list">
+        <h3>Frequently Asked Questions</h3>
+
+        <details>
+          <summary>What is the difference between an anagram and a permutation?</summary>
+          <div class="faq-body">
+            <p>A <strong>permutation</strong> is any possible ordered arrangement of a set of letters. For three letters A, C, T there are 6 permutations: ACT, ATC, CAT, CTA, TAC, TCA. Most permutations produce nonsense strings, not real words.</p>
+            <p>An <strong>anagram</strong> is the special subset of permutations that form a valid dictionary word. ACT and CAT are both anagrams - real, playable words - while ATC and CTA are merely permutations with no word value.</p>
+            <p>This tool efficiently finds all anagrams of your letters (and their subsets) by comparing sorted letter fingerprints against a full dictionary, skipping the millions of invalid permutations entirely.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>How does the unscrambling algorithm find valid words from my letters?</summary>
+          <div class="faq-body">
+            <p>The engine uses a technique called <strong>sorted-signature matching</strong>. Every word in the embedded dictionary is stored alongside a version of itself with its letters sorted alphabetically. For example, CRANE becomes ACENR. When you enter letters, they are sorted the same way.</p>
+            <p>The algorithm then scans every entry in the dictionary and asks: can this word's letters be formed from your sorted pool? It does this by checking, letter by letter, that the word does not need more of any given letter than you have available. This single-pass scan is far more efficient than generating all permutations of your input.</p>
+            <p>Wildcard tiles (?) are handled by counting how many blanks you supplied and using them to fill in any letters the target word needs that your non-blank pool does not contain.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What is the strategy behind using wildcards (blank tiles) in Scrabble?</summary>
+          <div class="faq-body">
+            <p>In competitive Scrabble, blank tiles are considered the most valuable tiles in the game - worth keeping even though they score zero points - because they dramatically expand your playable word options. Expert players often hold a blank rather than play it on a low-scoring word, waiting for a high-value opportunity such as a bingo (using all 7 tiles for a 50-point bonus).</p>
+            <p>When using this tool with a wildcard, pay attention to what letter the blank would need to represent in each result word. The best plays are usually those where the blank represents a common, low-point-value letter (like E, A, or I) while your high-value scored tiles (like Q, Z, or J) land on premium squares.</p>
+            <p>With two wildcards in your rack, the results expand enormously. In competitive play this is the signal to search aggressively for 7-letter bingos that use both blanks alongside your remaining tiles.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Why should I filter results by word length, and what lengths matter for which games?</summary>
+          <div class="faq-body">
+            <p>Different word games reward different word lengths, so filtering intelligently is a core skill:</p>
+            <p><strong>Scrabble / Words With Friends:</strong> Prioritize 7-letter words (bingo territory) first, then 6-letter words. Two-letter words are also essential for parallel plays. Filter to 2+ letters for full flexibility or 7 letters only when hunting the bingo bonus.</p>
+            <p><strong>Wordle:</strong> Filter to exactly 5 letters. Every other length is irrelevant, and removing the clutter helps you focus purely on 5-letter candidates that match your current game constraints.</p>
+            <p><strong>Spelling Bee (NYT):</strong> You need words of 4 letters or more that include the center letter. Filter to 4+ letters and then manually check for the required center letter in each result.</p>
+            <p><strong>Boggle / Bananagrams:</strong> Shorter words (3-4 letters) are often just as valuable as long ones for clearing tiles quickly. Set the minimum to 3 for a broad set of options.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What dictionary does this tool use, and how accurate are the results?</summary>
+          <div class="faq-body">
+            <p>This tool uses a curated embedded dictionary of common English words covering standard usage as well as words recognized in popular word games. The dictionary is stored as a JavaScript array directly inside the page, which means lookups are instantaneous and fully offline - no server is involved at any step.</p>
+            <p>Because the dictionary is embedded for speed and privacy, it is not identical to the official TWL (Tournament Word List) or SOWPODS lists used in competitive Scrabble. Some rare or very recently added competitive words may not appear, and some informal words that are not in competition dictionaries may be included. For serious tournament play, always verify your words against the current official word list for your competition format.</p>
+            <p>The tool will never show you a false positive (a string of letters that is not a real English word), but it may occasionally omit an obscure valid word that is in the official competition list. This makes it a reliable aid for casual, educational, and recreational word game play.</p>
+          </div>
+        </details>
+
+      </div><!-- /faq-list -->
+    </div><!-- /guide-section -->
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer">
+      <div class="disclaimer-icon">&#128274;</div>
+      <div>
+        <strong>Privacy First</strong>
+        All word processing and dictionary lookups occur entirely within your local web browser. Your game boards and letter inputs are never uploaded or tracked.
+      </div>
+    </div>
+
+  </div><!-- /page-wrapper -->
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div>&copy; <span id="fyear"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <script>
+    /* ==========================================================
+       DICTIONARY
+       A large embedded array of standard English words.
+       Words are stored in uppercase for uniform comparison.
+       This array is the "dictionary lookup table" - the
+       complete reference list against which your input letters
+       are checked to find valid words.
+    ========================================================== */
+    const DICTIONARY = [
+      // 2-letter words
+      "AA","AB","AD","AE","AG","AH","AI","AL","AM","AN","AR","AS","AT","AW","AX","AY",
+      "BA","BE","BI","BO","BY","DA","DE","DO","ED","EF","EH","EL","EM","EN","ER","ES","ET","EW","EX",
+      "FA","FE","FI","GO","HA","HE","HI","HM","HO","ID","IF","IN","IS","IT","JO",
+      "KA","KI","LA","LI","LO","MA","ME","MI","MM","MO","MU","MY","NA","NE","NO","NU",
+      "OD","OE","OF","OH","OI","OM","ON","OP","OR","OS","OW","OX","OY",
+      "PA","PE","PI","PO","QI","RE","SH","SI","SO","TA","TI","TO","UH","UM","UN","UP","UR","US","UT",
+      "WE","WO","XI","XU","YA","YE","YO","ZA","ZO",
+      // 3-letter words
+      "AAH","AAL","AAS","ABA","ABO","ABS","ABY","ACE","ACT","ADD","ADO","ADS","ADZ","AFF","AFT","AGA","AGE","AGO","AGS","AHA","AHI","AHS","AID","AIM","AIN","AIR","AIS","AIT","ALA","ALB","ALE","ALL","ALP","ALS","ALT","AMA","AMI","AMP","AMU","ANA","AND","ANE","ANI","ANT","ANY","APE","APO","APP","APT","ARB","ARC","ARE","ARF","ARK","ARM","ARP","ARS","ART","ASH","ASK","ASP","ASS","ATE","ATT","AUK","AVA","AVE","AVO","AWA","AWE","AWL","AWN","AXE","AYE","AYS","AZO",
+      "BAA","BAD","BAG","BAH","BAL","BAM","BAN","BAP","BAR","BAS","BAT","BAY","BED","BEG","BEL","BEN","BES","BET","BEY","BIB","BIG","BIN","BIO","BIS","BIT","BIZ","BOA","BOB","BOD","BOG","BOO","BOP","BOT","BOW","BOX","BOY","BRA","BRO","BUB","BUD","BUG","BUM","BUN","BUR","BUS","BUT","BUY","BYE","BYS",
+      "CAB","CAD","CAM","CAN","CAP","CAR","CAT","CAW","CAY","CEE","CEL","CEP","CHI","CIG","CIS","COB","COD","COG","COP","COR","COS","COT","COW","COY","COZ","CUB","CUD","CUE","CUP","CUR","CUT","CWM",
+      "DAB","DAD","DAG","DAH","DAK","DAL","DAM","DAP","DAW","DAY","DEB","DEE","DEL","DEN","DEV","DEW","DEX","DEY","DIB","DID","DIE","DIG","DIM","DIN","DIP","DIS","DIT","DOC","DOE","DOG","DOM","DON","DOR","DOS","DOT","DOW","DRY","DUB","DUD","DUE","DUG","DUH","DUN","DUO","DUP","DYE",
+      "EAR","EAT","EAU","EEL","EFF","EFS","EFT","EGO","ELD","ELF","ELK","ELL","ELM","ELS","EME","EMU","END","ERA","ERE","ERG","ERN","ERR","ERS","ESS","ETA","ETH","EVE","EWE","EYE",
+      "FAD","FAG","FAN","FAR","FAT","FAX","FAY","FED","FEE","FEH","FEM","FEN","FER","FEW","FEY","FEZ","FIB","FID","FIG","FIL","FIN","FIR","FIT","FIX","FLY","FOB","FOE","FOG","FOP","FOR","FOX","FRY","FUB","FUD","FUN","FUR",
+      "GAB","GAD","GAG","GAL","GAP","GAS","GAT","GAY","GEL","GEM","GET","GIB","GID","GIG","GIN","GNU","GOB","GOD","GOO","GOR","GOT","GOX","GUL","GUM","GUN","GUT","GUY","GYM","GYP",
+      "HAD","HAG","HAJ","HAM","HAP","HAS","HAT","HAW","HAY","HEH","HEM","HEN","HEP","HER","HES","HET","HEW","HID","HIM","HIP","HIS","HIT","HOB","HOD","HOE","HOG","HOM","HOP","HOT","HOW","HOY","HUB","HUE","HUG","HUM","HUP","HUT",
+      "ICE","ICY","ILL","IMP","INK","INN","ION","IRE","IRK","ISM","ITS","IVY",
+      "JAB","JAG","JAM","JAR","JAW","JAY","JEE","JET","JEW","JIB","JIG","JIN","JOB","JOE","JOG","JOT","JOW","JOY","JUG","JUN","JUS","JUT",
+      "KAB","KAF","KAS","KAT","KAY","KEA","KEF","KEG","KEN","KEP","KET","KEY","KHI","KID","KIN","KIP","KIT","KOA","KOB","KOI","KOP","KOR","KOS","KUE",
+      "LAB","LAC","LAD","LAG","LAM","LAP","LAR","LAS","LAT","LAV","LAW","LAX","LAY","LEA","LED","LEE","LEG","LET","LEU","LEV","LEY","LID","LIE","LIN","LIP","LIS","LIT","LOB","LOG","LOO","LOP","LOT","LOW","LOX","LUG","LUM","LUV","LUX",
+      "MAD","MAE","MAG","MAN","MAP","MAR","MAS","MAT","MAW","MAY","MED","MEL","MEM","MEN","MET","MEW","MHO","MIB","MID","MIG","MIL","MIM","MIR","MIS","MIX","MOB","MOD","MOL","MOM","MOP","MOT","MOW","MOY","MUD","MUG","MUM","MUN","MUT","NAB","NAE","NAG","NAH","NAM","NAP","NAS","NAW","NAY","NEB","NEE","NET","NEW","NIB","NIL","NIM","NIT","NIX","NOB","NOD","NOG","NOM","NOR","NOT","NOW","NUB","NUN","NUS","NUT",
+      "OAF","OAK","OAR","OAT","OCA","ODD","ODE","ODS","OES","OFF","OFT","OHM","OHO","OHS","OIL","OKA","OKE","OLD","OLE","OMS","ONE","ONO","ONS","OOH","OPE","OPS","OPT","ORA","ORB","ORC","ORE","ORS","ORT","OUD","OUR","OUT","OVA","OWE","OWL","OWN",
+      "PAC","PAD","PAH","PAL","PAM","PAN","PAP","PAR","PAS","PAT","PAW","PAX","PAY","PEA","PEC","PED","PEE","PEG","PEH","PEN","PEP","PER","PES","PET","PEW","PHO","PHT","PIA","PIC","PIE","PIG","PIN","PIP","PIS","PIT","PIU","PIX","PLY","POD","POM","POP","POT","POW","POX","PRO","PRY","PUB","PUD","PUG","PUL","PUN","PUP","PUR","PUS","PUT",
+      "RAH","RAJ","RAM","RAN","RAP","RAS","RAT","RAW","RAY","REB","REC","RED","REF","REI","REM","REP","RES","RET","REV","REX","RHO","RIB","RID","RIG","RIM","RIP","ROB","ROC","ROD","ROE","ROT","ROW","RUB","RUD","RUG","RUM","RUN","RUT","RYA","RYE",
+      "SAC","SAD","SAG","SAP","SAT","SAU","SAW","SAX","SAY","SEA","SEC","SEE","SEG","SEI","SEN","SER","SET","SEW","SHA","SHE","SHH","SHY","SIB","SIC","SIM","SIN","SIP","SIR","SIS","SIT","SIX","SKI","SKY","SLY","SOB","SOD","SON","SOP","SOT","SOW","SOX","SOY","SPA","SPY","STY","SUB","SUE","SUM","SUN","SUP","SYN",
+      "TAB","TAD","TAE","TAG","TAJ","TAM","TAN","TAO","TAP","TAR","TAS","TAT","TAU","TAV","TAW","TAX","TEA","TED","TEE","TEN","THE","THO","TIC","TIL","TIN","TIP","TIS","TOD","TOE","TOG","TOM","TON","TOO","TOP","TOT","TOW","TOY","TUB","TUN","TUP","TUT","TWA","TWO",
+      "UDO","UGH","UKE","ULU","UMM","UMP","UNS","UPO","UPS","URN","URP","USE","UTA","UTE",
+      "VAC","VAN","VAR","VAS","VAT","VAV","VAW","VEE","VEG","VET","VIE","VIG","VIM","VIS","VOW","VOX",
+      "WAB","WAD","WAE","WAG","WAN","WAP","WAR","WAS","WAW","WAX","WAY","WEB","WED","WEE","WEN","WET","WHO","WHY","WIG","WIN","WIS","WIT","WIZ","WOE","WOG","WOP","WOS","WOT","WOW","WUD","WYN",
+      "YAK","YAM","YAP","YAW","YEA","YEH","YEP","YES","YET","YEW","YID","YIP","YOD","YOM","YON","YOU","YOW","YUK","YUM","YUP",
+      "ZAG","ZAP","ZAX","ZED","ZEE","ZEK","ZEN","ZEP","ZIG","ZIT","ZOO","ZUZ",
+      // 4-letter words
+      "ABBE","ABLE","ABLY","ABUT","ACED","ACES","ACHE","ACHY","ACID","ACME","ACNE","ACRE","ACTA","ACTS","ACYL","ADDS","ADZE","AFAR","AGED","AGER","AGES","AGHA","AGIO","AGLY","AGMA","AGUE","AIDE","AIDS","AIMS","AINS","AIRS","AIRY","AITS","ALAE","ALAN","ALAR","ALAS","ALBA","ALBS","ALEC","ALES","ALFA","ALGA","ALLY","ALMA","ALMS","ALOE","ALOW","ALPS","ALSO","ALTO","ALUM","AMAH","AMBO","AMEN","AMID","AMIS","AMOK","AMPS","AMUS","ANAL","ANDS","ANEW","ANNA","ANOA","ANSA","ANTE","ANTI","ANTS","ANUS","APED","APES","APEX","APOD","APPS","APSE","APSE","AQUA","ARCO","AREA","AREG","ARES","ARKS","ARMS","ARMY","ARTY","ASCI","ASHY","ASPS","ATOM","ATOP","AUKS","AVID","AVOW","AWED","AWES","AWLS","AWNS","AWRY","AXES","AXIS","AXLE","AYAH",
+      "BAAL","BABE","BABY","BACH","BACK","BADE","BAGS","BAIL","BAIT","BAKE","BALE","BALK","BALL","BALM","BAND","BANE","BANG","BANK","BANS","BARD","BARE","BARK","BARN","BARS","BASE","BASH","BASK","BASS","BAST","BATE","BATH","BATS","BAWL","BAYS","BEAD","BEAK","BEAM","BEAN","BEAR","BEAT","BECK","BEEF","BEEN","BEER","BEES","BEET","BELL","BELT","BEND","BERM","BEST","BETA","BIDE","BILE","BILL","BIND","BIRD","BITE","BITS","BLAB","BLAM","BLAT","BLEW","BLOB","BLOC","BLOG","BLOT","BLOW","BLUE","BLUR","BOAR","BOAT","BODE","BODY","BOGY","BOIL","BOLA","BOLD","BOLE","BOLT","BOND","BONE","BOOK","BOOM","BOON","BOOR","BOOT","BORE","BORN","BOTH","BOUT","BOWL","BRAD","BRAG","BRAN","BRAT","BREW","BRIG","BRIM","BROW","BUCK","BUFF","BULB","BULK","BULL","BUMP","BUNK","BUOY","BURN","BURP","BURR","BURY","BUSH","BUSK","BUST","BUSY","BUTT","BUZZ",
+      "CAGE","CAKE","CALF","CALL","CALM","CAME","CAMP","CANE","CANT","CARD","CARE","CARP","CART","CASE","CASH","CAST","CAVE","CEIL","CELL","CHAT","CHIN","CHIP","CHOP","CHOW","CITE","CITY","CLAM","CLAP","CLAW","CLAY","CLEF","CLEW","CLIP","CLOD","CLOG","CLOT","CLUE","COAL","COAT","COAX","CODA","CODE","COIF","COIL","COIN","COLA","COLD","COLT","COMA","COMB","COME","CONE","COOK","COOL","CORD","CORE","CORK","CORN","COST","COUP","COVE","COWL","COZY","CRAG","CRAM","CRAW","CREW","CROP","CROW","CUBE","CUFF","CULT","CURL","CUTE","CYAN",
+      "DACE","DALE","DANK","DARE","DARK","DART","DASH","DATE","DAZE","DEAD","DEAL","DEAN","DEAR","DECK","DEED","DEEM","DEEP","DEER","DEFT","DELL","DENT","DENY","DESK","DIAL","DICE","DIKE","DILL","DIME","DINE","DINT","DIRE","DIRK","DIRT","DISC","DISH","DISK","DIVA","DIVE","DOCK","DODO","DOLE","DOLL","DOME","DONE","DOOM","DOOR","DORM","DOTE","DOUR","DOVE","DOWL","DOWN","DRAB","DRAG","DRAW","DREW","DRIP","DROP","DRUM","DUAL","DUEL","DUFF","DUMB","DUNE","DUSK","DUST","DYER",
+      "EACH","EARL","EARN","EASE","EAST","EASY","EAVE","EDGY","ELSE","EMIT","ENVY","EPIC","EVEN","EVER","EVIL","EXAM","EXPO",
+      "FACE","FACT","FADE","FAIL","FAIR","FAKE","FALL","FAME","FANG","FARE","FARM","FAST","FATE","FAWN","FAZE","FEAT","FELL","FELT","FEND","FERN","FEST","FEUD","FIEF","FIFE","FILE","FILL","FILM","FIND","FINE","FINK","FIRE","FIRM","FISH","FIST","FLAG","FLAK","FLAT","FLAW","FLEA","FLED","FLEW","FLEX","FLIT","FLOP","FLOW","FOAM","FOIL","FOLD","FOLK","FOND","FONT","FOOL","FORD","FORE","FORK","FORM","FORT","FOUL","FOUR","FOWL","FOXY","FRAY","FROG","FROM","FUEL","FULL","FUME","FUND","FUNK","FURY","FUSE","FUSS","FUZZ",
+      "GALE","GALL","GAME","GANG","GASP","GATE","GAVE","GEAR","GELD","GELS","GEMS","GERM","GILD","GILL","GILT","GIST","GIVE","GLAD","GLEE","GLEN","GLIB","GLOP","GLOW","GLUE","GLUT","GNAT","GNAW","GOAD","GOAL","GOAT","GOBS","GONE","GOOD","GOOP","GORE","GORY","GOWN","GRAB","GRAD","GRAM","GRAY","GREW","GRIN","GRIP","GRIT","GROW","GRUB","GULF","GULL","GULP","GUST","GUTS",
+      "HACK","HAIL","HALF","HALL","HALT","HAND","HANG","HARD","HARE","HARM","HARP","HASH","HATE","HAUL","HAVE","HAWK","HAZE","HAZY","HEAL","HEAP","HEAT","HEEL","HELM","HELP","HEMP","HERD","HERE","HERO","HEWN","HIDE","HIGH","HIKE","HILL","HILT","HINT","HIRE","HIVE","HOAX","HOLD","HOLE","HOLM","HOLY","HOME","HOOD","HOOF","HOOK","HOOP","HOPE","HORN","HOST","HOUR","HOVE","HOWL","HUGE","HULL","HUMP","HURL","HYMN","HYPE",
+      "ICON","IDLE","IDLY","INCH","INFO","INKS","INKY","INTO","IONS","IRON","ISLE","ITEM",
+      "JADE","JAIL","JAKE","JAMB","JANE","JEST","JIBE","JILT","JIMP","JOIN","JOKE","JOLT","JOWL","JUDO","JUST",
+      "KALE","KEEN","KEEP","KELP","KEPT","KERN","KIND","KING","KISS","KITE","KIWI","KNOB","KNOT","KNOW",
+      "LACK","LAID","LAKE","LAME","LAMP","LAND","LANE","LARD","LARK","LASH","LAST","LATE","LAUD","LAVA","LAWN","LAZY","LEAD","LEAF","LEAK","LEAN","LEAP","LEER","LEND","LENS","LENT","LESS","LIEN","LIFE","LIFT","LIKE","LIME","LIMP","LINE","LINK","LION","LIST","LIVE","LOAD","LOAF","LOAN","LOCK","LOFT","LONE","LONG","LOOK","LOOM","LOON","LOOT","LORD","LORE","LORN","LOSE","LOUR","LOUT","LOVE","LUCK","LULL","LUMP","LURK","LUST","LUXE","LYNX",
+      "MACE","MADE","MAIL","MAIN","MALE","MALL","MALT","MANE","MARE","MARK","MASH","MAST","MATE","MAZE","MEAD","MEAL","MEAN","MEAT","MEET","MELD","MELT","MERE","MESH","MILD","MILE","MILK","MILL","MIME","MIND","MINE","MINT","MIRE","MIST","MITT","MOCK","MOLD","MOLE","MOLT","MOOD","MOOR","MOPE","MORE","MOTE","MOVE","MUCH","MULD","MULE","MULL","MUSK","MUST","MUTE",
+      "NARC","NARK","NAVE","NEAR","NEAT","NEED","NEST","NEWS","NEXT","NICE","NICK","NIGH","NINE","NODE","NOEL","NONE","NORM","NOSE","NOTE","NOUN","NUDE","NUMB",
+      "OATH","OBOE","ODDS","ODES","OKRA","ONCE","ONLY","ONTO","OPEN","ORAL","ORBS","ORCA","ORGY","OTIC","OTTO","OVEN","OVER","OWED","OWES","OWLS","OWNS",
+      "PACE","PAGE","PAIN","PALE","PALL","PALM","PANE","PARE","PARK","PART","PAVE","PAWN","PEAK","PEAR","PEAT","PEEL","PELT","PERK","PERT","PEST","PIER","PILE","PILL","PINE","PINK","PIPE","PLAN","PLAT","PLAY","PLEA","PLOD","PLOT","PLOW","PLOY","PLUM","PLUS","POEM","POET","POKE","POLE","POLL","POLO","POND","POOR","POPE","POSE","POSH","POUR","PREY","PRIM","PROD","PROP","PROW","PULL","PULP","PUMP","PURE","PURR","PUSH",
+      "QUAY","QUIT","QUIZ",
+      "RACE","RACK","RAFT","RAGE","RAID","RAIL","RAIN","RAKE","RAMP","RANG","RANK","RANT","RASH","RASP","RATE","RAVE","REAM","REAP","REAR","REED","REEF","REEL","RELY","REND","RENT","REST","RICE","RICH","RIDE","RIFE","RING","RINK","RIOT","RISE","RISK","ROAD","ROAM","ROAR","ROBE","ROCK","RODE","ROLL","ROLE","ROPE","ROTE","ROUT","RUDE","RUIN","RULE","RUMP","RUNE","RUNT","RUSH","RUST",
+      "SACK","SAFE","SAGE","SAIL","SAKE","SALT","SAME","SAND","SANE","SANG","SANK","SASH","SAVE","SCAM","SCAN","SCAR","SEAL","SEAM","SEAR","SEED","SEEK","SEEM","SELF","SELL","SEND","SERF","SHED","SHIP","SHOE","SHOP","SHOT","SHOW","SHUN","SHUT","SICK","SIDE","SIFT","SIGH","SILK","SILL","SILO","SING","SINK","SITE","SIZE","SKEW","SKIM","SKIP","SLAB","SLAP","SLAT","SLAY","SLIM","SLIP","SLOT","SLOW","SLUG","SLUM","SLUR","SMOG","SNAP","SNIP","SNOB","SNOW","SOAK","SOAR","SOCK","SOFT","SOIL","SOLD","SOLE","SONG","SORT","SOUL","SPAN","SPAR","SPIN","SPIT","SPOT","SPUD","SPUR","STAB","STAG","STAR","STAY","STEM","STEP","STEW","STIR","STOP","STUB","STUN","SUCH","SUIT","SULK","SUMP","SUNG","SUNK","SWAM","SWAN","SWAP","SWAT","SWAY","SWIM","SWUM",
+      "TACK","TACT","TAIL","TALE","TALL","TAME","TANK","TARE","TART","TAUT","TEAR","TEEM","TEEN","TEND","TENT","TERM","TERN","TILT","TIME","TINT","TIRE","TOAD","TOIL","TOLL","TOMB","TONE","TONG","TOOK","TOOL","TOWN","TRAP","TRAY","TREE","TRIM","TRIP","TROD","TROW","TRUE","TUBE","TUCK","TUFF","TUNE","TURF","TUSK","TUTU","TWIG","TWIN","TWIT",
+      "UGLY","ULNA","UNDO","UNIT","UNTO","UPON","URGE","USED","USER",
+      "VAIN","VALE","VANE","VAST","VEAL","VEIL","VEIN","VERB","VERY","VEST","VIEW","VILE","VINE","VISA","VOID","VOLT","VOTE",
+      "WADE","WAGE","WAIL","WAIT","WAKE","WANE","WARD","WARE","WARM","WARP","WART","WASP","WAVE","WEAK","WEAL","WEAN","WEED","WEEP","WELL","WELT","WEND","WEPT","WERE","WHAT","WHIM","WHIP","WHIR","WHOM","WIDE","WIFE","WILD","WILL","WIND","WINE","WING","WINK","WISE","WISH","WITH","WOKE","WOLF","WOMB","WOOL","WORD","WORE","WORK","WORM","WORN","WRAP","WREN","WRIT",
+      "YARD","YARN","YELL","YORE","YOUR",
+      "ZEAL","ZERO","ZEST","ZINC","ZONE","ZOOM",
+      // 5-letter words
+      "ABBEY","ABBOT","ABHOR","ABIDE","ABODE","ABORT","ABOUT","ABOVE","ABUSE","ABYSS","ACUTE","ADMIT","ADOBE","ADOPT","ADORE","ADULT","AFTER","AGAIN","AGATE","AGILE","AGLOW","AGONY","AGREE","AHEAD","AISLE","AITCH","ALARM","ALBUM","ALDER","ALGAE","ALIBI","ALIEN","ALIGN","ALIKE","ALOFT","ALOOF","ALOUD","ALTAR","ALTER","AMBER","AMBLE","AMEND","AMISS","AMONG","AMPLE","ANGEL","ANGER","ANGLE","ANGST","ANIME","ANKLE","ANNEX","ANTIC","ANVIL","AORTA","APTLY","ARBOR","AREAL","ARENA","ARGON","ARGUE","ARISE","AROMA","ARRAY","ASIDE","ASPEN","ASSAY","ATONE","ATTIC","AUDIO","AUGUR","AZURE",
+      "BACON","BAKER","BADLY","BAGEL","BASIC","BASIL","BASIN","BASIS","BATCH","BEACH","BEADY","BEARD","BEAST","BEGUN","BEIGE","BELOW","BENCH","BEING","BERRY","BRAVE","BLAZE","BLEED","BLEND","BLESS","BLIND","BLINK","BLISS","BLOCK","BLOOD","BLOOM","BLOWN","BLUNT","BLUSH","BOARD","BOAST","BOGGY","BONUS","BOOST","BOOTH","BOUND","BOXER","BRACE","BRAID","BRAIN","BRAND","BRASH","BRASS","BRAVE","BREAD","BREAK","BREAM","BREED","BRICK","BRIDE","BRIDE","BRIEF","BRING","BRISK","BROAD","BROKE","BROOK","BROTH","BROOM","BRUNT","BRUTE","BUDDY","BUILT","BUNCH","BURST","BUTCH",
+      "CABIN","CABLE","CANAL","CANON","CANOE","CASTE","CATCH","CAUSE","CEDAR","CHAIN","CHAIR","CHALK","CHAMP","CHAOS","CHARD","CHARM","CHANT","CHEAP","CHEAT","CHECK","CHEEK","CHEER","CHESS","CHEST","CHIEF","CHILD","CHINA","CHOIR","CHORD","CHOSE","CHUNK","CIVIC","CIVIL","CLAMP","CLASS","CLEAN","CLEAR","CLEFT","CLERK","CLIMB","CLING","CLOCK","CLONE","CLOSE","CLOTH","CLOUD","COACH","COAST","COMET","COMIC","CORAL","CORNY","COUCH","COUNT","COURT","COVER","CRACK","CRAFT","CRANE","CRANK","CRASH","CRAZY","CREAK","CREEK","CREST","CRIME","CRISP","CROSS","CROWD","CRUEL","CRUMB","CRUSH","CRUST","CURVE","CYCLE",
+      "DADDY","DAIRY","DANCE","DECAY","DEFER","DENSE","DEPOT","DEPTH","DERBY","DIGIT","DIRTY","DISCO","DITCH","DITTO","DODGE","DOGMA","DOING","DRAIN","DRAMA","DRAPE","DRIFT","DRINK","DRIVE","DROOL","DROOP","DROVE","DROWN","DRUID","DRUNK","DRYER","DWARF","DWELL","DYING",
+      "EAGER","EAGLE","EARLY","EARTH","EIGHT","ELECT","ELBOW","ELDER","ELITE","EMAIL","EMBER","EMPTY","ENACT","ENJOY","ENTER","ENTRY","EQUAL","ERROR","ESSAY","EXACT","EXIST","EXTRA",
+      "FABLE","FALLS","FALSE","FANCY","FATAL","FEAST","FENCE","FERRY","FEVER","FETCH","FIELD","FIEND","FIFTH","FIFTY","FIGHT","FINAL","FIRST","FIXED","FLAME","FLARE","FLASH","FLESH","FLICK","FLOOD","FLOOR","FLUNK","FLUTE","FOCUS","FORCE","FORGE","FORTY","FOUND","FRAME","FRANK","FRAUD","FRESH","FROTH","FROZE","FRUIT","FULLY","FUNGI","FUNNY",
+      "GAUGE","GHOST","GIANT","GIVEN","GLAND","GLARE","GLASS","GLEAM","GLOBE","GLOOM","GLOSS","GLOVE","GOING","GOURD","GRACE","GRADE","GRAIN","GRAND","GRANT","GRAPE","GRASP","GRASS","GRATE","GRAVE","GRAZE","GREAT","GREET","GRIEF","GROAN","GROIN","GROPE","GROSS","GROUP","GROUT","GROVE","GROWL","GRUEL","GUILD","GUILE","GUILT","GUISE","GUSTO","GUTTER",
+      "HABIT","HAIRY","HAPPY","HAVEN","HEART","HEAVY","HEDGE","HENCE","HERON","HITCH","HOARD","HOBBY","HORSE","HOTEL","HOUND","HUMAN","HUMID","HUMOR","HURRY","HYDRO",
+      "IDEAL","IDIOM","IDIOT","IMAGE","IMPLY","INDEX","INFER","INNER","INPUT","INTER","INTRO","IRONY","ISSUE",
+      "JELLY","JEWEL","JOUST","JUDGE","JUICE","JUICY","JUROR",
+      "KEBAB","KITTY","KNACK","KNAVE","KNEEL","KNIFE","KNOCK","KNOWN",
+      "LATHE","LEAPT","LEARN","LEASE","LEAST","LEAVE","LEDGE","LEGAL","LEMON","LEVEL","LIGHT","LIKEN","LIVER","LOGIC","LOOSE","LOVER","LOWER","LOWLY","LUCKY","LUNAR","LYMPH",
+      "MAGIC","MAJOR","MAMMAL","MANOR","MAPLE","MARSH","MATCH","MAYOR","MERCY","MERIT","METAL","MIGHT","MIXED","MOIST","MONEY","MONTH","MOUND","MOUNT","MOUSE","MOUTH","MOVER","MULCH","MURKY","MUSIC","MUSTY","MYRRH",
+      "NAIVE","NERVE","NIGHT","NINTH","NOISE","NORTH","NOVEL","NURSE","NYMPH",
+      "OCEAN","OFFER","OFTEN","ONION","OVERT","OWNED","OXIDE","OZONE",
+      "PAINT","PANIC","PAPER","PARCH","PARTY","PATCH","PAUSE","PEACE","PEACH","PEARL","PEDAL","PENNY","PERCH","PHASE","PHONE","PIANO","PIECE","PILOT","PIXIE","PIXEL","PIZZA","PLACE","PLAIN","PLANE","PLANK","PLANT","PLAZA","PLEAD","PLEAT","PLUMB","PLUME","POINT","POKER","POLAR","POSED","POSIT","POWER","PRESS","PRICE","PRIDE","PRIME","PRISM","PRIVY","PROBE","PRONE","PROOF","PROSE","PROUD","PRUDE","PRUNE","PUBIC","PULSE","PURGE","PYGMY",
+      "QUAIL","QUALM","QUEEN","QUERY","QUEST","QUEUE","QUICK","QUIET","QUIRK","QUOTA","QUOTE",
+      "RABBI","RADAR","RAINY","RALLY","RANCH","RANGE","RAPID","RAVEN","REACH","REALM","REBEL","REIGN","RELAX","REPAY","REPEL","RESIN","RIDER","RIDGE","RIFLE","RISKY","RIVAL","RIVER","ROBIN","ROBOT","ROUGH","ROUND","ROUTE","ROWDY","ROYAL","RUGBY","RULER",
+      "SALAD","SAUCE","SCALE","SCENE","SCENT","SCION","SCONE","SCOPE","SCORE","SCOUT","SCOWL","SCRAM","SEIZE","SENSE","SERVE","SEVEN","SHADE","SHAFT","SHAKE","SHALL","SHAME","SHAPE","SHARE","SHARK","SHARP","SHAVE","SHEAF","SHEAR","SHEET","SHELF","SHELL","SHIFT","SHINE","SHIRT","SHOCK","SHORT","SHOUT","SINCE","SIXTH","SIXTY","SIZED","SKILL","SKIM","SKULL","SLACK","SLATE","SLAVE","SLEEP","SLEET","SLIME","SLOPE","SMART","SMEAR","SMILE","SMOKE","SNAIL","SNAKE","SNARE","SNEAK","SNEER","SNIFF","SOLAR","SOLID","SOLVE","SOUND","SOUTH","SPACE","SPARE","SPARK","SPAWN","SPECK","SPEED","SPEND","SPICE","SPILL","SPINE","SPOKE","SPOOK","SPOOL","SPOON","SPORE","SPORT","STACK","STAFF","STAGE","STAIN","STAKE","STAND","STARK","START","STATE","STAVE","STEAK","STEAL","STEAM","STEEL","STEEP","STEER","STERN","STICK","STIFF","STILL","STOCK","STOKE","STONE","STOOD","STORM","STORY","STOVE","STRAP","STRAW","STRAY","STRIP","STRUM","STRUT","STUCK","STUDY","STUMP","STUFF","STYLE","SUGAR","SULKY","SUNNY","SUPER","SURGE","SWAMP","SWEEP","SWEET","SWEPT","SWIFT","SWORD",
+      "TABLE","TALON","TASTE","TAINT","TAUNT","TEACH","TEASE","TEETH","TEMPO","TENSE","TEINT","THANK","THORN","THOSE","THREE","THREW","THROW","TIGHT","TIMES","TIRED","TITLE","TOAST","TOTAL","TOUCH","TOUGH","TOWER","TRACK","TRADE","TRAIL","TRAIN","TRAIT","TRAMP","TRASH","TREAD","TREAT","TREND","TRIAL","TRIBE","TRICK","TROOP","TRUCE","TRUCK","TRULY","TRUMP","TRUNK","TRUST","TRUTH","TUMOR","TUNER","TREND","TWEET","TWICE","TYING",
+      "UDDER","ULTRA","UNCUT","UNIFY","UNION","UNFIT","UNTIL","UPSET","USHER",
+      "VAGUE","VALID","VALUE","VALVE","VIGOR","VIRAL","VIPER","VIRUS","VISIT","VISOR","VITAL","VOGUE","VOICE","VOTER","VYING",
+      "WATER","WAFER","WAGER","WALTZ","WASTE","WATCH","WEARY","WEAVE","WEDGE","WEIGH","WEIRD","WHEAT","WHEEL","WHERE","WHICH","WHILE","WHIRL","WHOLE","WIDEN","WIDOW","WITCH","WORLD","WORRY","WORSE","WORST","WORTH","WOULD","WOUND","WRING","WRIST","WROTE","WRONG",
+      "YACHT","YEARN","YIELD","YOUNG","YOURS","YOUTH",
+      "ZONAL",
+      // 6-letter words
+      "ABLAZE","ABSORB","ACCENT","ACCORD","ACROSS","ACTIVE","ACTUAL","ADHERE","ADVENT","AERIAL","AFFORD","AFRAID","ALBINO","ALBEIT","ALBITE","ALLIED","ALMOST","ALMOND","ALPACA","ALPINE","ALWAYS","AMBUSH","AMNESIA","AMOUNT","ANCHOR","ANIMAL","ANNEAL","ANNOY","ANNUAL","ANTLER","ANYWAY","APPEAR","ARCHER","ARDENT","ARMORY","ASHORE","ASPECT","ASSERT","ASTRAY","ATTAIN","ATTEST","AUBURN","AUGUST","AVOCET","AWHILE","AWNING",
+      "BANTER","BARELY","BARREL","BATTLE","BEACON","BECKON","BEGGAR","BEHOLD","BENIGN","BESTOW","BETRAY","BITTER","BLANCH","BLANKET","BLAZER","BLIGHT","BRACES","BREACH","BRIGHT","BROKEN","BRONZE","BRUTAL","BUCKLE","BUNDLE","BURDEN","BURROW","BUTTER","BUTTON",
+      "CACKLE","CANOPY","CAPTOR","CARBON","CARROT","CASTLE","CASUAL","CAVERN","CELLAR","CENSOR","CERTAIN","CHARGE","CHASTE","CHOICE","CHOSEN","CIRCLE","CLARET","CLAMOR","COBALT","COBBLE","COCKLE","COERCE","COLLAR","COMBAT","COMFORT","COMMIT","COMMON","CUSTOM","COMPEL","COTTON","COUPLE","COUPON","COWBOY","COYOTE","CRATER","CRISIS","CLEVER","CONVEX","CORNER","CUDDLE","CURFEW","CUTICLE",
+      "DAMPEN","DANGLE","DAPPER","DARKEN","DARING","DEACON","DEBRIS","DECADE","DEFACE","DEFEAT","DEFEND","DEGREE","DEPART","DESIGN","DESIRE","DETAIL","DEVOTE","DIGEST","DIRECT","DIVIDE","DOCTOR","DRAGON","DRAWER","DRIVEN","DUBIOUS","DURING",
+      "EASILY","EFFECT","EFFORT","EIGHTH","EITHER","EMBERS","ENABLE","ENRICH","ENSURE","ENTIRE","ENTOMB","ESCAPE","ETHNIC","EVOLVE","EXCESS","EXCITE","EXEMPT","EXPAND","EXPERT","EXPORT","EXPOSE",
+      "FAMINE","FATHOM","FELINE","FELLOW","FIGURE","FINGER","FIXATE","FLAGON","FLAVOR","FLINCH","FOLLOW","FORBID","FOREST","FORMAL","FROZEN","FUTURE",
+      "GADGET","GALLOP","GAMBLE","GARDEN","GARLIC","GENTLE","GESTURES","GLUTEN","GOBLIN","GOLFER","GOTTEN","GRAVEL","GREEDY","GROVEL","GUTTER",
+      "HANDLE","HAPPEN","HARBOR","HARDEN","HARDLY","HARROW","HEARTH","HEIGHT","HIDDEN","HONEST","HORNET","HUMBLE","HUNTER","HUSTLE",
+      "IGNORE","IMPACT","INSECT","INTENT","ISLAND","ITSELF",
+      "JACKET","JIGSAW","JOYFUL","JUNGLE","JUNIOR","JUSTLY",
+      "KERNEL","KETTLE","KIDNAP","KINDLE","KITTEN","KNIGHT",
+      "LAMENT","LAUGHTER","LEADER","LEGEND","LENGTH","LETTER","LISTEN","LIVELY","LOOSEN","LOVELY","LURKER",
+      "MANNER","MARBLE","MARGIN","MARVEL","MASTER","MATTER","MEADOW","MEMBER","MENTAL","MIGHTY","MIRROR","MISERY","MODEST","MOMENT","MONKEY","MUTTER",
+      "NARROW","NATURE","NEARLY","NECTAR","NEEDLE","NEPHEW","NORMAL","NOTICE","NOURISH","NOVICE",
+      "OBJECT","OBTAIN","ORIGIN","OUTRUN","OYSTER",
+      "PACKET","PARENT","PARLOR","PARROT","PARDON","PATRON","PEBBLE","PENCIL","PERMIT","PIERCE","PILLAR","PIRATE","PLANET","PLUNGE","POCKET","POLLEN","PORTAL","PREFER","PRETTY","PRISON","PROFIT","PROPER","PUNISH","PURPLE","PURSUE","PUZZLE",
+      "RABBIT","RACOON","RANDOM","RASCAL","RATHER","RECENT","RECIPE","RECKLESS","RESCUE","REVEAL","REVOLT","REWARD","RIDDLE","RITUAL","ROBUST","ROCKET","RUSTLE",
+      "SADDLE","SAVAGE","SCARCE","SCHEME","SENTRY","SEVERE","SHIELD","SILVER","SIMPLE","SINGLE","SISTER","SIZZLE","SKETCH","SLEUTH","SLOUCH","SNEAKY","SOCIAL","SOFTEN","SORROW","SPLASH","SPREAD","SPRINT","SQUARE","SQUEAK","STABLE","STATUE","STOLEN","STRICT","STRONG","STUPID","SUDDEN","SUFFER","SUMMER","SURVEY","SWITCH","SYSTEM",
+      "TALENT","TARGET","TEMPLE","TENDER","TETHER","TINGLE","TINKER","TOGGLE","TORENT","TRAITOR","TRENCH","TRIBAL","TRIPLE","TROPHY","TUMBLE","TUNDRA","TUNNEL","TURTLE","TYCOON",
+      "UNABLE","UNFAIR","UNISON","UNLOCK","UNRULY","UPROOT","URGENT","USEFUL",
+      "VALLEY","VANISH","VARIED","VENDOR","VERTEX","VIBRANT","VICTOR","VIRTUE","VISION","VISUAL","VOTING",
+      "WANDER","WEALTH","WEAPON","WEASEL","WEEKLY","WITHER","WONDER","WOODEN","WORKER","WORTHY",
+      "YEARLY","YELLOW",
+      // 7-letter words (a broad selection)
+      "ABANDON","ABILITY","ABRIDGE","ABSENCE","ACCLAIM","ACHIEVE","ACQUIRE","ADDRESS","ADVANCE","ADVERSE","ADVISER","AGONIZE","AILMENT","AILERON","ALIMENT","ALLEGED","ALLERGY","ALMANAC","ANCIENT","ANOTHER","ANTENNA","ANXIETY","ARRANGE","ARTWORK","ASSAULT","ATHLETE","AUCTION","AWESOME",
+      "BACKLOG","BALANCE","BAPTISM","BARGAIN","BARRIER","BECAUSE","BELIEVE","BENEATH","BETWEEN","BEWITCH","BLANKET","BLOSSOM","CABINET","CAPTURE","CAREFUL","CAPTAIN","CENTURY","CERTAIN","CHAPTER","CHARITY","CLIMATE","CLOSEST","COMFORT","COMMAND","COMPARE","COMPILE","CONCERN","CONDUCT","CONFESS","CONFIRM","CONNECT","CONSENT","CONTAIN","CONTENT","CONTROL","COURAGE","CURTAIN","CUSTOMS",
+      "DARKEST","DATASET","DEVOTED","DIAMOND","DISTANT","DISTRICT","DIVERSE","DORMANT","DRAWERS",
+      "ELEMENT","EMPEROR","EMBRACE","ENCLOSE","ENFORCE","EXAMPLE","EXCEPT","EXPLORE","EXPRESS","EXTREME",
+      "FACTORY","FAILURE","FASHION","FORWARD","FURNISH","FURTHER","FEATURE","FANTASY","FOREIGN","FOREVER","FOUNDER","FREEDOM",
+      "GARBAGE","GATEWAY","GENERAL","GENUINE","GETTING","GLIMMER","GLAMOUR","GLIMPSE","GORILLA","GRAVITY","GROWLING","GRAMMAR","GROWING","JOURNEY","GALLERY","GARMENT",
+      "HABITAT","HANDFUL","HEADING","HEALTHY","HELPFUL","HISTORY","HOSTILE","HOWEVER","HARVEST","HARMONY",
+      "IMAGINE","IMPROVE","INCLUDE","INSPIRE","INSTALL","INTENSE","INVOLVE","ISOLATE",
+      "JOURNEY","JUSTICE","JUSTIFY",
+      "KINGDOM","KNOWING",
+      "LANDING","LANGUOR","LARGELY","LASTING","LEARNED","LEATHER","LIBRARY","LIFELONG","LOADING","LOOKING","LOOSELY","LOYALTY",
+      "MACHINE","MANAGED","MANKIND","MEANING","MENTION","MESSAGE","MONSTER","MORNING","MYSTERY","MIRACLE","MIXTURE",
+      "NOTHING","NOWHERE","NUCLEAR","NURTURE",
+      "OBVIOUS","OUTCOME","OUTSIDE",
+      "PACKAGE","PAINFUL","PASSION","PATTERN","PERFECT","PERFORM","PERHAPS","PERSIST","PICTURE","PLASTIC","PLEASED","PORTION","PRESENT","PREVENT","PRIVATE","PROBLEM","PROCESS","PROTECT","PROVIDE","PURPOSE",
+      "QUICKLY","QUIETLY","QUALIFY",
+      "REALIZE","REBUILD","RECEIVE","RECOVER","REMAINS","REQUIRE","RESPECT","RESTORE","RESULTS","REVENGE","ROMANCE",
+      "SCIENCE","SECTION","SERVANT","SETTLED","SEVERAL","SHARING","SHELTER","SILENCE","SIMILAR","SINCERE","SKILLED","SOCIETY","SOMEONE","SOMEHOW","SPARKLE","SPEAKER","SPECIAL","SPECIFY","STORAGE","STORIES","STRANGE","STUDENT","SUBJECT","SUCCESS","SUGGEST","SURVIVE","SUPPORT","SURFACE","SUPPOSE",
+      "THOUGHT","THROUGH","TONIGHT","TOTALLY","TOURISM","TOWARDS","TRAFFIC","TRAINED","TROUBLE","TURNING",
+      "UNCLEAR","UNCOVER","UNUSUAL","UPGRADE","USELESS",
+      "VARIETY","VILLAGE","VIOLENT","VISIBLE","VOLCANO",
+      "WALKING","WARNING","WEATHER","WHETHER","WITHOUT","WORKING","WORRIED","WORSHIP","WRITING","WRAPPED",
+      "YELLING",
+      // 8-letter words (selection)
+      "ABSOLUTE","ACCEPTED","ACCIDENT","ACCURATE","ADEQUATE","ADMIRING","ADVANCED","ADVOCATE","AFFECTED","ALPHABET","APPARENT","APPROACH","APPROVAL","ARRANGED","ATTORNEY","AUDIENCE","ALTHOUGH",
+      "BACKBONE","BALANCED","BECOMING","BEHAVIOR","BIRTHDAY","BLOCKING","BORROWED","BORROWED","BOUNDARY","BUILDING",
+      "CAMPAIGN","CAPACITY","CATEGORY","CAUTIOUS","CHEERFUL","CHILDREN","CHOOSING","CLIMBING","CLOTHING","COMBINED","COMPLETE","CONFLICT","CONTINUE","CRIMINAL","CULTURAL","CURRENCY","CUSTOMER",
+      "DECISION","DECREASE","DEFEATED","DEFENDER","DELICATE","DELIVERY","DESCRIBE","DETAILED","DIAGNOSE","DIALOGUE","DICTATOR","DISASTER","DISCOVER","DISTINCT","DOCTRINE","DOMINANT","DRAMATIC","DWELLING",
+      "ECONOMIC","ELIGIBLE","EMERGING","EMPHATIC","EMPLOYEE","ENERGIZE","ENFORCED","ENTIRELY","EVALUATE","EVIDENCE","EVOLVING","EXCHANGE","EXCITING","EXISTING","EXTERIOR",
+      "FAMILIAR","FAVORITE","FESTIVAL","FOLLOWED","FOOTBALL","FORMALLY","FRACTION","FRIENDLY","FRONTIER","FUNCTION","GRATEFUL",
+      "GARDENER","GENERATE","GIGANTIC","GRATEFUL","GREATEST","GUIDANCE","GUARDIAN",
+      "HANDBOOK","HANDBOOK","HANDSOME","HARMLESS","HERITAGE","HISTORIC","HOMELAND","HOMEWORK","HONESTLY","HOSPITAL","HUMANITY","HUMILITY",
+      "IDENTITY","ILLUSION","IMMORTAL","IMPROVED","INCREASE","INNOCENT","INTEREST","INTERVAL","INTIMATE","ISOLATED",
+      "JEALOUSY","LEARNING","LEGENDARY","LEVERAGE","LIFETIME","LIKEWISE","LOCATION","LONESOME",
+      "MAJORITY","MEMORIAL","MERCHANT","MINIMIZE","MOMENTUM","MORALITY","MOVEMENT","MULTIPLE",
+      "NATIONAL","NAVIGATE","NEIGHBOR","NOBILITY","NORMALLY","NUMEROUS",
+      "PEACEFUL","PHYSICAL","PLATFORM","POSITIVE","POSSIBLE","PRACTICE","PRECIOUS","PRESERVE","PREVIOUS","PROBLEMS","PROGRESS","PROPERTY","PROVINCE","PURCHASE","PURSUING",
+      "QUESTION","REACTION","RECENTLY","RECOVERY","RELATION","RELATIVE","RELEASED","RELIABLE","REMEMBER","REPUBLIC","RESOURCE","RESTRICT","REVEALED","ROTATION",
+      "SEASONAL","SECURITY","SELECTED","SEPARATE","SHORTAGE","SHOULDER","SIMPLIFY","SKELETON","SLIGHTLY","SOMEWHAT","SPENDING","STANDARD","STRATEGY","STRENGTH","SURGICAL",
+      "TANGIBLE","THINKING","THOUSAND","TOGETHER","TOMORROW","TRAINING","TRIBUNAL","TROUBLES",
+      "UMBRELLA","UNIQUELY","UNIVERSE","UNLIKELY","URGENTLY","VALUABLE","VANISHED","VARIABLE","VERTICAL","VIOLATED","VOLATILE",
+      "WANDERER","WARRIORS","WEAKENED","WELCOMED","WHEREVER","WILDLIFE","WIRELESS","WISHLIST","WONDROUS","WORKLOAD"
+    ].map(w => w.toUpperCase().trim()).filter(w => /^[A-Z]+$/.test(w));
+
+    /* Remove duplicates */
+    const DICT_SET = [...new Set(DICTIONARY)];
+    /* Pre-compute sorted signatures for every word */
+    const DICT_ENTRIES = DICT_SET.map(w => ({ word: w, sig: w.split('').sort().join('') }));
+
+    /* ==========================================================
+       STATE
+    ========================================================== */
+    let currentSort = 'length'; /* 'length' | 'alpha' */
+
+    /* ==========================================================
+       SORTING TOGGLES
+    ========================================================== */
+    function setSort(mode) {
+      currentSort = mode;
+      document.getElementById('sortLength').classList.toggle('active', mode === 'length');
+      document.getElementById('sortAlpha').classList.toggle('active', mode === 'alpha');
+      /* Re-render results if any are visible */
+      const letters = document.getElementById('letterInput').value.trim();
+      if (letters) runSearch();
+    }
+
+    /* ==========================================================
+       MAIN SEARCH FUNCTION
+       Algorithm: sorted-signature subset matching with wildcard support.
+
+       A "signature" is simply the letters of a word sorted
+       alphabetically - e.g. "CRANE" -> "ACENR".
+       Two words are anagrams when their signatures are identical.
+       A word can be formed from a pool when its signature is a
+       subset of the pool's signature (with wildcards filling gaps).
+    ========================================================== */
+    function runSearch() {
+      const raw       = document.getElementById('letterInput').value.toUpperCase().replace(/[^A-Z?]/g, '');
+      const minLen    = parseInt(document.getElementById('minLen').value, 10);
+
+      if (!raw) { clearAll(); return; }
+
+      /* Count wildcards and extract regular letters */
+      const wildcards = (raw.match(/\?/g) || []).length;
+      const letters   = raw.replace(/\?/g, '').split('').sort(); /* sorted non-wild letters */
+
+      const results = [];
+
+      for (const entry of DICT_ENTRIES) {
+        if (entry.word.length < minLen) continue;
+        if (entry.word.length > raw.length) continue; /* can't exceed total tile count */
+        if (canForm(entry.sig, letters, wildcards)) {
+          results.push(entry.word);
+        }
+      }
+
+      renderResults(results, raw, minLen);
+    }
+
+    /*
+      canForm(wordSig, poolLetters, wildcards):
+      Checks whether the word's sorted letters fit within
+      the pool (sorted non-wild letters) + available wildcards.
+
+      Both wordSig and poolLetters are sorted arrays/strings.
+      We walk through wordSig letter by letter; if the current
+      letter is in the pool we consume it, otherwise we consume
+      a wildcard. If we run out of wildcards we return false.
+    */
+    function canForm(wordSig, poolLetters, wildcards) {
+      let wi = 0; /* pool index */
+      let blanksLeft = wildcards;
+      for (let i = 0; i < wordSig.length; i++) {
+        const ch = wordSig[i];
+        /* Advance pool pointer to ch */
+        while (wi < poolLetters.length && poolLetters[wi] < ch) wi++;
+        if (wi < poolLetters.length && poolLetters[wi] === ch) {
+          wi++; /* consume from pool */
+        } else if (blanksLeft > 0) {
+          blanksLeft--; /* use a wildcard */
+        } else {
+          return false; /* can't form this letter */
+        }
+      }
+      return true;
+    }
+
+    /* ==========================================================
+       RENDER RESULTS
+    ========================================================== */
+    function renderResults(words, input, minLen) {
+      const area     = document.getElementById('resultsArea');
+      const statsBar = document.getElementById('statsBar');
+
+      if (!words.length) {
+        statsBar.classList.remove('visible');
+        area.innerHTML = `
+          <div class="no-results">
+            <div class="icon">&#128269;</div>
+            <h3>No words found</h3>
+            <p>Try removing a letter, lowering the minimum length, or adding a wildcard (?) to fill a gap.</p>
+          </div>`;
+        return;
+      }
+
+      /* Sort */
+      if (currentSort === 'alpha') {
+        words.sort();
+      } else {
+        words.sort((a, b) => b.length - a.length || a.localeCompare(b));
+      }
+
+      /* Stats bar */
+      const maxLen = Math.max(...words.map(w => w.length));
+      statsBar.textContent = `Found ${words.length} word${words.length !== 1 ? 's' : ''} from "${input}" - longest: ${maxLen} letters`;
+      statsBar.classList.add('visible');
+
+      /* Group by length */
+      const groups = {};
+      for (const w of words) {
+        if (!groups[w.length]) groups[w.length] = [];
+        groups[w.length].push(w);
+      }
+
+      const lengths = Object.keys(groups).map(Number);
+      if (currentSort === 'length') lengths.sort((a, b) => b - a);
+      else lengths.sort((a, b) => a - b);
+
+      let html = '';
+      for (const len of lengths) {
+        const label = `${len} Letter Word${len !== 1 ? 's' : ''}`;
+        html += `
+          <div class="length-group">
+            <div class="length-heading">
+              ${label}
+              <span class="length-count">${groups[len].length}</span>
+            </div>
+            <div class="word-grid">
+              ${groups[len].map(w => `<div class="word-chip" onclick="copyWord(this,'${w}')">${w}</div>`).join('')}
+            </div>
+          </div>`;
+      }
+
+      area.innerHTML = html;
+    }
+
+    /* ==========================================================
+       COPY WORD ON CLICK
+    ========================================================== */
+    function copyWord(el, word) {
+      navigator.clipboard.writeText(word).catch(() => {});
+      el.classList.add('copied');
+      el.textContent = word + ' ✓';
+      setTimeout(() => {
+        el.classList.remove('copied');
+        el.textContent = word;
+      }, 1200);
+    }
+
+    /* ==========================================================
+       CLEAR ALL
+    ========================================================== */
+    function clearAll() {
+      document.getElementById('letterInput').value = '';
+      document.getElementById('resultsArea').innerHTML = '';
+      document.getElementById('statsBar').classList.remove('visible');
+    }
+
+    /* ==========================================================
+       KEYBOARD: run search on Enter
+    ========================================================== */
+    document.getElementById('letterInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runSearch();
+    });
+
+    /* Footer year */
+    document.getElementById('fyear').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

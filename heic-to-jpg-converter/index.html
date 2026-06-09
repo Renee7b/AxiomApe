@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEIC to JPG Converter - Convert iPhone HEIC Photos Into Standard JPG Files | AxiomApe</title>
+  <meta name="description" content="Free, private browser-based HEIC to JPG converter. Convert iPhone HEIC photos to standard JPG files instantly - no uploads, no servers, completely private." />
+  <meta name="keywords" content="HEIC to JPG, HEIC converter, iPhone photo converter, HEIF to JPEG, convert iPhone photos, HEIC file opener" />
+
+  <!-- heic2any: open-source HEIC/HEIF decoder that runs entirely in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <!-- JSZip: client-side ZIP file creation library for bundling converted images -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- FileSaver.js: cross-browser helper to trigger file save dialogs -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <style>
+    /* ================================================================
+       RESET & BASE
+    ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:       #0071e3;
+      --blue-dark:  #005bb5;
+      --blue-light: #e8f1fd;
+      --green:      #28a745;
+      --red:        #dc3545;
+      --gray-50:    #f9fafb;
+      --gray-100:   #f3f4f6;
+      --gray-200:   #e5e7eb;
+      --gray-400:   #9ca3af;
+      --gray-600:   #4b5563;
+      --gray-800:   #1f2937;
+      --white:      #ffffff;
+      --shadow-sm:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:  0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+      --shadow-lg:  0 10px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.07);
+      --radius:     14px;
+      --radius-sm:  8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-800);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ================================================================
+       SITE NAV BAR (top link back to axiomape.com)
+    ================================================================ */
+    .site-nav {
+      text-align: center;
+      padding: 12px 20px;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 13px;
+      color: var(--gray-600);
+      letter-spacing: .01em;
+    }
+    .site-nav a {
+      font-weight: 600;
+      color: var(--blue);
+    }
+
+    /* ================================================================
+       PAGE WRAPPER
+    ================================================================ */
+    .page-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ================================================================
+       MAIN CARD
+    ================================================================ */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+    }
+
+    .card-inner { padding: 36px 40px; }
+    @media (max-width: 600px) { .card-inner { padding: 24px 20px; } }
+
+    /* ================================================================
+       AD PLACEHOLDER - leaderboard (728x90)
+       Replace this div with your Google AdSense snippet when ready.
+    ================================================================ */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 32px;
+      background: var(--gray-100);
+      border: 2px dashed var(--gray-200);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+
+    /* ================================================================
+       PAGE TITLE
+    ================================================================ */
+    .page-title {
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 700;
+      color: var(--gray-800);
+      text-align: center;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .page-subtitle {
+      text-align: center;
+      color: var(--gray-600);
+      font-size: 15px;
+      margin-bottom: 28px;
+    }
+
+    /* ================================================================
+       DEFINITION PILL TAGS (explain jargon inline)
+    ================================================================ */
+    .term {
+      display: inline-block;
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      vertical-align: middle;
+      margin-left: 4px;
+      letter-spacing: .02em;
+      cursor: default;
+    }
+    .jargon-bar {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 28px;
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+    .jargon-bar strong { color: var(--gray-800); }
+
+    /* ================================================================
+       DRAG-AND-DROP ZONE
+    ================================================================ */
+    .drop-zone {
+      border: 2.5px dashed var(--gray-200);
+      border-radius: var(--radius);
+      padding: 52px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: var(--gray-50);
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--blue);
+      background: var(--blue-light);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: block;
+      line-height: 1;
+    }
+    .drop-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 6px;
+    }
+    .drop-sub {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+
+    /* ================================================================
+       QUALITY SLIDER
+    ================================================================ */
+    .quality-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .quality-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-800);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .quality-label span {
+      color: var(--blue);
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .quality-row input[type="range"] {
+      flex: 1;
+      min-width: 120px;
+      accent-color: var(--blue);
+      height: 4px;
+      cursor: pointer;
+    }
+    .quality-hint {
+      font-size: 12px;
+      color: var(--gray-600);
+      width: 100%;
+      margin-top: -8px;
+    }
+
+    /* ================================================================
+       ACTION BUTTONS
+    ================================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 22px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s, opacity .15s;
+      line-height: 1;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--blue-dark); }
+    .btn-success { background: var(--green); color: #fff; font-size: 13px; padding: 8px 14px; }
+    .btn-success:hover:not(:disabled) { background: #218838; }
+    .btn-zip {
+      background: var(--gray-800);
+      color: #fff;
+      font-size: 15px;
+      padding: 13px 26px;
+    }
+    .btn-zip:hover:not(:disabled) { background: #111827; }
+    .btn-clear {
+      background: var(--gray-100);
+      color: var(--gray-600);
+      border: 1px solid var(--gray-200);
+      font-size: 13px;
+      padding: 9px 16px;
+    }
+    .btn-clear:hover:not(:disabled) { background: var(--gray-200); }
+
+    .actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    /* ================================================================
+       FILE QUEUE LIST
+    ================================================================ */
+    #queue-section { display: none; }
+
+    .queue-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      transition: border-color .2s;
+    }
+    .file-card.done { border-color: #a7f3d0; background: #f0fdf4; }
+    .file-card.error { border-color: #fca5a5; background: #fff5f5; }
+    .file-card.active { border-color: var(--blue); background: var(--blue-light); }
+
+    .file-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--gray-200);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      overflow: hidden;
+    }
+    .file-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-800);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+
+    .file-status { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .badge-pending  { background: var(--gray-200); color: var(--gray-600); }
+    .badge-working  { background: #dbeafe; color: #1d4ed8; }
+    .badge-done     { background: #d1fae5; color: #065f46; }
+    .badge-error    { background: #fee2e2; color: #991b1b; }
+
+    /* ================================================================
+       PROGRESS BAR (per-file and global)
+    ================================================================ */
+    .progress-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 99px;
+      transition: width .3s ease;
+      width: 0%;
+    }
+    .progress-bar.indeterminate {
+      width: 40%;
+      animation: indeterminate 1.4s infinite linear;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    .global-progress-wrap {
+      margin-bottom: 20px;
+      display: none;
+    }
+    .global-progress-label {
+      font-size: 12px;
+      color: var(--gray-600);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .global-progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: var(--gray-200);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .global-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), #34c6f5);
+      border-radius: 99px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+
+    /* ================================================================
+       DISCLAIMER BOX
+    ================================================================ */
+    .disclaimer {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #92400e;
+      margin-top: 32px;
+      line-height: 1.6;
+      text-align: center;
+    }
+    .disclaimer strong { color: #78350f; }
+
+    /* ================================================================
+       SEO CONTENT SECTION
+    ================================================================ */
+    .seo-section {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-200);
+      padding: 40px 40px;
+      margin-top: 32px;
+    }
+    @media (max-width: 600px) { .seo-section { padding: 28px 20px; } }
+
+    .seo-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 24px;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 18px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-800);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      line-height: 1.4;
+    }
+    .faq-question:hover { color: var(--blue); }
+    .faq-arrow {
+      flex-shrink: 0;
+      font-size: 18px;
+      color: var(--gray-400);
+      transition: transform .25s;
+      font-style: normal;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .35s ease, padding .35s ease;
+      font-size: 14px;
+      color: var(--gray-600);
+      line-height: 1.75;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 800px;
+      padding-bottom: 18px;
+    }
+    .faq-answer p { margin-bottom: 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer ul { padding-left: 20px; margin-top: 8px; }
+    .faq-answer ul li { margin-bottom: 6px; }
+
+    /* ================================================================
+       FOOTER
+    ================================================================ */
+    .footer {
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+    .footer a { color: var(--gray-600); margin: 0 10px; }
+    .footer a:hover { color: var(--blue); }
+    .footer-divider { margin: 0 2px; }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/heic-to-jpg-converter/" />
+</head>
+<body>
+
+  <!-- ================================================================
+       TOP NAV - link back to main site
+  ================================================================ -->
+  <nav class="site-nav">
+    Tools by <a href="/">axiomape.com</a>
+  </nav>
+
+  <div class="page-wrap">
+
+    <!-- ================================================================
+         MAIN CARD
+    ================================================================ -->
+    <div class="card">
+      <div class="card-inner">
+
+        <!-- AD PLACEHOLDER (leaderboard 728x90) -->
+        <!-- Replace this entire div with your Google AdSense code snippet -->
+        <div class="ad-placeholder" id="ad-leaderboard">
+          Advertisement - 728 x 90
+        </div>
+
+        <!-- PAGE HEADING -->
+        <h1 class="page-title">HEIC to JPG Converter</h1>
+        <p class="page-subtitle">
+          Convert iPhone HEIC photos into standard JPG files - free, private, and instant.
+        </p>
+
+        <!-- JARGON EXPLAINER BAR -->
+        <div class="jargon-bar">
+          <strong>Quick glossary:</strong>
+          <strong>HEIC/HEIF</strong> - High Efficiency Image Container/Format - is the photo format Apple introduced in iOS 11. It stores images at roughly half the file size of a traditional JPG while keeping the same visual quality.
+          <strong>JPG/JPEG</strong> - Joint Photographic Experts Group - is the universal photo format supported by virtually every website, app, printer, and Windows PC.
+          <strong>Browser-side Processing</strong> means all conversion happens inside your own browser using JavaScript - your photos never leave your device.
+          <strong>EXIF Metadata</strong> refers to hidden data embedded in your photo (camera settings, GPS location, date/time) - this tool preserves it automatically during conversion.
+        </div>
+
+        <!-- DRAG-AND-DROP ZONE -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".heic,.heif,image/heic,image/heif" multiple />
+          <span class="drop-icon">🖼️</span>
+          <div class="drop-title">Drag and drop your HEIC files here</div>
+          <div class="drop-sub">
+            Or click anywhere in this box to browse - supports batch uploads of 100+ files at once<br>
+            Accepted formats: .heic and .heif (standard iPhone/iOS photo formats)
+          </div>
+        </div>
+
+        <!-- QUALITY SLIDER -->
+        <div class="quality-row">
+          <label class="quality-label" for="quality-slider">
+            JPG Quality: <span id="quality-display">90</span>/100
+          </label>
+          <input type="range" id="quality-slider" min="1" max="100" value="90" />
+        </div>
+        <p class="quality-hint">
+          Higher quality = larger file size. 80-95 is recommended for a great balance of sharpness and size. 100 is maximum quality (no compression).
+        </p>
+
+        <!-- GLOBAL PROGRESS BAR (shown during batch processing) -->
+        <div class="global-progress-wrap" id="global-progress-wrap">
+          <div class="global-progress-label">
+            <span id="global-progress-text">Processing images...</span>
+            <span id="global-progress-pct">0%</span>
+          </div>
+          <div class="global-progress-bar-bg">
+            <div class="global-progress-bar-fill" id="global-bar"></div>
+          </div>
+        </div>
+
+        <!-- QUEUE SECTION (revealed once files are added) -->
+        <div id="queue-section">
+          <div class="actions-bar">
+            <button class="btn btn-zip" id="btn-zip" disabled>
+              <span>⬇</span> Download All (ZIP)
+            </button>
+            <button class="btn btn-clear" id="btn-clear">
+              Clear All
+            </button>
+          </div>
+
+          <div class="queue-header">
+            <span id="queue-label">0 files queued</span>
+          </div>
+
+          <div class="file-grid" id="file-grid"></div>
+        </div>
+
+        <!-- PRIVACY DISCLAIMER -->
+        <div class="disclaimer">
+          <strong>Privacy First:</strong> This tool processes and converts your personal iPhone photos entirely within your local browser. Your images are never uploaded, stored, or transmitted to any external servers.
+        </div>
+
+      </div><!-- /card-inner -->
+    </div><!-- /card -->
+
+    <!-- ================================================================
+         SEO / EDUCATIONAL CONTENT
+    ================================================================ -->
+    <div class="seo-section">
+      <h2>The Ultimate Guide to HEIC Files and iPhone Photography</h2>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          What is a HEIC file and why does Apple use it?
+          <i class="faq-arrow">&#8964;</i>
+        </button>
+        <div class="faq-answer">
+          <p>
+            HEIC stands for High Efficiency Image Container, and it is Apple's default photo format for iPhones and iPads running iOS 11 or later. It is built on the HEIF standard - High Efficiency Image Format - developed by the Motion Picture Experts Group and adopted by Apple in 2017. The core reason Apple switched to HEIC was storage efficiency: a HEIC photo typically uses about half the disk space of an equivalent JPG image while delivering the same perceived visual quality.
+          </p>
+          <p>
+            Beyond just compression, HEIC supports features that the older JPG format cannot handle natively: 16-bit color depth (compared to JPG's 8-bit), Live Photos with their short video clips embedded in a single file, image sequences (like burst shots), and wider dynamic range data from HDR sensors. For the average iPhone user with a 128 GB device and thousands of photos, HEIC can effectively double usable photo storage - a meaningful improvement for everyday users.
+          </p>
+          <p>
+            The format is based on the same underlying compression codec (HEVC, or H.265) that Apple uses to compress 4K video, which is why it achieves such dramatic size savings without visible quality loss.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Why can't I open my iPhone photos on my Windows PC or in most apps?
+          <i class="faq-arrow">&#8964;</i>
+        </button>
+        <div class="faq-answer">
+          <p>
+            The root cause is licensing. HEVC - the compression codec inside every HEIC file - is patent-protected technology. Microsoft requires Windows users to pay a small fee for the HEVC Video Extensions codec from the Microsoft Store before Windows 10 or 11 can natively display HEIC files. Many users are unaware this codec exists and are therefore left with files that display only as blank icons in File Explorer.
+          </p>
+          <p>
+            Beyond Windows, the compatibility gap is wide. Older versions of Adobe Photoshop, web browsers below a certain version, most social media uploaders, email clients, document editors, and many photo printing services do not support HEIC files natively. EXIF data and color profiles sometimes get stripped or misread when HEIC files are processed by non-Apple software. This is why converting to JPG - the universally accepted standard - is often the most practical solution for sharing or editing photos outside the Apple ecosystem.
+          </p>
+          <p>
+            JPG has been the dominant image format on the web since the mid-1990s and enjoys near-universal support. Converting your HEIC files to JPG eliminates compatibility friction entirely.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Does converting HEIC to JPG lose photo quality?
+          <i class="faq-arrow">&#8964;</i>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Yes - technically, but in practice the difference is almost always invisible to the human eye. JPG is a "lossy" format, meaning some image data is discarded each time the image is compressed and saved. HEIC is also lossy, but uses a more efficient algorithm that retains more detail at the same file size. When you convert from HEIC to JPG, you are decoding the original HEIC data to a raw pixel grid, then re-encoding that grid to JPG.
+          </p>
+          <p>
+            The key variable is the quality setting you choose. At quality 90 out of 100 (this tool's default), the resulting JPG will look virtually indistinguishable from the original HEIC photo for normal viewing, sharing, and printing. Setting quality to 100 produces the largest possible JPG file with minimal compression artifacts. Settings below 70 will start to show visible degradation - blockiness in smooth gradients, fuzziness around fine details - so we recommend staying above 80 for important photos.
+          </p>
+          <p>
+            One important note: if you convert a HEIC to JPG, then edit the JPG and re-save it, you are compressing the image again, adding another generation of quality loss. For long-term archiving, it is wise to keep the original HEIC files alongside any converted JPGs.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          How can I change my iPhone settings to take JPGs automatically?
+          <i class="faq-arrow">&#8964;</i>
+        </button>
+        <div class="faq-answer">
+          <p>
+            If you prefer your iPhone to shoot JPGs directly rather than HEIC files, you can change this in a few taps:
+          </p>
+          <ul>
+            <li>Open the <strong>Settings</strong> app on your iPhone.</li>
+            <li>Scroll down and tap <strong>Camera</strong>.</li>
+            <li>Tap <strong>Formats</strong>.</li>
+            <li>Select <strong>Most Compatible</strong> instead of "High Efficiency."</li>
+          </ul>
+          <p>
+            With "Most Compatible" selected, your iPhone will capture photos as JPG files and videos in H.264 format, which work on all devices and platforms without any conversion step. The trade-off is that your photos will use roughly twice as much storage space as HEIC files of equivalent quality.
+          </p>
+          <p>
+            Alternatively, you can keep HEIC enabled on your phone to preserve storage, and use a tool like this one whenever you need to share photos outside the Apple ecosystem. Many users find this the best of both worlds: maximum efficiency on the device, universal compatibility when sharing.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          Is it safe to convert my photos in the browser? What about privacy?
+          <i class="faq-arrow">&#8964;</i>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Browser-based conversion is one of the most private ways to process personal photos. When you use this tool, the HEIC decoding and JPG encoding happens entirely through JavaScript running inside your own browser on your own hardware. Your photo data is loaded into your browser's memory, processed locally, and then made available for download - it never travels over your internet connection to any server.
+          </p>
+          <p>
+            There are no accounts, no accounts, no file uploads, no cloud storage, and no analytics that touch the contents of your images. This is fundamentally different from cloud-based converter services, which require you to upload your photos to a remote server (often with unclear data retention policies) before returning the converted file.
+          </p>
+          <p>
+            The only limitation of browser-side processing is RAM. HEIC files, when decoded to raw pixel data before re-encoding as JPG, expand significantly in memory. A single 12-megapixel HEIC photo can briefly occupy 50-150 MB of RAM during conversion. This tool processes your files one at a time (sequentially) rather than all at once specifically to manage this memory load and prevent your browser from running out of RAM or freezing.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /seo-section -->
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div style="margin-bottom:10px;">
+        <a href="/about.html">About</a>
+        <span class="footer-divider">-</span>
+        <a href="/privacy.html">Privacy</a>
+        <span class="footer-divider">-</span>
+        <a href="/contact.html">Contact</a>
+      </div>
+      <div>
+        &copy; <span id="yr"></span> <a href="/">axiomape.com</a> - All rights reserved.
+      </div>
+    </footer>
+
+  </div><!-- /page-wrap -->
+
+  <!-- ================================================================
+       JAVASCRIPT
+  ================================================================ -->
+  <script>
+    // ----------------------------------------------------------------
+    // UTILITIES
+    // ----------------------------------------------------------------
+
+    // Format bytes to human-readable string (e.g. "1.4 MB")
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // Replace file extension with .jpg (case-insensitive)
+    function toJpgName(filename) {
+      return filename.replace(/\.(heic|heif)$/i, '.jpg');
+    }
+
+    // Set footer year
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    // ----------------------------------------------------------------
+    // QUALITY SLIDER
+    // ----------------------------------------------------------------
+    const qualitySlider  = document.getElementById('quality-slider');
+    const qualityDisplay = document.getElementById('quality-display');
+
+    qualitySlider.addEventListener('input', () => {
+      qualityDisplay.textContent = qualitySlider.value;
+    });
+
+    // ----------------------------------------------------------------
+    // DRAG-AND-DROP + FILE INPUT
+    // ----------------------------------------------------------------
+    const dropZone  = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      handleFiles(Array.from(e.dataTransfer.files));
+    });
+    fileInput.addEventListener('change', () => {
+      handleFiles(Array.from(fileInput.files));
+      fileInput.value = ''; // reset so same files can be re-added
+    });
+
+    // ----------------------------------------------------------------
+    // STATE
+    // ----------------------------------------------------------------
+    // Each item: { file, name, status, blob, cardEl, downloadBtn, progressBar }
+    const queue = [];
+
+    // ----------------------------------------------------------------
+    // HANDLE INCOMING FILES
+    // ----------------------------------------------------------------
+    function handleFiles(files) {
+      // Filter to only HEIC/HEIF files
+      const heicFiles = files.filter(f =>
+        /\.(heic|heif)$/i.test(f.name) ||
+        ['image/heic', 'image/heif'].includes(f.type)
+      );
+
+      if (heicFiles.length === 0) {
+        alert('No HEIC/HEIF files found. Please select files with a .heic or .heif extension from your iPhone.');
+        return;
+      }
+
+      heicFiles.forEach(file => {
+        const item = {
+          file,
+          name: file.name,
+          status: 'pending',
+          blob: null,
+          cardEl: null,
+          downloadBtn: null,
+          progressBar: null,
+        };
+        queue.push(item);
+        renderCard(item);
+      });
+
+      document.getElementById('queue-section').style.display = 'block';
+      updateQueueLabel();
+
+      // Start the sequential processing loop (only if not already running)
+      if (!processingActive) runQueue();
+    }
+
+    // ----------------------------------------------------------------
+    // RENDER A FILE CARD IN THE LIST
+    // ----------------------------------------------------------------
+    function renderCard(item) {
+      const grid = document.getElementById('file-grid');
+
+      const card = document.createElement('div');
+      card.className = 'file-card';
+
+      // Thumbnail placeholder (emoji icon until we have a real preview)
+      const thumb = document.createElement('div');
+      thumb.className = 'file-thumb';
+      thumb.textContent = '📷';
+
+      // Info column
+      const info = document.createElement('div');
+      info.className = 'file-info';
+
+      const name = document.createElement('div');
+      name.className = 'file-name';
+      name.textContent = item.name;
+
+      const size = document.createElement('div');
+      size.className = 'file-size';
+      size.textContent = formatBytes(item.file.size) + ' - original HEIC';
+
+      // Progress bar (hidden at pending stage)
+      const progressWrap = document.createElement('div');
+      progressWrap.className = 'progress-wrap';
+      progressWrap.style.display = 'none';
+
+      const progressBar = document.createElement('div');
+      progressBar.className = 'progress-bar';
+      progressWrap.appendChild(progressBar);
+
+      info.appendChild(name);
+      info.appendChild(size);
+      info.appendChild(progressWrap);
+
+      // Status column
+      const statusCol = document.createElement('div');
+      statusCol.className = 'file-status';
+
+      const badge = document.createElement('span');
+      badge.className = 'badge badge-pending';
+      badge.textContent = 'Pending';
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'btn btn-success';
+      downloadBtn.style.display = 'none';
+      downloadBtn.textContent = 'Download JPG';
+
+      statusCol.appendChild(badge);
+      statusCol.appendChild(downloadBtn);
+
+      card.appendChild(thumb);
+      card.appendChild(info);
+      card.appendChild(statusCol);
+      grid.appendChild(card);
+
+      // Store references on item for later updates
+      item.cardEl      = card;
+      item.badge       = badge;
+      item.downloadBtn = downloadBtn;
+      item.progressBar = progressBar;
+      item.progressWrap = progressWrap;
+      item.thumb       = thumb;
+    }
+
+    // ----------------------------------------------------------------
+    // SEQUENTIAL PROCESSING QUEUE ENGINE
+    // ----------------------------------------------------------------
+    // Only one file is decoded at a time to avoid exhausting browser RAM.
+    // HEIC decoding expands each image to raw pixel data before re-encoding.
+    let processingActive = false;
+    let completedCount   = 0;
+
+    async function runQueue() {
+      processingActive = true;
+      showGlobalProgress(true);
+
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        if (item.status !== 'pending') continue; // skip already-processed items
+
+        await processItem(item);
+
+        completedCount++;
+        updateGlobalProgress();
+      }
+
+      // Check if all done
+      const allDone = queue.every(it => it.status === 'done' || it.status === 'error');
+      if (allDone) {
+        const anySuccess = queue.some(it => it.status === 'done');
+        if (anySuccess) {
+          document.getElementById('btn-zip').disabled = false;
+        }
+        document.getElementById('global-progress-text').textContent = 'All files processed!';
+      }
+
+      processingActive = false;
+    }
+
+    // Convert a single file item using heic2any
+    async function processItem(item) {
+      // Mark card as active/converting
+      item.status = 'working';
+      item.cardEl.classList.add('active');
+      item.badge.className = 'badge badge-working';
+      item.badge.textContent = 'Converting...';
+      item.progressWrap.style.display = 'block';
+      item.progressBar.classList.add('indeterminate'); // animated while waiting
+
+      const quality = parseInt(qualitySlider.value, 10) / 100;
+
+      try {
+        // heic2any does the heavy lifting: decodes HEIC bytes -> returns a JPG Blob
+        // toType: 'image/jpeg' ensures JPG output
+        // quality: maps 0.0 to 1.0 (we convert from the 1-100 slider)
+        const resultBlob = await heic2any({
+          blob: item.file,
+          toType: 'image/jpeg',
+          quality: quality,
+        });
+
+        // heic2any returns a Blob or an array of Blobs (for sequences)
+        // We take the first (or only) blob in all cases
+        const jpgBlob = Array.isArray(resultBlob) ? resultBlob[0] : resultBlob;
+
+        item.blob   = jpgBlob;
+        item.status = 'done';
+
+        // Build a thumbnail preview from the converted JPG blob
+        const previewUrl = URL.createObjectURL(jpgBlob);
+        const img = document.createElement('img');
+        img.src = previewUrl;
+        img.alt = toJpgName(item.name);
+        item.thumb.textContent = '';
+        item.thumb.appendChild(img);
+
+        // Update card to success state
+        item.cardEl.classList.remove('active');
+        item.cardEl.classList.add('done');
+        item.badge.className  = 'badge badge-done';
+        item.badge.textContent = 'Done';
+        item.progressBar.classList.remove('indeterminate');
+        item.progressBar.style.width = '100%';
+        item.progressBar.style.background = '#34d399';
+
+        // Update size label to show converted JPG size
+        item.cardEl.querySelector('.file-size').textContent =
+          formatBytes(item.file.size) + ' HEIC - ' + formatBytes(jpgBlob.size) + ' JPG';
+
+        // Show individual download button
+        item.downloadBtn.style.display = '';
+        item.downloadBtn.addEventListener('click', () => {
+          saveAs(jpgBlob, toJpgName(item.name));
+        });
+
+      } catch (err) {
+        // Conversion failed - surface a clear error state
+        console.error('heic2any error for', item.name, err);
+        item.status = 'error';
+        item.cardEl.classList.remove('active');
+        item.cardEl.classList.add('error');
+        item.badge.className  = 'badge badge-error';
+        item.badge.textContent = 'Error';
+        item.progressBar.classList.remove('indeterminate');
+        item.progressBar.style.width = '100%';
+        item.progressBar.style.background = '#f87171';
+        item.thumb.textContent = '❌';
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // GLOBAL PROGRESS BAR
+    // ----------------------------------------------------------------
+    function showGlobalProgress(show) {
+      document.getElementById('global-progress-wrap').style.display = show ? 'block' : 'none';
+    }
+
+    function updateGlobalProgress() {
+      const total     = queue.length;
+      const done      = queue.filter(it => it.status === 'done' || it.status === 'error').length;
+      const pct       = total > 0 ? Math.round((done / total) * 100) : 0;
+      document.getElementById('global-bar').style.width = pct + '%';
+      document.getElementById('global-progress-pct').textContent = pct + '%';
+      document.getElementById('global-progress-text').textContent =
+        'Converting ' + done + ' of ' + total + ' files...';
+    }
+
+    // ----------------------------------------------------------------
+    // QUEUE LABEL
+    // ----------------------------------------------------------------
+    function updateQueueLabel() {
+      const total = queue.length;
+      document.getElementById('queue-label').textContent =
+        total + ' file' + (total !== 1 ? 's' : '') + ' queued';
+    }
+
+    // ----------------------------------------------------------------
+    // DOWNLOAD ALL AS ZIP (using JSZip + FileSaver)
+    // ----------------------------------------------------------------
+    document.getElementById('btn-zip').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-zip');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Building ZIP...';
+
+      const zip = new JSZip();
+
+      queue.forEach(item => {
+        if (item.status === 'done' && item.blob) {
+          zip.file(toJpgName(item.name), item.blob);
+        }
+      });
+
+      try {
+        // Generate ZIP blob asynchronously
+        const zipBlob = await zip.generateAsync(
+          { type: 'blob', compression: 'STORE' }, // STORE = no re-compression on already-compressed JPGs
+          (meta) => {
+            btn.innerHTML = '<span>⏳</span> Building ZIP... ' + Math.round(meta.percent) + '%';
+          }
+        );
+
+        saveAs(zipBlob, 'converted-photos.zip');
+      } catch (e) {
+        console.error('ZIP error', e);
+        alert('There was an error building the ZIP file. You can still download images individually.');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<span>⬇</span> Download All (ZIP)';
+    });
+
+    // ----------------------------------------------------------------
+    // CLEAR ALL
+    // ----------------------------------------------------------------
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      if (processingActive) {
+        if (!confirm('Files are still being converted. Clear the queue anyway?')) return;
+      }
+      queue.length    = 0;
+      completedCount  = 0;
+      processingActive = false;
+
+      document.getElementById('file-grid').innerHTML = '';
+      document.getElementById('queue-section').style.display  = 'none';
+      document.getElementById('global-progress-wrap').style.display = 'none';
+      document.getElementById('btn-zip').disabled = true;
+    });
+
+    // ----------------------------------------------------------------
+    // FAQ ACCORDION
+    // ----------------------------------------------------------------
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+        // Toggle clicked
+        if (!isOpen) item.classList.add('open');
+      });
+    });
+  </script>
+
+</body>
+</html>

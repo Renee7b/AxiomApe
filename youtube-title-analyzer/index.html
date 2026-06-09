@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Title Analyzer - Check Character Length and Clickability Score</title>
+  <meta name="description" content="Instantly analyze your YouTube video title for character length, clickability score, power words, and mobile truncation. Free tool for content creators." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --accent: #ff0000;
+      --accent-dark: #cc0000;
+      --green: #16a34a;
+      --yellow: #ca8a04;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    body.dark {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --border: #2d3148;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --shadow: 0 2px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+      line-height: 1.6;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-bar {
+      text-align: center;
+      padding: 10px 20px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .top-bar a {
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .top-bar a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .page-header h1 {
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Dark mode toggle */
+    .dark-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .dark-toggle input { display: none; }
+    .toggle-track {
+      width: 40px; height: 22px;
+      background: var(--border);
+      border-radius: 11px;
+      position: relative;
+      transition: background 0.3s;
+    }
+    .dark-toggle input:checked + .toggle-track { background: var(--blue); }
+    .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    .dark-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
+
+    /* ============================================================
+       AD PLACEHOLDER - Standard Leaderboard (728x90)
+       Inject Google AdSense code here when ready.
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      border: 1px dashed var(--text-muted);
+      /* ADSENSE: Replace this entire div's contents with your AdSense unit */
+    }
+
+    /* ============================================================
+       MAIN CARD GRID
+    ============================================================ */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 780px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 18px; }
+
+    /* ============================================================
+       INPUT SECTION
+    ============================================================ */
+    .input-card { grid-column: 1 / -1; }
+
+    .title-input {
+      width: 100%;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 16px 18px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: 'Roboto', sans-serif;
+      line-height: 1.5;
+    }
+    .title-input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .title-input::placeholder { color: var(--text-muted); font-weight: 400; }
+
+    /* Character counter bar */
+    .char-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .char-counter {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .char-counter.zone-short  { background: #fef9c3; color: #854d0e; }
+    .char-counter.zone-sweet  { background: #dcfce7; color: #14532d; }
+    .char-counter.zone-warn   { background: #fee2e2; color: #7f1d1d; }
+
+    /* Progress bar under textarea */
+    .char-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .char-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.2s, background 0.3s;
+      background: var(--green);
+    }
+
+    /* Zone legend */
+    .char-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .char-legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Action buttons */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: var(--accent-dark); box-shadow: 0 4px 12px rgba(220,38,38,0.3); }
+
+    /* Power words popup */
+    .pw-wrapper { position: relative; }
+    .pw-popup {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow-lg);
+      padding: 16px;
+      z-index: 100;
+      width: 320px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .pw-popup.open { display: block; }
+    .pw-popup h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .pw-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pw-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .pw-chip:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    /* Copy notification */
+    .copy-notif {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: var(--shadow-lg);
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* ============================================================
+       SCORE SECTION
+    ============================================================ */
+    .score-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* SVG circle gauge */
+    .gauge-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .gauge-svg { transform: rotate(-90deg); }
+    .gauge-bg   { fill: none; stroke: var(--border); stroke-width: 12; }
+    .gauge-fill { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease; }
+    .gauge-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .gauge-number { font-size: 34px; font-weight: 800; line-height: 1; }
+    .gauge-label  { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+    .score-grade {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    /* Feedback checklist */
+    .checklist { width: 100%; margin-top: 8px; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .check-text { color: var(--text); }
+    .check-detail { color: var(--text-muted); font-size: 12px; }
+
+    /* ============================================================
+       PREVIEW SECTION
+    ============================================================ */
+    .preview-toggle {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      width: fit-content;
+    }
+    .preview-btn {
+      padding: 7px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: background 0.2s, color 0.2s;
+    }
+    .preview-btn.active {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    /* YouTube card mockup */
+    .yt-card-wrap {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+
+    /* Desktop mockup */
+    .yt-card-desktop {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 240px;
+    }
+    .yt-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #374151, #6b7280);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .yt-thumb-label {
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .yt-duration {
+      position: absolute;
+      bottom: 6px; right: 6px;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: 'Roboto', sans-serif;
+    }
+    .yt-meta { display: flex; gap: 10px; }
+    .yt-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      flex-shrink: 0;
+    }
+    .yt-info { flex: 1; min-width: 0; }
+    .yt-title {
+      font-family: 'Roboto', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #0f0f0f;
+      line-height: 1.4;
+      max-height: 2.8em;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+    body.dark .yt-title { color: #e5e5e5; }
+    .yt-channel { font-family: 'Roboto', sans-serif; font-size: 12px; color: #606060; margin-top: 3px; }
+    body.dark .yt-channel { color: #aaa; }
+    .yt-stats { font-family: 'Roboto', sans-serif; font-size: 12px; color: #606060; }
+    body.dark .yt-stats { color: #aaa; }
+
+    /* Mobile mockup */
+    .yt-card-mobile {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      max-width: 320px;
+    }
+    .yt-thumb-mobile {
+      width: 120px;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #374151, #6b7280);
+      border-radius: 6px;
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .yt-title-mobile {
+      font-family: 'Roboto', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #0f0f0f;
+      line-height: 1.4;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+    body.dark .yt-title-mobile { color: #e5e5e5; }
+    .yt-info-mobile { flex: 1; min-width: 0; }
+
+    .truncation-warning {
+      margin-top: 10px;
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    body.dark .truncation-warning { background: #451a03; color: #fcd34d; border-color: #78350f; }
+    .truncation-ok {
+      background: #dcfce7;
+      color: #14532d;
+      border-color: #86efac;
+    }
+    body.dark .truncation-ok { background: #052e16; color: #86efac; border-color: #166534; }
+
+    /* ============================================================
+       POWER WORDS REFERENCE TABLE
+    ============================================================ */
+    .full-width-card { margin-bottom: 20px; }
+
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .ref-table th {
+      background: var(--bg);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ref-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table tr:hover td { background: var(--bg); }
+    .emotion-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tag-curiosity  { background: #ede9fe; color: #5b21b6; }
+    .tag-urgency    { background: #fee2e2; color: #991b1b; }
+    .tag-authority  { background: #dbeafe; color: #1e40af; }
+    .tag-emotional  { background: #fce7f3; color: #9d174d; }
+    .tag-value      { background: #dcfce7; color: #166534; }
+    body.dark .tag-curiosity  { background: #2e1065; color: #c4b5fd; }
+    body.dark .tag-urgency    { background: #450a0a; color: #fca5a5; }
+    body.dark .tag-authority  { background: #1e3a8a; color: #93c5fd; }
+    body.dark .tag-emotional  { background: #500724; color: #fbcfe8; }
+    body.dark .tag-value      { background: #052e16; color: #86efac; }
+
+    /* ============================================================
+       GUIDE / SEO SECTION
+    ============================================================ */
+    .guide-section { margin-bottom: 20px; }
+    .guide-section h2 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    /* FAQ Accordions */
+    .faq-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      padding: 16px 20px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.2s;
+    }
+    .faq-question:hover { background: var(--bg); }
+    .faq-arrow {
+      font-size: 18px;
+      transition: transform 0.3s;
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s;
+      padding: 0 20px;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+      padding: 0 20px 20px;
+    }
+    .faq-answer p { font-size: 14px; line-height: 1.75; color: var(--text-muted); margin-bottom: 12px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--text); }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--yellow);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .disclaimer strong { color: var(--text); }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .footer {
+      text-align: center;
+      padding: 24px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .footer a { color: var(--text-muted); margin: 0 10px; }
+    .footer a:hover { color: var(--accent); text-decoration: none; }
+    .footer-links { margin-bottom: 8px; }
+
+    /* ============================================================
+       RESPONSIVE HELPERS
+    ============================================================ */
+    @media (max-width: 520px) {
+      .card { padding: 16px; }
+      .action-row { gap: 8px; }
+      .btn { padding: 8px 13px; font-size: 12px; }
+      .pw-popup { width: 260px; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/youtube-title-analyzer/" />
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP NAV
+  ============================================================ -->
+  <div class="top-bar">
+    <a href="/" title="Back to AxiomApe">axiomape.com</a>
+  </div>
+
+  <!-- Copy notification toast -->
+  <div class="copy-notif" id="copyNotif">Copied to clipboard!</div>
+
+  <div class="page-wrapper">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>YouTube <span>Title Analyzer</span></h1>
+        <p>Check character length and clickability score of your video title - instantly, for free.</p>
+      </div>
+      <label class="dark-toggle" title="Toggle dark mode">
+        <input type="checkbox" id="darkToggle" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        Dark Mode
+      </label>
+    </div>
+
+    <!-- Ad Leaderboard Placeholder (728x90) -->
+    <!-- ADSENSE: Replace the contents of this div with your Google AdSense ad unit code -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement (728 x 90)
+    </div>
+
+    <!-- ============================================================
+         INPUT CARD (full width)
+    ============================================================ -->
+    <div class="card input-card full-width-card">
+      <div class="card-title"><span class="icon">✏️</span> Your Draft Title</div>
+
+      <textarea
+        id="titleInput"
+        class="title-input"
+        rows="3"
+        maxlength="100"
+        placeholder="Type or paste your YouTube title here..."
+        aria-label="YouTube title input"
+      ></textarea>
+
+      <!-- Character bar -->
+      <div class="char-bar-wrap">
+        <div class="char-bar" id="charBar" style="width:0%"></div>
+      </div>
+
+      <!-- Counter + zone label -->
+      <div class="char-meta">
+        <span class="char-counter zone-short" id="charCounter">0 / 100 characters</span>
+        <span id="zoneLabel" style="font-size:13px; color:var(--text-muted);">Start typing above</span>
+      </div>
+
+      <!-- Legend -->
+      <div class="char-legend">
+        <span><span class="dot" style="background:#854d0e;"></span> Under 30 - too short</span>
+        <span><span class="dot" style="background:var(--green);"></span> 30-70 - sweet spot</span>
+        <span><span class="dot" style="background:var(--red);"></span> 70+ - may be cut off</span>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <button class="btn btn-primary" id="copyBtn" onclick="copyTitle()">📋 Copy Title</button>
+        <button class="btn btn-secondary" onclick="clearTitle()">🗑️ Clear</button>
+        <div class="pw-wrapper">
+          <button class="btn btn-accent" onclick="togglePowerWords()">⚡ Suggest Power Words</button>
+          <div class="pw-popup" id="pwPopup">
+            <h4>Click a word to insert it at your cursor:</h4>
+            <div class="pw-chips" id="pwChips"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SCORING + PREVIEW GRID
+    ============================================================ -->
+    <div class="main-grid">
+
+      <!-- SCORE CARD -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🎯</span> Clickability Score</div>
+
+        <div class="score-display">
+          <!-- SVG circle gauge -->
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 140 140" width="140" height="140">
+              <circle class="gauge-bg" cx="70" cy="70" r="54" />
+              <circle class="gauge-fill" id="gaugeFill" cx="70" cy="70" r="54"
+                stroke-dasharray="339.3"
+                stroke-dashoffset="339.3"
+                stroke="#16a34a" />
+            </svg>
+            <div class="gauge-text">
+              <span class="gauge-number" id="scoreNumber">--</span>
+              <span class="gauge-label">out of 100</span>
+            </div>
+          </div>
+
+          <div class="score-grade" id="scoreGrade" style="color:var(--text-muted);">Awaiting input</div>
+        </div>
+
+        <!-- Feedback checklist - updates in real time -->
+        <div class="checklist" id="checklist" style="margin-top:20px;"></div>
+      </div>
+
+      <!-- PREVIEW CARD -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📺</span> Live YouTube Preview</div>
+
+        <div class="preview-toggle">
+          <button class="preview-btn active" id="btnDesktop" onclick="setView('desktop')">🖥 Desktop</button>
+          <button class="preview-btn" id="btnMobile" onclick="setView('mobile')">📱 Mobile</button>
+        </div>
+
+        <!-- Desktop mockup -->
+        <div class="yt-card-wrap" id="previewDesktop">
+          <div class="yt-card-desktop">
+            <div class="yt-thumb">
+              <span class="yt-thumb-label">Thumbnail</span>
+              <span class="yt-duration">12:34</span>
+            </div>
+            <div class="yt-meta">
+              <div class="yt-avatar"></div>
+              <div class="yt-info">
+                <div class="yt-title" id="previewTitleDesktop">Your title will appear here...</div>
+                <div class="yt-channel">Your Channel</div>
+                <div class="yt-stats">1.2M views &middot; 3 days ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile mockup (hidden by default) -->
+        <div class="yt-card-wrap" id="previewMobile" style="display:none;">
+          <div class="yt-card-mobile">
+            <div class="yt-thumb-mobile">
+              <span class="yt-thumb-label" style="font-size:9px; color:rgba(255,255,255,0.5);">Thumb</span>
+              <span class="yt-duration" style="font-size:10px;">12:34</span>
+            </div>
+            <div class="yt-info-mobile">
+              <div class="yt-title-mobile" id="previewTitleMobile">Your title will appear here...</div>
+              <div class="yt-channel" style="font-size:11px; margin-top:4px;">Your Channel</div>
+              <div class="yt-stats" style="font-size:11px;">1.2M views</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="truncationMsg" class="truncation-warning" style="display:none;"></div>
+      </div>
+
+    </div><!-- end main-grid -->
+
+    <!-- ============================================================
+         POWER WORDS REFERENCE TABLE
+    ============================================================ -->
+    <div class="card full-width-card">
+      <div class="card-title"><span class="icon">📊</span> Power Word Reference Table - 20 High-Impact Words by Emotion Category</div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:4px;">
+        <strong>What are Power Words?</strong> Power words are psychologically loaded terms that trigger an emotional or instinctive reaction in the reader - making them far more likely to click. YouTube's algorithm rewards high Click-Through Rates (CTR), so choosing strong words directly improves your channel's reach.
+      </p>
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Power Word</th>
+            <th>Emotion Category</th>
+            <th>Why It Works</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Secret</strong></td><td><span class="emotion-tag tag-curiosity">Curiosity</span></td><td>Implies exclusive knowledge the viewer is missing out on.</td></tr>
+          <tr><td><strong>Nobody</strong></td><td><span class="emotion-tag tag-curiosity">Curiosity</span></td><td>Creates a knowledge gap - the viewer wants to be the one who knows.</td></tr>
+          <tr><td><strong>Hidden</strong></td><td><span class="emotion-tag tag-curiosity">Curiosity</span></td><td>Suggests insider information that most people overlook.</td></tr>
+          <tr><td><strong>Exposed</strong></td><td><span class="emotion-tag tag-curiosity">Curiosity</span></td><td>Signals a reveal or scandal - very high click impulse.</td></tr>
+          <tr><td><strong>NOW</strong></td><td><span class="emotion-tag tag-urgency">Urgency</span></td><td>Creates immediate time pressure, reducing hesitation to click.</td></tr>
+          <tr><td><strong>Before It's Gone</strong></td><td><span class="emotion-tag tag-urgency">Urgency</span></td><td>Triggers loss aversion - one of the most powerful psychological motivators.</td></tr>
+          <tr><td><strong>Warning</strong></td><td><span class="emotion-tag tag-urgency">Urgency</span></td><td>Activates a protective instinct - the viewer needs to know this.</td></tr>
+          <tr><td><strong>Stop</strong></td><td><span class="emotion-tag tag-urgency">Urgency</span></td><td>A direct command word that interrupts the viewer's scroll pattern.</td></tr>
+          <tr><td><strong>Proven</strong></td><td><span class="emotion-tag tag-authority">Authority</span></td><td>Signals credibility and evidence-backed content - reduces skepticism.</td></tr>
+          <tr><td><strong>Expert</strong></td><td><span class="emotion-tag tag-authority">Authority</span></td><td>Positions content as high-quality and trustworthy.</td></tr>
+          <tr><td><strong>Ultimate</strong></td><td><span class="emotion-tag tag-authority">Authority</span></td><td>Implies this is the definitive, most complete resource on the topic.</td></tr>
+          <tr><td><strong>Official</strong></td><td><span class="emotion-tag tag-authority">Authority</span></td><td>Suggests legitimacy and authoritative sourcing.</td></tr>
+          <tr><td><strong>Shocking</strong></td><td><span class="emotion-tag tag-emotional">Emotional</span></td><td>Promises an emotional reaction, which drives high click impulse.</td></tr>
+          <tr><td><strong>Insane</strong></td><td><span class="emotion-tag tag-emotional">Emotional</span></td><td>Signals something extreme or unbelievable - triggers awe or disbelief.</td></tr>
+          <tr><td><strong>Heartbreaking</strong></td><td><span class="emotion-tag tag-emotional">Emotional</span></td><td>Drives empathy-based clicks, especially effective for storytelling content.</td></tr>
+          <tr><td><strong>Embarrassing</strong></td><td><span class="emotion-tag tag-emotional">Emotional</span></td><td>Triggers social awareness and relatability - viewers want to avoid this.</td></tr>
+          <tr><td><strong>Free</strong></td><td><span class="emotion-tag tag-value">Value</span></td><td>One of the most clicked words online - signals zero-cost gain.</td></tr>
+          <tr><td><strong>Instant</strong></td><td><span class="emotion-tag tag-value">Value</span></td><td>Promises immediate results - appeals to impatience and desire for fast wins.</td></tr>
+          <tr><td><strong>Save</strong></td><td><span class="emotion-tag tag-value">Value</span></td><td>Triggers a tangible benefit - money, time, or effort saved.</td></tr>
+          <tr><td><strong>Mistake</strong></td><td><span class="emotion-tag tag-value">Value</span></td><td>Frames content as fixing a costly error, which feels high-value and preventative.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================
+         GUIDE / SEO SECTION
+    ============================================================ -->
+    <div class="guide-section">
+      <h2>The Ultimate Guide to Writing Viral YouTube Titles</h2>
+
+      <div class="faq-item" id="faq1">
+        <button class="faq-question" onclick="toggleFaq('faq1')">
+          What is Click-Through Rate (CTR) and why does YouTube care so much about it?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Click-Through Rate (CTR)</strong> is the percentage of viewers who see your video's thumbnail and title in their feed and then actually click on it. For example, if 1,000 people see your video in search results or on the home page, and 50 of them click it, your CTR is 5%. YouTube considers an average CTR of 2-10% to be normal, with top-performing videos often reaching 10-20% or higher in niche audiences.</p>
+          <p>YouTube's algorithm uses CTR as a primary signal of quality and relevance. A high CTR tells YouTube's system that your title and thumbnail are compelling - that the promise you are making to the viewer is interesting enough to earn their attention. In response, the algorithm rewards high-CTR videos by distributing them more broadly: pushing them into more home feeds, suggested video slots, and search result positions. This creates a compounding effect where a great title generates more clicks, which generates more algorithmic distribution, which generates even more views.</p>
+          <p>Crucially, CTR is always measured alongside <strong>Audience Retention</strong> - how long people watch after clicking. YouTube wants both: a title that earns the click, and a video that delivers on its promise so viewers stick around. A misleading title (sometimes called "clickbait") can achieve a high CTR initially but will be punished if viewers immediately leave, signaling that the content did not match the title's promise. The goal is to write titles that are both genuinely compelling and completely accurate to the video's content.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <button class="faq-question" onclick="toggleFaq('faq2')">
+          Why do my video titles get cut off with "..." on mobile? What is Truncation?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Truncation</strong> is the technical term for when text is automatically cut short and replaced with three dots ("...") because it does not fit within the available display space. On YouTube, truncation is one of the biggest silent killers of potential clicks - because a truncated title cannot finish delivering its message, its question, or its compelling hook.</p>
+          <p>The character limits where truncation occurs vary by device and context. On the YouTube <strong>desktop home feed</strong>, titles are typically cut off at around 60-65 characters in a two-line display. On <strong>mobile devices</strong> (which account for over 70% of YouTube's total watch time), titles in search results are often cut off at approximately 50-55 characters when only two lines are displayed. In the YouTube app's "Up Next" sidebar panel, titles can be cut even shorter - sometimes at around 40-45 characters.</p>
+          <p>The practical best practice is to front-load your most important information. Put your core keyword, your biggest promise, or your most compelling hook within the first 40-50 characters of the title. This ensures that even if the title is truncated, the most valuable part of the message survives and is visible to the viewer. Think of it like a newspaper headline - the essential story must be in the first line. This tool's preview section lets you visualize exactly how truncation will affect your specific title on both desktop and mobile before you publish.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <button class="faq-question" onclick="toggleFaq('faq3')">
+          What are Power Words and how do they trigger psychological curiosity in viewers?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Power words</strong> are specific, carefully chosen words that have been shown through decades of marketing, advertising, and copywriting research to trigger a strong psychological or emotional response in the reader. They work by activating primal cognitive systems - curiosity, fear of loss, desire for social status, or the need for safety - that override the brain's default "keep scrolling" behavior. In the context of YouTube titles, a single power word can be the difference between a 2% CTR and a 12% CTR.</p>
+          <p>The psychology behind these words is well-documented. Words like "Secret," "Hidden," and "Nobody Knows" create what is called an <strong>information gap</strong> - a psychological tension between what you know and what you suspect you are missing. The brain is uncomfortable with this gap and seeks to close it by clicking the video. Words like "Warning," "Stop," and "Mistake" tap into the brain's threat-detection system, triggering a protective instinct that compels attention. Words like "Proven," "Expert," and "Ultimate" leverage our desire for <strong>authority</strong> and credibility, reducing the cognitive risk we associate with investing our time in a video.</p>
+          <p>Emotional triggers are a closely related category. <strong>Emotional triggers</strong> are words that are designed to produce a specific feeling - such as excitement, shock, empathy, or inspiration - before the viewer even clicks. Research published in behavioral psychology shows that decisions, including what to click online, are primarily emotionally driven and only secondarily rationalized. By pairing a strong emotional trigger with a clear, specific promise in your title, you create a title that is both compelling on a gut level and credible on a logical level - the winning combination for maximum CTR.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <button class="faq-question" onclick="toggleFaq('faq4')">
+          Should I put the most important keywords at the beginning or end of my title?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Front-loading your most important keywords is almost always the better strategy,</strong> and it is recommended by YouTube's own Creator Academy guidelines. The reason is twofold: first, it ensures your core topic is visible even if the title is truncated on mobile or small screens. Second, YouTube's search algorithm gives slightly more weight to words that appear earlier in the title, similar to how Google treats the first words of a page title tag in web search results.</p>
+          <p><strong>Search Intent</strong> is a critical concept to understand here. Search Intent refers to the underlying goal or motivation behind a viewer's search query - are they looking to learn something ("how to"), be entertained ("best fails"), make a decision ("should I buy"), or find something specific ("Logan Paul vs")? When your primary keyword appears at the very front of your title, it directly matches the search intent signal YouTube's algorithm is looking for when it decides which videos to surface for a given query.</p>
+          <p>A practical formula used by many successful creators is: <strong>[Primary Keyword] + [Compelling Hook or Number] + [Power Word or Emotional Trigger].</strong> For example, rather than "I Tried Making Sourdough for the First Time - It Was Shocking," a better structure would be "Sourdough Bread for Beginners - Shocking Results on My First Attempt." The topic is immediately clear in the first three words, the target audience ("beginners") is addressed early, and the power word ("shocking") creates curiosity and emotional anticipation. This structure serves both the algorithm and the human viewer simultaneously.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <button class="faq-question" onclick="toggleFaq('faq5')">
+          Does using ALL CAPS in a YouTube title actually help, or does it look spammy?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>The answer is: <strong>strategic, limited use of ALL CAPS works; overuse backfires.</strong> Using one or two words in all caps within an otherwise normally-cased title is a legitimate and widely-used technique to direct the viewer's eye to the most important concept in your title. When someone is rapidly scanning their feed, an ALL CAPS word acts as a visual anchor - it draws the gaze and creates a micro-moment of emphasis that can tip a "maybe" into a click.</p>
+          <p>However, writing your <strong>entire title in ALL CAPS</strong> has the opposite effect. Research into online reading behavior shows that text written entirely in capital letters is significantly harder and slower to read than standard mixed-case text. This is because we recognize words largely by their shape profile - the mix of ascending letters (like 'd' and 'h') and descending letters (like 'g' and 'p') creates a distinctive outline our brain recognizes instantly. All-caps text destroys these shape profiles and forces the brain to read letter by letter, which increases cognitive load and reduces the impulse to engage.</p>
+          <p>Beyond readability, an all-caps title reads as aggressive or as desperate shouting, which erodes trust and positions the channel as low-quality or "clickbaity" in the viewer's mind - particularly among the valuable 25-45 year old demographic. YouTube itself has stated it may suppress titles that appear spammy. The recommended approach: capitalize one to two key words strategically for emphasis, write the rest of the title in standard Title Case or sentence case, and let your power words do the heavy lifting rather than relying on capitalization as a crutch.</p>
+        </div>
+      </div>
+
+    </div><!-- end guide-section -->
+
+    <!-- ============================================================
+         DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This tool analyzes structural and psychological best practices. A high score does not guarantee viral success, as YouTube's algorithm also heavily weighs thumbnail quality, audience retention, and overall video engagement.
+    </div>
+
+  </div><!-- end page-wrapper -->
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div>&copy; <span id="footerYear"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    // ----------------------------------------------------------------
+    // POWER WORDS ARRAY (50 words used for scoring + suggestions)
+    // ----------------------------------------------------------------
+    const POWER_WORDS = [
+      'Secret','Secrets','Ultimate','Insane','Proven','Shocking','Truth','Hidden',
+      'Exposed','Warning','Mistake','Mistakes','Free','Instant','Save','Stop',
+      'Never','Always','Best','Worst','Unbelievable','Incredible','Amazing',
+      'Horrifying','Surprising','Nobody','Everybody','Actually','Finally',
+      'Embarrassing','Heartbreaking','Devastating','Explosive','Dangerous',
+      'Forbidden','Banned','Leaked','Exclusive','Revealed','Confession',
+      'Genius','Stupid','Lazy','Easy','Fast','Simple','Massive','Epic',
+      'Broken','Real'
+    ];
+
+    // Suggestion pool (subset with categories for the popup)
+    const SUGGESTION_GROUPS = [
+      { label: 'Curiosity', words: ['Secret','Hidden','Exposed','Leaked','Forbidden','Revealed','Nobody','Actually'] },
+      { label: 'Urgency',   words: ['Warning','Stop','Never','Finally','NOW','Before','Dangerous'] },
+      { label: 'Authority', words: ['Proven','Ultimate','Expert','Best','Genius','Real','Exclusive'] },
+      { label: 'Emotion',   words: ['Shocking','Insane','Incredible','Heartbreaking','Embarrassing','Devastating'] },
+      { label: 'Value',     words: ['Free','Instant','Save','Easy','Simple','Fast','Massive'] },
+    ];
+
+    // ----------------------------------------------------------------
+    // DOM REFS
+    // ----------------------------------------------------------------
+    const input      = document.getElementById('titleInput');
+    const charBar    = document.getElementById('charBar');
+    const charCtr    = document.getElementById('charCounter');
+    const zoneLabel  = document.getElementById('zoneLabel');
+    const gaugeFill  = document.getElementById('gaugeFill');
+    const scoreNum   = document.getElementById('scoreNumber');
+    const scoreGrade = document.getElementById('scoreGrade');
+    const checklist  = document.getElementById('checklist');
+    const pDesktop   = document.getElementById('previewTitleDesktop');
+    const pMobile    = document.getElementById('previewTitleMobile');
+    const truncMsg   = document.getElementById('truncationMsg');
+    const pwPopup    = document.getElementById('pwPopup');
+    const pwChips    = document.getElementById('pwChips');
+    const CIRC       = 2 * Math.PI * 54; // circumference for r=54
+
+    // ----------------------------------------------------------------
+    // DARK MODE
+    // ----------------------------------------------------------------
+    const darkToggle = document.getElementById('darkToggle');
+    const saved = localStorage.getItem('axiomape-dark');
+    if (saved === 'true') { document.body.classList.add('dark'); darkToggle.checked = true; }
+    darkToggle.addEventListener('change', () => {
+      document.body.classList.toggle('dark', darkToggle.checked);
+      localStorage.setItem('axiomape-dark', darkToggle.checked);
+    });
+
+    // ----------------------------------------------------------------
+    // FOOTER YEAR
+    // ----------------------------------------------------------------
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+    // ----------------------------------------------------------------
+    // MAIN ANALYSIS - fires on every keystroke
+    // ----------------------------------------------------------------
+    input.addEventListener('input', analyze);
+
+    function analyze() {
+      const raw = input.value;
+      const len = raw.length;
+      updateCharCounter(len);
+      updatePreviews(raw);
+      updateScore(raw, len);
+    }
+
+    // -- Character counter + bar ---------------------------------
+    function updateCharCounter(len) {
+      // Determine zone
+      let zone, color, label;
+      if (len === 0) {
+        zone = 'zone-short'; label = 'Start typing above'; color = '#6b7280';
+      } else if (len < 30) {
+        zone = 'zone-short'; label = 'Too short - aim for at least 30 characters'; color = '#ca8a04';
+      } else if (len <= 70) {
+        zone = 'zone-sweet'; label = len <= 60 ? 'Great length - visible on all devices' : 'Good - near the safe cutoff zone'; color = '#16a34a';
+      } else {
+        zone = 'zone-warn'; label = 'Title may be cut off on mobile and desktop'; color = '#dc2626';
+      }
+
+      charCtr.textContent = `${len} / 100 characters`;
+      charCtr.className   = `char-counter ${zone}`;
+      zoneLabel.textContent = label;
+      zoneLabel.style.color  = color;
+
+      // Progress bar (100 chars = 100%)
+      const pct = Math.min(len / 100 * 100, 100);
+      charBar.style.width = pct + '%';
+      charBar.style.background = zone === 'zone-sweet' ? '#16a34a' : zone === 'zone-warn' ? '#dc2626' : '#ca8a04';
+    }
+
+    // -- Previews ------------------------------------------------
+    function updatePreviews(text) {
+      const display = text.trim() || 'Your title will appear here...';
+      pDesktop.textContent = display;
+      pMobile.textContent  = display;
+
+      // Truncation warning
+      const len = text.trim().length;
+      if (len === 0) {
+        truncMsg.style.display = 'none';
+      } else if (len > 70) {
+        truncMsg.style.display = 'block';
+        truncMsg.className = 'truncation-warning';
+        truncMsg.textContent = 'Your title is ' + len + ' characters. Titles over 70 characters are likely truncated on mobile devices (shown as "..."). Consider shortening to keep the full message visible.';
+      } else if (len > 55) {
+        truncMsg.style.display = 'block';
+        truncMsg.className = 'truncation-warning';
+        truncMsg.textContent = 'Heads up: titles over 55 characters may be cut off in the YouTube mobile sidebar and search results. Preview above shows the two-line display.';
+      } else {
+        truncMsg.style.display = 'block';
+        truncMsg.className = 'truncation-warning truncation-ok';
+        truncMsg.textContent = 'Title length is safe - it should display in full on both desktop and mobile without truncation.';
+      }
+    }
+
+    // -- Scoring engine ------------------------------------------
+    function updateScore(raw, len) {
+      if (len === 0) {
+        resetScore();
+        return;
+      }
+
+      let score = 50; // neutral starting point
+      const checks = [];
+
+      // 1. Contains a number
+      const hasNumber = /\d/.test(raw);
+      if (hasNumber) {
+        score += 10;
+        checks.push({ pass: true,  text: 'Contains a number (e.g., "5 Tips...")',      detail: 'Numbers increase specificity and trust. +10 pts' });
+      } else {
+        score -= 5;
+        checks.push({ pass: false, text: 'No number detected',                         detail: 'Adding a specific number (e.g., "7 Ways...") boosts CTR. -5 pts' });
+      }
+
+      // 2. Power word scan (case-insensitive)
+      const upperRaw = raw.toUpperCase();
+      const foundWords = POWER_WORDS.filter(w => upperRaw.includes(w.toUpperCase()));
+      if (foundWords.length >= 2) {
+        score += 18;
+        checks.push({ pass: true,  text: `Power words found: ${foundWords.slice(0,3).join(', ')}`,  detail: 'Multiple emotional triggers detected. +18 pts' });
+      } else if (foundWords.length === 1) {
+        score += 10;
+        checks.push({ pass: true,  text: `Power word found: "${foundWords[0]}"`,        detail: 'Good use of an emotional trigger. +10 pts' });
+      } else {
+        score -= 10;
+        checks.push({ pass: false, text: 'No power words or emotional triggers found', detail: 'Add words like "Secret", "Proven", or "Warning" to boost CTR. -10 pts' });
+      }
+
+      // 3. ALL CAPS check
+      const words = raw.trim().split(/\s+/);
+      const capsWords = words.filter(w => w.length > 2 && w === w.toUpperCase() && /[A-Z]/.test(w));
+      const allCaps   = words.length > 2 && words.every(w => w === w.toUpperCase() && /[A-Z]/.test(w));
+
+      if (allCaps) {
+        score -= 15;
+        checks.push({ pass: false, text: 'Entire title is ALL CAPS - looks spammy',    detail: 'All-caps titles are harder to read and may be suppressed. -15 pts' });
+      } else if (capsWords.length >= 1 && capsWords.length <= 2) {
+        score += 7;
+        checks.push({ pass: true,  text: `Strategic ALL CAPS used: ${capsWords.join(', ')}`, detail: 'One or two caps words create visual emphasis without looking spammy. +7 pts' });
+      } else if (capsWords.length > 2) {
+        score -= 5;
+        checks.push({ pass: false, text: 'Too many ALL CAPS words (' + capsWords.length + ')',  detail: 'Limit caps emphasis to 1-2 words for best results. -5 pts' });
+      } else {
+        checks.push({ pass: null,  text: 'No ALL CAPS words used',                     detail: 'Optional: capitalizing 1-2 key words can boost visual impact. No penalty.' });
+      }
+
+      // 4. Length score
+      if (len < 30) {
+        score -= 15;
+        checks.push({ pass: false, text: 'Title is too short (' + len + ' chars)',     detail: 'Short titles lack SEO keywords and context. Aim for 40-70 chars. -15 pts' });
+      } else if (len <= 60) {
+        score += 12;
+        checks.push({ pass: true,  text: 'Ideal length: ' + len + ' characters',      detail: 'In the sweet spot (40-60 chars) - fully visible on all devices. +12 pts' });
+      } else if (len <= 70) {
+        score += 6;
+        checks.push({ pass: true,  text: 'Acceptable length: ' + len + ' characters', detail: 'Within the safe zone but approaching truncation on mobile. +6 pts' });
+      } else {
+        score -= 12;
+        checks.push({ pass: false, text: 'Too long - likely truncated (' + len + ' chars)', detail: 'Title exceeds 70 chars and will be cut off on most devices. -12 pts' });
+      }
+
+      // 5. Bonus: contains a question mark or colon (engagement signals)
+      if (/[?]/.test(raw)) {
+        score += 5;
+        checks.push({ pass: true,  text: 'Contains a question mark',                  detail: 'Questions trigger curiosity and search intent alignment. +5 pts' });
+      }
+
+      if (/:/.test(raw)) {
+        score += 3;
+        checks.push({ pass: true,  text: 'Contains a colon (topic-subtitle format)',  detail: 'The "Topic: Subtitle" format is a proven high-CTR structure. +3 pts' });
+      }
+
+      // Clamp to 0-100
+      score = Math.max(0, Math.min(100, score));
+
+      renderScore(score, checks);
+    }
+
+    function resetScore() {
+      scoreNum.textContent  = '--';
+      scoreNum.style.color  = 'var(--text-muted)';
+      scoreGrade.textContent = 'Awaiting input';
+      scoreGrade.style.color = 'var(--text-muted)';
+      gaugeFill.style.strokeDashoffset = CIRC;
+      gaugeFill.style.stroke = '#6b7280';
+      checklist.innerHTML = '';
+    }
+
+    function renderScore(score, checks) {
+      // Gauge
+      const offset = CIRC - (score / 100) * CIRC;
+      gaugeFill.style.strokeDashoffset = offset;
+
+      let gaugeColor, gradeText, gradeColor;
+      if (score >= 80) {
+        gaugeColor = '#16a34a'; gradeText = 'Excellent'; gradeColor = '#16a34a';
+      } else if (score >= 65) {
+        gaugeColor = '#2563eb'; gradeText = 'Strong';    gradeColor = '#2563eb';
+      } else if (score >= 50) {
+        gaugeColor = '#ca8a04'; gradeText = 'Average';   gradeColor = '#ca8a04';
+      } else if (score >= 35) {
+        gaugeColor = '#f97316'; gradeText = 'Weak';      gradeColor = '#f97316';
+      } else {
+        gaugeColor = '#dc2626'; gradeText = 'Poor';      gradeColor = '#dc2626';
+      }
+
+      gaugeFill.style.stroke = gaugeColor;
+      scoreNum.textContent   = score;
+      scoreNum.style.color   = gaugeColor;
+      scoreGrade.textContent = gradeText;
+      scoreGrade.style.color = gradeColor;
+
+      // Checklist
+      checklist.innerHTML = checks.map(c => {
+        const icon = c.pass === true ? '✅' : c.pass === false ? '⚠️' : 'ℹ️';
+        return `
+          <div class="check-item">
+            <span class="check-icon">${icon}</span>
+            <div>
+              <div class="check-text">${c.text}</div>
+              <div class="check-detail">${c.detail}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ----------------------------------------------------------------
+    // VIEW TOGGLE (Desktop / Mobile)
+    // ----------------------------------------------------------------
+    let currentView = 'desktop';
+    function setView(v) {
+      currentView = v;
+      document.getElementById('previewDesktop').style.display = v === 'desktop' ? '' : 'none';
+      document.getElementById('previewMobile').style.display  = v === 'mobile'  ? '' : 'none';
+      document.getElementById('btnDesktop').classList.toggle('active', v === 'desktop');
+      document.getElementById('btnMobile').classList.toggle('active',  v === 'mobile');
+    }
+
+    // ----------------------------------------------------------------
+    // ACTION BUTTONS
+    // ----------------------------------------------------------------
+    function copyTitle() {
+      const text = input.value.trim();
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const n = document.getElementById('copyNotif');
+        n.style.display = 'block';
+        setTimeout(() => { n.style.display = 'none'; }, 2500);
+      });
+    }
+
+    function clearTitle() {
+      input.value = '';
+      analyze();
+      input.focus();
+    }
+
+    function togglePowerWords() {
+      // Build chips on first open
+      if (!pwChips.children.length) {
+        SUGGESTION_GROUPS.forEach(g => {
+          const header = document.createElement('div');
+          header.style.cssText = 'width:100%; font-size:11px; font-weight:700; color:var(--text-muted); margin:8px 0 4px; text-transform:uppercase; letter-spacing:0.5px;';
+          header.textContent = g.label;
+          pwChips.appendChild(header);
+          g.words.forEach(w => {
+            const chip = document.createElement('span');
+            chip.className = 'pw-chip';
+            chip.textContent = w;
+            chip.onclick = () => insertWord(w);
+            pwChips.appendChild(chip);
+          });
+        });
+      }
+      pwPopup.classList.toggle('open');
+    }
+
+    // Insert a suggested power word at cursor or append
+    function insertWord(word) {
+      const start = input.selectionStart;
+      const end   = input.selectionEnd;
+      const val   = input.value;
+      const spaced = (start > 0 && val[start-1] !== ' ') ? ' ' + word + ' ' : word + ' ';
+      input.value = val.slice(0, start) + spaced + val.slice(end);
+      input.selectionStart = input.selectionEnd = start + spaced.length;
+      input.focus();
+      pwPopup.classList.remove('open');
+      analyze();
+    }
+
+    // Close popup when clicking outside
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.pw-wrapper')) {
+        pwPopup.classList.remove('open');
+      }
+    });
+
+    // ----------------------------------------------------------------
+    // FAQ ACCORDIONS
+    // ----------------------------------------------------------------
+    function toggleFaq(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('open');
+    }
+
+    // ----------------------------------------------------------------
+    // INIT - run once on load with empty state
+    // ----------------------------------------------------------------
+    analyze();
+  </script>
+</body>
+</html>

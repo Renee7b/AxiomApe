@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML to Markdown Converter - Strip HTML Tags Into Clean Markdown | AxiomApe</title>
+  <meta name="description" content="Free online HTML to Markdown converter. Paste raw HTML and instantly get clean, readable Markdown. Supports GitHub Flavored Markdown (GFM), tables, code blocks, and nested lists. Runs 100% locally in your browser." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://axiomape.com/html-to-markdown/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="HTML to Markdown Converter - AxiomApe" />
+  <meta property="og:description" content="Instantly convert raw HTML to clean Markdown. Supports GFM tables, code blocks, nested lists. 100% local - nothing is ever sent to a server." />
+  <meta property="og:type" content="website" />
+
+  <!-- Turndown.js - lightweight HTML-to-Markdown parsing engine (~20kb) -->
+  <script src="https://unpkg.com/turndown@7.1.2/dist/turndown.js"></script>
+  <!-- Turndown GFM Plugin - adds GitHub Flavored Markdown support (tables, strikethrough) -->
+  <script src="https://unpkg.com/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js"></script>
+
+  <style>
+    /* =========================================================
+       BASE RESET & TYPOGRAPHY
+    ========================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --color-bg: #f0f2f7;
+      --color-card: #ffffff;
+      --color-border: #e2e6ef;
+      --color-accent: #3b3fe8;        /* vibrant coding purple-blue */
+      --color-accent-dark: #2a2eb8;
+      --color-accent-light: #eef0fd;
+      --color-text: #1a1d2e;
+      --color-text-muted: #6b7280;
+      --color-text-light: #9ca3af;
+      --color-success: #059669;
+      --color-label: #374151;
+      --color-textarea-bg: #fafbff;
+      --color-tag: #e0e7ff;
+      --color-tag-text: #3b3fe8;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 24px rgba(59, 63, 232, 0.07), 0 1px 4px rgba(0,0,0,0.06);
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.07);
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      --transition: 150ms ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: var(--color-accent);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    a:hover { color: var(--color-accent-dark); text-decoration: underline; }
+
+    /* =========================================================
+       TOP NAV BAR
+    ========================================================= */
+    .top-bar {
+      text-align: center;
+      padding: 10px 20px;
+      background: var(--color-card);
+      border-bottom: 1px solid var(--color-border);
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    .top-bar a {
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+
+    /* =========================================================
+       PAGE WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      flex: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 32px 20px 60px;
+    }
+
+    /* =========================================================
+       AD PLACEHOLDER - leaderboard (728x90)
+       Inject AdSense unit here in production
+    ========================================================= */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #f3f4f6;
+      border: 2px dashed #d1d5db;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-light);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-header h1 span {
+      color: var(--color-accent);
+    }
+    .page-header p {
+      color: var(--color-text-muted);
+      font-size: 15px;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--color-tag);
+      color: var(--color-tag-text);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 99px;
+      margin-bottom: 12px;
+    }
+
+    /* =========================================================
+       MAIN TOOL CARD
+    ========================================================= */
+    .tool-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 28px;
+    }
+
+    /* =========================================================
+       SETTINGS PANEL
+    ========================================================= */
+    .settings-panel {
+      background: var(--color-accent-light);
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-bottom: 22px;
+    }
+    .settings-panel h2 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-accent);
+      margin-bottom: 14px;
+    }
+    .settings-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 28px;
+      align-items: flex-end;
+    }
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .setting-item label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-label);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .setting-item label .tooltip-icon {
+      display: inline-flex;
+      width: 16px;
+      height: 16px;
+      background: var(--color-accent);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .tooltip-icon:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1d2e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 400;
+      padding: 7px 11px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      width: 240px;
+      z-index: 100;
+      line-height: 1.5;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .tooltip-icon:hover::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 2px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #1a1d2e;
+      z-index: 101;
+    }
+
+    /* Checkbox toggle */
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .checkbox-wrap input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--color-accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* Select dropdown */
+    .settings-select {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 6px 28px 6px 10px;
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius-sm);
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236366f1'/%3E%3C/svg%3E") no-repeat right 10px center;
+      background-size: 10px;
+      color: var(--color-text);
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .settings-select:focus { border-color: var(--color-accent); }
+
+    /* =========================================================
+       SPLIT EDITOR LAYOUT
+    ========================================================= */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .editor-layout { grid-template-columns: 1fr; }
+    }
+
+    .editor-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pane-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-label);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .char-count {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--color-text-light);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .editor-textarea {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      width: 100%;
+      min-height: 340px;
+      padding: 14px 16px;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-textarea-bg);
+      color: var(--color-text);
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      tab-size: 2;
+    }
+    .editor-textarea:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    }
+    .editor-textarea.output-area {
+      background: #f8faff;
+      color: #2d2f5e;
+    }
+
+    /* Placeholder hint text */
+    .editor-textarea::placeholder {
+      color: #b0b7c3;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* =========================================================
+       ACTION BUTTON ROW
+    ========================================================= */
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 18px;
+      justify-content: space-between;
+    }
+    .action-row-left { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background var(--transition), color var(--transition), transform 60ms;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--color-accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--color-accent-dark); }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--color-label);
+      border: 1px solid var(--color-border);
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    .btn-danger {
+      background: #fff0f0;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .btn-danger:hover { background: #fee2e2; }
+
+    /* Copy notification */
+    .copy-notice {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-success);
+      opacity: 0;
+      transition: opacity 300ms;
+      pointer-events: none;
+    }
+    .copy-notice.show { opacity: 1; }
+
+    /* =========================================================
+       STATUS BAR
+    ========================================================= */
+    .status-bar {
+      margin-top: 14px;
+      padding: 8px 12px;
+      background: #f8faf9;
+      border: 1px solid #e5e7eb;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--color-text-muted);
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .status-bar span strong { color: var(--color-text); }
+
+    /* =========================================================
+       DISCLAIMER
+    ========================================================= */
+    .disclaimer {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #166534;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .disclaimer-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    /* =========================================================
+       SEO CONTENT SECTION
+    ========================================================= */
+    .seo-section {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .seo-section { padding: 24px 20px; }
+    }
+
+    .seo-section h2 {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+    .seo-section .section-subtitle {
+      color: var(--color-text-muted);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .seo-section p {
+      color: #374151;
+      font-size: 15px;
+      line-height: 1.75;
+      margin-bottom: 18px;
+    }
+    .seo-section p:last-child { margin-bottom: 0; }
+
+    /* FAQ accordion */
+    .faq-list {
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .faq-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 16px 20px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background var(--transition);
+    }
+    .faq-question:hover { background: var(--color-accent-light); }
+    .faq-question.active { background: var(--color-accent-light); color: var(--color-accent); }
+    .faq-chevron {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      transition: transform 250ms;
+    }
+    .faq-question.active .faq-chevron { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 350ms ease, padding 250ms ease;
+      padding: 0 20px;
+    }
+    .faq-answer.open {
+      max-height: 800px;
+      padding: 0 20px 18px;
+    }
+    .faq-answer p {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.75;
+      margin-top: 14px;
+    }
+    .faq-answer p:first-child { margin-top: 0; }
+    .faq-answer ul {
+      margin: 10px 0 0 18px;
+    }
+    .faq-answer ul li {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.75;
+      margin-bottom: 4px;
+    }
+
+    /* Inline code highlight */
+    code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: #eef2ff;
+      color: var(--color-accent);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    .site-footer {
+      background: var(--color-card);
+      border-top: 1px solid var(--color-border);
+      text-align: center;
+      padding: 20px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    .site-footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .site-footer .footer-links a {
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+    .site-footer .footer-links a:hover { color: var(--color-accent); }
+    .site-footer .copyright { font-size: 12px; color: var(--color-text-light); }
+
+    /* =========================================================
+       UTILITY
+    ========================================================= */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP BAR - Back link to axiomape.com
+  ============================================================ -->
+  <div class="top-bar">
+    <a href="/" aria-label="Back to AxiomApe homepage">axiomape.com</a>
+    &nbsp;&middot;&nbsp; HTML to Markdown Converter
+  </div>
+
+  <!-- ============================================================
+       MAIN PAGE WRAPPER
+  ============================================================ -->
+  <main class="page-wrapper">
+
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+      <div class="badge">Free Developer Tool</div>
+      <h1>HTML to Markdown: <span>Strip HTML Tags</span> Into Clean, Readable Markdown Formatting</h1>
+      <p>Paste any raw HTML below and get instant, clean Markdown output - powered entirely in your browser. No server. No uploads. No wait.</p>
+    </header>
+
+    <!-- ============================================================
+         AD LEADERBOARD PLACEHOLDER (728x90)
+         Replace this div's contents with your AdSense code unit.
+         Standard leaderboard format: 728px wide x 90px tall.
+    ============================================================ -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement - 728 x 90 Leaderboard
+    </div>
+
+    <!-- ============================================================
+         MAIN TOOL CARD
+    ============================================================ -->
+    <section class="tool-card" aria-label="HTML to Markdown conversion tool">
+
+      <!-- SETTINGS PANEL -->
+      <div class="settings-panel" role="group" aria-label="Conversion settings">
+        <h2>Conversion Settings</h2>
+        <div class="settings-grid">
+
+          <!-- GFM Toggle -->
+          <div class="setting-item">
+            <label class="checkbox-wrap" for="toggle-gfm">
+              <input type="checkbox" id="toggle-gfm" checked />
+              Enable GitHub Flavored Markdown (GFM)
+              <span class="tooltip-icon" data-tip="GFM is a superset of standard Markdown used by GitHub, GitLab, and many editors. It adds support for tables, strikethrough text, task lists, and fenced code blocks with syntax highlighting labels. Leave this ON for most use cases.">?</span>
+            </label>
+          </div>
+
+          <!-- Heading Style -->
+          <div class="setting-item">
+            <label for="sel-heading">
+              Heading Style
+              <span class="tooltip-icon" data-tip="ATX headings use # symbols (e.g. # Heading 1). Setext headings use underlines of === or --- for H1 and H2 only. ATX is the modern standard and works everywhere.">?</span>
+            </label>
+            <select id="sel-heading" class="settings-select" aria-label="Heading style">
+              <option value="atx" selected>ATX (# Heading)</option>
+              <option value="setext">Setext (underline style)</option>
+            </select>
+          </div>
+
+          <!-- Unknown Tags -->
+          <div class="setting-item">
+            <label for="sel-unknown-tags">
+              Unknown HTML Tags
+              <span class="tooltip-icon" data-tip="When the converter encounters an HTML tag it doesn't know how to convert (like custom elements or obscure tags), you can choose to keep the raw tag in the output or strip it away entirely for cleaner Markdown.">?</span>
+            </label>
+            <select id="sel-unknown-tags" class="settings-select" aria-label="How to handle unknown HTML tags">
+              <option value="passThrough">Keep in output</option>
+              <option value="drop" selected>Strip entirely</option>
+            </select>
+          </div>
+
+          <!-- Output Editable -->
+          <div class="setting-item">
+            <label class="checkbox-wrap" for="toggle-editable">
+              <input type="checkbox" id="toggle-editable" />
+              Make Output Editable
+              <span class="tooltip-icon" data-tip="By default, the Markdown output area is read-only to prevent accidental edits. Enable this to allow manual touch-ups directly inside the output box.">?</span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+      <!-- END SETTINGS PANEL -->
+
+      <!-- SPLIT EDITOR -->
+      <div class="editor-layout">
+
+        <!-- INPUT PANE -->
+        <div class="editor-pane">
+          <div class="pane-label">
+            Input: Paste Raw HTML Here
+            <span class="char-count" id="input-count">0 chars</span>
+          </div>
+          <textarea
+            id="html-input"
+            class="editor-textarea"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            aria-label="HTML input"
+            placeholder="Paste your raw HTML here... for example:
+<h1>Hello World</h1>
+<p>This is a <strong>bold</strong> paragraph.</p>
+<ul>
+  <li>Item one</li>
+  <li>Item two</li>
+</ul>
+<table>
+  <tr><th>Name</th><th>Role</th></tr>
+  <tr><td>Alice</td><td>Engineer</td></tr>
+</table>"
+          ></textarea>
+        </div>
+
+        <!-- OUTPUT PANE -->
+        <div class="editor-pane">
+          <div class="pane-label">
+            Output: Clean Markdown
+            <span class="char-count" id="output-count">0 chars</span>
+          </div>
+          <textarea
+            id="md-output"
+            class="editor-textarea output-area"
+            readonly
+            spellcheck="false"
+            aria-label="Markdown output"
+            aria-live="polite"
+            placeholder="Your Markdown will appear here instantly as you type or paste HTML..."
+          ></textarea>
+        </div>
+
+      </div>
+      <!-- END SPLIT EDITOR -->
+
+      <!-- STATUS BAR -->
+      <div class="status-bar" role="status" aria-live="polite">
+        <span>Lines: <strong id="stat-lines">0</strong></span>
+        <span>Words: <strong id="stat-words">0</strong></span>
+        <span>Headings: <strong id="stat-headings">0</strong></span>
+        <span>Links: <strong id="stat-links">0</strong></span>
+        <span>Code blocks: <strong id="stat-code">0</strong></span>
+        <span>Tables: <strong id="stat-tables">0</strong></span>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="action-row">
+        <div class="action-row-left">
+          <button class="btn btn-primary" id="btn-copy" aria-label="Copy Markdown to clipboard">
+            <!-- Clipboard icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy Markdown
+          </button>
+          <button class="btn btn-secondary" id="btn-download" aria-label="Download as .md file">
+            <!-- Download icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download .md
+          </button>
+          <button class="btn btn-danger" id="btn-clear" aria-label="Clear all text">
+            <!-- Trash icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Clear All
+          </button>
+        </div>
+        <span class="copy-notice" id="copy-notice" aria-live="polite">Copied!</span>
+      </div>
+      <!-- END ACTION BUTTONS -->
+
+    </section>
+    <!-- END TOOL CARD -->
+
+    <!-- ============================================================
+         PRIVACY DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer" role="note">
+      <span class="disclaimer-icon" aria-hidden="true">🔒</span>
+      <div>
+        <strong>Your data never leaves your device.</strong> This tool processes all code locally in your browser using client-side JavaScript (DOM Parsing). We do not store, save, or transmit your sensitive documents or web code to any server.
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SEO CONTENT SECTION
+    ============================================================ -->
+    <article class="seo-section" aria-label="Educational guide about HTML to Markdown conversion">
+      <h2>The Ultimate Guide to Converting HTML to Markdown</h2>
+      <p class="section-subtitle">Everything developers, writers, and content creators need to know</p>
+
+      <p>
+        Markdown was created in 2004 by John Gruber as a way to write text that is readable as-is, but can also be converted to clean HTML. Today the relationship has flipped: much of the web is built in HTML first, and developers, technical writers, and content strategists constantly need to go the other direction - from HTML back to Markdown. Whether you are pulling content from a CMS, archiving web pages, migrating a blog, or preparing documentation for a GitHub repository, converting HTML to Markdown by hand is slow, error-prone, and deeply tedious. This tool automates every step of that process using a browser-side parsing engine called Turndown.js, so you get accurate, clean Markdown in real time without ever leaving the page.
+      </p>
+      <p>
+        The conversion process works through what is called <strong>DOM Parsing</strong>. The term "DOM" stands for Document Object Model - it is the internal tree structure a web browser builds when it reads HTML. Each tag (<code>&lt;h1&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;ul&gt;</code>, etc.) becomes a node in that tree. When you paste HTML into the input box, this tool builds that same tree in memory, then walks through every node and replaces each HTML element with its Markdown equivalent: <code>&lt;strong&gt;</code> becomes <code>**bold**</code>, <code>&lt;h2&gt;</code> becomes <code>## Heading</code>, <code>&lt;a href="..."&gt;</code> becomes <code>[text](url)</code>, and so on. The result is clean, portable, human-readable Markdown - free of any HTML syntax.
+      </p>
+
+      <!-- FAQ ACCORDION -->
+      <div class="faq-list" role="list" aria-label="Frequently asked questions">
+
+        <!-- FAQ 1 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-1">
+            Why convert HTML to Markdown? What are the real benefits?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-1" role="region">
+            <p>Markdown is dramatically lighter and more portable than HTML. A Markdown file can be read by a human without any rendering - the syntax is intuitive enough that <code># Heading</code> and <code>**bold**</code> are obvious at a glance. HTML, by contrast, is verbose and intended for machines. Here are the most common real-world reasons developers make this conversion:</p>
+            <ul>
+              <li><strong>Documentation and README files:</strong> GitHub, GitLab, and Bitbucket render Markdown natively, making it the standard language for project documentation, wikis, and README files.</li>
+              <li><strong>Static site generators:</strong> Tools like Jekyll, Hugo, Eleventy, and Astro use Markdown as their primary content format. If you have an old HTML site you want to migrate, you need Markdown first.</li>
+              <li><strong>Content migration:</strong> Moving content from WordPress, Squarespace, or a legacy CMS often means extracting raw HTML that then needs to be cleaned up into Markdown for a new system.</li>
+              <li><strong>AI and LLM prompts:</strong> Large language models process Markdown far more efficiently than HTML because the signal-to-noise ratio is much higher - there is actual content rather than markup overhead.</li>
+              <li><strong>Version control:</strong> Markdown files diff cleanly in Git because changes are semantic. HTML files are full of tags that obscure what actually changed in the content.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-2">
+            What is GitHub Flavored Markdown (GFM) and why does it matter?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-2" role="region">
+            <p>Standard Markdown (the original spec from John Gruber) is intentionally minimal. It handles headings, bold, italics, links, images, code, and lists - but it does not define a standard way to render tables, strikethrough text, or syntax-highlighted code blocks. Different platforms filled that gap in different ways, creating fragmentation.</p>
+            <p>GitHub Flavored Markdown - abbreviated as GFM - is GitHub's formal extension of the Markdown spec, published in 2017. It has since become the de facto standard across the developer ecosystem. The key additions GFM introduces are:</p>
+            <ul>
+              <li><strong>Tables:</strong> Using pipe characters (<code>|</code>) to define rows and columns, with a separator row to indicate header cells.</li>
+              <li><strong>Strikethrough:</strong> Wrapping text in double tildes (<code>~~like this~~</code>) to render struck-through text.</li>
+              <li><strong>Task lists:</strong> Using <code>- [ ]</code> and <code>- [x]</code> syntax to create interactive checkboxes in GitHub issues and PRs.</li>
+              <li><strong>Fenced code blocks:</strong> Using triple backticks (```) with an optional language label (like <code>```javascript</code>) to enable syntax highlighting.</li>
+            </ul>
+            <p>Enabling GFM in this tool ensures that HTML <code>&lt;table&gt;</code> elements are converted to proper pipe-delimited Markdown tables, and that <code>&lt;del&gt;</code> or <code>&lt;s&gt;</code> tags become <code>~~strikethrough~~</code> syntax. If your target platform does not support GFM (rare, but possible), you can toggle it off and the converter will handle those elements differently or skip them.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-3">
+            What happens to CSS styles and JavaScript during conversion?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-3" role="region">
+            <p>CSS and JavaScript are both completely removed during conversion, and this is intentional. Markdown is a plain-text format. It carries meaning through structure (headings, lists, bold text, links) but it has no concept of color, font size, layout, or interactivity. There is no Markdown equivalent for <code>color: red</code> or <code>font-weight: 700</code> applied inline - those styles simply cannot be expressed in the format.</p>
+            <p>Here is exactly what happens to each element type during the conversion process:</p>
+            <ul>
+              <li><strong>Inline CSS</strong> (<code>style="..."</code> attributes): Stripped entirely. The visual formatting is lost; only the semantic structure of the tag is preserved.</li>
+              <li><strong>CSS class and ID attributes</strong> (<code>class="..."</code>, <code>id="..."</code>): Stripped. Markdown has no class system.</li>
+              <li><strong>&lt;style&gt; blocks:</strong> Removed completely - the converter processes content nodes, not stylesheet declarations.</li>
+              <li><strong>&lt;script&gt; blocks:</strong> Removed completely. JavaScript has no place in a Markdown document.</li>
+              <li><strong>Data attributes</strong> (<code>data-*</code>): Stripped. Custom data attributes are HTML-specific and have no Markdown analogue.</li>
+              <li><strong>Semantic meaning is preserved:</strong> An <code>&lt;h3 style="color:red"&gt;</code> becomes a Markdown <code>### Heading</code> - the heading level is preserved even though the red color is discarded.</li>
+            </ul>
+            <p>This stripping behavior is a feature, not a bug. The output Markdown will be leaner, cleaner, and significantly more portable than the original HTML.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-4">
+            Why is it important to clean up messy HTML before converting?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-4" role="region">
+            <p>HTML that is "messy" - meaning it has unclosed tags, deeply nested formatting wrappers, redundant inline styles, or mixed indentation - can produce Markdown that is technically correct but structurally confusing. The parser does its best using the browser's own HTML engine (which is extremely forgiving), but garbage in tends to produce garbage out at a structural level.</p>
+            <p>Common sources of messy HTML include content copied from Microsoft Word or Google Docs (which adds hundreds of useless style tags and wrapper spans), HTML exported by visual page builders (which wrap every sentence in <code>&lt;div&gt;</code> after <code>&lt;div&gt;</code>), or legacy content from old CMS platforms that used font tags and table-based layouts. When converting this kind of HTML, you may notice:</p>
+            <ul>
+              <li>Extra blank lines in the Markdown output from deeply nested empty div structures.</li>
+              <li>Code blocks that appear around content not intended to be code, because of unusual pre/code tag nesting.</li>
+              <li>Escaped special characters (like <code>\*</code> or <code>\_</code>) appearing in the output to prevent unintended Markdown formatting.</li>
+            </ul>
+            <p>The best practice is to paste only the inner content HTML (the part between <code>&lt;body&gt;</code> tags) rather than full page HTML with <code>&lt;head&gt;</code>, scripts, and navigation. This produces the cleanest, most focused Markdown output. You can then use the output as a starting point and make any final adjustments directly in the output box if you enable the "Make Output Editable" option.</p>
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item" role="listitem">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-5">
+            What are ATX vs. Setext heading styles, and which should I use?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-5" role="region">
+            <p>Markdown supports two distinct syntaxes for headings, and both are part of the original spec. <strong>ATX style</strong> uses hash symbols at the start of the line - one hash for H1, two for H2, up to six for H6. For example: <code># Main Title</code>, <code>## Section</code>, <code>### Subsection</code>. This style works for all six heading levels and is the universally supported modern standard. Almost every Markdown editor, static site generator, and documentation platform handles ATX headings correctly.</p>
+            <p><strong>Setext style</strong> is an older approach that only supports two heading levels. H1 headings are indicated by underlining the text with equals signs (<code>===</code>), and H2 headings are underlined with hyphens (<code>---</code>). There is no Setext equivalent for H3 through H6, so any deeper headings automatically fall back to ATX hash syntax anyway. Setext headings can look more readable in raw text form for some writers, but they are less flexible and less universally supported.</p>
+            <p>The recommendation for nearly all use cases is to stick with the default <strong>ATX style</strong>. It is consistent across all heading levels, works everywhere, and is what the vast majority of Markdown tools and linters expect. Setext is primarily useful if you are targeting a very specific legacy system or have a personal preference for the visual appearance of raw Markdown files.</p>
+          </div>
+        </div>
+
+      </div>
+      <!-- END FAQ LIST -->
+
+    </article>
+    <!-- END SEO SECTION -->
+
+  </main>
+  <!-- END PAGE WRAPPER -->
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="copyright">&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT - CORE TOOL LOGIC
+       All processing happens locally in the browser.
+       No data is ever sent to a server.
+  ============================================================ -->
+  <script>
+    // ============================================================
+    // ELEMENT REFERENCES
+    // ============================================================
+    const htmlInput    = document.getElementById('html-input');
+    const mdOutput     = document.getElementById('md-output');
+    const inputCount   = document.getElementById('input-count');
+    const outputCount  = document.getElementById('output-count');
+    const toggleGfm    = document.getElementById('toggle-gfm');
+    const selHeading   = document.getElementById('sel-heading');
+    const selUnknown   = document.getElementById('sel-unknown-tags');
+    const toggleEdit   = document.getElementById('toggle-editable');
+    const btnCopy      = document.getElementById('btn-copy');
+    const btnDownload  = document.getElementById('btn-download');
+    const btnClear     = document.getElementById('btn-clear');
+    const copyNotice   = document.getElementById('copy-notice');
+    const statLines    = document.getElementById('stat-lines');
+    const statWords    = document.getElementById('stat-words');
+    const statHeadings = document.getElementById('stat-headings');
+    const statLinks    = document.getElementById('stat-links');
+    const statCode     = document.getElementById('stat-code');
+    const statTables   = document.getElementById('stat-tables');
+
+    // ============================================================
+    // BUILD TURNDOWN SERVICE
+    // Creates a new TurndownService instance with current settings.
+    // Called whenever a setting changes.
+    // ============================================================
+    function buildTurndown() {
+      const options = {
+        headingStyle:  selHeading.value,     // 'atx' or 'setext'
+        hr:            '---',
+        bulletListMarker: '-',
+        codeBlockStyle: 'fenced',            // GFM-style fenced code blocks
+        fence:          '```',
+        emDelimiter:    '_',
+        strongDelimiter: '**',
+        linkStyle:      'inlined',
+        linkReferenceStyle: 'full',
+        br:             '  ',               // two trailing spaces = line break in Markdown
+      };
+
+      const service = new TurndownService(options);
+
+      // Apply GitHub Flavored Markdown plugin if toggled on.
+      // This adds table conversion and strikethrough support.
+      if (toggleGfm.checked && window.turndownPluginGfm) {
+        service.use(turndownPluginGfm.gfm);
+      }
+
+      // Handle unknown / unrecognized HTML tags based on user setting.
+      // 'passThrough' keeps the raw tag in the output.
+      // 'drop' removes the tag and all its content.
+      if (selUnknown.value === 'drop') {
+        // Remove unknown block-level tags entirely
+        service.remove(['head', 'style', 'script', 'noscript', 'iframe',
+                        'nav', 'aside', 'footer', 'header', 'figure',
+                        'figcaption', 'template', 'object', 'embed']);
+      } else {
+        // Keep unknown tags as raw HTML pass-through
+        service.keep(['figure', 'figcaption', 'template']);
+      }
+
+      return service;
+    }
+
+    // ============================================================
+    // CONVERT - Core parsing function
+    // Reads the HTML input textarea, runs it through Turndown,
+    // and writes the result to the output textarea.
+    // ============================================================
+    function convert() {
+      const rawHtml = htmlInput.value;
+
+      // Update input character count
+      inputCount.textContent = rawHtml.length.toLocaleString() + ' chars';
+
+      if (!rawHtml.trim()) {
+        // Clear output if input is empty
+        mdOutput.value = '';
+        outputCount.textContent = '0 chars';
+        updateStats('');
+        return;
+      }
+
+      try {
+        const service = buildTurndown();
+        const markdown = service.turndown(rawHtml);
+        mdOutput.value = markdown;
+        outputCount.textContent = markdown.length.toLocaleString() + ' chars';
+        updateStats(markdown);
+      } catch (err) {
+        // Show a user-friendly error in the output area without crashing
+        mdOutput.value = '-- Conversion error: ' + err.message + ' --\n\nPlease check that your HTML is well-formed.';
+        outputCount.textContent = '--';
+        updateStats('');
+      }
+    }
+
+    // ============================================================
+    // STATS - Parse the Markdown output and update the status bar
+    // ============================================================
+    function updateStats(md) {
+      if (!md.trim()) {
+        statLines.textContent    = '0';
+        statWords.textContent    = '0';
+        statHeadings.textContent = '0';
+        statLinks.textContent    = '0';
+        statCode.textContent     = '0';
+        statTables.textContent   = '0';
+        return;
+      }
+      const lines    = md.split('\n');
+      const words    = md.trim().split(/\s+/).filter(Boolean).length;
+      // Count ATX headings (lines starting with one or more # followed by space)
+      const headings = lines.filter(l => /^#{1,6}\s/.test(l)).length;
+      // Count Markdown links: [text](url)
+      const links    = (md.match(/\[.+?\]\(.+?\)/g) || []).length;
+      // Count fenced code blocks (pairs of ```)
+      const fences   = (md.match(/^```/gm) || []).length;
+      const codeBlks = Math.floor(fences / 2);
+      // Count GFM table separator rows (lines with pipes and dashes)
+      const tables   = lines.filter(l => /^\|?\s*[-:]+\s*\|/.test(l)).length;
+
+      statLines.textContent    = lines.length.toLocaleString();
+      statWords.textContent    = words.toLocaleString();
+      statHeadings.textContent = headings;
+      statLinks.textContent    = links;
+      statCode.textContent     = codeBlks;
+      statTables.textContent   = tables;
+    }
+
+    // ============================================================
+    // COPY TO CLIPBOARD
+    // Uses the modern Clipboard API with a fallback for older browsers.
+    // ============================================================
+    btnCopy.addEventListener('click', async () => {
+      const text = mdOutput.value;
+      if (!text.trim()) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // Fallback: select the textarea text and use execCommand
+        mdOutput.select();
+        document.execCommand('copy');
+      }
+
+      // Show brief "Copied!" confirmation
+      copyNotice.classList.add('show');
+      setTimeout(() => copyNotice.classList.remove('show'), 2000);
+    });
+
+    // ============================================================
+    // DOWNLOAD AS .md FILE
+    // Creates a Blob from the output text and triggers a download.
+    // ============================================================
+    btnDownload.addEventListener('click', () => {
+      const text = mdOutput.value;
+      if (!text.trim()) return;
+
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'converted.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // ============================================================
+    // CLEAR ALL
+    // Wipes both input and output, resets all counters.
+    // ============================================================
+    btnClear.addEventListener('click', () => {
+      htmlInput.value = '';
+      mdOutput.value  = '';
+      inputCount.textContent  = '0 chars';
+      outputCount.textContent = '0 chars';
+      updateStats('');
+      htmlInput.focus();
+    });
+
+    // ============================================================
+    // MAKE OUTPUT EDITABLE TOGGLE
+    // ============================================================
+    toggleEdit.addEventListener('change', () => {
+      mdOutput.readOnly = !toggleEdit.checked;
+    });
+
+    // ============================================================
+    // SETTINGS CHANGE HANDLERS
+    // Re-run conversion whenever any setting changes.
+    // ============================================================
+    [toggleGfm, selHeading, selUnknown].forEach(el => {
+      el.addEventListener('change', convert);
+    });
+
+    // ============================================================
+    // REAL-TIME INPUT HANDLER
+    // Fires on every keystroke or paste event in the HTML input.
+    // Uses requestAnimationFrame to keep the UI responsive.
+    // ============================================================
+    let convertRaf = null;
+    htmlInput.addEventListener('input', () => {
+      cancelAnimationFrame(convertRaf);
+      convertRaf = requestAnimationFrame(convert);
+    });
+
+    // Also trigger on paste (fires before input on some browsers)
+    htmlInput.addEventListener('paste', () => {
+      setTimeout(convert, 0);
+    });
+
+    // ============================================================
+    // FAQ ACCORDION INTERACTION
+    // Toggles open/close state and updates aria-expanded.
+    // ============================================================
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isActive    = btn.classList.contains('active');
+        const answerId    = btn.getAttribute('aria-controls');
+        const answerEl    = document.getElementById(answerId);
+
+        // Close all other open FAQs (accordion behavior)
+        document.querySelectorAll('.faq-question.active').forEach(other => {
+          if (other !== btn) {
+            other.classList.remove('active');
+            other.setAttribute('aria-expanded', 'false');
+            const otherId = other.getAttribute('aria-controls');
+            document.getElementById(otherId).classList.remove('open');
+          }
+        });
+
+        // Toggle this FAQ
+        btn.classList.toggle('active', !isActive);
+        btn.setAttribute('aria-expanded', String(!isActive));
+        answerEl.classList.toggle('open', !isActive);
+      });
+    });
+
+    // ============================================================
+    // FOOTER YEAR - auto-updates each year
+    // ============================================================
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ============================================================
+    // INIT - Run once on page load in case HTML is already in input
+    // ============================================================
+    convert();
+  </script>
+
+</body>
+</html>

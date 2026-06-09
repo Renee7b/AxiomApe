@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hash Generator - Generate MD5, SHA-1, SHA-256, and SHA-512 Hashes | AxiomApe</title>
+  <meta name="description" content="Free online hash generator tool. Instantly compute MD5, SHA-1, SHA-256, and SHA-512 cryptographic hashes from text or files. 100% client-side - your data never leaves your browser." />
+  <meta name="keywords" content="hash generator, MD5, SHA-1, SHA-256, SHA-512, checksum, cryptographic hash, data integrity, file hash, online hash tool" />
+
+  <!-- SparkMD5 via CDN - used because Web Crypto API does not natively support MD5 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+
+  <style>
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #21253a;
+      --border:      #2e3350;
+      --accent:      #4f8ef7;
+      --accent-glow: rgba(79,142,247,0.18);
+      --green:       #3dd68c;
+      --green-glow:  rgba(61,214,140,0.15);
+      --text:        #e2e8f0;
+      --muted:       #8892a4;
+      --mono:        'Consolas', 'Courier New', monospace;
+      --sans:        'Segoe UI', system-ui, sans-serif;
+      --radius:      10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =============================================
+       SITE NAV BAR (top link back to axiomape.com)
+    ============================================= */
+    .site-nav {
+      text-align: center;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+    }
+    .site-nav a {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* =============================================
+       PAGE WRAPPER
+    ============================================= */
+    .page-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* =============================================
+       PAGE HEADER
+    ============================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =============================================
+       AD PLACEHOLDER
+       Standard leaderboard (728x90) - AdSense ready
+    ============================================= */
+    /* === ADSENSE PLACEHOLDER - INSERT AD CODE BELOW === */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: var(--surface2);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+    }
+    /* === END ADSENSE PLACEHOLDER === */
+
+    /* =============================================
+       TOOL CARD CONTAINER
+    ============================================= */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .tool-card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* =============================================
+       DUAL INPUT ENGINE
+    ============================================= */
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 620px) {
+      .input-row { grid-template-columns: 1fr; }
+    }
+
+    /* Text input area */
+    .input-section label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    #text-input {
+      width: 100%;
+      height: 160px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      padding: 12px 14px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    #text-input::placeholder { color: var(--muted); }
+    #text-input:focus { border-color: var(--accent); }
+
+    /* Drag-and-drop zone */
+    .drop-zone {
+      height: 160px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--bg);
+      text-align: center;
+      padding: 16px;
+      position: relative;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .drop-zone .drop-icon { font-size: 2rem; }
+    .drop-zone .drop-text { font-size: 0.88rem; color: var(--muted); }
+    .drop-zone .drop-subtext { font-size: 0.78rem; color: var(--muted); opacity: 0.7; }
+    .drop-zone #file-name {
+      font-size: 0.82rem;
+      color: var(--green);
+      font-weight: 600;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+    #file-input { display: none; }
+
+    /* Clear buttons row */
+    .input-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* =============================================
+       OUTPUT HASH CARDS
+    ============================================= */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    @media (max-width: 620px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    .hash-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s;
+    }
+    .hash-card:hover { border-color: var(--accent); }
+
+    .hash-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hash-algo-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+    .hash-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge-legacy  { background: rgba(255,180,0,0.15); color: #f0b429; }
+    .badge-secure  { background: rgba(61,214,140,0.15); color: var(--green); }
+    .badge-strong  { background: rgba(79,142,247,0.15); color: var(--accent); }
+
+    /* The hash output itself - monospace terminal style */
+    .hash-output {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--green);
+      word-break: break-all;
+      line-height: 1.6;
+      min-height: 50px;
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      border: 1px solid rgba(61,214,140,0.1);
+      letter-spacing: 0.03em;
+    }
+    .hash-output.placeholder { color: var(--muted); font-family: var(--sans); font-size: 0.82rem; }
+    .hash-output.calculating { color: #f0b429; }
+
+    /* Copy button */
+    .btn-copy {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+    }
+    .btn-copy:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-copy.copied { background: var(--green); border-color: var(--green); color: #0f1117; }
+    .btn-copy:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* =============================================
+       DISCLAIMER
+    ============================================= */
+    .disclaimer {
+      background: var(--green-glow);
+      border: 1px solid rgba(61,214,140,0.25);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .disclaimer-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .disclaimer strong { color: var(--green); }
+
+    /* =============================================
+       SEO CONTENT - EDUCATIONAL GUIDE
+    ============================================= */
+    .guide-section {
+      margin-top: 48px;
+    }
+    .guide-section h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .guide-section h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    /* FAQ accordions */
+    .faq-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    summary {
+      padding: 16px 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text);
+      transition: color 0.2s;
+    }
+    summary:hover { color: var(--accent); }
+    summary::after {
+      content: '+';
+      font-size: 1.3rem;
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    details[open] summary::after {
+      content: '-';
+    }
+    .faq-body {
+      padding: 0 20px 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.75;
+    }
+    .faq-body p + p { margin-top: 10px; }
+    .faq-body strong { color: var(--text); }
+
+    /* Comparison table */
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead tr { background: var(--surface2); }
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 12px 16px;
+      color: var(--text);
+      vertical-align: top;
+    }
+    tbody td:first-child { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+    .sec-low    { color: #f56565; font-weight: 700; }
+    .sec-medium { color: #f0b429; font-weight: 700; }
+    .sec-high   { color: var(--green); font-weight: 700; }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    footer {
+      text-align: center;
+      padding: 24px 16px;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+      font-size: 0.83rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); margin: 0 10px; }
+    footer a:hover { color: var(--accent); text-decoration: underline; }
+    .footer-copy { margin-top: 8px; font-size: 0.78rem; opacity: 0.6; }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/hash-generator/" />
+</head>
+<body>
+
+  <!-- =============================================
+       SITE NAV - link back to axiomape.com
+  ============================================= -->
+  <nav class="site-nav">
+    <a href="/" title="AxiomApe - Free Online Tools">&#8592; axiomape.com</a>
+  </nav>
+
+  <div class="page-wrap">
+
+    <!-- =============================================
+         PAGE HEADER
+    ============================================= -->
+    <header class="page-header">
+      <h1>Hash Generator: <span>MD5, SHA-1, SHA-256 &amp; SHA-512</span></h1>
+      <p>Instantly compute cryptographic hashes from text or files. All processing happens entirely in your browser - nothing is ever uploaded or transmitted.</p>
+    </header>
+
+    <!-- =============================================
+         AD PLACEHOLDER - Leaderboard 728x90
+         Replace this div with your Google AdSense
+         <script> block when ready to monetize.
+    ============================================= -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement (728x90)
+    </div>
+
+    <!-- =============================================
+         MAIN TOOL CARD
+    ============================================= -->
+    <div class="tool-card">
+      <h2>Input Source</h2>
+
+      <!-- Dual input: text area + drag-and-drop -->
+      <div class="input-row">
+
+        <!-- Text input -->
+        <div class="input-section">
+          <label for="text-input">Text Input - Live Hash (type to update instantly)</label>
+          <textarea
+            id="text-input"
+            placeholder="Type or paste any text here... hashes update in real time as you type."
+            aria-label="Text to hash"
+            spellcheck="false"
+          ></textarea>
+          <div class="input-actions">
+            <button class="btn-ghost" id="clear-text-btn" title="Clear text input">Clear Text</button>
+          </div>
+        </div>
+
+        <!-- File drag-and-drop zone -->
+        <div class="input-section">
+          <label>File Input - Drag-and-Drop or Click to Browse</label>
+          <div
+            class="drop-zone"
+            id="drop-zone"
+            role="button"
+            tabindex="0"
+            aria-label="Drop a file here or click to browse"
+          >
+            <span class="drop-icon">&#128196;</span>
+            <span class="drop-text">Drag &amp; drop any file here</span>
+            <span class="drop-subtext">or click to browse from your computer</span>
+            <span id="file-name"></span>
+          </div>
+          <input type="file" id="file-input" aria-hidden="true" />
+          <div class="input-actions">
+            <button class="btn-ghost" id="clear-file-btn" title="Clear file selection">Clear File</button>
+          </div>
+        </div>
+
+      </div><!-- end .input-row -->
+    </div><!-- end .tool-card -->
+
+    <!-- =============================================
+         OUTPUT CARDS
+    ============================================= -->
+    <div class="tool-card">
+      <h2>Hash Output</h2>
+      <div class="output-grid">
+
+        <!-- MD5 Card -->
+        <div class="hash-card" id="card-md5">
+          <div class="hash-card-header">
+            <span class="hash-algo-name">MD5</span>
+            <span class="hash-badge badge-legacy">Legacy / Checksums</span>
+          </div>
+          <div class="hash-output placeholder" id="output-md5">
+            Awaiting input...
+          </div>
+          <button class="btn-copy" id="copy-md5" disabled aria-label="Copy MD5 hash">
+            &#128203; Copy MD5
+          </button>
+        </div>
+
+        <!-- SHA-1 Card -->
+        <div class="hash-card" id="card-sha1">
+          <div class="hash-card-header">
+            <span class="hash-algo-name">SHA-1</span>
+            <span class="hash-badge badge-legacy">Deprecated / Legacy</span>
+          </div>
+          <div class="hash-output placeholder" id="output-sha1">
+            Awaiting input...
+          </div>
+          <button class="btn-copy" id="copy-sha1" disabled aria-label="Copy SHA-1 hash">
+            &#128203; Copy SHA-1
+          </button>
+        </div>
+
+        <!-- SHA-256 Card -->
+        <div class="hash-card" id="card-sha256">
+          <div class="hash-card-header">
+            <span class="hash-algo-name">SHA-256</span>
+            <span class="hash-badge badge-secure">Secure / Recommended</span>
+          </div>
+          <div class="hash-output placeholder" id="output-sha256">
+            Awaiting input...
+          </div>
+          <button class="btn-copy" id="copy-sha256" disabled aria-label="Copy SHA-256 hash">
+            &#128203; Copy SHA-256
+          </button>
+        </div>
+
+        <!-- SHA-512 Card -->
+        <div class="hash-card" id="card-sha512">
+          <div class="hash-card-header">
+            <span class="hash-algo-name">SHA-512</span>
+            <span class="hash-badge badge-strong">Maximum Strength</span>
+          </div>
+          <div class="hash-output placeholder" id="output-sha512">
+            Awaiting input...
+          </div>
+          <button class="btn-copy" id="copy-sha512" disabled aria-label="Copy SHA-512 hash">
+            &#128203; Copy SHA-512
+          </button>
+        </div>
+
+      </div><!-- end .output-grid -->
+    </div><!-- end output tool-card -->
+
+    <!-- =============================================
+         PRIVACY DISCLAIMER
+    ============================================= -->
+    <div class="disclaimer" role="note">
+      <span class="disclaimer-icon">&#128274;</span>
+      <div>
+        <strong>Privacy &amp; Security First:</strong> This hashing utility operates entirely within your local browser. Your text inputs and files are never uploaded, logged, or transmitted to any external servers. All cryptographic operations are performed on-device using the native browser Web Crypto API and the SparkMD5 library.
+      </div>
+    </div>
+
+    <!-- =============================================
+         SEO / EDUCATIONAL CONTENT
+    ============================================= -->
+    <section class="guide-section" aria-label="Educational guide to cryptographic hashing">
+      <h2>The Ultimate Guide to Cryptographic Hashing and Data Integrity</h2>
+
+      <!-- Algorithm comparison table -->
+      <h3>Algorithm Comparison Table</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>Output Length</th>
+              <th>Released</th>
+              <th>Security Level</th>
+              <th>Common Use Cases</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>MD5</td>
+              <td>128 bits (32 hex chars)</td>
+              <td>1992</td>
+              <td><span class="sec-low">Broken</span></td>
+              <td>File checksums, non-security deduplication, legacy systems</td>
+            </tr>
+            <tr>
+              <td>SHA-1</td>
+              <td>160 bits (40 hex chars)</td>
+              <td>1995</td>
+              <td><span class="sec-low">Deprecated</span></td>
+              <td>Git commit IDs (legacy), older TLS certificates, version control</td>
+            </tr>
+            <tr>
+              <td>SHA-256</td>
+              <td>256 bits (64 hex chars)</td>
+              <td>2001</td>
+              <td><span class="sec-high">Strong</span></td>
+              <td>Software verification, TLS/HTTPS, Bitcoin, digital signatures, passwords</td>
+            </tr>
+            <tr>
+              <td>SHA-512</td>
+              <td>512 bits (128 hex chars)</td>
+              <td>2001</td>
+              <td><span class="sec-high">Maximum</span></td>
+              <td>High-security applications, database password storage, sensitive file verification</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- FAQ accordions -->
+      <div class="faq-list" style="margin-top:28px;">
+
+        <details>
+          <summary>What is a cryptographic hash function and how does it work?</summary>
+          <div class="faq-body">
+            <p>A <strong>cryptographic hash function</strong> is a mathematical algorithm that takes any input - a single letter, a full novel, or an entire operating system ISO image - and produces a fixed-length string of characters called a <strong>hash</strong>, <strong>digest</strong>, or <strong>checksum</strong>. The output is always the same length regardless of how large or small the input is. For example, SHA-256 always outputs exactly 64 hexadecimal characters.</p>
+            <p>Hash functions are designed to be <strong>one-way functions</strong>: it is computationally trivial to calculate a hash from an input, but it is practically impossible to reconstruct the original input from the hash alone. Think of it like a fingerprint - you can easily take someone's fingerprint, but you cannot reconstruct the person from the fingerprint. This one-way property is the cornerstone of modern cybersecurity.</p>
+            <p>A critical property is <strong>determinism</strong>: the exact same input will always produce the exact same output hash, every single time, on any machine in the world. Even changing a single character - altering "Hello" to "hello" - will produce a completely different hash. This sensitivity is called the <strong>avalanche effect</strong> and is what makes hashes so useful for verifying data integrity.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What is the difference between hashing and encryption?</summary>
+          <div class="faq-body">
+            <p><strong>Hashing</strong> and <strong>encryption</strong> are both cryptographic techniques, but they serve fundamentally different purposes. The most critical distinction is reversibility. Encryption is a <strong>two-way process</strong>: data is scrambled using a key, and that same (or a related) key can be used to unscramble it and recover the original data exactly. This is essential for things like HTTPS connections, where your browser and a web server need to encrypt and then decrypt messages to each other.</p>
+            <p>Hashing, by contrast, is a <strong>one-way process</strong>. There is no key and no "unhashing" operation. You cannot recover the original input from a hash. This makes hashing ideal for scenarios where you need to <em>verify</em> that data is correct or that a password matches, without ever needing to store or transmit the original sensitive data. A secure website does not store your password - it stores the hash of your password. When you log in, it hashes what you type and compares the two hashes. If they match, you are authenticated, and the original password never needed to be stored.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Why is MD5 considered insecure for passwords but still useful for files?</summary>
+          <div class="faq-body">
+            <p>MD5 was designed in 1992 and was considered strong at the time, but researchers have since discovered a fatal flaw: <strong>collision vulnerabilities</strong>. A collision occurs when two completely different inputs produce the same output hash. In 2004, cryptographers demonstrated that MD5 collisions could be intentionally engineered, meaning an attacker could craft a malicious file that has the identical MD5 hash as a legitimate, trusted file. This completely breaks its trustworthiness as a security primitive.</p>
+            <p>For <strong>password storage</strong>, MD5 is doubly dangerous. Beyond collisions, it is extremely fast - which sounds like a good thing but is terrible for passwords. Attackers can use <strong>GPU-accelerated brute-force attacks</strong> to try billions of MD5 hashes per second. Dedicated hardware can crack short MD5 passwords in seconds. For this use case, you should always use purpose-built slow algorithms like bcrypt, Argon2, or scrypt, which are specifically designed to be computationally expensive.</p>
+            <p>However, MD5 remains entirely valid for <strong>non-security file integrity checks</strong>. If you are verifying that a large file downloaded correctly and was not corrupted in transit (rather than tampered with by a malicious actor), MD5 checksums are fast, universally supported, and perfectly sufficient. Many Linux distributions still publish MD5 checksums alongside their ISO images for quick download verification.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What is a hash collision, and why does it matter for security?</summary>
+          <div class="faq-body">
+            <p>A <strong>hash collision</strong> occurs when two distinct inputs produce an identical output hash. Because hash functions map an infinite input space (any string of any length) to a finite output space (a fixed-length string), it is mathematically guaranteed that collisions must exist in theory. The design goal of a secure hash algorithm is to make finding a collision so computationally difficult that it is impossible in practice with any foreseeable computing resources.</p>
+            <p>The severity of a collision depends entirely on context. For MD5 and SHA-1, <strong>practical collision attacks</strong> have been demonstrated. In 2017, Google's Project Zero team published "SHAttered" - the first publicly known SHA-1 collision, producing two different PDF files with the identical SHA-1 hash. This type of attack could theoretically be used to forge digital signatures, allowing a malicious document to inherit the valid certificate of a trusted one.</p>
+            <p>For <strong>SHA-256 and SHA-512</strong>, no collisions have ever been found. The sheer size of their output space (2^256 and 2^512 possible values respectively) makes a collision attack computationally infeasible. Even if every computer ever built worked in unison for billions of years, they would not crack a SHA-256 hash through brute force. This is why SHA-256 is the standard for software signing, SSL certificates, and the Bitcoin blockchain.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>How do developers use SHA-256 to verify software downloads?</summary>
+          <div class="faq-body">
+            <p>When a software developer or organization publishes a new release - an OS installer, a firmware update, or a security tool - they run the final binary file through SHA-256 and publish the resulting 64-character hash string alongside the download link on their official website. This published hash is called the <strong>checksum</strong> or <strong>hash digest</strong>.</p>
+            <p>When you download the file, you can use a tool like this one to compute the SHA-256 hash of your downloaded file. You then compare your computed hash against the official hash published on the developer's website. If the two strings match exactly - character for character - it proves two things: first, that your file is complete and was not corrupted or truncated during the download. Second, and more importantly, it proves the file has not been <strong>tampered with</strong> - no malicious actor intercepted the download and injected malware into it.</p>
+            <p>This verification workflow is the backbone of secure software distribution and is why major projects like Ubuntu Linux, OpenSSL, and the Tor Browser publish SHA-256 checksums for every single release. It is a simple, one-step way to establish a <strong>chain of trust</strong> between the developer's build server and your local machine, without requiring a direct secure connection to the source.</p>
+          </div>
+        </details>
+
+      </div><!-- end .faq-list -->
+    </section>
+
+  </div><!-- end .page-wrap -->
+
+  <!-- =============================================
+       FOOTER
+  ============================================= -->
+  <footer>
+    <div>
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div class="footer-copy">&copy; <span id="footer-year"></span> AxiomApe.com - All rights reserved.</div>
+  </footer>
+
+  <!-- =============================================
+       JAVASCRIPT - Hash Engine
+  ============================================= -->
+  <script>
+    // -----------------------------------------------
+    // UTILITY: Convert an ArrayBuffer to a hex string
+    // Used for displaying the raw binary hash as a
+    // human-readable hexadecimal string.
+    // -----------------------------------------------
+    function bufferToHex(buffer) {
+      return Array.from(new Uint8Array(buffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    // -----------------------------------------------
+    // UTILITY: Convert a plain string to an ArrayBuffer
+    // Required because crypto.subtle.digest() expects
+    // binary data (ArrayBuffer), not raw strings.
+    // -----------------------------------------------
+    function stringToBuffer(str) {
+      return new TextEncoder().encode(str);
+    }
+
+    // -----------------------------------------------
+    // CORE: Compute all four hashes from an ArrayBuffer
+    // - SHA-1, SHA-256, SHA-512 use the native
+    //   Web Crypto API (window.crypto.subtle.digest)
+    // - MD5 uses the SparkMD5 library loaded via CDN
+    //   because Web Crypto intentionally omits MD5
+    //   due to its known collision vulnerabilities.
+    // -----------------------------------------------
+    async function computeAllHashes(buffer) {
+      // Compute SHA variants in parallel using Promise.all
+      // for maximum performance - all three fire simultaneously.
+      const [sha1Buf, sha256Buf, sha512Buf] = await Promise.all([
+        crypto.subtle.digest('SHA-1',   buffer),
+        crypto.subtle.digest('SHA-256', buffer),
+        crypto.subtle.digest('SHA-512', buffer),
+      ]);
+
+      // SparkMD5 requires a Uint8Array, not a raw ArrayBuffer
+      const md5 = SparkMD5.ArrayBuffer.hash(buffer);
+
+      return {
+        md5:    md5,
+        sha1:   bufferToHex(sha1Buf),
+        sha256: bufferToHex(sha256Buf),
+        sha512: bufferToHex(sha512Buf),
+      };
+    }
+
+    // -----------------------------------------------
+    // UI: Update all four output cards with results
+    // -----------------------------------------------
+    function displayHashes(hashes) {
+      const ids = ['md5', 'sha1', 'sha256', 'sha512'];
+      ids.forEach(id => {
+        const el = document.getElementById('output-' + id);
+        const btn = document.getElementById('copy-' + id);
+        el.textContent = hashes[id];
+        el.classList.remove('placeholder', 'calculating');
+        btn.disabled = false;
+      });
+    }
+
+    // -----------------------------------------------
+    // UI: Reset all output cards to placeholder state
+    // -----------------------------------------------
+    function resetOutputs() {
+      const ids = ['md5', 'sha1', 'sha256', 'sha512'];
+      ids.forEach(id => {
+        const el = document.getElementById('output-' + id);
+        const btn = document.getElementById('copy-' + id);
+        el.textContent = 'Awaiting input...';
+        el.className = 'hash-output placeholder';
+        btn.disabled = true;
+      });
+    }
+
+    // -----------------------------------------------
+    // UI: Show "Calculating..." state for file loads
+    // (large files may take a moment to hash)
+    // -----------------------------------------------
+    function setCalculatingState() {
+      const ids = ['md5', 'sha1', 'sha256', 'sha512'];
+      ids.forEach(id => {
+        const el = document.getElementById('output-' + id);
+        const btn = document.getElementById('copy-' + id);
+        el.textContent = 'Calculating...';
+        el.className = 'hash-output calculating';
+        btn.disabled = true;
+      });
+    }
+
+    // -----------------------------------------------
+    // TEXT INPUT: live hash on every keystroke
+    // Using a small debounce (50ms) to avoid hammering
+    // the crypto API on every single character for
+    // very fast typists on very slow devices.
+    // -----------------------------------------------
+    const textInput = document.getElementById('text-input');
+    let textDebounce = null;
+
+    textInput.addEventListener('input', () => {
+      clearTimeout(textDebounce);
+      const val = textInput.value;
+      if (!val) {
+        resetOutputs();
+        return;
+      }
+      textDebounce = setTimeout(async () => {
+        try {
+          const buffer = stringToBuffer(val).buffer;
+          const hashes = await computeAllHashes(buffer);
+          displayHashes(hashes);
+        } catch (err) {
+          console.error('Hash computation error (text):', err);
+        }
+      }, 50);
+    });
+
+    // -----------------------------------------------
+    // FILE INPUT: handle drag-and-drop and click
+    // -----------------------------------------------
+    const dropZone   = document.getElementById('drop-zone');
+    const fileInput  = document.getElementById('file-input');
+    const fileNameEl = document.getElementById('file-name');
+
+    // Click on drop zone triggers the hidden file input
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+    });
+
+    // Visual feedback on drag-over
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    // Handle file dropped into the zone
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    });
+
+    // Handle file selected via the file browser dialog
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) processFile(file);
+    });
+
+    // -----------------------------------------------
+    // FILE PROCESSING: Read as ArrayBuffer and hash
+    // Clears text input first to avoid UI confusion
+    // about which source is currently being hashed.
+    // -----------------------------------------------
+    function processFile(file) {
+      // Clear text input when a file is loaded
+      textInput.value = '';
+      fileNameEl.textContent = file.name + ' (' + formatBytes(file.size) + ')';
+      setCalculatingState();
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const hashes = await computeAllHashes(e.target.result);
+          displayHashes(hashes);
+        } catch (err) {
+          console.error('Hash computation error (file):', err);
+        }
+      };
+      // Read as ArrayBuffer - works for files of any type and size
+      reader.readAsArrayBuffer(file);
+    }
+
+    // -----------------------------------------------
+    // UTILITY: Format bytes into a human-readable size
+    // -----------------------------------------------
+    function formatBytes(bytes) {
+      if (bytes < 1024)       return bytes + ' B';
+      if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+      return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    // -----------------------------------------------
+    // COPY BUTTONS: Copy hash to clipboard with
+    // a brief "Copied!" visual confirmation state.
+    // -----------------------------------------------
+    ['md5', 'sha1', 'sha256', 'sha512'].forEach(id => {
+      const btn = document.getElementById('copy-' + id);
+      btn.addEventListener('click', () => {
+        const hash = document.getElementById('output-' + id).textContent;
+        if (!hash || btn.disabled) return;
+        navigator.clipboard.writeText(hash).then(() => {
+          const original = btn.innerHTML;
+          btn.innerHTML = '&#10003; Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove('copied');
+          }, 1800);
+        }).catch(err => {
+          console.warn('Clipboard write failed:', err);
+        });
+      });
+    });
+
+    // -----------------------------------------------
+    // CLEAR BUTTONS
+    // -----------------------------------------------
+    document.getElementById('clear-text-btn').addEventListener('click', () => {
+      textInput.value = '';
+      resetOutputs();
+    });
+
+    document.getElementById('clear-file-btn').addEventListener('click', () => {
+      fileInput.value = '';
+      fileNameEl.textContent = '';
+      resetOutputs();
+    });
+
+    // -----------------------------------------------
+    // FOOTER: dynamic copyright year
+    // -----------------------------------------------
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>

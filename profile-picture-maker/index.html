@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Picture Maker - Remove Background & Add Color | AxiomApe</title>
+  <meta name="description" content="Free AI-powered profile picture maker. Remove photo backgrounds instantly in your browser and replace with a solid color for LinkedIn, X (Twitter), and more. 100% private - no uploads." />
+  <meta name="keywords" content="profile picture maker, remove background, LinkedIn profile photo, AI background removal, X Twitter profile picture, solid color background" />
+  <meta property="og:title" content="Profile Picture Maker - AI Background Removal | AxiomApe" />
+  <meta property="og:description" content="Remove your photo background and add a solid color fill - entirely in your browser. No uploads, no servers, 100% private." />
+  <meta property="og:type" content="website" />
+
+  <!-- ============================================================
+       THIRD-PARTY: @imgly/background-removal via CDN
+       This is a WebAssembly (WASM) - based AI library that runs
+       entirely in the browser. WASM is a compiled binary format
+       that lets complex ML (machine learning) code run at near-
+       native speed inside any modern web browser, with zero
+       server involvement.
+       ============================================================ -->
+  <script type="module">
+    /* We load the ESM (ES Module) build from the jsDelivr CDN.
+       This script tag is type="module" so we can use top-level
+       await and dynamic imports safely. */
+    import { removeBackground } from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/background-removal.js';
+    window.__removeBackground = removeBackground;
+    window.__bgRemovalReady = true;
+    document.dispatchEvent(new Event('bgRemovalReady'));
+  </script>
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #f4f6f9;
+      --card:       #ffffff;
+      --border:     #e2e6ea;
+      --text:       #1a1d23;
+      --muted:      #6b7280;
+      --accent:     #0a66c2;   /* LinkedIn blue */
+      --accent2:    #14b8a6;   /* teal highlight */
+      --danger:     #ef4444;
+      --radius:     14px;
+      --shadow:     0 4px 24px rgba(0,0,0,0.08);
+      --shadow-lg:  0 8px 40px rgba(0,0,0,0.13);
+      --font:       'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* =========================================================
+       TOP NAV
+    ========================================================= */
+    .top-nav {
+      text-align: center;
+      padding: 12px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+    .top-nav a:hover { text-decoration: underline; }
+
+    /* =========================================================
+       LAYOUT
+    ========================================================= */
+    .page-wrapper {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+    }
+
+    /* =========================================================
+       AD PLACEHOLDER - leaderboard (728x90)
+       Replace this div with your Google AdSense <ins> tag.
+    ========================================================= */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #eef0f4;
+      border: 2px dashed #c9d0da;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    /* =========================================================
+       HERO
+    ========================================================= */
+    .hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .hero h1 {
+      font-size: clamp(1.5rem, 4vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* =========================================================
+       CARD
+    ========================================================= */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 1.15rem; }
+
+    /* =========================================================
+       DROP ZONE
+    ========================================================= */
+    #drop-zone {
+      border: 2.5px dashed #c5ccd6;
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #fafbfc;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: #eef4fd;
+    }
+    #drop-zone .dz-icon { font-size: 3rem; margin-bottom: 12px; }
+    #drop-zone h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    #drop-zone p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 18px;
+    }
+    #file-input { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: #f0f2f5; color: var(--text); border: 1px solid var(--border); }
+    .btn-success {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: #fff;
+      font-size: 1.05rem;
+      padding: 15px 32px;
+      border-radius: 10px;
+      width: 100%;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+    }
+
+    /* =========================================================
+       LOADING STATE
+    ========================================================= */
+    #loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+      text-align: center;
+      gap: 18px;
+    }
+    #loading-state.active { display: flex; }
+
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 5px solid #e2e6ea;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .loading-sub {
+      font-size: 0.88rem;
+      color: var(--muted);
+      max-width: 380px;
+      line-height: 1.55;
+    }
+    .progress-bar-wrap {
+      width: 100%;
+      max-width: 340px;
+      height: 6px;
+      background: #e2e6ea;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease;
+      animation: indeterminate 1.6s ease-in-out infinite;
+    }
+    @keyframes indeterminate {
+      0%   { margin-left: 0%; width: 30%; }
+      50%  { margin-left: 40%; width: 40%; }
+      100% { margin-left: 100%; width: 0%; }
+    }
+
+    /* =========================================================
+       EDITOR
+    ========================================================= */
+    #editor {
+      display: none;
+    }
+    #editor.active { display: block; }
+
+    /* Canvas area */
+    .canvas-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    #preview-canvas {
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      max-width: 100%;
+    }
+
+    /* Shape toggle */
+    .shape-toggle {
+      display: flex;
+      gap: 8px;
+    }
+    .shape-btn {
+      padding: 7px 18px;
+      border-radius: 99px;
+      border: 2px solid var(--border);
+      background: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--muted);
+    }
+    .shape-btn.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Controls grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 600px) { .controls-grid { grid-template-columns: 1fr; } }
+
+    .control-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .control-group .hint {
+      font-size: 0.76rem;
+      color: #9ca3af;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 44px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 3px;
+      background: var(--card);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .range-row span {
+      min-width: 38px;
+      text-align: right;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* =========================================================
+       RESET BUTTON
+    ========================================================= */
+    .reset-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    /* =========================================================
+       ERROR STATE
+    ========================================================= */
+    #error-state {
+      display: none;
+      padding: 20px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+    #error-state.active { display: block; }
+
+    /* =========================================================
+       DISCLAIMER
+    ========================================================= */
+    .disclaimer {
+      background: linear-gradient(135deg, #f0fdf4, #e0f2fe);
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 40px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .disclaimer .shield { font-size: 2rem; flex-shrink: 0; }
+    .disclaimer h3 { font-size: 0.95rem; font-weight: 700; color: #065f46; margin-bottom: 4px; }
+    .disclaimer p  { font-size: 0.87rem; color: #064e3b; line-height: 1.55; }
+
+    /* =========================================================
+       SEO GUIDE
+    ========================================================= */
+    .guide-section {
+      margin-bottom: 48px;
+    }
+    .guide-section h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: var(--text);
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: 10px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      padding: 16px 20px;
+      background: var(--card);
+      border: none;
+      cursor: pointer;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: #f8fafc; }
+    .faq-question .chevron {
+      font-size: 0.8rem;
+      transition: transform 0.25s;
+      color: var(--muted);
+    }
+    .faq-question[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.25s;
+      padding: 0 20px;
+      background: #fafbfc;
+    }
+    .faq-answer.open {
+      max-height: 600px;
+      padding: 16px 20px;
+    }
+    .faq-answer p {
+      font-size: 0.93rem;
+      line-height: 1.72;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    .faq-answer p:last-child { margin-bottom: 0; }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    footer {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 22px 16px;
+      text-align: center;
+    }
+    footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 8px;
+    }
+    footer a {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--accent); }
+    footer .copy {
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/profile-picture-maker/" />
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP NAV - back to main site
+  ============================================================ -->
+  <nav class="top-nav" aria-label="Site navigation">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <div class="page-wrapper">
+
+    <!-- AD PLACEHOLDER - replace with AdSense <ins> tag when ready -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      Advertisement Space (728x90 Leaderboard)
+    </div>
+
+    <!-- HERO -->
+    <header class="hero">
+      <h1>Profile Picture Maker</h1>
+      <p>Remove your photo background with AI and add a solid color fill - optimized for LinkedIn, X (Twitter), and every social network. Runs 100% in your browser. Nothing is uploaded anywhere.</p>
+    </header>
+
+    <!-- UPLOAD CARD -->
+    <div class="card" id="upload-card">
+      <div class="card-title"><span class="icon">📷</span> Step 1: Upload Your Portrait Photo</div>
+
+      <!-- Drop zone -->
+      <div id="drop-zone" role="button" tabindex="0" aria-label="Upload photo: click or drag and drop">
+        <div class="dz-icon">🖼️</div>
+        <h2>Drag and drop your photo here</h2>
+        <p>Or click the button below to browse - JPG, PNG, WEBP accepted</p>
+        <button class="btn btn-primary" id="browse-btn" type="button">Choose Photo</button>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" />
+      </div>
+
+      <!-- Loading state - shown while AI model downloads and processes -->
+      <div id="loading-state" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <div class="loading-title" id="loading-title">Initializing AI Model...</div>
+        <div class="loading-sub" id="loading-sub">
+          Downloading the AI model for the first time (approx. 40MB). This only happens once per browser session and keeps your data completely private - no photo leaves your device.
+          <br><br>
+          <strong>What is a WASM AI model?</strong> WebAssembly (WASM) is a technology that lets complex AI programs run directly inside your web browser, just like desktop software, without sending your photo to any server.
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill"></div></div>
+      </div>
+
+      <!-- Error state -->
+      <div id="error-state" role="alert"></div>
+    </div>
+
+    <!-- EDITOR CARD - shown after processing -->
+    <div class="card" id="editor" aria-live="polite">
+      <div class="card-title"><span class="icon">🎨</span> Step 2: Customize Your Profile Picture</div>
+
+      <!-- Canvas preview -->
+      <div class="canvas-section">
+        <canvas id="preview-canvas" width="400" height="400" aria-label="Profile picture preview"></canvas>
+
+        <!-- Shape toggle -->
+        <div class="shape-toggle" role="group" aria-label="Preview shape">
+          <button class="shape-btn active" id="btn-square" type="button">Square</button>
+          <button class="shape-btn" id="btn-circle" type="button">Circle</button>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-grid">
+
+        <!-- Background color -->
+        <div class="control-group">
+          <label for="bg-color">Background Fill Color</label>
+          <input type="color" id="bg-color" value="#f0c040" aria-describedby="bg-color-hint" />
+          <div class="hint" id="bg-color-hint">
+            Choose any solid color. Bright, high-contrast colors (yellow, teal, cobalt) help your face stand out in small thumbnail views on LinkedIn and X.
+            <br><br>
+            The color value you see (like <code>#f0c040</code>) is called a <strong>Hex Code</strong> - a six-character shorthand that represents any of 16 million possible colors.
+          </div>
+        </div>
+
+        <!-- Subject scale -->
+        <div class="control-group">
+          <label for="scale-slider">Subject Scale (Zoom)</label>
+          <div class="range-row">
+            <input type="range" id="scale-slider" min="40" max="130" value="85" step="1" aria-describedby="scale-hint" />
+            <span id="scale-val">85%</span>
+          </div>
+          <div class="hint" id="scale-hint">
+            Move left to zoom out and see more of your shoulders. Move right to zoom in and fill the frame with your face. Most headshots look best between 70% and 95%.
+          </div>
+
+          <!-- Vertical offset -->
+          <label for="offset-slider" style="margin-top:16px;">Subject Vertical Position</label>
+          <div class="range-row">
+            <input type="range" id="offset-slider" min="-80" max="80" value="0" step="1" aria-describedby="offset-hint" />
+            <span id="offset-val">0</span>
+          </div>
+          <div class="hint" id="offset-hint">
+            Slide up or down to reframe your face within the square crop. Negative values move the subject up; positive values move it down.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Reset and download -->
+      <div class="reset-row">
+        <button class="btn btn-secondary" id="reset-btn" type="button">Reset - Start Over</button>
+      </div>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-success" id="download-btn" type="button">
+          ⬇️ Download Profile Picture (PNG)
+        </button>
+        <p style="text-align:center;font-size:0.8rem;color:var(--muted);margin-top:8px;">
+          Exports at 800x800px - high resolution PNG with full alpha transparency support.
+        </p>
+      </div>
+    </div>
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer" role="note">
+      <div class="shield">🛡️</div>
+      <div>
+        <h3>Privacy First</h3>
+        <p>This AI tool processes your photo entirely within your local browser. Your face and personal images are never uploaded, stored, or transmitted to any external servers. The AI background removal model runs entirely via WebAssembly (WASM) on your own device, with no network calls beyond the one-time model download.</p>
+      </div>
+    </div>
+
+    <!-- SEO GUIDE SECTION -->
+    <section class="guide-section" aria-labelledby="guide-heading">
+      <h2 id="guide-heading">The Ultimate Guide to Professional Profile Pictures and AI Background Removal</h2>
+
+      <details class="faq-item" open>
+        <summary class="faq-question" aria-expanded="true">
+          Why do bright solid color backgrounds perform better on LinkedIn and X?
+          <span class="chevron">▼</span>
+        </summary>
+        <div class="faq-answer open">
+          <p>Your profile picture is almost always displayed at a very small size - often as a circle no wider than 48 pixels on a phone screen. In that tiny thumbnail, busy or dark photographic backgrounds compete visually with your face, reducing how quickly and memorably people register who you are. A solid color background, especially a high-saturation one like cobalt blue, bright teal, or warm yellow, creates immediate visual separation between your face and the surrounding feed.</p>
+          <p>Research in personal branding consistently shows that profiles with clean, solid backgrounds receive higher click-through rates and are perceived as more professional, approachable, and credible. The color itself can also carry meaning: blue signals trustworthiness (dominant in tech and finance), green signals growth and wellness, and yellow signals energy and creativity. Choosing intentionally gives you a subtle but real edge.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question" aria-expanded="false">
+          How does browser-based AI background removal actually work?
+          <span class="chevron">▼</span>
+        </summary>
+        <div class="faq-answer">
+          <p>Traditional background removal required sending your photo to a cloud server, where a model like U2-Net or DeepLabV3 would analyze it and return a result. This tool uses a different approach called <strong>AI Segmentation</strong> - the process of having a neural network identify which pixels belong to a person (the "foreground") versus which belong to the background.</p>
+          <p>The model used here runs via <strong>WebAssembly (WASM)</strong>, a low-level binary format that web browsers can execute at near-native speed. Combined with the ONNX runtime (Open Neural Network Exchange - an open standard for running ML models in different environments), the segmentation model loads directly into your browser tab on first use. The model is roughly 40-50MB, which is why there is a brief download phase the first time you use the tool in a given session.</p>
+          <p>Once loaded, the model reads the pixel data of your image, produces an <strong>Alpha Transparency mask</strong> (a grayscale image where white means "keep this pixel" and black means "remove this pixel"), and blends the result onto the canvas behind a solid color of your choice. Alpha Transparency simply means that a pixel can be partially or fully see-through, allowing the background color beneath to show. All of this happens with zero data leaving your device.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question" aria-expanded="false">
+          What is the ideal size and resolution for a LinkedIn or X profile picture?
+          <span class="chevron">▼</span>
+        </summary>
+        <div class="faq-answer">
+          <p>Platform requirements change frequently, but the safe universal standard is a <strong>square image at 800x800 pixels</strong> or larger, saved as PNG at full quality. This tool exports at exactly 800x800 to match that standard. Here is a quick breakdown of what the major platforms currently recommend:</p>
+          <p><strong>LinkedIn</strong> accepts profile photos up to 8MB. The recommended dimensions are at least 400x400 pixels, and the platform displays them as circles in most views. Uploading at 800x800 ensures crisp rendering on retina displays.</p>
+          <p><strong>X (Twitter)</strong> recommends 400x400 pixels minimum and also masks the image as a circle. Going larger future-proofs the image for any display resolution changes.</p>
+          <p>PNG format is preferred over JPEG for profile pictures because PNG uses lossless compression - meaning no visual quality is sacrificed. JPEG uses lossy compression, which can introduce blurring artifacts around the edges of your cutout, making the job of AI segmentation look worse than it is. Always export as PNG when quality matters.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question" aria-expanded="false">
+          Why is keeping my photos off external servers important for privacy?
+          <span class="chevron">▼</span>
+        </summary>
+        <div class="faq-answer">
+          <p>When you upload a photo to a typical cloud-based image editing service, your face becomes data on a third-party server. Even if the service deletes it after processing, the transmission itself is a privacy exposure point. Your image may pass through load balancers, be written to temporary disk storage, logged in access logs, or processed by workers in multiple data centers before returning to you. Each step is a potential vector for data breach, misuse, or retention beyond what the privacy policy actually promises.</p>
+          <p>The Federal Trade Commission (FTC) and equivalent regulators in the EU (under GDPR) have increasingly scrutinized how biometric data - which includes facial images - is collected, stored, and used by technology companies. Several high-profile AI tools have faced investigations for using uploaded face photos to train new models without explicit user consent.</p>
+          <p>By running AI processing entirely inside your browser, this tool eliminates all of those risks by design. There is no server, no transmission, and no third-party involvement. The privacy guarantee is architectural, not just a policy promise - it is simply technically impossible for this tool to send your photo anywhere, because no such outbound request is ever made.</p>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-question" aria-expanded="false">
+          Tips for taking a great headshot photo to use with this tool
+          <span class="chevron">▼</span>
+        </summary>
+        <div class="faq-answer">
+          <p>AI segmentation works best when there is clear contrast between the subject and the background at the time the photo is taken. While the model can handle complex scenes, giving it a strong starting point produces sharper cutout edges with fewer stray pixels around your hair and shoulders. Here are the most impactful tips:</p>
+          <p><strong>Lighting:</strong> Face a window or a softbox light source. Even, diffused light from the front reduces harsh shadows on your face and eliminates dark areas that the AI might misread as background. Avoid shooting with a bright light source behind you - this creates a silhouette and is the single biggest reason for poor cutouts.</p>
+          <p><strong>Background contrast:</strong> Stand in front of a single-color wall, even an imperfect one. A plain white, grey, or beige wall gives the AI a clear signal. Busy bookshelves, plants, or outdoor scenes with complex edges (tree branches, hair-like foliage) are harder to separate cleanly.</p>
+          <p><strong>Camera distance:</strong> Frame yourself from the mid-chest up and face the camera directly or at a very slight angle. The framing slider in this tool lets you zoom in further, but starting with a portrait-style crop reduces unnecessary processing and keeps the final output sharp.</p>
+          <p><strong>File quality:</strong> Upload the highest resolution version of your photo. Upscaling a small or compressed image after the fact will not recover lost detail. A modern phone camera shooting in natural light is more than sufficient - you do not need professional studio equipment.</p>
+        </div>
+      </details>
+    </section>
+
+  </div><!-- end .page-wrapper -->
+
+  <!-- FOOTER -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="copy">&copy; <span id="year"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+  <!-- ============================================================
+       MAIN APPLICATION JAVASCRIPT
+       All rendering is done via the HTML5 Canvas API.
+       No frameworks, no build tools - vanilla JS only.
+  ============================================================ -->
+  <script>
+  (function () {
+    'use strict';
+
+    // -------------------------------------------------------
+    // DOM references
+    // -------------------------------------------------------
+    const dropZone     = document.getElementById('drop-zone');
+    const fileInput    = document.getElementById('file-input');
+    const browseBtn    = document.getElementById('browse-btn');
+    const loadingState = document.getElementById('loading-state');
+    const loadingTitle = document.getElementById('loading-title');
+    const loadingSub   = document.getElementById('loading-sub');
+    const errorState   = document.getElementById('error-state');
+    const editor       = document.getElementById('editor');
+    const canvas       = document.getElementById('preview-canvas');
+    const ctx          = canvas.getContext('2d');
+
+    const bgColorInput  = document.getElementById('bg-color');
+    const scaleSlider   = document.getElementById('scale-slider');
+    const scaleVal      = document.getElementById('scale-val');
+    const offsetSlider  = document.getElementById('offset-slider');
+    const offsetVal     = document.getElementById('offset-val');
+    const btnSquare     = document.getElementById('btn-square');
+    const btnCircle     = document.getElementById('btn-circle');
+    const downloadBtn   = document.getElementById('download-btn');
+    const resetBtn      = document.getElementById('reset-btn');
+
+    // -------------------------------------------------------
+    // State
+    // -------------------------------------------------------
+    let subjectImage  = null;  // HTMLImageElement with transparent background
+    let originalName  = 'profile';
+    let isCircle      = false;
+
+    // Canvas export size (high resolution)
+    const EXPORT_SIZE = 800;
+    // Canvas display size
+    const DISPLAY_SIZE = 400;
+
+    canvas.width  = EXPORT_SIZE;
+    canvas.height = EXPORT_SIZE;
+    canvas.style.width  = DISPLAY_SIZE + 'px';
+    canvas.style.height = DISPLAY_SIZE + 'px';
+
+    // -------------------------------------------------------
+    // Footer year
+    // -------------------------------------------------------
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // -------------------------------------------------------
+    // FAQ accordion (details/summary already handles toggle;
+    // we animate the inner div and update aria-expanded)
+    // -------------------------------------------------------
+    document.querySelectorAll('.faq-item').forEach(function (item) {
+      const summary = item.querySelector('.faq-question');
+      const answer  = item.querySelector('.faq-answer');
+      // Sync initial open state
+      if (item.hasAttribute('open')) {
+        answer.classList.add('open');
+        summary.setAttribute('aria-expanded', 'true');
+      }
+      item.addEventListener('toggle', function () {
+        if (item.open) {
+          answer.classList.add('open');
+          summary.setAttribute('aria-expanded', 'true');
+        } else {
+          answer.classList.remove('open');
+          summary.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+
+    // -------------------------------------------------------
+    // Drop zone events
+    // -------------------------------------------------------
+    browseBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', function () {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', function () {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) handleFile(file);
+    });
+
+    // -------------------------------------------------------
+    // Handle uploaded file
+    // -------------------------------------------------------
+    function handleFile (file) {
+      if (!file.type.startsWith('image/')) {
+        showError('Please upload a JPEG, PNG, or WEBP image file.');
+        return;
+      }
+
+      // Store filename (strip extension)
+      originalName = file.name.replace(/\.[^.]+$/, '') || 'profile';
+
+      // Hide drop zone, show loading
+      dropZone.style.display = 'none';
+      loadingState.classList.add('active');
+      hideError();
+
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        processImage(ev.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // -------------------------------------------------------
+    // Process image with AI background removal
+    // -------------------------------------------------------
+    function processImage (dataUrl) {
+      loadingTitle.textContent = 'Initializing AI Model (this happens once and keeps your data private)...';
+
+      // Wait for the background-removal library to be ready,
+      // then invoke it. The library is loaded as an ES Module
+      // in the <head> and signals readiness via a custom event.
+      function runRemoval () {
+        loadingTitle.textContent = 'AI is removing your background...';
+        loadingSub.innerHTML = 'Using AI Segmentation to find the edges of your face and body. This usually takes 5-20 seconds depending on your device speed.';
+
+        const removeBackground = window.__removeBackground;
+
+        // Convert dataUrl to a Blob (required by the library)
+        fetch(dataUrl)
+          .then(function (r) { return r.blob(); })
+          .then(function (blob) {
+            return removeBackground(blob, {
+              // Progress callback - updates the loading message
+              progress: function (key, current, total) {
+                if (total > 0) {
+                  var pct = Math.round((current / total) * 100);
+                  loadingSub.innerHTML = 'Downloading AI model... ' + pct + '% complete. This model stays in your browser cache after the first download.';
+                }
+              }
+            });
+          })
+          .then(function (resultBlob) {
+            // resultBlob is a PNG with transparent background
+            const url = URL.createObjectURL(resultBlob);
+            const img = new Image();
+            img.onload = function () {
+              subjectImage = img;
+              loadingState.classList.remove('active');
+              editor.classList.add('active');
+              renderCanvas();
+            };
+            img.onerror = function () {
+              loadingState.classList.remove('active');
+              dropZone.style.display = '';
+              showError('Could not load the processed image. Please try a different photo.');
+            };
+            img.src = url;
+          })
+          .catch(function (err) {
+            console.error('Background removal error:', err);
+            loadingState.classList.remove('active');
+            dropZone.style.display = '';
+            showError('The AI model encountered an error. Please try again with a different photo. Error: ' + (err.message || err));
+          });
+      }
+
+      if (window.__bgRemovalReady) {
+        runRemoval();
+      } else {
+        document.addEventListener('bgRemovalReady', function onReady () {
+          document.removeEventListener('bgRemovalReady', onReady);
+          runRemoval();
+        });
+      }
+    }
+
+    // -------------------------------------------------------
+    // Canvas rendering
+    // -------------------------------------------------------
+    function renderCanvas () {
+      if (!subjectImage) return;
+
+      const size   = EXPORT_SIZE;
+      const scale  = parseInt(scaleSlider.value, 10) / 100;
+      const offset = parseInt(offsetSlider.value, 10) * (EXPORT_SIZE / DISPLAY_SIZE);
+      const color  = bgColorInput.value;
+
+      ctx.clearRect(0, 0, size, size);
+
+      // Clip to circle if needed
+      ctx.save();
+      if (isCircle) {
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+      }
+
+      // Draw background fill
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, size, size);
+
+      // Compute subject draw dimensions maintaining aspect ratio
+      const imgW = subjectImage.naturalWidth;
+      const imgH = subjectImage.naturalHeight;
+      const aspect = imgW / imgH;
+
+      let drawW, drawH;
+      if (aspect >= 1) {
+        drawW = size * scale;
+        drawH = drawW / aspect;
+      } else {
+        drawH = size * scale;
+        drawW = drawH * aspect;
+      }
+
+      // Center + vertical offset
+      const drawX = (size - drawW) / 2;
+      const drawY = (size - drawH) / 2 + offset;
+
+      // Draw the subject (transparent-background PNG from AI)
+      ctx.drawImage(subjectImage, drawX, drawY, drawW, drawH);
+
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------
+    // Control events - all update canvas instantly
+    // -------------------------------------------------------
+    bgColorInput.addEventListener('input', renderCanvas);
+
+    scaleSlider.addEventListener('input', function () {
+      scaleVal.textContent = scaleSlider.value + '%';
+      renderCanvas();
+    });
+
+    offsetSlider.addEventListener('input', function () {
+      offsetVal.textContent = offsetSlider.value;
+      renderCanvas();
+    });
+
+    btnSquare.addEventListener('click', function () {
+      isCircle = false;
+      btnSquare.classList.add('active');
+      btnCircle.classList.remove('active');
+      renderCanvas();
+    });
+
+    btnCircle.addEventListener('click', function () {
+      isCircle = true;
+      btnCircle.classList.add('active');
+      btnSquare.classList.remove('active');
+      renderCanvas();
+    });
+
+    // -------------------------------------------------------
+    // Download - exports at full 800x800 resolution
+    // -------------------------------------------------------
+    downloadBtn.addEventListener('click', function () {
+      // Ensure we render without circle clip for the PNG
+      // (circle is a visual preview only; export is always square
+      //  so the user can re-use it. If they want a circle export
+      //  we honor the current preview shape.)
+      renderCanvas(); // ensure freshest render
+
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = originalName + '-profile.png';
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // -------------------------------------------------------
+    // Reset - start over
+    // -------------------------------------------------------
+    resetBtn.addEventListener('click', function () {
+      subjectImage = null;
+      editor.classList.remove('active');
+      ctx.clearRect(0, 0, EXPORT_SIZE, EXPORT_SIZE);
+
+      // Reset controls to defaults
+      bgColorInput.value    = '#f0c040';
+      scaleSlider.value     = 85;
+      scaleVal.textContent  = '85%';
+      offsetSlider.value    = 0;
+      offsetVal.textContent = '0';
+      isCircle = false;
+      btnSquare.classList.add('active');
+      btnCircle.classList.remove('active');
+
+      // Reset file input so the same file can be re-selected
+      fileInput.value = '';
+      dropZone.style.display = '';
+      hideError();
+    });
+
+    // -------------------------------------------------------
+    // Error helpers
+    // -------------------------------------------------------
+    function showError (msg) {
+      errorState.textContent = 'Error: ' + msg;
+      errorState.classList.add('active');
+    }
+    function hideError () {
+      errorState.classList.remove('active');
+      errorState.textContent = '';
+    }
+
+  })();
+  </script>
+
+</body>
+</html>

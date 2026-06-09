@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF to Word Converter - Extract PDF Text Into an Editable Word Document | AxiomApe</title>
+  <meta name="description" content="Free browser-based PDF to Word converter. Extract text from native PDFs and download as an editable .docx file instantly - no uploads, 100% private and secure." />
+  <meta name="keywords" content="pdf to word converter, pdf to docx, extract text from pdf, convert pdf to word, pdf text extraction, native pdf converter, client side pdf" />
+
+  <!-- ============================================================
+       LIBRARY 1: pdf.js by Mozilla
+       Used to parse PDF binary files and extract their internal
+       text content layer, page by page, entirely in the browser.
+  ============================================================ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- ============================================================
+       LIBRARY 2: docx.js
+       Used to compile extracted text strings into a valid,
+       properly structured Microsoft Word (.docx) binary file
+       that can be downloaded locally.
+  ============================================================ -->
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+
+  <style>
+    /* ============================================================
+       GLOBAL RESET & BASE VARIABLES
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-light: #eff6ff;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-700);
+      line-height: 1.65;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ============================================================
+       SITE HEADER NAV
+    ============================================================ */
+    .site-nav {
+      text-align: center;
+      padding: 14px 20px;
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .site-nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .site-nav a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - Standard Leaderboard (728x90)
+       Replace this comment block with your Google AdSense snippet.
+       Ad unit type: Display / Leaderboard Banner
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      background: var(--gray-200);
+      border: 2px dashed var(--gray-300);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+      color: var(--gray-400);
+      font-size: 0.78rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 40px 36px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 600px) {
+      .card { padding: 24px 20px; }
+    }
+
+    /* ============================================================
+       PAGE TITLE & SUBTITLE
+    ============================================================ */
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 0.97rem;
+      color: var(--gray-500);
+      margin-bottom: 32px;
+      max-width: 620px;
+    }
+
+    /* ============================================================
+       UPLOAD ZONE - Drag and Drop
+    ============================================================ */
+    .upload-zone {
+      border: 2px dashed var(--gray-300);
+      border-radius: var(--radius);
+      background: var(--gray-50);
+      padding: 52px 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+      line-height: 1;
+    }
+
+    .upload-zone h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 6px;
+    }
+
+    .upload-zone p {
+      font-size: 0.88rem;
+      color: var(--gray-500);
+    }
+
+    .upload-zone .file-name {
+      display: inline-block;
+      margin-top: 14px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 4px 14px;
+      border-radius: 99px;
+    }
+
+    /* ============================================================
+       STATUS / ALERT MESSAGES
+    ============================================================ */
+    .alert {
+      display: none;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.92rem;
+      font-weight: 500;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .alert.show { display: flex; align-items: flex-start; gap: 10px; }
+    .alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    .alert-warning {
+      background: var(--warning-light);
+      color: var(--warning);
+      border: 1px solid #fde68a;
+    }
+
+    .alert-danger {
+      background: var(--danger-light);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .alert-success {
+      background: var(--success-light);
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+
+    /* ============================================================
+       LOADING STATE
+    ============================================================ */
+    .loading-bar {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+      background: var(--accent-light);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+    }
+
+    .loading-bar.show { display: flex; }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid #bfdbfe;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-bar p {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* ============================================================
+       PREVIEW SECTION - The "Digital Document" Canvas
+    ============================================================ */
+    .preview-section {
+      display: none;
+    }
+
+    .preview-section.show { display: block; }
+
+    .preview-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gray-500);
+      margin-bottom: 8px;
+    }
+
+    .preview-meta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .preview-badge {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-200);
+      border-radius: 99px;
+      padding: 3px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    /* The textarea is styled to look like a Word document page */
+    #text-preview {
+      width: 100%;
+      min-height: 360px;
+      max-height: 540px;
+      padding: 28px 32px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.06);
+      font-family: 'Calibri', 'Arial', 'Georgia', serif;
+      font-size: 0.97rem;
+      line-height: 1.75;
+      color: var(--gray-900);
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      overflow-y: auto;
+    }
+
+    #text-preview:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1), inset 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .preview-hint {
+      font-size: 0.8rem;
+      color: var(--gray-400);
+      margin-top: 8px;
+      margin-bottom: 24px;
+    }
+
+    /* ============================================================
+       ACTION BUTTONS
+    ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+      width: 100%;
+      font-size: 1.05rem;
+      padding: 16px 28px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-primary:disabled {
+      background: var(--gray-300);
+      color: var(--gray-500);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-600);
+      border: 1px solid var(--gray-200);
+      font-size: 0.88rem;
+      padding: 9px 18px;
+      margin-bottom: 20px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--gray-200);
+    }
+
+    /* ============================================================
+       EXTRACT BUTTON (shown before preview is ready)
+    ============================================================ */
+    #btn-extract {
+      width: 100%;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.28);
+      transition: background 0.18s, box-shadow 0.18s;
+      display: none;
+    }
+
+    #btn-extract.show { display: block; }
+    #btn-extract:hover { background: var(--accent-hover); }
+    #btn-extract:disabled { background: var(--gray-300); color: var(--gray-500); box-shadow: none; cursor: not-allowed; }
+
+    /* ============================================================
+       HOW IT WORKS SECTION (inline explainer)
+    ============================================================ */
+    .explainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+      margin-bottom: 0;
+    }
+
+    .explainer-step {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px;
+      text-align: center;
+    }
+
+    .explainer-step .step-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+    .explainer-step h3 { font-size: 0.88rem; font-weight: 700; color: var(--gray-700); margin-bottom: 4px; }
+    .explainer-step p { font-size: 0.8rem; color: var(--gray-500); line-height: 1.5; }
+
+    /* ============================================================
+       TECH TERMS GLOSSARY
+    ============================================================ */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .glossary-item {
+      background: var(--gray-50);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 14px 16px;
+    }
+
+    .glossary-item strong {
+      display: block;
+      font-size: 0.88rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .glossary-item p {
+      font-size: 0.82rem;
+      color: var(--gray-600);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       SEO GUIDE SECTION
+    ============================================================ */
+    .guide-section {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 40px 36px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 600px) {
+      .guide-section { padding: 24px 20px; }
+    }
+
+    .guide-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 24px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--gray-100);
+    }
+
+    /* ============================================================
+       FAQ ACCORDIONS
+    ============================================================ */
+    .faq-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .faq-item {
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      background: var(--gray-50);
+      border: none;
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+
+    .faq-question:hover { background: var(--accent-light); color: var(--accent); }
+
+    .faq-chevron {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      transition: transform 0.25s;
+      color: var(--gray-400);
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--accent); }
+    .faq-item.open .faq-question { background: var(--accent-light); color: var(--accent); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+
+    .faq-item.open .faq-answer { max-height: 1000px; }
+
+    .faq-answer-inner {
+      padding: 18px 20px;
+      font-size: 0.93rem;
+      color: var(--gray-600);
+      line-height: 1.75;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    .faq-answer-inner p + p { margin-top: 12px; }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: var(--success-light);
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-sm);
+      padding: 18px 22px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .disclaimer-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+
+    .disclaimer-text {
+      font-size: 0.92rem;
+      color: #166534;
+      line-height: 1.6;
+    }
+
+    .disclaimer-text strong {
+      display: block;
+      font-size: 0.97rem;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      background: #fff;
+      border-top: 1px solid var(--gray-200);
+      text-align: center;
+      padding: 20px;
+    }
+
+    footer nav {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    footer nav a {
+      color: var(--gray-500);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+
+    footer nav a:hover { color: var(--accent); }
+
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gray-400);
+      margin-bottom: 14px;
+      margin-top: 32px;
+    }
+
+    .section-label:first-child { margin-top: 0; }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 28px 0;
+    }
+
+  </style>
+  <link rel="canonical" href="https://axiomape.com/pdf-to-word-converter/" />
+</head>
+<body>
+
+  <!-- ============================================================
+       SITE NAV - Back link to axiomape.com
+  ============================================================ -->
+  <nav class="site-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <main class="page-wrapper">
+
+    <!-- ============================================================
+         AD PLACEHOLDER - Leaderboard (728x90)
+         Insert your Google AdSense ad unit code here.
+         Recommended ad type: Display - Leaderboard Banner
+    ============================================================ -->
+    <div class="ad-leaderboard">Advertisement - 728 x 90</div>
+
+    <!-- ============================================================
+         MAIN TOOL CARD
+    ============================================================ -->
+    <div class="card">
+
+      <h1 class="page-title">PDF to Word Converter</h1>
+      <p class="page-subtitle">
+        Extract text from a native PDF and download it as an editable Word document (.docx).
+        All processing happens directly inside your browser - your file never leaves your device.
+      </p>
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept=".pdf" />
+        <span class="upload-icon">📄</span>
+        <h2>Drag and Drop Your PDF Here</h2>
+        <p>or click anywhere in this box to browse your files</p>
+        <p style="margin-top:8px; font-size:0.8rem; color:var(--gray-400)">Accepts: .pdf files only</p>
+        <span class="file-name" id="file-name-display" style="display:none"></span>
+      </div>
+
+      <!-- Extract Button (visible after file is selected) -->
+      <button id="btn-extract" onclick="extractText()">
+        Extract Text from PDF
+      </button>
+
+      <!-- Loading State -->
+      <div class="loading-bar" id="loading-bar">
+        <div class="spinner"></div>
+        <p id="loading-message">Extracting text from your PDF, please wait...</p>
+      </div>
+
+      <!-- Warnings and Errors -->
+      <div class="alert alert-warning" id="alert-scanned">
+        <span class="alert-icon">⚠️</span>
+        <div>
+          <strong>Scanned PDF Detected</strong><br>
+          This PDF appears to contain scanned images rather than a real text layer. Text extraction returned no readable content.
+          To convert a scanned PDF, you need OCR (Optical Character Recognition) software - a technology that analyzes images of text and translates them into machine-readable characters.
+          This tool is optimized for native PDFs, which are documents where the text was digitally typed or exported directly.
+        </div>
+      </div>
+
+      <div class="alert alert-danger" id="alert-error">
+        <span class="alert-icon">❌</span>
+        <div id="alert-error-text">An unexpected error occurred while reading the PDF.</div>
+      </div>
+
+      <div class="alert alert-success" id="alert-success">
+        <span class="alert-icon">✅</span>
+        <div id="alert-success-text">Text extracted successfully. Review the preview below, then download your Word document.</div>
+      </div>
+
+      <!-- ============================================================
+           TEXT PREVIEW CANVAS - "The Digital Document"
+           Users can visually review and manually edit the extracted
+           text before it is compiled into a .docx file.
+      ============================================================ -->
+      <div class="preview-section" id="preview-section">
+
+        <p class="preview-label">Extracted Text Preview</p>
+
+        <div class="preview-meta">
+          <span class="preview-badge" id="badge-pages">Pages: -</span>
+          <span class="preview-badge" id="badge-chars">Characters: -</span>
+          <span class="preview-badge" id="badge-words">Words: -</span>
+        </div>
+
+        <button class="btn btn-secondary" onclick="resetTool()">
+          ← Upload a Different File
+        </button>
+
+        <!-- The textarea is intentionally styled to mimic a Word document page -->
+        <textarea
+          id="text-preview"
+          spellcheck="true"
+          aria-label="Extracted text - you may edit this content before downloading"
+        ></textarea>
+
+        <p class="preview-hint">
+          You can edit or clean up the text above before downloading. Changes you make here will be reflected in the final Word document.
+        </p>
+
+        <!-- Download Button -->
+        <button class="btn btn-primary" id="btn-download" onclick="downloadDocx()">
+          <span>⬇️</span> Download as Word (.docx)
+        </button>
+
+      </div>
+
+      <!-- ============================================================
+           HOW IT WORKS - Step-by-step explainer for new users
+      ============================================================ -->
+      <hr class="divider" />
+      <p class="section-label">How It Works</p>
+
+      <div class="explainer">
+        <div class="explainer-step">
+          <span class="step-icon">📂</span>
+          <h3>Step 1 - Upload Your PDF</h3>
+          <p>Drag and drop or browse to select any native PDF file from your device.</p>
+        </div>
+        <div class="explainer-step">
+          <span class="step-icon">🔍</span>
+          <h3>Step 2 - Text is Extracted</h3>
+          <p>pdf.js reads the internal text layer of your PDF page by page, entirely in your browser.</p>
+        </div>
+        <div class="explainer-step">
+          <span class="step-icon">✏️</span>
+          <h3>Step 3 - Review and Edit</h3>
+          <p>The extracted text appears in the preview window. Clean it up or make edits as needed.</p>
+        </div>
+        <div class="explainer-step">
+          <span class="step-icon">📝</span>
+          <h3>Step 4 - Download as .docx</h3>
+          <p>Click the download button to compile your text into a Microsoft Word document and save it locally.</p>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           TECHNICAL TERMS GLOSSARY
+           These definitions help beginner users understand the key
+           concepts involved in PDF text extraction.
+      ============================================================ -->
+      <hr class="divider" />
+      <p class="section-label">Key Terms Explained</p>
+
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <strong>Native PDF vs. Scanned PDF</strong>
+          <p>A native PDF is a document where the text was created digitally - such as a Word file saved as PDF or an exported report. A scanned PDF is a photograph of a physical document, meaning it has no real text layer, only an image.</p>
+        </div>
+        <div class="glossary-item">
+          <strong>Text Extraction</strong>
+          <p>The process of reading and copying the text strings embedded inside a PDF file. This works on native PDFs where text is stored as actual characters, not images.</p>
+        </div>
+        <div class="glossary-item">
+          <strong>OCR - Optical Character Recognition</strong>
+          <p>A technology that analyzes an image of text and converts it into machine-readable characters. OCR is required for scanned PDFs. This tool does not use OCR and works only with native PDFs.</p>
+        </div>
+        <div class="glossary-item">
+          <strong>Client-Side Processing</strong>
+          <p>All computation runs inside your own web browser using JavaScript. No data is sent to any external server. Your files are processed locally on your device and remain completely private.</p>
+        </div>
+        <div class="glossary-item">
+          <strong>Document Object Model (DOM)</strong>
+          <p>The internal structure a browser uses to display and manage web page elements. JavaScript reads this structure to update the page in real time - such as showing your extracted text in the preview box - without reloading.</p>
+        </div>
+        <div class="glossary-item">
+          <strong>.docx - Word Open XML Format</strong>
+          <p>The standard file format for Microsoft Word documents since 2007. A .docx file is actually a compressed folder of XML files that store text, formatting, and structure data, making it universally editable.</p>
+        </div>
+      </div>
+
+    </div><!-- /.card -->
+
+    <!-- ============================================================
+         DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer">
+      <span class="disclaimer-icon">🔒</span>
+      <div class="disclaimer-text">
+        <strong>Privacy First</strong>
+        This text extraction engine operates entirely within your local web browser. Your confidential PDFs, legal files, and sensitive text are never uploaded, stored, or transmitted to external servers.
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SEO GUIDE SECTION - "The Ultimate Guide to PDF Conversion"
+    ============================================================ -->
+    <div class="guide-section">
+      <h2>The Ultimate Guide to PDF Conversion and Text Extraction</h2>
+
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Why is it safer to convert confidential PDFs locally in the browser?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Most online PDF conversion services require you to upload your file to a remote server, where it is processed by software running on hardware you do not control. For everyday documents this may be acceptable, but for legal contracts, medical records, financial statements, personnel files, and proprietary business reports, that upload introduces serious risk. Server-side processors store temporary file copies, log metadata, and in some cases retain documents for training or auditing purposes. A data breach on that third-party server could expose your private information to unauthorized parties.</p>
+              <p>This tool processes everything using JavaScript that runs directly inside your web browser, a computing model known as client-side processing. Your PDF is read from your local hard drive by your own browser, the text layer is extracted by the pdf.js library running in your browser tab, and the resulting .docx file is compiled and saved back to your local drive - all without a single byte of your document ever traveling across the internet. This is the gold standard for handling sensitive documents online, and it is the architecture used by major privacy-focused developer tools and enterprise-grade utilities.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is the difference between a native PDF and a scanned PDF?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>A native PDF - sometimes called a digitally born PDF - is created when text is composed on a computer and exported or printed to the PDF format. This happens when you save a Word document as PDF, export a spreadsheet, or download a digital invoice. In this type of file, the PDF specification stores the actual character codes for every letter, number, and symbol. Those characters can be selected, copied, and extracted programmatically by tools like pdf.js.</p>
+              <p>A scanned PDF, by contrast, is created by placing a physical piece of paper on a scanner or photographing it with a phone. The resulting PDF contains only a flat image - a photograph of the page. There are no character codes stored, only pixels. To extract text from a scanned PDF, software must use OCR (Optical Character Recognition), a process that uses machine learning models to analyze the shapes in the image and infer what letters and words they represent. OCR is computationally intensive and requires specialized engines such as Tesseract or cloud-based services. This tool does not include an OCR engine and is designed for native PDFs only.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Why does some formatting get lost when converting a PDF to Word?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>The PDF format and the Word (.docx) format store documents in fundamentally different ways. A PDF is essentially a set of instructions for placing visual elements - text blocks, lines, images, and shapes - at precise coordinates on a fixed-size page. It is designed for faithful visual reproduction, not for editing. The PDF specification has no concept of a flowing paragraph, a heading hierarchy, a table structure, or a bulleted list as editable objects. Text is simply placed at X and Y positions on the canvas.</p>
+              <p>A Word document, on the other hand, is structured content - it stores paragraphs, runs of text, styles, and semantic structure in a way that a word processor can understand and reflow. When you extract text from a PDF, you retrieve the character strings and their approximate reading order, but the structural meaning - which line was a heading, which block was a table cell, which text was in a two-column layout - is lost. This is why extracted text often appears as a single block of plain text. For basic office documents such as contracts, reports, and memos, the extracted text is almost always fully usable after minor cleanup. For complex layouts such as academic papers with multi-column figures or highly designed brochures, more manual formatting work may be needed after extraction.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Do I need OCR software to extract text from a PDF?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>It depends entirely on the type of PDF you have. If your PDF is a native digital document - meaning it was originally created on a computer and exported to PDF format - then no OCR is needed. The text layer already exists inside the file and can be extracted directly using tools like this one. You can verify whether a PDF has a real text layer by opening it in any PDF viewer and attempting to click and highlight text. If your cursor can select individual words, the document is native and text extraction will work perfectly.</p>
+              <p>If your PDF is a scanned image - photographed paper, faxed documents saved as PDF, or archival records digitized from physical files - then OCR is absolutely required. OCR (Optical Character Recognition) is the only way to derive machine-readable text from a raster image. For documents of this type, consider using a dedicated OCR service. Adobe Acrobat Pro includes built-in OCR. Free alternatives include Google Drive (which can open PDFs in Google Docs and automatically applies OCR), Microsoft OneNote's OCR feature, or the open-source Tesseract OCR engine which can be run locally from the command line on Windows, Mac, and Linux.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is pdf.js and why is it used for this kind of tool?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>pdf.js is an open-source JavaScript library created and maintained by Mozilla, the nonprofit organization behind the Firefox web browser. It is, in fact, the same engine that powers the built-in PDF viewer in Firefox. The library is capable of reading the binary PDF file format specification, parsing its internal structure, and rendering each page - either as a visual canvas image or as a stream of extracted text strings.</p>
+              <p>It is the preferred choice for privacy-first PDF tools because it is entirely client-side: it runs completely inside the browser using standard JavaScript, with no server required. It is well-maintained, has an active open-source community, handles a wide variety of PDF versions and encodings, and is trusted by millions of users via Firefox daily. For text extraction, pdf.js provides a getTextContent() API that returns the ordered array of text items on each page - exactly what this tool uses to compile the full document text you see in the preview panel. The extracted text is then passed to the docx library, which wraps it into a valid Word document format and triggers a local file download.</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.faq-list -->
+    </div><!-- /.guide-section -->
+
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    <nav>
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT - Core Application Logic
+  ============================================================ -->
+  <script>
+    // ============================================================
+    // SETUP: Configure pdf.js worker
+    // The worker is a separate thread that handles the heavy PDF
+    // parsing work without freezing the browser UI.
+    // ============================================================
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // ============================================================
+    // STATE VARIABLES
+    // ============================================================
+    let selectedFile = null;
+    let extractedPageCount = 0;
+
+    // ============================================================
+    // UI ELEMENT REFERENCES
+    // ============================================================
+    const uploadZone      = document.getElementById('upload-zone');
+    const fileInput       = document.getElementById('file-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const btnExtract      = document.getElementById('btn-extract');
+    const loadingBar      = document.getElementById('loading-bar');
+    const loadingMsg      = document.getElementById('loading-message');
+    const alertScanned    = document.getElementById('alert-scanned');
+    const alertError      = document.getElementById('alert-error');
+    const alertErrorText  = document.getElementById('alert-error-text');
+    const alertSuccess    = document.getElementById('alert-success');
+    const previewSection  = document.getElementById('preview-section');
+    const textPreview     = document.getElementById('text-preview');
+    const badgePages      = document.getElementById('badge-pages');
+    const badgeChars      = document.getElementById('badge-chars');
+    const badgeWords      = document.getElementById('badge-words');
+
+    // ============================================================
+    // FILE SELECTION HANDLER
+    // Triggered when the user picks a file via click or drag-drop
+    // ============================================================
+    fileInput.addEventListener('change', function () {
+      handleFileSelection(this.files[0]);
+    });
+
+    // Drag-over visual feedback
+    uploadZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', function () {
+      uploadZone.classList.remove('drag-over');
+    });
+
+    // Handle the dropped file
+    uploadZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileSelection(file);
+    });
+
+    function handleFileSelection(file) {
+      if (!file) return;
+
+      // Validate file type - only accept PDF files
+      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+        showAlert(alertError, alertErrorText, 'Please upload a valid .pdf file. Other file types are not supported by this tool.');
+        return;
+      }
+
+      // Clear any previous results before starting fresh
+      hideAllAlerts();
+      previewSection.classList.remove('show');
+      textPreview.value = '';
+
+      selectedFile = file;
+
+      // Show the selected file name in the upload zone
+      fileNameDisplay.textContent = file.name;
+      fileNameDisplay.style.display = 'inline-block';
+
+      // Reveal the Extract button so the user can initiate processing
+      btnExtract.classList.add('show');
+    }
+
+    // ============================================================
+    // MAIN EXTRACTION FUNCTION
+    // Uses pdf.js to read the PDF and extract text from each page.
+    // This is an async function using await to handle the
+    // asynchronous nature of file reading without freezing the UI.
+    // ============================================================
+    async function extractText() {
+      if (!selectedFile) return;
+
+      // Disable button and show loading state
+      btnExtract.disabled = true;
+      loadingBar.classList.add('show');
+      loadingMsg.textContent = 'Reading PDF structure...';
+      hideAllAlerts();
+
+      try {
+        // Read the selected file as an ArrayBuffer (raw binary data)
+        const arrayBuffer = await selectedFile.arrayBuffer();
+
+        loadingMsg.textContent = 'Parsing pages and extracting text...';
+
+        // Load the PDF document using pdf.js
+        // getDocument() returns a LoadingTask that resolves to a PDFDocumentProxy
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        extractedPageCount = pdfDoc.numPages;
+        loadingMsg.textContent = `Extracting text from ${extractedPageCount} page(s)...`;
+
+        let fullText = '';
+        let totalChars = 0;
+
+        // Loop through every page and extract its text content
+        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+          const page = await pdfDoc.getPage(pageNum);
+
+          // getTextContent() returns an object with an 'items' array.
+          // Each item represents a text run (a span of consistently
+          // formatted characters) at a specific position on the page.
+          const textContent = await page.getTextContent();
+
+          let pageText = '';
+          let lastY = null;
+
+          // Join text items, preserving line breaks by detecting
+          // vertical position changes between text runs
+          for (const item of textContent.items) {
+            if (item.str === undefined) continue;
+
+            // If the vertical position changed significantly,
+            // treat it as a new line
+            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+              pageText += '\n';
+            }
+
+            pageText += item.str;
+            lastY = item.transform[5];
+          }
+
+          // Add a page separator between pages for readability
+          if (pageNum > 1) fullText += '\n\n';
+          fullText += pageText.trim();
+          totalChars += pageText.length;
+        }
+
+        loadingBar.classList.remove('show');
+        btnExtract.disabled = false;
+
+        // Validate that we actually extracted meaningful text.
+        // If the text is nearly empty, the PDF is likely scanned.
+        const wordCount = fullText.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+        if (wordCount < 5) {
+          // Not enough text found - likely a scanned PDF image
+          alertScanned.classList.add('show');
+          btnExtract.classList.remove('show');
+          return;
+        }
+
+        // Populate the preview textarea and show the preview section
+        textPreview.value = fullText.trim();
+
+        // Update the statistics badges
+        badgePages.textContent = `Pages: ${extractedPageCount}`;
+        badgeChars.textContent = `Characters: ${totalChars.toLocaleString()}`;
+        badgeWords.textContent = `Words: ${wordCount.toLocaleString()}`;
+
+        // Show the preview panel and success message
+        previewSection.classList.add('show');
+        alertSuccess.classList.add('show');
+        btnExtract.classList.remove('show');
+
+        // Smoothly scroll the user down to the preview area
+        previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        // Catch any errors from pdf.js (corrupt file, wrong format, etc.)
+        loadingBar.classList.remove('show');
+        btnExtract.disabled = false;
+        showAlert(
+          alertError,
+          alertErrorText,
+          'Could not read the PDF file. The file may be corrupted, password-protected, or in an unsupported format. Error: ' + (err.message || err)
+        );
+      }
+    }
+
+    // ============================================================
+    // DOWNLOAD FUNCTION
+    // Compiles the text from the preview textarea into a valid
+    // .docx file using the docx library, then triggers a download.
+    // ============================================================
+    async function downloadDocx() {
+      const rawText = textPreview.value.trim();
+
+      if (!rawText) {
+        showAlert(alertError, alertErrorText, 'The text preview is empty. Please extract text from a PDF first.');
+        return;
+      }
+
+      const btnDownload = document.getElementById('btn-download');
+      btnDownload.disabled = true;
+      btnDownload.innerHTML = '<span>⏳</span> Compiling Word document...';
+
+      try {
+        // Split the raw text into lines, then map each line
+        // to a Paragraph object in the docx document model.
+        // Empty lines become blank paragraphs for spacing.
+        const lines = rawText.split('\n');
+
+        const paragraphs = lines.map(line => {
+          return new docx.Paragraph({
+            children: [
+              new docx.TextRun({
+                text: line,
+                font: 'Calibri',
+                size: 24, // 12pt - size is in half-points in docx.js
+              }),
+            ],
+            spacing: { after: 120 }, // spacing after each paragraph (twips)
+          });
+        });
+
+        // Create the Word Document object with a single section
+        const doc = new docx.Document({
+          creator: 'AxiomApe PDF to Word Converter',
+          description: 'Text extracted from PDF using AxiomApe',
+          sections: [
+            {
+              properties: {
+                page: {
+                  margin: {
+                    top: 1440,    // 1 inch in twips (1 inch = 1440 twips)
+                    right: 1440,
+                    bottom: 1440,
+                    left: 1440,
+                  },
+                },
+              },
+              children: paragraphs,
+            },
+          ],
+        });
+
+        // toBlob() compiles the document and returns a binary Blob
+        const blob = await docx.Packer.toBlob(doc);
+
+        // Create a temporary download link, click it, then remove it
+        const fileName = selectedFile
+          ? selectedFile.name.replace(/\.pdf$/i, '') + '.docx'
+          : 'extracted-text.docx';
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        btnDownload.disabled = false;
+        btnDownload.innerHTML = '<span>⬇️</span> Download as Word (.docx)';
+
+      } catch (err) {
+        btnDownload.disabled = false;
+        btnDownload.innerHTML = '<span>⬇️</span> Download as Word (.docx)';
+        showAlert(
+          alertError,
+          alertErrorText,
+          'Failed to generate the Word document. Error: ' + (err.message || err)
+        );
+      }
+    }
+
+    // ============================================================
+    // RESET FUNCTION
+    // Clears all state so the user can start fresh with a new file
+    // ============================================================
+    function resetTool() {
+      selectedFile = null;
+      extractedPageCount = 0;
+      fileInput.value = '';
+      fileNameDisplay.textContent = '';
+      fileNameDisplay.style.display = 'none';
+      textPreview.value = '';
+      previewSection.classList.remove('show');
+      btnExtract.classList.remove('show');
+      btnExtract.disabled = false;
+      loadingBar.classList.remove('show');
+      hideAllAlerts();
+    }
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    // Show a specific alert message and update its inner text
+    function showAlert(alertEl, textEl, message) {
+      if (textEl) textEl.innerHTML = message;
+      alertEl.classList.add('show');
+    }
+
+    // Hide all alert banners at once
+    function hideAllAlerts() {
+      alertScanned.classList.remove('show');
+      alertError.classList.remove('show');
+      alertSuccess.classList.remove('show');
+    }
+
+    // ============================================================
+    // FAQ ACCORDION TOGGLE
+    // Opens or closes an FAQ item when its question button is clicked
+    // ============================================================
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+
+      // Close all other open FAQ items first (accordion behavior)
+      document.querySelectorAll('.faq-item.open').forEach(el => {
+        el.classList.remove('open');
+        el.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+      });
+
+      // Toggle the clicked item
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+  </script>
+
+</body>
+</html>

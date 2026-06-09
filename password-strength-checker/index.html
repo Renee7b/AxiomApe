@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Strength Checker - How Long to Crack Your Password | AxiomApe</title>
+  <meta name="description" content="Find out instantly how long it would take a computer to crack your password. 100% private - your password never leaves your browser. Powered by the zxcvbn algorithm." />
+  <meta name="keywords" content="password strength checker, how secure is my password, password crack time, brute force attack, password entropy, password security" />
+
+  <!-- zxcvbn: Industry-standard password strength estimation library by Dropbox -->
+  <!-- It checks for dictionary words, keyboard patterns, and predictable sequences -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js" integrity="sha512-TZlMGFY9xKj38t/5m2FzJ+RM/aD5alMHDe26p0mYUMoCF5G7ibfHUQILq0qQPV3wlsnCwL+TPRNK4vIWGLOA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --bg2:         #161b22;
+      --card:        #ffffff;
+      --border:      #e2e8f0;
+      --text:        #1a202c;
+      --text-muted:  #64748b;
+      --accent:      #3b82f6;
+      --red:         #ef4444;
+      --orange:      #f97316;
+      --yellow:      #eab308;
+      --green:       #22c55e;
+      --radius:      12px;
+      --shadow:      0 4px 32px rgba(0,0,0,0.35);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       SITE HEADER LINK
+    ============================================================ */
+    .site-header {
+      text-align: center;
+      padding: 14px 0 8px;
+    }
+    .site-header a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+    .site-header a:hover { color: var(--accent); }
+
+    /* ============================================================
+       PAGE TITLE AREA
+    ============================================================ */
+    .page-title {
+      text-align: center;
+      padding: 28px 20px 8px;
+    }
+    .page-title h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 800;
+      color: #f1f5f9;
+      line-height: 1.25;
+    }
+    .page-title h1 span { color: var(--accent); }
+    .page-title p {
+      color: #94a3b8;
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    /* ============================================================
+       MAIN CONTENT WRAPPER
+    ============================================================ */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ============================================================
+       ADSENSE PLACEHOLDER - LEADERBOARD (728x90)
+       Replace this comment block with your AdSense <ins> tag
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 18px auto 24px;
+      background: #1e2a3a;
+      border: 1px dashed #334155;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #475569;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+    }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 24px 18px; }
+    }
+
+    /* ============================================================
+       PASSWORD INPUT
+    ============================================================ */
+    .input-label {
+      display: block;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 16px 52px 16px 18px;
+      font-size: 1.15rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      background: #f8fafc;
+    }
+    .input-wrap input:focus { border-color: var(--accent); background: #fff; }
+    .toggle-btn {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      padding: 4px;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .toggle-btn:hover { color: var(--accent); }
+
+    /* ============================================================
+       STRENGTH METER BAR
+    ============================================================ */
+    .meter-wrap {
+      margin-top: 18px;
+    }
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .meter-label span:last-child { font-weight: 700; }
+    .meter-bar-bg {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .meter-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    /* ============================================================
+       TIME-TO-CRACK HERO DISPLAY
+    ============================================================ */
+    .crack-time-box {
+      text-align: center;
+      margin: 30px 0 24px;
+      padding: 28px 20px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .crack-time-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .crack-time-value {
+      font-size: clamp(2rem, 7vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      color: var(--text);
+      transition: color 0.3s;
+      word-break: break-word;
+    }
+    .crack-time-sub {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================
+       FEEDBACK CONSOLE
+    ============================================================ */
+    .feedback-console {
+      margin-top: 4px;
+    }
+    .feedback-console h3 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .feedback-empty {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+    .feedback-warning {
+      background: #fff7ed;
+      border-left: 4px solid var(--orange);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: #92400e;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .feedback-suggestion {
+      background: #eff6ff;
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: #1e40af;
+      margin-bottom: 8px;
+    }
+
+    /* Score color utilities */
+    .score-0, .score-1 { color: var(--red); }
+    .score-2 { color: var(--orange); }
+    .score-3 { color: var(--yellow); }
+    .score-4 { color: var(--green); }
+
+    .fill-0, .fill-1 { background: var(--red);    width: 20%; }
+    .fill-2           { background: var(--orange); width: 45%; }
+    .fill-3           { background: var(--yellow); width: 70%; }
+    .fill-4           { background: var(--green);  width: 100%; }
+
+    /* ============================================================
+       STATS GRID
+    ============================================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .stat-box .stat-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .stat-box .stat-value {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       DISCLAIMER BANNER
+    ============================================================ */
+    .disclaimer {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .disclaimer .icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+    .disclaimer p {
+      font-size: 0.88rem;
+      color: #166534;
+      line-height: 1.55;
+    }
+    .disclaimer p strong { font-weight: 700; }
+
+    /* ============================================================
+       EDUCATIONAL GUIDE SECTION
+    ============================================================ */
+    .edu-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .edu-section { padding: 24px 18px; }
+    }
+    .edu-section h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    /* FAQ accordion */
+    details {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    details summary {
+      padding: 16px 18px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      transition: background 0.2s;
+    }
+    details summary:hover { background: #eff6ff; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::after {
+      content: '+';
+      font-size: 1.3rem;
+      font-weight: 300;
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+    details[open] summary::after { content: '-'; }
+    details[open] summary { background: #eff6ff; }
+    .faq-body {
+      padding: 16px 18px 20px;
+      font-size: 0.9rem;
+      color: #334155;
+      line-height: 1.7;
+      border-top: 1px solid #e2e8f0;
+    }
+    .faq-body p + p { margin-top: 10px; }
+
+    /* Password comparison visual */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 8px;
+      font-size: 0.88rem;
+    }
+    .compare-table th {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .compare-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:nth-child(even) td { background: #f8fafc; }
+    .pw-bad  { font-family: monospace; font-size: 1rem; color: var(--red);   font-weight: 700; }
+    .pw-good { font-family: monospace; font-size: 1rem; color: var(--green); font-weight: 700; }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      text-align: center;
+      padding: 20px 16px 32px;
+    }
+    footer a {
+      color: #64748b;
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin: 0 10px;
+      transition: color 0.2s;
+    }
+    footer a:hover { color: var(--accent); }
+    footer .sep { color: #334155; }
+    footer .copy {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: #475569;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/password-strength-checker/" />
+</head>
+<body>
+
+  <!-- ============================================================
+       SITE HEADER BACK-LINK
+  ============================================================ -->
+  <header class="site-header">
+    <a href="/">axiomape.com</a>
+  </header>
+
+  <!-- ============================================================
+       PAGE TITLE
+  ============================================================ -->
+  <div class="page-title">
+    <h1>Password Strength Checker<br><span>See How Long It Would Take a Computer to Crack Yours</span></h1>
+    <p>Real-time analysis powered by the zxcvbn algorithm. 100% private - nothing ever leaves your browser.</p>
+  </div>
+
+  <div class="container">
+
+    <!-- ============================================================
+         ADSENSE LEADERBOARD PLACEHOLDER (728x90)
+         To activate: replace the div below with your <ins> AdSense tag
+    ============================================================ -->
+    <div class="ad-leaderboard" aria-hidden="true">
+      ADVERTISEMENT SPACE - 728 x 90 LEADERBOARD
+    </div>
+
+    <!-- ============================================================
+         MAIN CHECKER CARD
+    ============================================================ -->
+    <div class="card">
+
+      <!-- Password input -->
+      <label class="input-label" for="pw-input">Type a password to analyze:</label>
+      <div class="input-wrap">
+        <input
+          type="password"
+          id="pw-input"
+          placeholder="Enter any password..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Password input"
+        />
+        <button class="toggle-btn" id="toggle-vis" aria-label="Show or hide password" title="Show / Hide">
+          &#128065;
+        </button>
+      </div>
+
+      <!-- Strength meter bar -->
+      <div class="meter-wrap">
+        <div class="meter-label">
+          <span>Strength</span>
+          <span id="strength-label">-</span>
+        </div>
+        <div class="meter-bar-bg">
+          <div class="meter-bar-fill" id="meter-fill"></div>
+        </div>
+      </div>
+
+      <!-- Time-to-crack hero -->
+      <div class="crack-time-box">
+        <div class="crack-time-label">Estimated Time to Crack (Offline Slow Attack)</div>
+        <div class="crack-time-value" id="crack-time">Start typing...</div>
+        <div class="crack-time-sub" id="crack-sub">
+          Based on 10,000 guesses per second using a slow hashing algorithm (like bcrypt)
+        </div>
+      </div>
+
+      <!-- Supplemental stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Guesses Required</div>
+          <div class="stat-value" id="stat-guesses">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Entropy (bits)</div>
+          <div class="stat-value" id="stat-entropy">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Password Length</div>
+          <div class="stat-value" id="stat-length">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Online Fast Attack</div>
+          <div class="stat-value" id="stat-online">-</div>
+        </div>
+      </div>
+
+      <!-- Feedback console -->
+      <div class="feedback-console" style="margin-top:24px;">
+        <h3>Analysis Feedback</h3>
+        <div id="feedback-area">
+          <p class="feedback-empty">Your detailed feedback will appear here once you start typing.</p>
+        </div>
+      </div>
+
+    </div><!-- /card -->
+
+    <!-- ============================================================
+         PRIVACY DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer" role="note">
+      <div class="icon">&#128274;</div>
+      <p>
+        <strong>Total Privacy Guarantee:</strong> Testing your password is 100% safe.
+        This tool operates entirely within your local web browser. Your keystrokes and
+        passwords are never uploaded, logged, or transmitted over the internet to any server.
+        The source code is open for inspection in your browser's developer tools at any time.
+      </p>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL GUIDE
+    ============================================================ -->
+    <section class="edu-section" aria-label="Educational guide to password security">
+
+      <h2>The Ultimate Guide to Password Security and Entropy</h2>
+
+      <p style="font-size:0.92rem;color:#475569;margin-bottom:24px;">
+        Understanding how attackers actually crack passwords is the most effective way to
+        defend yourself. The sections below explain the real mechanics in plain language.
+      </p>
+
+      <!-- FAQ 1 -->
+      <details>
+        <summary>How does a Brute Force Attack actually work?</summary>
+        <div class="faq-body">
+          <p>
+            A <strong>Brute Force Attack</strong> is the most straightforward method an attacker uses
+            to crack a password. The concept is simple: a computer program systematically tries
+            every possible combination of characters - letters, numbers, symbols - until it finds
+            the one that matches your password. Think of it like trying every possible combination
+            on a combination lock, except a modern computer can test billions of combinations per second.
+          </p>
+          <p>
+            The attack has no intelligence or strategy behind it. It starts with "a", then "b",
+            then "aa", "ab", "ac"... and keeps going until it succeeds or exhausts all possibilities.
+            The critical insight is that this attack is defeated almost entirely by <strong>length</strong>.
+            A password of 8 characters has around 200 billion possible combinations. A 12-character
+            password has around 95 trillion - a difference so enormous that even the fastest
+            supercomputers cannot crack it in a human lifetime.
+          </p>
+          <p>
+            This is why the "Time to Crack" estimate shown above changes so dramatically as you add
+            just a few extra characters. Each additional character multiplies the total search space
+            by the size of your character set (roughly 26 to 95x harder per character).
+          </p>
+        </div>
+      </details>
+
+      <!-- FAQ 2 -->
+      <details>
+        <summary>What is a Dictionary Attack and why is it so dangerous?</summary>
+        <div class="faq-body">
+          <p>
+            A <strong>Dictionary Attack</strong> is far smarter and faster than a brute force attack.
+            Instead of trying random character combinations, it works from a pre-built list - a
+            "dictionary" - of known passwords, common words, names, phrases, sports teams, movie
+            titles, and every word from multiple human languages.
+          </p>
+          <p>
+            These dictionaries contain hundreds of millions to billions of entries compiled from
+            real data breaches. When a major website is hacked and its password database stolen,
+            those passwords are analyzed and fed into new dictionaries used by attackers worldwide.
+            If your password is "password123", "iloveyou", "sunshine", or your pet's name, it is
+            almost certainly in these lists and will be cracked in seconds.
+          </p>
+          <p>
+            Modern dictionary attacks also use "rules" - automated transformations like replacing
+            letters with numbers (a becomes 4, e becomes 3), capitalizing the first letter, or
+            adding a number at the end. This is why "P4ssw0rd!" is just as weak as "Password" to
+            a modern attack tool. The zxcvbn library that powers this checker is specifically
+            designed to detect these exact patterns and penalize them in the strength score.
+          </p>
+        </div>
+      </details>
+
+      <!-- FAQ 3 -->
+      <details>
+        <summary>Why is password length more important than adding weird symbols?</summary>
+        <div class="faq-body">
+          <p>
+            This is one of the most important and misunderstood concepts in cybersecurity. Many
+            websites and IT departments force users to create "complex" passwords with uppercase
+            letters, numbers, and symbols. But research from NIST (the National Institute of
+            Standards and Technology) and countless security experts shows that <strong>length
+            matters far more than complexity</strong>.
+          </p>
+          <p>
+            Here is the math. Adding a symbol requirement expands your character set from roughly
+            62 characters (letters and numbers) to 95 characters - a modest 53% increase in
+            difficulty per character. But adding a single additional character multiplies the total
+            search space by the entire character set size (53x to 95x). Adding 5 extra characters
+            is literally billions of times more effective than swapping a letter for a symbol.
+          </p>
+          <p>
+            Compare the passwords in the table below. The short, complex password is far weaker
+            than the long, simple passphrase - even though it looks more "technical":
+          </p>
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Password</th>
+                <th>Type</th>
+                <th>Length</th>
+                <th>Approximate Crack Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pw-bad">Tr0ub4!re</span></td>
+                <td>Short - "complex"</td>
+                <td>9 chars</td>
+                <td>A few days (dictionary + rules)</td>
+              </tr>
+              <tr>
+                <td><span class="pw-good">correct horse battery staple</span></td>
+                <td>Long passphrase</td>
+                <td>28 chars</td>
+                <td>Centuries (even for supercomputers)</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            The passphrase is also dramatically easier to remember. This principle is behind
+            the modern recommendation: use a passphrase of four or more random common words.
+            The randomness and length work together to create a password that is both practically
+            uncrackable and human-memorable.
+          </p>
+        </div>
+      </details>
+
+      <!-- FAQ 4 -->
+      <details>
+        <summary>What is Password Entropy and what does the number mean?</summary>
+        <div class="faq-body">
+          <p>
+            <strong>Entropy</strong> is a concept borrowed from information theory. In the context
+            of passwords, it is a single number (measured in "bits") that represents how
+            unpredictable - and therefore how resistant to guessing - your password is.
+            Higher entropy means a harder password.
+          </p>
+          <p>
+            Technically, entropy is calculated as: <em>log2(N^L)</em>, where N is the size of
+            the character set you used and L is the length of the password. A password drawn
+            from 95 possible characters (all keyboard characters) that is 10 characters long
+            has roughly 65 bits of entropy. Each additional bit of entropy doubles the number
+            of guesses required to crack it.
+          </p>
+          <p>
+            In practice, security experts consider 50-60 bits of entropy the minimum for a
+            reasonably secure password, and 80+ bits for a strong one. However, raw entropy
+            calculations assume your password is truly random. If you use a dictionary word,
+            a keyboard pattern (like "qwerty"), or a predictable substitution, the effective
+            entropy drops dramatically - which is why the zxcvbn algorithm models realistic
+            attacker strategies rather than just counting character types.
+          </p>
+        </div>
+      </details>
+
+      <!-- FAQ 5 -->
+      <details>
+        <summary>Why is it safe to type my password into this specific tool?</summary>
+        <div class="faq-body">
+          <p>
+            This is exactly the right question to ask before using any password tool - and
+            the answer here is clear. This tool uses a technique called
+            <strong>Client-Side Processing</strong>, which means every single calculation
+            happens inside your own web browser on your own device. No server receives or
+            stores your input.
+          </p>
+          <p>
+            <strong>Client-Side Processing</strong> means: your browser downloads the HTML page
+            and the zxcvbn JavaScript library once, and then everything runs locally - the same
+            way a calculator app on your phone works without an internet connection. When you
+            type into the input field, the characters are analyzed by code running on your own
+            CPU and are never packaged into a network request.
+          </p>
+          <p>
+            You can verify this yourself. Open your browser's developer tools (press F12),
+            click the "Network" tab, then type a password into the field. You will see zero
+            outgoing network requests associated with your keystrokes. The source code of this
+            page is also fully readable in the "Sources" tab, confirming there are no hidden
+            tracking scripts. This privacy-by-design architecture is what makes it safe to test
+            real passwords here - but as a general principle, you should never type a password
+            you actually use into any website unless you have verified it operates this way.
+          </p>
+        </div>
+      </details>
+
+      <!-- FAQ 6 -->
+      <details>
+        <summary>What is Pattern Matching and how does this tool detect it?</summary>
+        <div class="faq-body">
+          <p>
+            <strong>Pattern Matching</strong> is a technique used both by attackers and by
+            password analysis tools (like this one) to identify predictable structures in a
+            password. Attackers use pattern matching to dramatically reduce the search space
+            they need to brute-force. Analysts use it to warn users when their "creative"
+            password is actually highly predictable.
+          </p>
+          <p>
+            Common patterns that attackers exploit include: keyboard walks (sequences typed by
+            sliding your fingers across the keyboard, like "qwerty", "12345", or "zxcvbn"),
+            date patterns ("june2024", "19901231"), repeated characters ("aaaaaa"), common
+            words with symbol substitutions ("p@ssw0rd"), and sequences based on personal
+            information (names, birthdays, sports teams).
+          </p>
+          <p>
+            The zxcvbn library - named after one of the most common keyboard-walk passwords -
+            was built by Dropbox security engineers specifically to detect all of these patterns.
+            It models the attacker's point of view and calculates how many guesses a sophisticated
+            attacker would realistically need, rather than relying on simple character-count rules.
+            This gives a far more accurate picture of real-world security than a basic "strong /
+            medium / weak" label.
+          </p>
+        </div>
+      </details>
+
+    </section><!-- /edu-section -->
+
+  </div><!-- /container -->
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer>
+    <nav>
+      <a href="/about.html">About</a>
+      <span class="sep">|</span>
+      <a href="/privacy.html">Privacy</a>
+      <span class="sep">|</span>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <span class="copy">&copy; <span id="yr"></span> AxiomApe. All rights reserved.</span>
+  </footer>
+
+  <!-- ============================================================
+       JAVASCRIPT - REAL-TIME ANALYSIS ENGINE
+  ============================================================ -->
+  <script>
+    /* ---- Utility: format large numbers for display ---- */
+    function formatGuesses(n) {
+      if (n === null || n === undefined) return '-';
+      if (n < 1000)        return n.toString();
+      if (n < 1e6)         return (n / 1e3).toFixed(1)  + 'K';
+      if (n < 1e9)         return (n / 1e6).toFixed(1)  + 'M';
+      if (n < 1e12)        return (n / 1e9).toFixed(1)  + 'B';
+      if (n < 1e15)        return (n / 1e12).toFixed(1) + 'T';
+      return '>1 quadrillion';
+    }
+
+    /* ---- Score labels and display strings ---- */
+    const SCORE_LABELS = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+
+    /* ---- DOM references ---- */
+    const pwInput       = document.getElementById('pw-input');
+    const toggleBtn     = document.getElementById('toggle-vis');
+    const meterFill     = document.getElementById('meter-fill');
+    const strengthLabel = document.getElementById('strength-label');
+    const crackTime     = document.getElementById('crack-time');
+    const crackSub      = document.getElementById('crack-sub');
+    const feedbackArea  = document.getElementById('feedback-area');
+    const statGuesses   = document.getElementById('stat-guesses');
+    const statEntropy   = document.getElementById('stat-entropy');
+    const statLength    = document.getElementById('stat-length');
+    const statOnline    = document.getElementById('stat-online');
+
+    /* ---- Show / hide password toggle ---- */
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = pwInput.type === 'password';
+      pwInput.type   = isHidden ? 'text' : 'password';
+      toggleBtn.innerHTML = isHidden ? '&#128064;' : '&#128065;';
+    });
+
+    /* ---- Reset UI to empty state ---- */
+    function resetUI() {
+      // Clear the meter
+      meterFill.className = 'meter-bar-fill';
+      meterFill.style.width = '0%';
+      meterFill.style.background = '';
+
+      strengthLabel.textContent = '-';
+      strengthLabel.className   = '';
+
+      crackTime.textContent = 'Start typing...';
+      crackTime.className   = 'crack-time-value';
+
+      crackSub.textContent = 'Based on 10,000 guesses per second using a slow hashing algorithm (like bcrypt)';
+
+      feedbackArea.innerHTML = '<p class="feedback-empty">Your detailed feedback will appear here once you start typing.</p>';
+
+      statGuesses.textContent = '-';
+      statEntropy.textContent = '-';
+      statLength.textContent  = '-';
+      statOnline.textContent  = '-';
+    }
+
+    /* ---- Main analysis function - runs on every keystroke ---- */
+    function analyzePassword(value) {
+      if (!value) { resetUI(); return; }
+
+      // Run zxcvbn - the entire library call happens locally in the browser
+      const result = zxcvbn(value);
+      const score  = result.score; // 0 to 4
+
+      /* -- Strength meter -- */
+      // Remove all score classes, add the current one
+      meterFill.className = 'meter-bar-fill fill-' + score;
+      strengthLabel.textContent = SCORE_LABELS[score];
+      strengthLabel.className   = 'score-' + score;
+
+      /* -- Time to crack display -- */
+      const timeStr = result.crack_times_display.offline_slow_hashing_1e4_per_second;
+      crackTime.textContent = timeStr;
+
+      // Color the hero number by score
+      crackTime.className = 'crack-time-value score-' + score;
+
+      /* -- Stats grid -- */
+      statGuesses.textContent = formatGuesses(result.guesses);
+      statLength.textContent  = value.length + ' chars';
+      statOnline.textContent  = result.crack_times_display.online_no_throttling_10_per_second;
+
+      // Entropy: zxcvbn exposes guesses, so we derive bits from log2(guesses)
+      const entropy = result.guesses > 0
+        ? Math.round(Math.log2(result.guesses))
+        : 0;
+      statEntropy.textContent = entropy + ' bits';
+
+      /* -- Feedback console -- */
+      const warning     = result.feedback.warning;
+      const suggestions = result.feedback.suggestions;
+
+      let html = '';
+
+      if (warning) {
+        html += `<div class="feedback-warning">&#9888; Warning: ${warning}</div>`;
+      }
+
+      if (suggestions && suggestions.length > 0) {
+        suggestions.forEach(s => {
+          html += `<div class="feedback-suggestion">&#128161; Suggestion: ${s}</div>`;
+        });
+      }
+
+      if (!html) {
+        if (score === 4) {
+          html = '<div class="feedback-suggestion">&#10003; Excellent! This password shows no common patterns or weaknesses detected by our analysis engine.</div>';
+        } else {
+          html = '<p class="feedback-empty">No specific warnings. Try making your password longer or more random.</p>';
+        }
+      }
+
+      feedbackArea.innerHTML = html;
+    }
+
+    /* ---- Attach input listener ---- */
+    pwInput.addEventListener('input', e => analyzePassword(e.target.value));
+
+    /* ---- Set copyright year ---- */
+    document.getElementById('yr').textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>

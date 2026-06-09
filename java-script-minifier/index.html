@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JavaScript Minifier - Remove Whitespace and Comments | AxiomApe</title>
+  <meta name="description" content="Free online JavaScript Minifier. Remove whitespace, comments, and mangle variables to shrink JS file sizes instantly. 100% private - runs in your browser." />
+  <meta name="keywords" content="javascript minifier, js minifier, minify javascript, compress js, remove whitespace javascript, terser online" />
+
+  <!-- Terser: Production-grade JS parser and minifier (replaces fragile regex hacks) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/terser/5.29.2/bundle.min.js"></script>
+
+  <style>
+    /* =============================================
+       GLOBAL RESET & BASE TYPOGRAPHY
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:       #f5f7fa;
+      --bg-card:       #ffffff;
+      --bg-ide:        #1e1e2e;
+      --bg-ide-header: #181825;
+      --bg-ide-gutter: #252535;
+      --text-primary:  #1a1a2e;
+      --text-muted:    #6b7280;
+      --text-code:     #cdd6f4;
+      --accent:        #7c3aed;
+      --accent-hover:  #6d28d9;
+      --accent-light:  #ede9fe;
+      --green:         #10b981;
+      --green-light:   #d1fae5;
+      --red:           #ef4444;
+      --red-light:     #fee2e2;
+      --yellow:        #f59e0b;
+      --border:        #e5e7eb;
+      --shadow:        0 4px 24px rgba(0,0,0,0.08);
+      --radius:        12px;
+      --font-sans:     'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       TOP NAV BAR
+    ============================================= */
+    .top-nav {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      text-align: center;
+    }
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+    .top-nav a:hover { text-decoration: underline; }
+
+    /* =============================================
+       HERO HEADER
+    ============================================= */
+    .hero {
+      background: linear-gradient(135deg, #1e1e2e 0%, #2a1f5e 60%, #1e1e2e 100%);
+      color: #fff;
+      padding: 52px 24px 44px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(124,58,237,0.35);
+      border: 1px solid rgba(124,58,237,0.6);
+      color: #c4b5fd;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(24px, 4vw, 40px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .hero h1 span { color: #a78bfa; }
+    .hero p {
+      font-size: 16px;
+      color: #94a3b8;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       MAIN WRAPPER
+    ============================================= */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* =============================================
+       AD PLACEHOLDER (Google AdSense slot)
+       Replace contents with AdSense script tag
+    ============================================= */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 32px;
+      background: #e9ecef;
+      border: 2px dashed #ced4da;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
+    }
+
+    /* =============================================
+       MAIN TOOL CARD
+    ============================================= */
+    .tool-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    /* Card toolbar row */
+    .card-toolbar {
+      background: #f8f9fb;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .card-toolbar h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .card-toolbar h2 span {
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-left: 6px;
+    }
+
+    /* =============================================
+       OPTIONS PANEL
+    ============================================= */
+    .options-panel {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .option-group { display: flex; flex-direction: column; gap: 10px; }
+    .option-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .option-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .option-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .option-label { font-size: 13.5px; line-height: 1.4; }
+    .option-label strong { display: block; font-weight: 600; color: var(--text-primary); }
+    .option-label small { color: var(--text-muted); font-size: 12px; }
+
+    /* =============================================
+       METRICS / ANALYTICS DASHBOARD
+    ============================================= */
+    .metrics-bar {
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+    }
+    .metric-cell {
+      flex: 1;
+      padding: 16px 20px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .metric-cell:last-child { border-right: none; }
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-cell.savings .metric-value {
+      color: var(--green);
+      font-size: 32px;
+    }
+    .metric-cell.savings { background: #f0fdf4; }
+
+    /* =============================================
+       ERROR / SUCCESS BANNERS
+    ============================================= */
+    .alert-banner {
+      margin: 12px 20px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .alert-banner.error  { background: var(--red-light);   color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-banner.success{ background: var(--green-light); color: #065f46; border: 1px solid #6ee7b7; }
+    .alert-banner.show   { display: flex; }
+    .alert-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* =============================================
+       CODE PANELS - SPLIT LAYOUT
+    ============================================= */
+    .code-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 380px;
+    }
+    @media (max-width: 768px) {
+      .code-panels { grid-template-columns: 1fr; }
+    }
+
+    .code-panel { display: flex; flex-direction: column; }
+    .code-panel + .code-panel { border-left: 2px solid #2a2a3e; }
+
+    .panel-header {
+      background: var(--bg-ide-header);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header-left { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.red    { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green  { background: #27c93f; }
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #7f849c;
+      margin-left: 6px;
+    }
+    .panel-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .panel-badge.input  { background: rgba(124,58,237,0.2); color: #a78bfa; }
+    .panel-badge.output { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+
+    #input-code, #output-code {
+      flex: 1;
+      width: 100%;
+      min-height: 360px;
+      background: var(--bg-ide);
+      color: var(--text-code);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 20px;
+      border: none;
+      resize: vertical;
+      outline: none;
+      tab-size: 2;
+    }
+    #input-code::placeholder { color: #45475a; }
+    #output-code {
+      resize: none;
+      cursor: default;
+      color: #a6e3a1;
+      word-break: break-all;
+    }
+
+    /* =============================================
+       ACTION BUTTONS ROW
+    ============================================= */
+    .actions-row {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8f9fb;
+    }
+    .actions-left  { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions-right { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.35); }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text-primary);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+    .btn-danger {
+      background: #fff;
+      color: var(--red);
+      border: 1.5px solid #fca5a5;
+    }
+    .btn-danger:hover { background: var(--red-light); }
+
+    /* Copy confirmation animation */
+    .copied-flash {
+      display: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green);
+      padding: 4px 10px;
+      background: var(--green-light);
+      border-radius: 6px;
+      animation: fadeOut 1.8s forwards;
+    }
+    @keyframes fadeOut {
+      0%   { opacity: 1; }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* =============================================
+       SEO / EDUCATIONAL CONTENT SECTION
+    ============================================= */
+    .edu-section {
+      margin-top: 60px;
+    }
+    .edu-section h2 {
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    .edu-section .subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      max-width: 680px;
+    }
+
+    /* Prose paragraphs */
+    .prose p {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #374151;
+      margin-bottom: 20px;
+    }
+    .prose strong { color: var(--text-primary); }
+
+    /* FAQ Accordion */
+    .faq-list { margin: 36px 0; display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      padding: 18px 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--accent-light); }
+    .faq-arrow {
+      font-size: 18px;
+      color: var(--accent);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .faq-item.open .faq-answer { max-height: 800px; }
+    .faq-answer-inner {
+      padding: 4px 20px 20px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #374151;
+      border-top: 1px solid var(--border);
+    }
+    .faq-answer-inner code {
+      background: #f3f4f6;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #7c3aed;
+    }
+
+    /* Term highlight pills */
+    .term-pill {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin: 0 2px;
+    }
+
+    /* =============================================
+       BEFORE / AFTER CODE COMPARISON
+    ============================================= */
+    .compare-block {
+      margin: 40px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    @media (max-width: 640px) { .compare-block { grid-template-columns: 1fr; } }
+
+    .compare-pane { background: var(--bg-ide); border-radius: 10px; overflow: hidden; }
+    .compare-pane-header {
+      background: var(--bg-ide-header);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .compare-pane-header span:first-child {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #7f849c;
+    }
+    .size-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .size-badge.before { background: rgba(239,68,68,0.2); color: #f87171; }
+    .size-badge.after  { background: rgba(16,185,129,0.2); color: #34d399; }
+    .compare-code {
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: var(--text-code);
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .compare-code .kw  { color: #cba6f7; }
+    .compare-code .fn  { color: #89b4fa; }
+    .compare-code .str { color: #a6e3a1; }
+    .compare-code .cm  { color: #585b70; font-style: italic; }
+    .compare-code .nm  { color: #fab387; }
+
+    /* Savings callout */
+    .savings-callout {
+      margin: 20px 0 40px;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border: 1.5px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .savings-callout .big-num { font-size: 40px; font-weight: 900; color: var(--green); }
+    .savings-callout .detail  { font-size: 15px; color: #065f46; }
+    .savings-callout .detail strong { display: block; font-size: 17px; }
+
+    /* =============================================
+       DISCLAIMER
+    ============================================= */
+    .disclaimer {
+      margin: 48px 0 0;
+      background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+      border: 1.5px solid #c4b5fd;
+      border-radius: 12px;
+      padding: 22px 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .disclaimer-icon { font-size: 28px; flex-shrink: 0; }
+    .disclaimer h3 { font-size: 15px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+    .disclaimer p  { font-size: 14px; color: #4c1d95; line-height: 1.6; }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    .site-footer {
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+      margin-top: 48px;
+    }
+    .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-copy {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/java-script-minifier/" />
+</head>
+<body>
+
+  <!-- ============ TOP NAV ============ -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="hero-badge">Free Developer Tool</div>
+    <h1>JavaScript <span>Minifier</span></h1>
+    <p>Remove whitespace, comments, and shorten variable names to shrink JS file sizes. Powered by Terser - the same engine used in Webpack and Vite.</p>
+  </header>
+
+  <!-- ============ MAIN CONTAINER ============ -->
+  <main class="container">
+
+    <!-- Ad Placeholder: Replace this div's contents with your AdSense script tag -->
+    <div class="ad-placeholder">
+      [ Advertisement - 728x90 Leaderboard ]
+    </div>
+
+    <!-- ============ TOOL CARD ============ -->
+    <div class="tool-card">
+
+      <!-- Toolbar -->
+      <div class="card-toolbar">
+        <h2>Minification Engine <span>Powered by Terser v5</span></h2>
+        <small style="font-size:12px; color:var(--text-muted);">100% browser-side - your code never leaves your device</small>
+      </div>
+
+      <!-- Options Panel -->
+      <div class="options-panel">
+        <div class="option-group">
+          <div class="option-group-title">Compiler Options</div>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-mangle" checked />
+            <span class="option-label">
+              <strong>Mangle Variables</strong>
+              <small>Renames <code>myLongVariableName</code> to <code>a</code>, <code>b</code>, <code>c</code> - often cuts file size by an additional 10-20%.</small>
+            </span>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-comments" checked />
+            <span class="option-label">
+              <strong>Remove All Comments</strong>
+              <small>Strips all <code>// single-line</code> and <code>/* block */</code> comments. Production browsers do not need them.</small>
+            </span>
+          </label>
+
+          <label class="option-item">
+            <input type="checkbox" id="opt-console" />
+            <span class="option-label">
+              <strong>Strip console.log() Statements</strong>
+              <small>Removes debug artifacts that leak internal logic to end-users in production. Highly recommended before any live deployment.</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Metrics Dashboard -->
+      <div class="metrics-bar">
+        <div class="metric-cell">
+          <div class="metric-label">Original Size</div>
+          <div class="metric-value" id="m-original">-</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">KB</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Minified Size</div>
+          <div class="metric-value" id="m-minified">-</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">KB</div>
+        </div>
+        <div class="metric-cell savings">
+          <div class="metric-label">Total Savings</div>
+          <div class="metric-value" id="m-savings">-%</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Characters Removed</div>
+          <div class="metric-value" id="m-chars">-</div>
+        </div>
+      </div>
+
+      <!-- Alert Banners -->
+      <div class="alert-banner error" id="alert-error">
+        <span class="alert-icon">&#9888;</span>
+        <span id="alert-error-text">Syntax Error: Check your code for missing brackets or typos.</span>
+      </div>
+      <div class="alert-banner success" id="alert-success">
+        <span class="alert-icon">&#10003;</span>
+        <span>Minification complete! Your code has been compressed successfully.</span>
+      </div>
+
+      <!-- Code Panels -->
+      <div class="code-panels">
+        <!-- Input Panel -->
+        <div class="code-panel">
+          <div class="panel-header">
+            <div class="panel-header-left">
+              <div class="dot red"></div>
+              <div class="dot yellow"></div>
+              <div class="dot green"></div>
+              <span class="panel-title">input.js</span>
+            </div>
+            <span class="panel-badge input">Raw JS</span>
+          </div>
+          <textarea id="input-code"
+            placeholder="// Paste your raw JavaScript code here...
+// Example:
+function calculateTotal(itemPrice, taxRate) {
+    var subtotal = itemPrice;
+    var tax = itemPrice * taxRate;
+    var totalAmount = subtotal + tax;
+    return totalAmount;
+}"></textarea>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="code-panel">
+          <div class="panel-header">
+            <div class="panel-header-left">
+              <div class="dot red"></div>
+              <div class="dot yellow"></div>
+              <div class="dot green"></div>
+              <span class="panel-title">output.min.js</span>
+            </div>
+            <span class="panel-badge output">Minified</span>
+          </div>
+          <textarea id="output-code" readonly placeholder="// Minified output will appear here..."></textarea>
+        </div>
+      </div>
+
+      <!-- Actions Row -->
+      <div class="actions-row">
+        <div class="actions-left">
+          <button class="btn btn-primary" onclick="runMinifier()">
+            &#9889; Minify JavaScript
+          </button>
+          <button class="btn btn-secondary" onclick="copyOutput()">
+            &#128203; Copy Minified Code
+          </button>
+          <span class="copied-flash" id="copied-flash">Copied!</span>
+        </div>
+        <div class="actions-right">
+          <button class="btn btn-danger" onclick="clearAll()">
+            &#215; Clear Code
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /.tool-card -->
+
+    <!-- ============ EDUCATIONAL / SEO SECTION ============ -->
+    <section class="edu-section">
+      <h2>The Ultimate Guide to JavaScript Minification and Performance</h2>
+      <p class="subtitle">Everything developers need to know about shrinking JS file sizes, from beginner concepts to production-grade techniques.</p>
+
+      <!-- Intro prose -->
+      <div class="prose">
+        <p>
+          Every byte you ship to a user's browser has a cost: bandwidth, parse time, and execution delay. For JavaScript files, this cost is amplified because the browser must not only download the file but also parse it into an
+          <span class="term-pill">Abstract Syntax Tree (AST)</span> - a structured, tree-based representation of every variable, function, and operation in your code. The browser's JavaScript engine walks this tree to compile and run your program. Larger files mean more nodes in the tree, slower parse times, and a worse experience for users on mobile data or slower devices.
+          Minification is the engineering discipline of reducing file size without altering that tree's behavior - the output runs identically to the original.
+        </p>
+        <p>
+          Modern bundlers like Webpack, Vite, and Parcel all run Terser internally as their default minification pass. When you use this tool, you are running the exact same production-grade engine directly in your browser, with zero server round-trips. It is not a fragile find-and-replace script. Terser fully parses your code into an AST, applies transformations at the node level, and then re-serializes the result into compact form. This means it handles edge cases like string literals containing whitespace, regular expressions with comment-like patterns, and template literals correctly - situations that break simple regex-based approaches.
+        </p>
+      </div>
+
+      <!-- FAQ Section -->
+      <div class="faq-list" id="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            What is the difference between Minification and Obfuscation?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>These two terms are commonly confused, but they serve different engineering goals.</p>
+              <p>
+                <strong>Minification</strong> is a mechanical process with a single purpose: reduce file size. It removes whitespace, newlines, and comments, and can rename internal variables to shorter names. The resulting code is harder for humans to read but is still completely decompilable by any experienced developer using browser DevTools. Minification does <em>not</em> protect your intellectual property. It only makes your code smaller.
+              </p>
+              <p>
+                <span class="term-pill">Obfuscation</span>, by contrast, is an intentional attempt to make code difficult to reverse-engineer. An obfuscator might encrypt string literals, wrap logic in self-executing functions, introduce bogus dead code paths, or encode variable names as hexadecimal sequences. The goal is to maximize confusion for a human reader, not to minimize bytes for a network transfer. Obfuscated code is often <em>larger</em> than the original.
+              </p>
+              <p>For most web applications, minification is sufficient and appropriate. Obfuscation is primarily used in licensing-sensitive software, anti-cheat systems in browser games, or DRM implementations. For everyday production JS, rely on minification and keep your proprietary server-side logic off the client entirely.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            How does Variable Mangling actually shrink file sizes?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>
+                <span class="term-pill">Variable Mangling</span> is the process of replacing long, descriptive internal variable and function names with the shortest possible alternatives - typically single letters like <code>a</code>, <code>b</code>, or <code>c</code>. The key word is "internal": mangling only touches names that are scoped inside functions and are not part of the public API. Global names and object property keys that other scripts depend on are left untouched by default.
+              </p>
+              <p>
+                The savings compound quickly in real codebases. Consider a 1,000-line application where the variable <code>userAuthenticationToken</code> appears 30 times. That variable name alone consumes 30 x 23 = 690 bytes. After mangling, it becomes <code>a</code>, saving 660 bytes from a single variable. Multiply this across hundreds of variables and function parameters, and mangling routinely delivers 10-25% additional compression on top of whitespace removal alone.
+              </p>
+              <p>Terser's mangling algorithm is scope-aware. It builds a complete map of all variable declarations and references before renaming anything, ensuring no two variables in the same scope receive the same short name and that no references are accidentally broken.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Why must you strip console.log() statements before launching?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>
+                <code>console.log()</code> calls left in production JavaScript are more than just clutter - they are an active security and performance risk. Every log statement evaluates its arguments and writes to the browser's DevTools console even when no developer has the DevTools panel open. This means three concrete problems arise:
+              </p>
+              <p>
+                <strong>1. Information Disclosure:</strong> Developers often log internal data structures, API response payloads, authentication tokens, or user objects during debugging. If these logs remain in the production bundle, any end-user who opens DevTools can read this sensitive internal state. This is a real-world security vulnerability, not a theoretical one.
+              </p>
+              <p>
+                <strong>2. Performance Cost:</strong> Each <code>console.log()</code> call has a measurable runtime cost. In tight loops or event handlers that fire frequently (like scroll or mousemove listeners), logging adds perceptible latency that degrades user experience.
+              </p>
+              <p>
+                <strong>3. Professional Quality Signal:</strong> Visible console output in a production application is a reliable signal to technical users and security auditors that the codebase lacks a proper build pipeline. It erodes trust in the product's engineering quality.
+              </p>
+              <p>The "Strip console.log() statements" option in this tool uses Terser's drop_console option to remove these calls at the AST level during the minification pass, so you never need to manually hunt and delete them before shipping.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Can minification break my JavaScript?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>
+                With a proper AST-based minifier like Terser, minification should never break syntactically valid JavaScript. Terser's transformations are semantics-preserving by design: the output executes identically to the input for all valid inputs. However, there are two categories of problems to be aware of:
+              </p>
+              <p>
+                <strong>Existing Bugs Surface:</strong> Minification collapses code that implicitly depended on quirks like automatic semicolon insertion (ASI) or undefined behavior. If your code had a latent bug that happened to work in development, minification may expose it. The fix is always in your original source code, not in the minifier.
+              </p>
+              <p>
+                <strong>Variable Mangling with Eval:</strong> If your code uses <code>eval()</code> to dynamically reference variable names by string (e.g., <code>eval('myVar')</code>), mangling will break those references because the variable name is now <code>a</code> instead of <code>myVar</code>. Terser can detect and handle most of these cases, but <code>eval()</code> usage is strongly discouraged in modern JavaScript for both security and performance reasons. The solution is to refactor away from <code>eval()</code>.
+              </p>
+              <p>
+                <strong>Dead Code Elimination</strong> - a related optimization where Terser removes code it can prove will never execute (e.g., code after an unconditional <code>return</code> statement, or branches of an <code>if (false) { ... }</code> block) - is always safe and correct by definition. Dead code cannot affect runtime behavior because it never runs.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            What is Render-Blocking JavaScript and why does minification help?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>
+                <span class="term-pill">Render-Blocking</span> describes any resource that forces the browser to pause building the visual page (the render tree) until the resource is fully downloaded and processed. By default, a <code>&lt;script&gt;</code> tag in an HTML document is render-blocking: when the browser's HTML parser encounters it, parsing stops completely, the script file is fetched, and JavaScript runs before the browser renders a single pixel of content below that point.
+              </p>
+              <p>
+                This is why Google's Core Web Vitals score (which directly influences search rankings) penalizes large JavaScript files. A 500 KB unminified JS file on a 3G mobile connection might take 4-5 seconds to download and parse, holding the page blank the entire time. The same file minified to 180 KB loads in under 2 seconds and delivers a dramatically better First Contentful Paint (FCP) and Largest Contentful Paint (LCP) score.
+              </p>
+              <p>
+                Minification is the first and most impactful step in a performance optimization pipeline. Subsequent steps - HTTP/2 multiplexing, Brotli/gzip compression, code splitting, and the <code>defer</code> or <code>async</code> attributes on script tags - stack on top of a minified baseline. Start here, then layer additional optimizations based on your specific performance budget.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.faq-list -->
+
+      <!-- Before / After Comparison Block -->
+      <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">Before and After: Real-World Example</h3>
+      <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">The same function, before minification (with comments and descriptive names) and after (compressed to a single line with mangled variables).</p>
+
+      <div class="compare-block">
+        <!-- BEFORE -->
+        <div class="compare-pane">
+          <div class="compare-pane-header">
+            <span>before.js</span>
+            <span class="size-badge before">389 bytes</span>
+          </div>
+          <div class="compare-code"><span class="cm">// Calculate the total price including tax
+// and apply a discount code if provided.</span>
+<span class="kw">function</span> <span class="fn">calculateOrderTotal</span>(
+  <span class="nm">itemPrice</span>,
+  <span class="nm">taxRate</span>,
+  <span class="nm">discountCode</span>
+) {
+  <span class="kw">var</span> <span class="nm">subtotal</span> = <span class="nm">itemPrice</span>;
+  <span class="kw">var</span> <span class="nm">taxAmount</span> = <span class="nm">itemPrice</span> * <span class="nm">taxRate</span>;
+  <span class="kw">var</span> <span class="nm">discountAmount</span> = <span class="nm">0</span>;
+
+  <span class="kw">if</span> (<span class="nm">discountCode</span> === <span class="str">"SAVE10"</span>) {
+    <span class="nm">discountAmount</span> = <span class="nm">subtotal</span> * <span class="nm">0.10</span>;
+  }
+
+  <span class="kw">return</span> <span class="nm">subtotal</span> + <span class="nm">taxAmount</span> - <span class="nm">discountAmount</span>;
+}</div>
+        </div>
+
+        <!-- AFTER -->
+        <div class="compare-pane">
+          <div class="compare-pane-header">
+            <span>after.min.js</span>
+            <span class="size-badge after">99 bytes</span>
+          </div>
+          <div class="compare-code"><span class="kw">function</span> <span class="fn">calculateOrderTotal</span>(<span class="nm">a</span>,<span class="nm">b</span>,<span class="nm">c</span>){<span class="kw">let</span> <span class="nm">d</span>=<span class="nm">0</span>;<span class="kw">if</span>(<span class="nm">c</span>===<span class="str">"SAVE10"</span>)<span class="nm">d</span>=<span class="nm">a</span>*<span class="nm">.1</span>;<span class="kw">return</span> <span class="nm">a</span>+<span class="nm">a</span>*<span class="nm">b</span>-<span class="nm">d</span>}</div>
+        </div>
+      </div>
+
+      <div class="savings-callout">
+        <div class="big-num">75%</div>
+        <div class="detail">
+          <strong>Smaller file. Same behavior.</strong>
+          From 389 bytes down to 99 bytes - comments stripped, whitespace removed, variables mangled. The function executes identically in both forms.
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer">
+        <div class="disclaimer-icon">&#128274;</div>
+        <div>
+          <h3>Privacy First: Your Code Stays On Your Device</h3>
+          <p>This tool runs entirely within your local web browser using client-side JavaScript. Your proprietary source code and application logic are never uploaded, saved, or sent to any external server. The minification engine (Terser) is loaded once from a public CDN and then executes locally. Close the browser tab and nothing persists.</p>
+        </div>
+      </div>
+
+    </section><!-- /.edu-section -->
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <nav class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="footer-copy">&copy; <span id="footer-year"></span> AxiomApe.com - Free Developer Tools</p>
+  </footer>
+
+  <!-- ============ JAVASCRIPT ENGINE ============ -->
+  <script>
+    // Set footer copyright year dynamically
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ---- FAQ Accordion ----
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+      // Toggle current
+      if (!isOpen) item.classList.add('open');
+    }
+
+    // ---- Show / Hide Alert Banners ----
+    function showAlert(type, message) {
+      hideAlerts();
+      if (type === 'error') {
+        document.getElementById('alert-error-text').textContent = message;
+        document.getElementById('alert-error').classList.add('show');
+      } else {
+        document.getElementById('alert-success').classList.add('show');
+      }
+    }
+    function hideAlerts() {
+      document.getElementById('alert-error').classList.remove('show');
+      document.getElementById('alert-success').classList.remove('show');
+    }
+
+    // ---- Update Metrics Dashboard ----
+    function updateMetrics(originalStr, minifiedStr) {
+      const origBytes  = new Blob([originalStr]).size;
+      const minBytes   = new Blob([minifiedStr]).size;
+      const saved      = origBytes - minBytes;
+      const pct        = origBytes > 0 ? ((saved / origBytes) * 100).toFixed(1) : 0;
+
+      document.getElementById('m-original').textContent = (origBytes / 1024).toFixed(2);
+      document.getElementById('m-minified').textContent = (minBytes  / 1024).toFixed(2);
+      document.getElementById('m-savings').textContent  = pct + '%';
+      document.getElementById('m-chars').textContent    = saved.toLocaleString();
+    }
+
+    function resetMetrics() {
+      ['m-original','m-minified','m-savings','m-chars'].forEach(id => {
+        document.getElementById(id).textContent = id === 'm-savings' ? '-%' : '-';
+      });
+    }
+
+    // ---- Core Minifier Function ----
+    async function runMinifier() {
+      hideAlerts();
+      const inputCode = document.getElementById('input-code').value.trim();
+
+      if (!inputCode) {
+        showAlert('error', 'Input is empty. Paste your JavaScript code into the left panel first.');
+        return;
+      }
+
+      // Build Terser options from checkboxes
+      const doMangle   = document.getElementById('opt-mangle').checked;
+      const doComments = document.getElementById('opt-comments').checked;
+      const doConsole  = document.getElementById('opt-console').checked;
+
+      const terserOptions = {
+        mangle: doMangle ? { toplevel: false } : false,
+        format: {
+          comments: doComments ? false : 'some',
+        },
+        compress: {
+          drop_console: doConsole,
+          dead_code: true,
+          drop_debugger: true,
+        },
+      };
+
+      try {
+        // Terser.minify returns a Promise in standalone bundle mode
+        const result = await Terser.minify(inputCode, terserOptions);
+
+        if (result.error) {
+          // Terser returned an error object (e.g., parse failure)
+          throw result.error;
+        }
+
+        document.getElementById('output-code').value = result.code;
+        updateMetrics(inputCode, result.code);
+        showAlert('success');
+
+      } catch (err) {
+        // Catch syntax errors and display a user-friendly message
+        const msg = err && err.message
+          ? 'Syntax Error: ' + err.message
+          : 'Syntax Error: Check your code for missing brackets, braces, or typos.';
+        showAlert('error', msg);
+        document.getElementById('output-code').value = '';
+        resetMetrics();
+      }
+    }
+
+    // ---- Copy Minified Output to Clipboard ----
+    function copyOutput() {
+      const output = document.getElementById('output-code').value;
+      if (!output) {
+        showAlert('error', 'Nothing to copy yet. Run the minifier first.');
+        return;
+      }
+      navigator.clipboard.writeText(output).then(() => {
+        const flash = document.getElementById('copied-flash');
+        flash.style.display = 'inline-block';
+        flash.style.animation = 'none';
+        // Restart animation
+        void flash.offsetWidth;
+        flash.style.animation = 'fadeOut 1.8s forwards';
+        setTimeout(() => { flash.style.display = 'none'; }, 1800);
+      }).catch(() => {
+        // Fallback for older browsers
+        document.getElementById('output-code').select();
+        document.execCommand('copy');
+      });
+    }
+
+    // ---- Clear Both Panels ----
+    function clearAll() {
+      document.getElementById('input-code').value  = '';
+      document.getElementById('output-code').value = '';
+      hideAlerts();
+      resetMetrics();
+    }
+
+    // ---- Allow Tab key inside textarea for indentation ----
+    document.getElementById('input-code').addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end   = this.selectionEnd;
+        this.value  = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Video Cutter - Trim Video Files to the Exact Clip You Need. No Software Required. | AxiomApe</title>
+  <meta name="description" content="Free online video cutter and trimmer. Trim MP4, MOV, and WEBM files directly in your browser using WebAssembly-powered FFmpeg. No uploads, no software, total privacy." />
+  <meta name="keywords" content="online video cutter, trim video online, video trimmer, cut video free, no upload video editor, browser video editor, ffmpeg wasm, video clip tool" />
+
+  <!-- =====================================================================
+       FFmpeg.wasm - WebAssembly-powered video processing library.
+       This runs entirely in the browser. No server ever touches your video.
+       Version 0.11.x uses a simple global API (createFFmpeg / fetchFile).
+  ====================================================================== -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
+  <style>
+    /* =====================================================================
+       ROOT VARIABLES AND RESET
+    ====================================================================== */
+    :root {
+      --bg-dark:        #0e0e11;
+      --bg-card:        #16161c;
+      --bg-surface:     #1e1e27;
+      --bg-surface2:    #252532;
+      --accent:         #6c63ff;
+      --accent-hover:   #574fe0;
+      --accent-light:   #a59eff;
+      --success:        #22c55e;
+      --warning:        #f59e0b;
+      --danger:         #ef4444;
+      --text-primary:   #f0f0f5;
+      --text-secondary: #9898b0;
+      --text-muted:     #5a5a72;
+      --border:         #2a2a38;
+      --border-light:   #38384d;
+      --terminal-bg:    #0a0a0d;
+      --terminal-text:  #39ff14;
+      --radius:         12px;
+      --radius-sm:      8px;
+      --shadow:         0 4px 24px rgba(0,0,0,0.5);
+      --shadow-accent:  0 0 20px rgba(108,99,255,0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { color: var(--accent); text-decoration: underline; }
+
+    /* =====================================================================
+       TOP NAV BAR
+    ====================================================================== */
+    .top-nav {
+      text-align: center;
+      padding: 14px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-secondary);
+      letter-spacing: 0.3px;
+    }
+    .top-nav a {
+      font-weight: 600;
+      color: var(--accent-light);
+      font-size: 14px;
+    }
+
+    /* =====================================================================
+       PAGE WRAPPER
+    ====================================================================== */
+    .page-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* =====================================================================
+       PAGE TITLE BLOCK
+    ====================================================================== */
+    .page-title {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-title h1 {
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .page-title p {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    /* =====================================================================
+       AD PLACEHOLDER - Leaderboard (728x90)
+       Replace this div with your Google AdSense <ins> tag when ready.
+    ====================================================================== */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: var(--bg-surface);
+      border: 1px dashed var(--border-light);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* =====================================================================
+       MAIN CARD
+    ====================================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title .icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* =====================================================================
+       UPLOAD / DROP ZONE
+    ====================================================================== */
+    #drop-zone {
+      border: 2px dashed var(--border-light);
+      border-radius: var(--radius);
+      padding: 56px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--bg-surface);
+    }
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(108,99,255,0.06);
+    }
+    #drop-zone .dz-icon {
+      font-size: 48px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    #drop-zone h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    #drop-zone p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    .btn-upload {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 11px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-upload:hover { background: var(--accent-hover); }
+    .btn-upload:active { transform: scale(0.98); }
+    #file-input { display: none; }
+
+    /* =====================================================================
+       EDITOR WORKSPACE (shown after file load)
+    ====================================================================== */
+    #editor-workspace { display: none; }
+
+    /* Video player */
+    .video-wrap {
+      background: #000;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    #video-player {
+      width: 100%;
+      max-height: 400px;
+      display: block;
+      background: #000;
+    }
+
+    /* File info strip */
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .file-info strong { color: var(--text-primary); }
+    .file-badge {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent-light);
+    }
+
+    /* =====================================================================
+       TIMELINE / DUAL RANGE SLIDER
+    ====================================================================== */
+    .timeline-section {
+      margin-bottom: 20px;
+    }
+    .timeline-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 10px;
+    }
+    .timeline-track-wrap {
+      position: relative;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    /* The filled bar that shows the selected range */
+    .timeline-track {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      background: var(--bg-surface2);
+      border-radius: 99px;
+      border: 1px solid var(--border);
+    }
+    .timeline-range-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      pointer-events: none;
+    }
+    /* Both range inputs overlay the same track */
+    .timeline-track-wrap input[type="range"] {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+    }
+    .timeline-track-wrap input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      pointer-events: all;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .timeline-track-wrap input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      border-color: var(--accent-light);
+    }
+    .timeline-track-wrap input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      pointer-events: all;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    /* Current playhead indicator */
+    .playhead-indicator {
+      position: absolute;
+      top: -4px;
+      width: 3px;
+      height: 18px;
+      background: var(--warning);
+      border-radius: 2px;
+      pointer-events: none;
+      transform: translateX(-50%);
+      transition: left 0.05s linear;
+    }
+    /* Time tick labels */
+    .timeline-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 2px;
+      margin-bottom: 16px;
+    }
+
+    /* =====================================================================
+       MANUAL TIME INPUTS
+    ====================================================================== */
+    .time-inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .time-input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .time-input-group input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-family: "Courier New", monospace;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .time-input-group input:focus { border-color: var(--accent); }
+    .time-input-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Duration badge */
+    .duration-badge {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .duration-badge strong { color: var(--accent-light); font-size: 17px; }
+
+    /* =====================================================================
+       OPTIONS ROW
+    ====================================================================== */
+    .options-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 22px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-surface2);
+      border: 1px solid var(--border-light);
+      border-radius: 99px;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 2px;
+      top: 2px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+      background: #fff;
+    }
+    .toggle-label-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .toggle-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* =====================================================================
+       ACTION BUTTON
+    ====================================================================== */
+    .btn-cut {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .btn-cut:hover { background: var(--accent-hover); box-shadow: var(--shadow-accent); }
+    .btn-cut:active { transform: scale(0.99); }
+    .btn-cut:disabled {
+      background: var(--bg-surface2);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* =====================================================================
+       PROGRESS BAR
+    ====================================================================== */
+    .progress-wrap {
+      display: none;
+      margin-bottom: 16px;
+    }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .progress-bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-surface2);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* =====================================================================
+       TERMINAL OUTPUT BOX
+    ====================================================================== */
+    .terminal-wrap {
+      display: none;
+      margin-bottom: 20px;
+    }
+    .terminal-header {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: "Courier New", monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    #terminal-output {
+      background: var(--terminal-bg);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      padding: 16px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 12px;
+      color: var(--terminal-text);
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* =====================================================================
+       SUCCESS / RESULT AREA
+    ====================================================================== */
+    .result-box {
+      display: none;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid var(--success);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .result-box .result-icon { font-size: 32px; margin-bottom: 8px; }
+    .result-box h3 { font-size: 17px; font-weight: 600; color: var(--success); margin-bottom: 6px; }
+    .result-box p { font-size: 13px; color: var(--text-secondary); }
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--success);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: opacity 0.2s;
+    }
+    .btn-download:hover { opacity: 0.88; }
+
+    /* Reset button */
+    .btn-reset {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-reset:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+    /* =====================================================================
+       STATUS MESSAGES
+    ====================================================================== */
+    .status-msg {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 8px;
+    }
+    .status-msg.error { color: var(--danger); }
+
+    /* =====================================================================
+       LOADING INDICATOR (for FFmpeg init)
+    ====================================================================== */
+    #ffmpeg-status {
+      display: none;
+      font-size: 13px;
+      color: var(--warning);
+      text-align: center;
+      padding: 10px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+    }
+
+    /* =====================================================================
+       DISCLAIMER BANNER
+    ====================================================================== */
+    .disclaimer {
+      background: rgba(108,99,255,0.07);
+      border: 1px solid rgba(108,99,255,0.25);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .disclaimer-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+    .disclaimer h3 { font-size: 15px; font-weight: 700; color: var(--accent-light); margin-bottom: 5px; }
+    .disclaimer p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* =====================================================================
+       EDUCATIONAL CONTENT SECTION
+    ====================================================================== */
+    .edu-section {
+      margin-top: 40px;
+    }
+    .edu-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .edu-section .edu-subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: color 0.15s;
+    }
+    .faq-question:hover { color: var(--accent-light); }
+    .faq-chevron {
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: transform 0.25s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--accent-light); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 20px;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+      padding: 0 20px 18px;
+    }
+    .faq-answer p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 10px;
+    }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--text-primary); }
+    .faq-answer code {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      color: var(--accent-light);
+    }
+
+    /* =====================================================================
+       FOOTER
+    ====================================================================== */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 48px;
+    }
+    footer a { color: var(--text-secondary); margin: 0 10px; }
+    footer a:hover { color: var(--accent-light); text-decoration: underline; }
+    .footer-sep { color: var(--border-light); }
+
+    /* =====================================================================
+       RESPONSIVENESS
+    ====================================================================== */
+    @media (max-width: 600px) {
+      .time-inputs-row { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+      .options-row { flex-direction: column; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/online-video-cutter/" />
+</head>
+<body>
+
+  <!-- =====================================================================
+       TOP NAVIGATION BAR
+  ====================================================================== -->
+  <nav class="top-nav">
+    A free tool by <a href="/" target="_blank" rel="noopener">axiomape.com</a>
+  </nav>
+
+  <div class="page-wrap">
+
+    <!-- =================================================================
+         PAGE TITLE
+    ==================================================================== -->
+    <div class="page-title">
+      <h1>Online Video Cutter</h1>
+      <p>Trim Video Files to the Exact Clip You Need. No Software Required.</p>
+    </div>
+
+    <!-- =================================================================
+         AD PLACEHOLDER - Leaderboard Banner (728x90)
+         Replace this block with your Google AdSense <ins> tag.
+    ==================================================================== -->
+    <div class="ad-placeholder">
+      [ Ad Space - 728 x 90 Leaderboard Banner ]
+    </div>
+
+    <!-- =================================================================
+         MAIN TOOL CARD
+    ==================================================================== -->
+    <div class="card">
+
+      <!-- FFmpeg initialization status indicator -->
+      <div id="ffmpeg-status">
+        Initializing FFmpeg WebAssembly engine... This only happens once per session.
+      </div>
+
+      <!-- ---------------------------------------------------------------
+           UPLOAD / DROP ZONE (shown by default)
+      ------------------------------------------------------------------ -->
+      <div id="drop-zone" role="button" tabindex="0" aria-label="Click or drag a video file to upload">
+        <span class="dz-icon">🎬</span>
+        <h2>Drop Your Video Here</h2>
+        <p>Supports MP4, MOV, WEBM - Files stay 100% on your device</p>
+        <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+          &#128193; Choose Video File
+        </button>
+        <input type="file" id="file-input" accept="video/mp4,video/quicktime,video/webm,video/*" />
+      </div>
+
+      <!-- ---------------------------------------------------------------
+           EDITOR WORKSPACE (shown after file is loaded)
+      ------------------------------------------------------------------ -->
+      <div id="editor-workspace">
+
+        <!-- File info strip -->
+        <div class="file-info" id="file-info-strip">
+          <span id="file-info-name"><strong>No file</strong></span>
+          <span class="file-badge" id="file-info-ext">MP4</span>
+          <span id="file-info-size"></span>
+          <span id="file-info-dur"></span>
+        </div>
+
+        <!-- Video player -->
+        <div class="video-wrap">
+          <video id="video-player" controls preload="metadata"></video>
+        </div>
+
+        <!-- -----  VISUAL TIMELINE  ----- -->
+        <div class="timeline-section">
+          <div class="timeline-label">Visual Timeline - Drag to Set Start and End Points</div>
+          <div class="timeline-track-wrap" id="timeline-track-wrap">
+            <div class="timeline-track" id="timeline-track">
+              <div class="timeline-range-fill" id="range-fill"></div>
+              <div class="playhead-indicator" id="playhead"></div>
+            </div>
+            <!-- Start slider (lower thumb) -->
+            <input
+              type="range"
+              id="slider-start"
+              min="0" max="100" value="0" step="0.01"
+              aria-label="Start point"
+            />
+            <!-- End slider (upper thumb) -->
+            <input
+              type="range"
+              id="slider-end"
+              min="0" max="100" value="100" step="0.01"
+              aria-label="End point"
+            />
+          </div>
+          <div class="timeline-ticks" id="timeline-ticks">
+            <span>0:00</span>
+            <span id="tick-25"></span>
+            <span id="tick-50"></span>
+            <span id="tick-75"></span>
+            <span id="tick-100">--:--</span>
+          </div>
+        </div>
+
+        <!-- -----  MANUAL TIME INPUTS  ----- -->
+        <div class="time-inputs-row">
+          <div class="time-input-group">
+            <label for="input-start">Start Time</label>
+            <input
+              type="text"
+              id="input-start"
+              placeholder="00:00:00.000"
+              maxlength="12"
+              aria-label="Start time in hh:mm:ss.ms format"
+            />
+            <div class="time-input-hint">Format: hh:mm:ss.ms  (e.g., 00:01:23.500)</div>
+          </div>
+          <div class="time-input-group">
+            <label for="input-end">End Time</label>
+            <input
+              type="text"
+              id="input-end"
+              placeholder="00:00:00.000"
+              maxlength="12"
+              aria-label="End time in hh:mm:ss.ms format"
+            />
+            <div class="time-input-hint">Format: hh:mm:ss.ms  (e.g., 00:02:45.000)</div>
+          </div>
+        </div>
+
+        <!-- Selected clip duration -->
+        <div class="duration-badge" id="duration-badge">
+          Selected clip duration: <strong id="clip-dur-display">--:--</strong>
+        </div>
+
+        <!-- -----  OPTIONS: FAST TRIM TOGGLE  ----- -->
+        <div class="options-row">
+          <label class="toggle-wrap" for="toggle-fast-trim">
+            <span class="toggle-switch">
+              <input type="checkbox" id="toggle-fast-trim" checked />
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+          <div>
+            <div class="toggle-label-text">Fast Trim (Direct Stream Copy) - Recommended</div>
+            <div class="toggle-desc">
+              When ON: Uses <code>-c copy</code> in FFmpeg. This is called <strong>Direct Stream Copy</strong> - the video
+              and audio data are sliced and reassembled with zero quality loss and near-instant processing speed.
+              No re-encoding (re-processing of pixels) takes place, so the output file is indistinguishable
+              from the original. The only minor trade-off is that the cut point is snapped to the nearest
+              <strong>keyframe</strong> (a complete video frame stored in full), which can cause a
+              start/end offset of up to a second on some files.
+              <br><br>
+              When OFF: Full re-encode mode. FFmpeg decodes every frame and writes it back out fresh.
+              This gives frame-perfect accuracy but takes significantly longer and uses more CPU.
+            </div>
+          </div>
+        </div>
+
+        <!-- -----  CUT BUTTON  ----- -->
+        <button class="btn-cut" id="btn-cut" onclick="runCut()">
+          ✂️ Cut and Download Video
+        </button>
+
+        <!-- -----  PROGRESS BAR  ----- -->
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-labels">
+            <span id="progress-label">Processing...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- -----  TERMINAL OUTPUT  ----- -->
+        <div class="terminal-wrap" id="terminal-wrap">
+          <div class="terminal-header">
+            <div class="terminal-dot" style="background:#ef4444;"></div>
+            <div class="terminal-dot" style="background:#f59e0b;"></div>
+            <div class="terminal-dot" style="background:#22c55e;"></div>
+            &nbsp; FFmpeg Terminal Output
+          </div>
+          <div id="terminal-output" aria-live="polite" aria-label="FFmpeg terminal output"></div>
+        </div>
+
+        <!-- -----  RESULT / DOWNLOAD BOX  ----- -->
+        <div class="result-box" id="result-box">
+          <div class="result-icon">✅</div>
+          <h3>Your Clip is Ready!</h3>
+          <p>Processing complete. Click below to download your trimmed video.</p>
+          <button class="btn-download" id="btn-download">⬇️ Download Clip</button>
+        </div>
+
+        <!-- Error display -->
+        <div class="status-msg error" id="error-msg" style="display:none;"></div>
+
+        <!-- Reset -->
+        <button class="btn-reset" onclick="resetTool()">⟲ Start Over with a New Video</button>
+
+      </div><!-- /editor-workspace -->
+
+    </div><!-- /card -->
+
+    <!-- =================================================================
+         TOTAL PRIVACY DISCLAIMER
+    ==================================================================== -->
+    <div class="disclaimer">
+      <div class="disclaimer-icon">🔒</div>
+      <div>
+        <h3>Total Privacy Guarantee</h3>
+        <p>
+          This video editing tool runs entirely within your local web browser. Your private videos,
+          home movies, and large media files are never uploaded, logged, or sent to any external servers.
+          All processing happens on your own computer using WebAssembly technology - a method that lets
+          complex software (like video editors) run safely inside a browser tab without requiring any installation.
+        </p>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         EDUCATIONAL / SEO CONTENT
+    ==================================================================== -->
+    <section class="edu-section" aria-label="Guide to video trimming and codecs">
+      <h2>The Ultimate Guide to Video Trimming and Media Codecs</h2>
+      <p class="edu-subtitle">
+        Everything content creators and everyday users need to know about cutting video files in 2025.
+      </p>
+
+      <!-- FAQ 1 -->
+      <div class="faq-item open">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="true">
+          Why is browser-based video editing faster than uploading to a server?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            When you upload a video to a traditional online editor, your file travels over the internet to
+            a remote server, waits in a processing queue, gets trimmed on that server's hardware, and then
+            the result must be downloaded back to your machine. For a single 1 GB video file on a typical
+            broadband connection, that upload alone can take 10 to 30 minutes - before any editing even begins.
+          </p>
+          <p>
+            Browser-based tools powered by <strong>WebAssembly</strong> eliminate the entire upload-download
+            cycle. WebAssembly (often abbreviated as WASM) is a technology built into every modern web browser
+            that allows programs originally written in C, C++, or Rust to run directly inside your browser tab
+            at near-native speed. This tool uses <strong>FFmpeg</strong> - the gold-standard, open-source video
+            processing program that professional studios rely on - compiled into WebAssembly so it runs
+            entirely on your device. The result: your video never leaves your machine, and trimming begins
+            the moment you click the button.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 2 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          What does Direct Stream Copy mean and why does it preserve video quality?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            <strong>Direct Stream Copy</strong> is a method where the video and audio data inside a media file
+            are extracted and reassembled without decoding or re-encoding them. Think of the video file as a
+            sealed envelope containing a letter. Direct Stream Copy cuts the envelope open, removes a section
+            of the letter, reseals it, and hands it back - the words on the page were never rewritten or
+            photocopied, so there is zero quality degradation.
+          </p>
+          <p>
+            In FFmpeg, this is expressed as the <code>-c copy</code> flag, where "c" stands for
+            <strong>codec</strong>. A <strong>Video Codec</strong> (short for coder-decoder) is the algorithm
+            that defines how raw video frames are compressed for storage and decompressed for playback. Common
+            codecs include H.264, H.265/HEVC, VP9, and AV1. When you re-encode a video, you are decompressing
+            every frame back to raw pixels and re-compressing them again, which introduces a small but
+            measurable loss each generation - similar to repeatedly saving a JPEG image. Direct Stream Copy
+            skips this process entirely, preserving the original codec, bitrate, and quality exactly as captured.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 3 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          What are video keyframes and how do they affect precise cutting?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Modern video codecs do not store every frame as a complete image. Instead, they use a layered
+            compression strategy. A <strong>Keyframe</strong> (also called an I-Frame, or Intra-coded frame)
+            is a fully self-contained image of a single video frame - it can be decoded on its own without
+            any reference to surrounding frames. Between keyframes, codecs store only the differences between
+            consecutive frames, called P-Frames (predicted frames) and B-Frames (bi-directional frames).
+            This is how a 1-hour 4K video can fit on a single flash drive.
+          </p>
+          <p>
+            The trade-off for cutting is this: when using Direct Stream Copy, FFmpeg can only start a clip
+            cleanly at a keyframe. If you set your start point at 1:23.500 and the nearest keyframe is at
+            1:22.800, FFmpeg will snap your cut to 1:22.800 to avoid a corrupted or blank beginning.
+            Keyframe intervals are set during the original recording or encoding and typically range from
+            every 1 to 10 seconds depending on the camera, software, and settings used. For frame-perfect
+            cuts - essential for lip-sync videos, podcast clips, or broadcast content - disable the
+            Fast Trim toggle to use full re-encoding mode, which starts the output at exactly the
+            millisecond you specify.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 4 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          Why do some video formats take longer to process than others?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Processing time varies based on several factors. The container format (MP4, MOV, WEBM) determines
+            how the video and audio streams are packaged together, but has less impact than the codec itself.
+            <strong>H.264</strong> videos are the fastest to process because the codec is decades old and
+            extremely well optimized. <strong>H.265 (HEVC)</strong> videos can take two to four times longer
+            to re-encode because the algorithm is more complex - though it produces smaller file sizes.
+            <strong>WEBM files</strong> using the VP9 or AV1 codec are computationally intensive, as these
+            codecs were designed to maximize compression at the cost of encoding speed.
+          </p>
+          <p>
+            File size and resolution also matter. A 4K (3840x2160) video has four times the pixel count of
+            a 1080p video, meaning four times the data to process per frame. Frame rate is another factor:
+            a 60fps video has twice as many frames per second as a standard 30fps file. For the fastest
+            possible results with large files, use Fast Trim mode, which avoids re-encoding entirely and
+            completes the cut in under a second regardless of file size, codec, or resolution.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ 5 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          Is it safe to use a browser-based video tool for private or sensitive footage?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Yes - and this is the primary reason tools like this one exist. Traditional cloud video editors
+            require you to hand your footage to a third party. That footage may be stored on their servers,
+            scanned by automated content moderation systems, retained for analytics, or in some cases used
+            to train machine learning models, depending on each service's privacy policy.
+          </p>
+          <p>
+            A browser-based editor using <strong>WebAssembly</strong> operates with a fundamentally different
+            model. The FFmpeg engine is downloaded to your browser once (like any other webpage asset), then
+            runs as code inside your browser's sandboxed environment. When you open a video file, the browser's
+            File API reads it directly from your hard drive into browser memory. No HTTP request carries
+            your video data outbound. You can even disconnect from the internet after the page loads and
+            the tool will continue to work perfectly. This makes it the safest possible option for editing
+            personal home videos, internal business recordings, legal depositions, medical consultations,
+            or any footage where privacy is non-negotiable.
+          </p>
+        </div>
+      </div>
+
+    </section><!-- /edu-section -->
+
+  </div><!-- /page-wrap -->
+
+  <!-- =====================================================================
+       FOOTER
+  ====================================================================== -->
+  <footer>
+    <p style="margin-bottom:10px;font-size:14px;color:var(--text-secondary);">
+      &copy; 2025 AxiomApe. All rights reserved.
+    </p>
+    <div>
+      <a href="/about.html" target="_blank" rel="noopener">About</a>
+      <span class="footer-sep">|</span>
+      <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      <span class="footer-sep">|</span>
+      <a href="/contact.html" target="_blank" rel="noopener">Contact</a>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       JAVASCRIPT - ALL LOGIC
+  ====================================================================== -->
+  <script>
+    /* ==================================================================
+       GLOBAL STATE
+    ================================================================== */
+    let videoDuration = 0;   // Total duration of loaded video in seconds
+    let startSec = 0;        // Selected start point in seconds
+    let endSec = 0;          // Selected end point in seconds
+    let originalFileName = "video"; // Without extension
+    let fileExtension = "mp4";
+    let ffmpeg = null;       // FFmpeg instance
+    let ffmpegReady = false; // Whether FFmpeg WASM has been loaded
+    let downloadBlob = null; // Blob URL for the processed output
+    let videoFile = null;    // The raw File object from the user
+
+    /* ==================================================================
+       DOM REFERENCES
+    ================================================================== */
+    const dropZone       = document.getElementById("drop-zone");
+    const fileInput      = document.getElementById("file-input");
+    const editorWS       = document.getElementById("editor-workspace");
+    const videoPlayer    = document.getElementById("video-player");
+    const sliderStart    = document.getElementById("slider-start");
+    const sliderEnd      = document.getElementById("slider-end");
+    const rangeFill      = document.getElementById("range-fill");
+    const playhead       = document.getElementById("playhead");
+    const inputStart     = document.getElementById("input-start");
+    const inputEnd       = document.getElementById("input-end");
+    const btnCut         = document.getElementById("btn-cut");
+    const terminalWrap   = document.getElementById("terminal-wrap");
+    const terminalOutput = document.getElementById("terminal-output");
+    const progressWrap   = document.getElementById("progress-wrap");
+    const progressFill   = document.getElementById("progress-bar-fill");
+    const progressLabel  = document.getElementById("progress-label");
+    const progressPct    = document.getElementById("progress-pct");
+    const resultBox      = document.getElementById("result-box");
+    const btnDownload    = document.getElementById("btn-download");
+    const errorMsg       = document.getElementById("error-msg");
+    const ffmpegStatus   = document.getElementById("ffmpeg-status");
+
+    /* ==================================================================
+       UTILITY: Convert seconds to "hh:mm:ss.ms" string
+    ================================================================== */
+    function secondsToTimestamp(sec) {
+      const h   = Math.floor(sec / 3600);
+      const m   = Math.floor((sec % 3600) / 60);
+      const s   = Math.floor(sec % 60);
+      const ms  = Math.round((sec - Math.floor(sec)) * 1000);
+      return (
+        String(h).padStart(2, "0") + ":" +
+        String(m).padStart(2, "0") + ":" +
+        String(s).padStart(2, "0") + "." +
+        String(ms).padStart(3, "0")
+      );
+    }
+
+    /* ==================================================================
+       UTILITY: Parse "hh:mm:ss.ms" to seconds
+       Returns NaN if format is invalid.
+    ================================================================== */
+    function timestampToSeconds(ts) {
+      const parts = ts.trim().split(":");
+      if (parts.length !== 3) return NaN;
+      const h = parseFloat(parts[0]);
+      const m = parseFloat(parts[1]);
+      const s = parseFloat(parts[2]);
+      if (isNaN(h) || isNaN(m) || isNaN(s)) return NaN;
+      return h * 3600 + m * 60 + s;
+    }
+
+    /* ==================================================================
+       UTILITY: Format seconds as "m:ss" for tick labels
+    ================================================================== */
+    function formatTick(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + ":" + String(s).padStart(2, "0");
+    }
+
+    /* ==================================================================
+       UTILITY: Format bytes as human-readable string
+    ================================================================== */
+    function formatBytes(bytes) {
+      if (bytes < 1024)      return bytes + " B";
+      if (bytes < 1048576)   return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / 1048576).toFixed(1) + " MB";
+    }
+
+    /* ==================================================================
+       UTILITY: Write a line to the terminal box
+    ================================================================== */
+    function termLog(text) {
+      terminalOutput.textContent += text + "\n";
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    /* ==================================================================
+       UTILITY: Update the range fill bar and playhead
+    ================================================================== */
+    function updateRangeFill() {
+      const pStart = parseFloat(sliderStart.value);
+      const pEnd   = parseFloat(sliderEnd.value);
+      rangeFill.style.left  = pStart + "%";
+      rangeFill.style.width = (pEnd - pStart) + "%";
+    }
+
+    /* ==================================================================
+       UTILITY: Update clip duration badge
+    ================================================================== */
+    function updateClipDuration() {
+      const dur = endSec - startSec;
+      if (dur <= 0) {
+        document.getElementById("clip-dur-display").textContent = "0:00";
+        return;
+      }
+      document.getElementById("clip-dur-display").textContent = formatTick(dur) +
+        "." + String(Math.round((dur - Math.floor(dur)) * 1000)).padStart(3, "0");
+    }
+
+    /* ==================================================================
+       UPDATE TIMELINE TICKS (shown at 0%, 25%, 50%, 75%, 100%)
+    ================================================================== */
+    function updateTicks() {
+      document.getElementById("tick-25").textContent  = formatTick(videoDuration * 0.25);
+      document.getElementById("tick-50").textContent  = formatTick(videoDuration * 0.5);
+      document.getElementById("tick-75").textContent  = formatTick(videoDuration * 0.75);
+      document.getElementById("tick-100").textContent = formatTick(videoDuration);
+    }
+
+    /* ==================================================================
+       SLIDER EVENTS: Keep start <= end and sync video seek
+    ================================================================== */
+    sliderStart.addEventListener("input", () => {
+      let sVal = parseFloat(sliderStart.value);
+      let eVal = parseFloat(sliderEnd.value);
+      // Prevent start overtaking end
+      if (sVal >= eVal) {
+        sVal = eVal - 0.1;
+        if (sVal < 0) sVal = 0;
+        sliderStart.value = sVal;
+      }
+      startSec = (sVal / 100) * videoDuration;
+      inputStart.value = secondsToTimestamp(startSec);
+      updateRangeFill();
+      updateClipDuration();
+      // Seek video to show the frame at this point
+      videoPlayer.currentTime = startSec;
+    });
+
+    sliderEnd.addEventListener("input", () => {
+      let eVal = parseFloat(sliderEnd.value);
+      let sVal = parseFloat(sliderStart.value);
+      if (eVal <= sVal) {
+        eVal = sVal + 0.1;
+        if (eVal > 100) eVal = 100;
+        sliderEnd.value = eVal;
+      }
+      endSec = (eVal / 100) * videoDuration;
+      inputEnd.value = secondsToTimestamp(endSec);
+      updateRangeFill();
+      updateClipDuration();
+      videoPlayer.currentTime = endSec;
+    });
+
+    /* ==================================================================
+       MANUAL TIME INPUT EVENTS: Sync sliders from typed values
+    ================================================================== */
+    inputStart.addEventListener("change", () => {
+      const sec = timestampToSeconds(inputStart.value);
+      if (isNaN(sec) || sec < 0 || sec >= endSec) {
+        inputStart.value = secondsToTimestamp(startSec);
+        return;
+      }
+      startSec = sec;
+      sliderStart.value = (sec / videoDuration) * 100;
+      updateRangeFill();
+      updateClipDuration();
+      videoPlayer.currentTime = sec;
+    });
+
+    inputEnd.addEventListener("change", () => {
+      const sec = timestampToSeconds(inputEnd.value);
+      if (isNaN(sec) || sec > videoDuration || sec <= startSec) {
+        inputEnd.value = secondsToTimestamp(endSec);
+        return;
+      }
+      endSec = sec;
+      sliderEnd.value = (sec / videoDuration) * 100;
+      updateRangeFill();
+      updateClipDuration();
+      videoPlayer.currentTime = sec;
+    });
+
+    /* ==================================================================
+       PLAYHEAD: Track video playback position on the timeline
+    ================================================================== */
+    videoPlayer.addEventListener("timeupdate", () => {
+      if (!videoDuration) return;
+      const pct = (videoPlayer.currentTime / videoDuration) * 100;
+      playhead.style.left = pct + "%";
+    });
+
+    /* ==================================================================
+       FILE LOADING: Handle file chosen via input or drop
+    ================================================================== */
+    function handleFile(file) {
+      if (!file || !file.type.startsWith("video/")) {
+        alert("Please select a valid video file (MP4, MOV, WEBM).");
+        return;
+      }
+      videoFile = file;
+
+      // Parse the filename
+      const nameParts = file.name.split(".");
+      fileExtension   = nameParts.pop().toLowerCase();
+      originalFileName = nameParts.join(".");
+
+      // Populate file info strip
+      document.getElementById("file-info-name").innerHTML =
+        "<strong>" + file.name + "</strong>";
+      document.getElementById("file-info-ext").textContent = fileExtension.toUpperCase();
+      document.getElementById("file-info-size").textContent = formatBytes(file.size);
+
+      // Load video into player
+      const objectURL = URL.createObjectURL(file);
+      videoPlayer.src = objectURL;
+      videoPlayer.load();
+
+      videoPlayer.addEventListener("loadedmetadata", () => {
+        videoDuration = videoPlayer.duration;
+        startSec = 0;
+        endSec   = videoDuration;
+
+        // Set slider bounds
+        sliderStart.value = 0;
+        sliderEnd.value   = 100;
+
+        // Set text inputs
+        inputStart.value = secondsToTimestamp(0);
+        inputEnd.value   = secondsToTimestamp(videoDuration);
+
+        document.getElementById("file-info-dur").textContent =
+          "Duration: " + formatTick(videoDuration);
+
+        updateTicks();
+        updateRangeFill();
+        updateClipDuration();
+      }, { once: true });
+
+      // Show editor, hide drop zone
+      dropZone.style.display    = "none";
+      editorWS.style.display    = "block";
+
+      // Pre-load FFmpeg in the background
+      initFFmpeg();
+    }
+
+    /* ==================================================================
+       DRAG AND DROP EVENTS
+    ================================================================== */
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("drag-over");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("drag-over");
+    });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      handleFile(file);
+    });
+    dropZone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") fileInput.click();
+    });
+    fileInput.addEventListener("change", () => {
+      handleFile(fileInput.files[0]);
+    });
+
+    /* ==================================================================
+       FFMPEG INITIALIZATION
+       Uses the createFFmpeg global from ffmpeg.min.js (v0.11.x)
+       Loads the WASM binary from unpkg CDN.
+    ================================================================== */
+    async function initFFmpeg() {
+      if (ffmpegReady) return; // Already loaded
+      ffmpegStatus.style.display = "block";
+      terminalWrap.style.display = "block";
+      termLog("[FFmpeg] Loading WebAssembly engine...");
+
+      try {
+        ffmpeg = FFmpeg.createFFmpeg({
+          log: true,
+          corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
+          logger: ({ type, message }) => {
+            termLog("[" + type + "] " + message);
+            // Parse FFmpeg progress from stderr output
+            parseProgress(message);
+          }
+        });
+        await ffmpeg.load();
+        ffmpegReady = true;
+        ffmpegStatus.style.display = "none";
+        termLog("[FFmpeg] Engine ready. Awaiting cut command.");
+      } catch (err) {
+        ffmpegStatus.textContent = "Failed to load FFmpeg engine: " + err.message;
+        ffmpegStatus.style.color = "var(--danger)";
+        termLog("[ERROR] " + err.message);
+      }
+    }
+
+    /* ==================================================================
+       PROGRESS PARSING
+       FFmpeg emits duration and time= lines. We parse them to calculate
+       a percentage and update the progress bar.
+    ================================================================== */
+    let ffmpegTotalMs = 0;
+    function parseProgress(msg) {
+      // Try to extract total duration from "Duration: hh:mm:ss.ms"
+      const durMatch = msg.match(/Duration:\s*(\d+):(\d+):(\d+)\.(\d+)/);
+      if (durMatch) {
+        ffmpegTotalMs =
+          parseInt(durMatch[1]) * 3600000 +
+          parseInt(durMatch[2]) * 60000 +
+          parseInt(durMatch[3]) * 1000 +
+          parseInt(durMatch[4]) * 10;
+      }
+      // Try to extract current time from "time=hh:mm:ss.ms"
+      const timeMatch = msg.match(/time=\s*(\d+):(\d+):(\d+)\.(\d+)/);
+      if (timeMatch && ffmpegTotalMs > 0) {
+        const currentMs =
+          parseInt(timeMatch[1]) * 3600000 +
+          parseInt(timeMatch[2]) * 60000 +
+          parseInt(timeMatch[3]) * 1000 +
+          parseInt(timeMatch[4]) * 10;
+        const pct = Math.min(100, Math.round((currentMs / ffmpegTotalMs) * 100));
+        setProgress(pct, "Re-encoding...");
+      }
+    }
+
+    /* ==================================================================
+       UPDATE PROGRESS BAR
+    ================================================================== */
+    function setProgress(pct, label) {
+      progressFill.style.width = pct + "%";
+      progressPct.textContent  = pct + "%";
+      if (label) progressLabel.textContent = label;
+    }
+
+    /* ==================================================================
+       MAIN CUT FUNCTION
+       Reads the file into FFmpeg's virtual FS, runs the trim command,
+       retrieves the output, and triggers a download.
+    ================================================================== */
+    async function runCut() {
+      // Validate selection
+      if (startSec >= endSec) {
+        showError("Start time must be before end time.");
+        return;
+      }
+      if (!videoFile) {
+        showError("No video file loaded.");
+        return;
+      }
+
+      // Wait for FFmpeg to be ready
+      if (!ffmpegReady) {
+        showError("FFmpeg is still loading. Please wait a moment and try again.");
+        return;
+      }
+
+      hideError();
+      btnCut.disabled = true;
+      resultBox.style.display = "none";
+
+      // Show terminal and progress bar
+      terminalWrap.style.display = "block";
+      progressWrap.style.display = "block";
+      terminalOutput.textContent = "";
+      setProgress(0, "Preparing...");
+      ffmpegTotalMs = 0;
+
+      const isFastTrim = document.getElementById("toggle-fast-trim").checked;
+      const startTs    = secondsToTimestamp(startSec);
+      const endTs      = secondsToTimestamp(endSec);
+      const inputName  = "input." + fileExtension;
+      const outputName = originalFileName + "-clipped." + fileExtension;
+
+      try {
+        termLog("[Video Cutter] Reading file into WebAssembly memory...");
+        setProgress(5, "Loading file...");
+
+        // Read the file as a Uint8Array and write to FFmpeg's virtual filesystem
+        const fileBuffer = await videoFile.arrayBuffer();
+        ffmpeg.FS("writeFile", inputName, new Uint8Array(fileBuffer));
+
+        termLog("[Video Cutter] File loaded. Starting cut...");
+        termLog("[Video Cutter] Start: " + startTs + " | End: " + endTs);
+        termLog("[Video Cutter] Mode: " + (isFastTrim ? "Fast Trim (Direct Stream Copy)" : "Full Re-encode (Frame Accurate)"));
+        setProgress(10, "Processing...");
+
+        // Build FFmpeg command arguments
+        // -ss : seek to start time (before -i for Fast Trim for speed)
+        // -to : end time
+        // -i  : input file
+        // -c copy : Direct Stream Copy (no re-encoding) if Fast Trim is ON
+        let args;
+        if (isFastTrim) {
+          // Place -ss before -i: faster seek, uses keyframe snap
+          args = [
+            "-ss", startTs,
+            "-to", endTs,
+            "-i", inputName,
+            "-c", "copy",
+            "-avoid_negative_ts", "make_zero",
+            outputName
+          ];
+        } else {
+          // Full re-encode: -ss after -i for frame accuracy (slower)
+          args = [
+            "-i", inputName,
+            "-ss", startTs,
+            "-to", endTs,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "18",
+            "-c:a", "aac",
+            outputName
+          ];
+        }
+
+        termLog("[FFmpeg] Command: ffmpeg " + args.join(" "));
+        termLog("---------------------------------------------------");
+
+        // Run the command
+        await ffmpeg.run(...args);
+
+        termLog("---------------------------------------------------");
+        termLog("[Video Cutter] Processing complete.");
+        setProgress(95, "Finalizing...");
+
+        // Read the output file from FFmpeg's virtual filesystem
+        const outputData = ffmpeg.FS("readFile", outputName);
+        const blob       = new Blob([outputData.buffer], { type: videoFile.type });
+        const blobUrl    = URL.createObjectURL(blob);
+
+        setProgress(100, "Done!");
+        termLog("[Video Cutter] Output size: " + formatBytes(blob.size));
+
+        // Clean up virtual FS
+        try {
+          ffmpeg.FS("unlink", inputName);
+          ffmpeg.FS("unlink", outputName);
+        } catch (_) {}
+
+        // Set up download button
+        btnDownload.onclick = () => {
+          const a = document.createElement("a");
+          a.href     = blobUrl;
+          a.download = outputName;
+          a.click();
+        };
+
+        resultBox.style.display = "block";
+
+      } catch (err) {
+        termLog("[ERROR] " + err.message);
+        showError("Processing failed: " + err.message + ". Check the terminal for details.");
+        setProgress(0, "Failed");
+      } finally {
+        btnCut.disabled = false;
+      }
+    }
+
+    /* ==================================================================
+       ERROR DISPLAY HELPERS
+    ================================================================== */
+    function showError(msg) {
+      errorMsg.textContent  = msg;
+      errorMsg.style.display = "block";
+    }
+    function hideError() {
+      errorMsg.style.display = "none";
+    }
+
+    /* ==================================================================
+       RESET TOOL: Return to the drop zone state
+    ================================================================== */
+    function resetTool() {
+      // Stop and clear video
+      videoPlayer.pause();
+      videoPlayer.src = "";
+      videoFile = null;
+
+      // Reset state
+      videoDuration = 0;
+      startSec      = 0;
+      endSec        = 0;
+      ffmpegTotalMs = 0;
+
+      // Reset sliders
+      sliderStart.value = 0;
+      sliderEnd.value   = 100;
+      updateRangeFill();
+
+      // Reset inputs
+      inputStart.value = "";
+      inputEnd.value   = "";
+
+      // Reset UI panels
+      resultBox.style.display       = "none";
+      terminalWrap.style.display    = "none";
+      progressWrap.style.display    = "none";
+      terminalOutput.textContent    = "";
+      errorMsg.style.display        = "none";
+      btnCut.disabled               = false;
+      setProgress(0, "Processing...");
+
+      // Show drop zone, hide editor
+      editorWS.style.display = "none";
+      dropZone.style.display = "block";
+
+      // Reset file input
+      fileInput.value = "";
+    }
+
+    /* ==================================================================
+       FAQ ACCORDION TOGGLE
+    ================================================================== */
+    function toggleFaq(btn) {
+      const item     = btn.closest(".faq-item");
+      const isOpen   = item.classList.contains("open");
+      // Close all open items first
+      document.querySelectorAll(".faq-item.open").forEach(el => el.classList.remove("open"));
+      // Toggle clicked item
+      if (!isOpen) item.classList.add("open");
+      btn.setAttribute("aria-expanded", String(!isOpen));
+    }
+
+  </script>
+
+</body>
+</html>

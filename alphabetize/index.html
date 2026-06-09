@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alphabetize: Sort Any List A-Z or Z-A Instantly | Axiom Ape</title>
+  <meta name="description" content="Free online list alphabetizer. Sort any list of items from A-Z or Z-A instantly in your browser. Supports natural sorting, last name sorting, duplicate removal, and more." />
+  <meta name="keywords" content="alphabetize list, sort list online, alphabetical order, sort A to Z, list sorter, natural sort, name sorter" />
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --accent:        #3730a3;   /* deep indigo */
+      --accent-hover:  #2e28890;
+      --accent-light:  #eef2ff;
+      --accent-border: #a5b4fc;
+      --success:       #16a34a;
+      --danger:        #dc2626;
+      --gray-50:       #f9fafb;
+      --gray-100:      #f3f4f6;
+      --gray-200:      #e5e7eb;
+      --gray-400:      #9ca3af;
+      --gray-600:      #4b5563;
+      --gray-700:      #374151;
+      --gray-900:      #111827;
+      --radius:        10px;
+      --shadow:        0 4px 24px rgba(55, 48, 163, 0.08);
+      --font:          'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--gray-100);
+      color: var(--gray-700);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    /* =========================================================
+       TOP NAV BAR
+    ========================================================= */
+    .top-bar {
+      text-align: center;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 0.85rem;
+      color: var(--gray-600);
+      letter-spacing: 0.01em;
+    }
+    .top-bar a {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* =========================================================
+       PAGE WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      color: var(--gray-900);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .page-header p {
+      margin-top: 8px;
+      color: var(--gray-600);
+      font-size: 1rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =========================================================
+       MAIN CARD
+    ========================================================= */
+    .card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* =========================================================
+       AD PLACEHOLDER
+       Standard leaderboard: 728x90 (collapses on mobile)
+    ========================================================= */
+    /* === AD SLOT: Replace this div's contents with your AdSense <script> tag === */
+    .ad-slot {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto;
+      background: var(--gray-100);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    /* === END AD SLOT === */
+
+    /* =========================================================
+       CARD BODY
+    ========================================================= */
+    .card-body {
+      padding: 28px;
+    }
+
+    /* =========================================================
+       CONTROLS GRID
+    ========================================================= */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+
+    .control-group h3 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--gray-600);
+      margin-bottom: 10px;
+    }
+
+    /* ---- Sort direction buttons ---- */
+    .direction-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-sort {
+      flex: 1;
+      padding: 11px 10px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--accent);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-sort:hover,
+    .btn-sort.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-sort:active { transform: scale(0.97); }
+
+    /* ---- Toggle checkboxes ---- */
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      cursor: pointer;
+    }
+    .toggle-item input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      margin-top: 2px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .toggle-item .toggle-label {
+      font-size: 0.875rem;
+      color: var(--gray-700);
+      font-weight: 600;
+    }
+    .toggle-item .toggle-desc {
+      font-size: 0.775rem;
+      color: var(--gray-600);
+      margin-top: 2px;
+      line-height: 1.45;
+    }
+
+    /* =========================================================
+       METRICS DASHBOARD
+    ========================================================= */
+    .metrics-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 14px;
+    }
+    .metric-item {
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .metric-item span {
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    .metric-sep {
+      color: var(--accent-border);
+      font-size: 0.9rem;
+    }
+
+    /* =========================================================
+       TEXTAREA
+    ========================================================= */
+    #list-input {
+      width: 100%;
+      min-height: 280px;
+      resize: vertical;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.95rem;
+      font-family: 'Courier New', monospace;
+      line-height: 1.7;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    #list-input:focus {
+      border-color: var(--accent);
+      background: #fff;
+    }
+    #list-input::placeholder { color: var(--gray-400); }
+
+    /* =========================================================
+       UTILITY BUTTONS ROW
+    ========================================================= */
+    .utility-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .btn-util {
+      padding: 8px 18px;
+      border-radius: 7px;
+      border: 1.5px solid var(--gray-200);
+      background: #fff;
+      color: var(--gray-700);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-util:hover {
+      background: var(--gray-100);
+      border-color: var(--gray-400);
+    }
+    .btn-util.danger:hover {
+      background: #fef2f2;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* "Copied!" toast */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--gray-900);
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 1000;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* =========================================================
+       DIVIDER
+    ========================================================= */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 36px 0;
+    }
+
+    /* =========================================================
+       DISCLAIMER
+    ========================================================= */
+    .disclaimer {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-size: 0.875rem;
+      color: var(--gray-700);
+      margin-bottom: 36px;
+      line-height: 1.55;
+    }
+    .disclaimer strong { color: var(--gray-900); }
+
+    /* =========================================================
+       SEO / EDUCATIONAL SECTION
+    ========================================================= */
+    .edu-section h2 {
+      font-size: clamp(1.25rem, 3vw, 1.6rem);
+      font-weight: 800;
+      color: var(--gray-900);
+      margin-bottom: 20px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      border: none;
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--gray-50); }
+    .faq-question .faq-icon {
+      font-size: 1.2rem;
+      color: var(--accent);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .faq-question[aria-expanded="true"] .faq-icon {
+      transform: rotate(45deg);
+    }
+    .faq-answer {
+      display: none;
+      padding: 0 20px 18px;
+      font-size: 0.9rem;
+      color: var(--gray-700);
+      line-height: 1.7;
+      background: var(--gray-50);
+      border-top: 1px solid var(--gray-200);
+    }
+    .faq-answer p + p { margin-top: 10px; }
+    .faq-answer strong { color: var(--gray-900); }
+    .faq-answer code {
+      background: var(--gray-200);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-family: 'Courier New', monospace;
+    }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    footer {
+      background: #fff;
+      border-top: 1px solid var(--gray-200);
+      padding: 20px 16px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--gray-600);
+    }
+    footer nav {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    footer nav a {
+      color: var(--gray-600);
+      font-weight: 600;
+    }
+    footer nav a:hover { color: var(--accent); }
+
+  </style>
+  <link rel="canonical" href="https://axiomape.com/alphabetize/" />
+</head>
+<body>
+
+  <!-- =========================================================
+       TOP NAVIGATION BAR
+  ========================================================= -->
+  <div class="top-bar">
+    Free tools from <a href="/" target="_blank" rel="noopener">axiomape.com</a>
+  </div>
+
+  <!-- =========================================================
+       PAGE WRAPPER
+  ========================================================= -->
+  <div class="page-wrapper">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Alphabetize: Sort Any List A-Z or Z-A Instantly</h1>
+      <p>Paste your list below, choose your options, and click a sort button. Everything happens instantly in your browser.</p>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+
+      <!-- =====================================================
+           AD SLOT - Leaderboard 728x90
+           Replace the inner content with your AdSense code.
+      ====================================================== -->
+      <div class="ad-slot" aria-hidden="true">
+        Advertisement (728 x 90)
+      </div>
+      <!-- END AD SLOT -->
+
+      <div class="card-body">
+
+        <!-- =================================================
+             CONTROLS GRID
+        ================================================== -->
+        <div class="controls-grid">
+
+          <!-- Left Column: Sort Direction + Sorting Behavior -->
+          <div>
+            <div class="control-group">
+              <h3>Sort Direction</h3>
+              <div class="direction-buttons">
+                <button class="btn-sort" id="btn-az" onclick="sortList('az')" aria-label="Sort A to Z">
+                  &#9650; A - Z
+                </button>
+                <button class="btn-sort" id="btn-za" onclick="sortList('za')" aria-label="Sort Z to A">
+                  &#9660; Z - A
+                </button>
+              </div>
+            </div>
+
+            <div class="control-group" style="margin-top:20px;">
+              <h3>Sorting Behavior</h3>
+              <div class="toggle-list">
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-natural" checked />
+                  <div>
+                    <div class="toggle-label">Natural Number Sorting</div>
+                    <div class="toggle-desc">
+                      Standard alphabetical order treats numbers as text, so "10" comes before "2" (because "1" precedes "2" as a character).
+                      <strong>Natural sorting</strong> understands numeric values, so "2" correctly comes before "10".
+                    </div>
+                  </div>
+                </label>
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-case" />
+                  <div>
+                    <div class="toggle-label">Case Sensitive</div>
+                    <div class="toggle-desc">
+                      <strong>Case Sensitivity</strong> means uppercase and lowercase letters are treated as different characters.
+                      When enabled, all uppercase words (e.g. "Apple") sort before all lowercase ones (e.g. "apple").
+                      When disabled, case is ignored and "apple" equals "Apple".
+                    </div>
+                  </div>
+                </label>
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-lastname" />
+                  <div>
+                    <div class="toggle-label">Sort by Last Word (Last Name)</div>
+                    <div class="toggle-desc">
+                      Sorts each line by its final word. Ideal for student rosters such as "Jane Smith" or "Dr. John Doe" - the list will be ordered by Smith, Doe, etc.
+                    </div>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Data Cleaning -->
+          <div>
+            <div class="control-group">
+              <h3>Data Cleaning</h3>
+              <div class="toggle-list">
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-trim" checked />
+                  <div>
+                    <div class="toggle-label">Trim Whitespace</div>
+                    <div class="toggle-desc">
+                      <strong>Whitespace</strong> refers to invisible characters (spaces, tabs) at the start or end of a line.
+                      Trimming removes them so " Apple" and "Apple" are treated as identical items and sort correctly.
+                    </div>
+                  </div>
+                </label>
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-empty" checked />
+                  <div>
+                    <div class="toggle-label">Remove Empty Lines</div>
+                    <div class="toggle-desc">
+                      Strips out completely blank lines from your list before sorting, preventing empty entries from floating to the top or bottom of results.
+                    </div>
+                  </div>
+                </label>
+
+                <label class="toggle-item">
+                  <input type="checkbox" id="chk-dupes" />
+                  <div>
+                    <div class="toggle-label">Remove Duplicates</div>
+                    <div class="toggle-desc">
+                      Scans the list for identical lines (comparison ignores case by default) and keeps only one copy of each unique item.
+                    </div>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- END CONTROLS GRID -->
+
+        <!-- =================================================
+             METRICS DASHBOARD
+        ================================================== -->
+        <div class="metrics-bar" id="metrics-bar" role="status" aria-live="polite">
+          <div class="metric-item">Total Lines: <span id="m-total">0</span></div>
+          <div class="metric-sep">|</div>
+          <div class="metric-item">Non-Empty Lines: <span id="m-nonempty">0</span></div>
+          <div class="metric-sep">|</div>
+          <div class="metric-item">Duplicates Found: <span id="m-dupes">0</span></div>
+          <div class="metric-sep">|</div>
+          <div class="metric-item">Blank Lines: <span id="m-blank">0</span></div>
+        </div>
+
+        <!-- =================================================
+             TEXTAREA (the main list canvas)
+        ================================================== -->
+        <textarea
+          id="list-input"
+          placeholder="Paste or type your list here, one item per line...
+
+Example:
+Mango
+Apple
+10 Pineapples
+2 Oranges
+Banana"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          aria-label="List input"
+        ></textarea>
+
+        <!-- =================================================
+             UTILITY BUTTONS
+        ================================================== -->
+        <div class="utility-row">
+          <button class="btn-util" onclick="copyList()" id="btn-copy" aria-label="Copy list to clipboard">
+            &#128203; Copy to Clipboard
+          </button>
+          <button class="btn-util" onclick="downloadList()" aria-label="Download list as text file">
+            &#8595; Download as .txt
+          </button>
+          <button class="btn-util danger" onclick="clearList()" aria-label="Clear all text">
+            &#10005; Clear List
+          </button>
+        </div>
+
+      </div><!-- END card-body -->
+    </div><!-- END card -->
+
+    <hr class="divider" />
+
+    <!-- =================================================
+         DISCLAIMER
+    ================================================== -->
+    <div class="disclaimer" role="note">
+      <strong>Privacy Notice:</strong>
+      This tool processes all list data locally in your browser. We do not store, save, or transmit your sensitive lists or personal data. Nothing you type here ever leaves your device.
+    </div>
+
+    <!-- =================================================
+         SEO / EDUCATIONAL SECTION
+    ================================================== -->
+    <div class="edu-section">
+      <h2>The Ultimate Guide to Alphabetical Order and Data Sorting</h2>
+
+      <div class="faq-item open">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="true">
+          What is alphabetical order, and why does it matter?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            Alphabetical order is the arrangement of words, names, or other text-based items according to the standard sequence of letters in a given alphabet. In English, this means ordering entries from A to Z (ascending) or Z to A (descending). The practice dates back to ancient libraries and cataloguing systems, and it remains one of the most universally understood organizational methods in the world precisely because it requires no prior knowledge of the subject matter to navigate.
+          </p>
+          <p>
+            Sorting data alphabetically matters because it dramatically reduces the cognitive load of finding information. Whether you are a teacher organizing a class roster of 300 students, a business owner compiling a vendor directory, or a writer cataloguing research sources, a sorted list lets your eye travel predictably from top to bottom instead of scanning randomly. Studies in information architecture consistently find that alphabetical navigation is the fastest method for users who already know what they are looking for.
+          </p>
+          <p>
+            Computers sort text using a method called <strong>Lexicographical Order</strong>, which is the digital equivalent of alphabetical order. Each character (letter, digit, symbol) is assigned a numeric code (its Unicode or ASCII value), and the computer compares strings character by character from left to right, just as you would compare words in a dictionary. Understanding this concept explains many behaviors you might otherwise find confusing, such as why numbers sometimes sort unexpectedly when mixed with text.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the difference between standard sorting and natural number sorting?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            This is one of the most important distinctions to understand when sorting mixed text-and-number lists. <strong>Standard (Lexicographical) sorting</strong> treats every character in a string identically, including digits. Because the digit "1" has a lower code value than "2", a standard sort will place "10" before "2", "100" before "3", and so on. This is technically correct for pure text comparison but produces results that feel wrong when the numbers carry real numeric meaning.
+          </p>
+          <p>
+            <strong>Natural Number Sorting</strong> (sometimes called "human sorting") solves this problem by detecting numeric segments within a string and comparing them as actual integers rather than character sequences. So <code>File 2.txt</code> correctly precedes <code>File 10.txt</code>, and <code>Chapter 9</code> comes before <code>Chapter 10</code>. This tool uses JavaScript's built-in <code>localeCompare()</code> function with the option <code>numeric: true</code> to enable natural sorting without any complex custom code.
+          </p>
+          <p>
+            Use natural sorting any time your list contains numbered items, version numbers, addresses, chapter titles, product codes, or any other entries where numbers represent quantities rather than arbitrary labels. Disable it only when the character-by-character comparison is specifically what you need, for example when sorting hexadecimal codes or other structured identifiers where numeric interpretation would be misleading.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          How does "Sort by Last Name" work, and who is it for?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            The "Sort by Last Word" feature is designed for one of the most common real-world sorting challenges: alphabetizing a list of full names by surname. When a list contains entries like "Jane Smith", "Robert Alvarez", and "Michael Chen", a standard alphabetical sort orders them by first name (A, J, M, R...), which is rarely what educators, administrators, or event planners need.
+          </p>
+          <p>
+            When this option is enabled, the tool reads each line, splits it into individual words, and uses only the <strong>last word</strong> as the sorting key. The full original line is preserved in the output, but the invisible ranking is determined by that final word. This means "Jane Smith" sorts under S, "Robert Alvarez" under A, and "Michael Chen" under C, producing the familiar last-name-first order used in grade books, attendance sheets, conference programs, and award lists.
+          </p>
+          <p>
+            <strong>Important caveat:</strong> this feature assumes the last word of each line is the surname. It works perfectly for "FirstName LastName" formats, but if your data includes professional titles at the end (like "Jane Smith, MD") or trailing punctuation, you may need to clean your data first. The "Trim Whitespace" option handles leading and trailing spaces automatically.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          Why does whitespace matter, and what does "Trim Whitespace" do?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            <strong>Whitespace</strong> is the collective term for invisible characters that occupy space in text: the standard space (the character you type with the spacebar), the tab character, and other Unicode spacing characters. When you paste data from a spreadsheet, a PDF, or another application, each line frequently carries hidden leading spaces (spaces before the first visible character) or trailing spaces (spaces after the last visible character).
+          </p>
+          <p>
+            These invisible characters cause serious sorting problems. From the computer's perspective, " Apple" (with a leading space) is entirely different from "Apple" (without one), because a space character has a lower ASCII value than any letter. This means " Apple" would sort before "Aardvark", even though visually it looks like it should sort with the A's. Similarly, "Apple  " and "Apple" would be treated as distinct entries, preventing the duplicate-removal feature from correctly identifying them as the same item.
+          </p>
+          <p>
+            Enabling "Trim Whitespace" applies JavaScript's <code>.trim()</code> method to each line before sorting and duplicate detection. This strips all leading and trailing whitespace, ensuring that your data is clean and that the sort results match what you see, not what the computer's character codes say. For virtually every use case, you should leave this option enabled.
+          </p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          How does this tool protect the privacy of my lists?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>
+            This tool is architected as a purely client-side application. That is a technical way of saying that every function - reading your text, sorting it, removing duplicates, copying to clipboard - happens entirely within your own web browser using JavaScript. When you paste your list and click "Sort A-Z", no data is sent to any server, no HTTP request is made, and no information leaves your device.
+          </p>
+          <p>
+            This design has important privacy implications for sensitive use cases. Teachers can sort class rosters with student names. HR professionals can alphabetize employee lists. Medical staff can organize patient records for a quick lookup without any risk that the names are logged or transmitted to a third party. Contrast this with some online tools that process text on their own servers, where your data technically passes through infrastructure you do not control.
+          </p>
+          <p>
+            You can verify this yourself: paste sensitive data into the tool, then disconnect your device from the internet entirely and click Sort. The tool will work perfectly, because it requires no network connection whatsoever. The only data that persists in any form is what remains visible in your browser tab, and that disappears the moment you close or refresh the page. We do not use cookies, analytics trackers, or session storage for your list data.
+          </p>
+        </div>
+      </div>
+
+    </div><!-- END edu-section -->
+
+  </div><!-- END page-wrapper -->
+
+  <!-- =========================================================
+       FOOTER
+  ========================================================= -->
+  <footer>
+    <nav aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <div>&copy; <span id="footer-year"></span> <a href="/">Axiom Ape</a>. All rights reserved.</div>
+  </footer>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+
+  <!-- =========================================================
+       JAVASCRIPT
+  ========================================================= -->
+  <script>
+    "use strict";
+
+    /* ----------------------------------------------------------
+       DOM REFERENCES
+    ---------------------------------------------------------- */
+    const textarea    = document.getElementById("list-input");
+    const mTotal      = document.getElementById("m-total");
+    const mNonempty   = document.getElementById("m-nonempty");
+    const mDupes      = document.getElementById("m-dupes");
+    const mBlank      = document.getElementById("m-blank");
+    const toast       = document.getElementById("toast");
+    const btnAz       = document.getElementById("btn-az");
+    const btnZa       = document.getElementById("btn-za");
+
+    /* ----------------------------------------------------------
+       FOOTER YEAR
+    ---------------------------------------------------------- */
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    /* ----------------------------------------------------------
+       METRICS: update live counts as user types
+    ---------------------------------------------------------- */
+    function updateMetrics() {
+      const raw   = textarea.value;
+      const lines = raw === "" ? [] : raw.split("\n");
+      const total = lines.length;
+      const blank = lines.filter(l => l.trim() === "").length;
+      const nonempty = total - blank;
+
+      // Count duplicates (case-insensitive)
+      const seen  = new Set();
+      let dupeCount = 0;
+      lines.forEach(line => {
+        const key = line.trim().toLowerCase();
+        if (key === "") return;
+        if (seen.has(key)) {
+          dupeCount++;
+        } else {
+          seen.add(key);
+        }
+      });
+
+      mTotal.textContent    = total;
+      mNonempty.textContent = nonempty;
+      mBlank.textContent    = blank;
+      mDupes.textContent    = dupeCount;
+    }
+
+    textarea.addEventListener("input", updateMetrics);
+    updateMetrics(); // run once on page load
+
+    /* ----------------------------------------------------------
+       SORT LOGIC
+    ---------------------------------------------------------- */
+    function sortList(direction) {
+      // Read option checkboxes
+      const useNatural  = document.getElementById("chk-natural").checked;
+      const useCaseSens = document.getElementById("chk-case").checked;
+      const useLastName = document.getElementById("chk-lastname").checked;
+      const useTrim     = document.getElementById("chk-trim").checked;
+      const useEmpty    = document.getElementById("chk-empty").checked;
+      const useDupes    = document.getElementById("chk-dupes").checked;
+
+      // Split textarea into an array of lines
+      let lines = textarea.value.split("\n");
+
+      // Step 1: Trim whitespace (leading and trailing spaces) from each line
+      if (useTrim) {
+        lines = lines.map(l => l.trim());
+      }
+
+      // Step 2: Remove empty lines
+      if (useEmpty) {
+        lines = lines.filter(l => l !== "");
+      }
+
+      // Step 3: Remove duplicates (preserve first occurrence)
+      if (useDupes) {
+        const seen = new Set();
+        lines = lines.filter(line => {
+          const key = useCaseSens ? line : line.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      // Step 4: Build sort key function
+      // If "sort by last word" is enabled, extract the last word from each line.
+      function getSortKey(line) {
+        if (useLastName) {
+          const words = line.trim().split(/\s+/);
+          return words[words.length - 1] || line;
+        }
+        return line;
+      }
+
+      // Step 5: Configure localeCompare options
+      // localeCompare handles both natural number sorting and case sensitivity
+      // in a way that is consistent across operating systems.
+      const collatorOptions = {
+        numeric:    useNatural,
+        sensitivity: useCaseSens ? "variant" : "base"
+        // "variant" = distinguish case and accents
+        // "base"    = ignore case and accents
+      };
+
+      // Step 6: Sort
+      lines.sort((a, b) => {
+        const keyA = getSortKey(a);
+        const keyB = getSortKey(b);
+        const cmp  = keyA.localeCompare(keyB, undefined, collatorOptions);
+        return direction === "az" ? cmp : -cmp;
+      });
+
+      // Step 7: Write sorted result back to textarea
+      textarea.value = lines.join("\n");
+
+      // Step 8: Update metrics to reflect the cleaned list
+      updateMetrics();
+
+      // Highlight the active sort button briefly
+      if (direction === "az") {
+        btnAz.classList.add("active");
+        btnZa.classList.remove("active");
+      } else {
+        btnZa.classList.add("active");
+        btnAz.classList.remove("active");
+      }
+    }
+
+    /* ----------------------------------------------------------
+       COPY TO CLIPBOARD
+    ---------------------------------------------------------- */
+    function copyList() {
+      const text = textarea.value;
+      if (!text.trim()) {
+        showToast("Nothing to copy!");
+        return;
+      }
+      // Use the modern Clipboard API where available, with a fallback
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast("Copied to clipboard!");
+        }).catch(() => {
+          fallbackCopy(text);
+        });
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        showToast("Copied to clipboard!");
+      } catch (e) {
+        showToast("Could not copy. Please select and copy manually.");
+      }
+      window.getSelection().removeAllRanges();
+    }
+
+    /* ----------------------------------------------------------
+       DOWNLOAD AS .TXT
+    ---------------------------------------------------------- */
+    function downloadList() {
+      const text = textarea.value;
+      if (!text.trim()) {
+        showToast("Nothing to download!");
+        return;
+      }
+      // Create an in-memory object URL and trigger a download
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "sorted-list.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Download started!");
+    }
+
+    /* ----------------------------------------------------------
+       CLEAR LIST
+    ---------------------------------------------------------- */
+    function clearList() {
+      textarea.value = "";
+      btnAz.classList.remove("active");
+      btnZa.classList.remove("active");
+      updateMetrics();
+      textarea.focus();
+    }
+
+    /* ----------------------------------------------------------
+       TOAST NOTIFICATION
+    ---------------------------------------------------------- */
+    let toastTimer = null;
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2200);
+    }
+
+    /* ----------------------------------------------------------
+       FAQ ACCORDION
+    ---------------------------------------------------------- */
+    function toggleFaq(button) {
+      const item     = button.parentElement;
+      const isOpen   = item.classList.contains("open");
+      const expanded = !isOpen;
+
+      // Close all items
+      document.querySelectorAll(".faq-item").forEach(el => {
+        el.classList.remove("open");
+        el.querySelector(".faq-question").setAttribute("aria-expanded", "false");
+      });
+
+      // Open the clicked one if it was closed
+      if (!isOpen) {
+        item.classList.add("open");
+        button.setAttribute("aria-expanded", "true");
+      }
+    }
+
+  </script>
+</body>
+</html>

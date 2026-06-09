@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Dice Roller - Roll Any Combo, D4 Through D100 | AxiomApe</title>
+  <meta name="description" content="Free virtual dice roller for tabletop RPGs and board games. Roll D4, D6, D8, D10, D12, D20, and D100 using a cryptographically secure random number generator. No bias, no ads, fully private." />
+  <meta name="keywords" content="virtual dice roller, dice roller, D20 roller, tabletop RPG dice, TTRPG dice, polyhedral dice, D&D dice roller, board game dice, cryptographic dice roller" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://axiomape.com/virtual-dice-roller/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Virtual Dice Roller - Roll Any Combo, D4 Through D100" />
+  <meta property="og:description" content="Cryptographically secure polyhedral dice roller for tabletop RPGs and board games. Fair, private, and works offline." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://axiomape.com/virtual-dice-roller/" />
+
+  <style>
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:        #c8a84b;
+      --gold-light:  #e8d080;
+      --gold-dim:    #7a6228;
+      --cream:       #f5ecd7;
+      --dark-bg:     #1a1108;
+      --panel-bg:    #221a0a;
+      --panel-border:#3d2f10;
+      --felt:        #0f2417;
+      --felt-light:  #163320;
+      --text-muted:  #9e8a5e;
+      --red-die:     #8b1a1a;
+      --radius:      10px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.7);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background-color: var(--dark-bg);
+      color: var(--cream);
+      min-height: 100vh;
+      /* subtle wood-grain texture via CSS gradient */
+      background-image:
+        repeating-linear-gradient(
+          92deg,
+          transparent,
+          transparent 2px,
+          rgba(255,255,255,0.012) 2px,
+          rgba(255,255,255,0.012) 4px
+        ),
+        repeating-linear-gradient(
+          180deg,
+          transparent,
+          transparent 40px,
+          rgba(0,0,0,0.08) 40px,
+          rgba(0,0,0,0.08) 41px
+        ),
+        radial-gradient(ellipse at 20% 50%, #2a1c08 0%, #1a1108 60%, #0d0a04 100%);
+    }
+
+    /* ============================================================
+       SITE NAV BAR
+    ============================================================ */
+    .site-nav {
+      text-align: center;
+      padding: 10px 0 8px;
+      border-bottom: 1px solid var(--panel-border);
+      background: rgba(0,0,0,0.4);
+    }
+    .site-nav a {
+      color: var(--gold);
+      text-decoration: none;
+      font-family: 'Georgia', serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .site-nav a:hover { color: var(--gold-light); text-decoration: underline; }
+
+    /* ============================================================
+       WRAPPER
+    ============================================================ */
+    .wrapper {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      padding: 36px 0 28px;
+      border-bottom: 1px solid var(--panel-border);
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      color: var(--gold-light);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      letter-spacing: 0.04em;
+      line-height: 1.25;
+    }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .dice-icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+
+    /* ============================================================
+       MAIN PANEL (felt table)
+    ============================================================ */
+    .main-panel {
+      background: var(--felt);
+      border: 2px solid var(--gold-dim);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow), inset 0 0 40px rgba(0,0,0,0.5);
+      padding: 28px 24px 24px;
+      margin-bottom: 28px;
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%),
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 8px,
+          rgba(255,255,255,0.008) 8px,
+          rgba(255,255,255,0.008) 9px
+        );
+    }
+
+    /* ============================================================
+       SECTION LABELS
+    ============================================================ */
+    .section-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 10px;
+      font-family: 'Georgia', serif;
+    }
+
+    /* ============================================================
+       DICE TRAY
+    ============================================================ */
+    .dice-tray {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .die-btn {
+      width: 68px;
+      height: 68px;
+      border: 2px solid var(--gold-dim);
+      border-radius: 8px;
+      background: linear-gradient(145deg, #2a1e0c, #1a1108);
+      color: var(--gold);
+      font-family: 'Georgia', serif;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .die-btn:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(200,168,75,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .die-btn:active { transform: translateY(0); }
+    .die-btn.has-count { border-color: var(--gold); background: linear-gradient(145deg, #3a2a10, #251c08); }
+
+    /* die face SVG icon */
+    .die-btn .die-face { font-size: 1.5rem; line-height: 1; }
+    .die-btn .die-label { font-size: 0.7rem; letter-spacing: 0.08em; color: var(--text-muted); }
+
+    /* count badge */
+    .die-count-badge {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      background: var(--gold);
+      color: #1a1108;
+      font-size: 0.7rem;
+      font-weight: bold;
+      font-family: monospace;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .die-btn.has-count .die-count-badge { opacity: 1; }
+
+    /* ============================================================
+       CONTROLS ROW (modifier, clear, roll)
+    ============================================================ */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .modifier-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modifier-group label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .modifier-group input {
+      width: 72px;
+      padding: 8px 10px;
+      background: #1a1108;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      color: var(--cream);
+      font-family: 'Georgia', serif;
+      font-size: 1rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modifier-group input:focus { border-color: var(--gold); }
+
+    .btn-clear {
+      padding: 9px 18px;
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-family: 'Georgia', serif;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-clear:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+    .btn-roll {
+      padding: 12px 40px;
+      background: linear-gradient(145deg, #c8a84b, #a07830);
+      border: none;
+      border-radius: 8px;
+      color: #1a1108;
+      font-family: 'Georgia', serif;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      box-shadow: 0 4px 14px rgba(200,168,75,0.35);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .btn-roll:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 20px rgba(200,168,75,0.5);
+    }
+    .btn-roll:active { transform: translateY(0); }
+    .btn-roll:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ============================================================
+       ROLL FORMULA DISPLAY
+    ============================================================ */
+    .formula-display {
+      text-align: center;
+      min-height: 28px;
+      color: var(--gold);
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 18px;
+      font-family: 'Georgia', serif;
+    }
+    .formula-display .empty { color: var(--gold-dim); font-size: 0.85rem; font-style: italic; }
+
+    /* ============================================================
+       RESULT AREA
+    ============================================================ */
+    .result-area {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .result-placeholder {
+      color: var(--gold-dim);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    /* individual die results */
+    .individual-results {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .single-die-result {
+      background: linear-gradient(145deg, #2a1e0c, #1a1108);
+      border: 1px solid var(--gold-dim);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.88rem;
+    }
+    .single-die-result .die-type { color: var(--text-muted); font-size: 0.72rem; display: block; margin-bottom: 2px; }
+    .single-die-result .die-value {
+      color: var(--gold-light);
+      font-size: 1.3rem;
+      font-weight: bold;
+      display: block;
+    }
+    /* spin animation */
+    @keyframes spinIn {
+      0%   { transform: rotateY(0deg) scale(0.6); opacity: 0.3; }
+      50%  { transform: rotateY(180deg) scale(1.15); opacity: 0.8; }
+      100% { transform: rotateY(360deg) scale(1); opacity: 1; }
+    }
+    .single-die-result.rolling .die-value { animation: spinIn 0.55s ease-out forwards; }
+
+    /* total sum */
+    .total-sum {
+      margin-top: 4px;
+    }
+    .total-sum .label { color: var(--text-muted); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; }
+    .total-sum .value {
+      font-size: 2.8rem;
+      font-weight: bold;
+      color: var(--gold-light);
+      line-height: 1.1;
+      text-shadow: 0 0 18px rgba(200,168,75,0.5);
+    }
+    @keyframes totalBounce {
+      0%   { transform: scale(0.7); opacity: 0; }
+      60%  { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .total-sum.animate .value { animation: totalBounce 0.45s ease-out forwards; }
+
+    .modifier-line { color: var(--text-muted); font-size: 0.85rem; }
+
+    /* ============================================================
+       HISTORY LOG
+    ============================================================ */
+    .history-section { margin-top: 6px; }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn-clear-history {
+      background: none;
+      border: none;
+      color: var(--gold-dim);
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: 'Georgia', serif;
+      transition: color 0.15s;
+    }
+    .btn-clear-history:hover { color: var(--gold); }
+
+    #history-log {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 220px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold-dim) transparent;
+    }
+    #history-log li {
+      background: rgba(0,0,0,0.25);
+      border-left: 3px solid var(--gold-dim);
+      border-radius: 0 6px 6px 0;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    #history-log li .hist-formula { color: var(--text-muted); flex: 1; }
+    #history-log li .hist-total { color: var(--gold); font-weight: bold; white-space: nowrap; }
+    #history-log li .hist-time { color: var(--gold-dim); font-size: 0.7rem; white-space: nowrap; }
+    #history-log li.newest { border-left-color: var(--gold); }
+    .history-empty { color: var(--gold-dim); font-size: 0.82rem; font-style: italic; text-align: center; padding: 12px 0; }
+
+    /* ============================================================
+       PROBABILITY DIAGRAM
+    ============================================================ */
+    .prob-section {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 28px;
+    }
+    .prob-section h2 {
+      font-size: 1rem;
+      color: var(--gold);
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+
+    /* visual bar chart of dice ranges */
+    .dice-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dice-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dice-row .dlabel {
+      width: 42px;
+      text-align: right;
+      font-size: 0.8rem;
+      color: var(--gold);
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .dice-row .dbar-wrap {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border-radius: 4px;
+      height: 20px;
+      overflow: hidden;
+    }
+    .dice-row .dbar {
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 0.7rem;
+      color: #1a1108;
+      font-weight: bold;
+      transition: width 0.6s ease-out;
+    }
+    .dice-row .drange {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER
+    ============================================================ */
+    /* =====================================================
+       ADSENSE PLACEHOLDER
+       Replace this block with your Google AdSense code snippet.
+       Standard banner size: 728x90 (leaderboard) or 320x50 (mobile).
+       ===================================================== */
+    .ad-placeholder {
+      background: rgba(0,0,0,0.3);
+      border: 1px dashed var(--panel-border);
+      border-radius: var(--radius);
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    /* ============================================================
+       SEO / EDUCATIONAL CONTENT
+    ============================================================ */
+    .edu-section {
+      margin-bottom: 32px;
+    }
+    .edu-section h2 {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      color: var(--gold-light);
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 16px 18px;
+      color: var(--gold);
+      font-family: 'Georgia', serif;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: rgba(200,168,75,0.06); }
+    .faq-question .faq-arrow {
+      font-size: 0.8rem;
+      color: var(--gold-dim);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease-out;
+    }
+    .faq-item.open .faq-answer { max-height: 700px; }
+    .faq-answer-inner {
+      padding: 0 18px 18px;
+      color: var(--cream);
+      font-size: 0.9rem;
+      line-height: 1.75;
+    }
+    .faq-answer-inner p { margin-bottom: 10px; }
+    .faq-answer-inner p:last-child { margin-bottom: 0; }
+    .faq-answer-inner strong { color: var(--gold-light); }
+    .faq-answer-inner em { color: var(--text-muted); }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding: 16px 20px;
+      border-top: 1px solid var(--panel-border);
+      border-bottom: 1px solid var(--panel-border);
+      margin-bottom: 24px;
+    }
+    .disclaimer strong { color: var(--gold-dim); }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      text-align: center;
+      padding: 18px 0 10px;
+      font-size: 0.8rem;
+      color: var(--gold-dim);
+    }
+    footer a {
+      color: var(--gold-dim);
+      text-decoration: none;
+      margin: 0 10px;
+      transition: color 0.15s;
+      letter-spacing: 0.05em;
+    }
+    footer a:hover { color: var(--gold); }
+    footer .sep { opacity: 0.4; }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+    }
+
+    @media (max-width: 500px) {
+      .die-btn { width: 56px; height: 56px; font-size: 1rem; }
+      .btn-roll { padding: 11px 28px; font-size: 1rem; }
+      .total-sum .value { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== SITE NAV ===================== -->
+  <nav class="site-nav" aria-label="Site navigation">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <div class="wrapper">
+
+    <!-- ===================== PAGE HEADER ===================== -->
+    <header class="page-header">
+      <span class="dice-icon" aria-hidden="true">&#x1F3B2;</span>
+      <h1>Virtual Dice Roller</h1>
+      <p>Roll any combination of polyhedral dice - D4 through D100 - for tabletop RPGs and board games. Powered by a Cryptographically Secure Random Number Generator (CSRNG) for truly fair results.</p>
+    </header>
+
+    <!-- ===================== MAIN PANEL ===================== -->
+    <main>
+      <section class="main-panel" aria-label="Dice roller interface">
+
+        <!-- Dice Tray -->
+        <p class="section-label">Select Dice - Click a die to add it to your roll</p>
+        <div class="dice-tray" role="group" aria-label="Dice selection buttons" id="dice-tray">
+          <!-- Buttons injected by JS -->
+        </div>
+
+        <!-- Formula Display -->
+        <div class="formula-display" id="formula-display" aria-live="polite">
+          <span class="empty">Click dice above to build your roll...</span>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="controls-row">
+          <div class="modifier-group">
+            <label for="modifier-input">
+              Modifier
+              <span title="A flat number added to (or subtracted from) the total - for example +2 or -1. Used in RPGs for character bonuses.">(+/-)</span>:
+            </label>
+            <input type="number" id="modifier-input" value="0" min="-99" max="99" aria-label="Roll modifier" />
+          </div>
+          <button class="btn-clear" id="btn-clear" aria-label="Clear all selected dice">Clear</button>
+          <button class="btn-roll" id="btn-roll" aria-label="Roll selected dice" disabled>Roll</button>
+        </div>
+
+        <!-- Result Area -->
+        <div class="result-area" id="result-area" aria-live="assertive" aria-atomic="true">
+          <p class="result-placeholder" id="result-placeholder">Your results will appear here.</p>
+          <div class="individual-results" id="individual-results" hidden></div>
+          <div class="total-sum" id="total-sum" hidden>
+            <span class="label">Total</span>
+            <span class="value" id="total-value">0</span>
+          </div>
+          <div class="modifier-line" id="modifier-line" hidden></div>
+        </div>
+
+        <!-- History Log -->
+        <div class="history-section">
+          <div class="history-header">
+            <p class="section-label" style="margin-bottom:0;">Roll History (last 10)</p>
+            <button class="btn-clear-history" id="btn-clear-history" aria-label="Clear roll history">Clear History</button>
+          </div>
+          <ul id="history-log" aria-label="Roll history">
+            <li class="history-empty" id="history-empty">No rolls yet.</li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- ===================== PROBABILITY DIAGRAM ===================== -->
+      <section class="prob-section" aria-label="Dice probability chart">
+        <h2>Polyhedral Dice - Probability Range at a Glance</h2>
+        <p style="font-size:0.82rem;color:var(--text-muted);text-align:center;margin-bottom:14px;">Each die has an equal chance of landing on any face. A wider range means more variance in outcomes.</p>
+        <div class="dice-chart" id="dice-chart">
+          <!-- Injected by JS -->
+        </div>
+      </section>
+
+      <!-- ===================== AD PLACEHOLDER ===================== -->
+      <!-- =====================================================
+           ADSENSE INJECTION POINT
+           Replace the div below with your Google AdSense <script> + <ins> tags.
+           Recommended sizes: 728x90 desktop leaderboard | 320x50 mobile banner.
+           ===================================================== -->
+      <div class="ad-placeholder" aria-hidden="true">Advertisement Space</div>
+
+      <!-- ===================== SEO / EDUCATIONAL SECTION ===================== -->
+      <section class="edu-section" aria-label="Educational guide to dice and probability">
+        <h2>The Ultimate Guide to Dice Probability and TTRPG Mechanics</h2>
+
+        <!-- FAQ 1 -->
+        <div class="faq-item" id="faq-1">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-1-answer" onclick="toggleFaq('faq-1')">
+            <span>Why is a Cryptographically Secure Roller better than a simple math one?</span>
+            <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-1-answer" role="region" aria-labelledby="faq-1">
+            <div class="faq-answer-inner">
+              <p>Most online dice rollers use JavaScript's built-in <strong>Math.random()</strong> function, which produces numbers through a <em>Pseudorandom Number Generator (PRNG)</em>. A PRNG starts from a predictable "seed" value, usually the current timestamp. While it looks random to the naked eye, it is technically reproducible and has subtle statistical patterns that can slightly favor certain outcomes over many thousands of rolls.</p>
+              <p>This roller uses <strong>window.crypto.getRandomValues()</strong>, which is the browser's <strong>Cryptographically Secure Random Number Generator (CSRNG)</strong>. A CSRNG draws entropy from genuinely unpredictable hardware-level events - such as mouse movements, CPU timing jitter, and thermal noise - to produce numbers that are statistically indistinguishable from true randomness. This is the same standard used in bank-grade encryption and secure password generation.</p>
+              <p>In practical gaming terms: over hundreds of session rolls, a CSRNG-powered roller will distribute results across all faces much more evenly than Math.random(), ensuring no die face is quietly favored. This is your <strong>Fair Play Guarantee</strong>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="faq-item" id="faq-2">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-2-answer" onclick="toggleFaq('faq-2')">
+            <span>What do D4, D20, and Modifiers actually mean in tabletop gaming?</span>
+            <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-2-answer" role="region" aria-labelledby="faq-2">
+            <div class="faq-answer-inner">
+              <p>The letter "D" simply stands for "die" or "dice," and the number after it tells you how many faces (sides) that die has. These are called <strong>Polyhedral Dice</strong> - meaning multi-sided dice with regular geometric shapes. The standard set used in tabletop RPGs like Dungeons and Dragons includes:</p>
+              <p><strong>D4</strong> (tetrahedron, 4 faces): Used for small weapons like daggers. <strong>D6</strong> (cube, 6 faces): The classic die everyone knows from board games, used for shortswords. <strong>D8</strong> (octahedron, 8 faces): Used for longswords and similar weapons. <strong>D10</strong>: Used for percentile rolls or medium damage. <strong>D12</strong> (dodecahedron, 12 faces): Used for great axes and some class features. <strong>D20</strong> (icosahedron, 20 faces): The most iconic RPG die - used to determine the success or failure of almost every action. <strong>D100</strong>: Usually rolled as two D10s together (one representing tens, one units) for percentage-based outcomes like wild magic surges.</p>
+              <p>A <strong>Modifier</strong> is a flat number you add to or subtract from the result. For example, "roll D20 plus 3" means roll a 20-sided die and add 3 to whatever comes up. Modifiers come from character stats, skills, spells, or equipment bonuses and represent how naturally talented or well-equipped a character is for a given task.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="faq-item" id="faq-3">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-3-answer" onclick="toggleFaq('faq-3')">
+            <span>How does Probability Distribution change when rolling multiple dice vs. one?</span>
+            <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-3-answer" role="region" aria-labelledby="faq-3">
+            <div class="faq-answer-inner">
+              <p>This is one of the most fascinating concepts in tabletop gaming mathematics. When you roll a <strong>single die</strong>, every possible number has an exactly equal chance of appearing. Roll one D6 and you have a 1-in-6 (about 16.7%) chance of getting any specific number from 1 to 6. This is called a <strong>Flat (Uniform) Probability Distribution</strong> - visualized as a perfectly level bar chart.</p>
+              <p>When you roll <strong>multiple dice and add them together</strong>, something remarkable happens: the probability distribution becomes a <strong>Bell Curve (Normal Distribution)</strong>. Roll 2d6 and while the minimum is 2 and the maximum is 12, rolling a 7 is six times more likely than rolling a 2 or 12 - because there are six different combinations of two dice that produce 7 (1+6, 2+5, 3+4, 4+3, 5+2, 6+1) but only one combination that produces 2 (1+1).</p>
+              <p>This has profound consequences for game design. Systems using multiple dice (like 2d6 or 3d6) produce more "average" results more often, making extreme outcomes rare and dramatic. Systems using a single D20 (like D and D 5th Edition) produce completely unpredictable results where a critical fail and a perfect success are equally likely - creating high tension and narrative drama. Neither approach is better; they create fundamentally different gameplay feels. Understanding <strong>Probability Distribution</strong> helps you choose which dice to use for which challenges in your game.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="faq-item" id="faq-4">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-4-answer" onclick="toggleFaq('faq-4')">
+            <span>Why should a virtual dice roller work offline, and is this one private?</span>
+            <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-4-answer" role="region" aria-labelledby="faq-4">
+            <div class="faq-answer-inner">
+              <p>Many game tables lack reliable internet connections - basements, cabins, convention halls with overloaded Wi-Fi, or international travel situations. A dice roller that requires a live server connection will fail you exactly when you need it most. An <strong>offline-first</strong> design means all the logic lives entirely in the browser's memory once the page is loaded. No server calls are made for any roll, ever.</p>
+              <p>Beyond reliability, there is a meaningful privacy consideration. Some server-based rollers log roll data to "verify fairness" or for analytics. This roller does the opposite: <strong>it is fully local and stateless</strong>. Your rolls exist only in your browser's session memory. Nothing is transmitted to any server. There are no cookies tracking your sessions, no accounts required, and no roll history stored beyond your own screen. When you close the tab, all roll data is gone. This design respects your privacy by default, not by policy - there is simply no mechanism for data collection to exist.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="faq-item" id="faq-5">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq-5-answer" onclick="toggleFaq('faq-5')">
+            <span>What are some common dice rolling conventions in popular RPGs?</span>
+            <span class="faq-arrow" aria-hidden="true">&#9660;</span>
+          </button>
+          <div class="faq-answer" id="faq-5-answer" role="region" aria-labelledby="faq-5">
+            <div class="faq-answer-inner">
+              <p>Different tabletop RPG systems have developed distinct dice conventions that shape how their games feel. In <strong>Dungeons and Dragons 5th Edition</strong>, the D20 is king: virtually every significant action - attacking, sneaking, persuading, resisting magic - is resolved with a D20 roll plus a relevant modifier, compared against a Difficulty Class (DC) set by the Game Master. Damage rolls then use a weapon-specific die (D6 for a shortsword, D12 for a greataxe).</p>
+              <p><strong>Pathfinder 2E</strong> uses a similar D20 system but adds a "degree of success" scale where beating a DC by 10 or more is a Critical Success with enhanced effects, while failing by 10 or more is a Critical Failure with severe consequences. This creates four tiers of outcomes instead of two. <strong>Call of Cthulhu</strong> uses a D100 (percentile) system where you simply need to roll equal to or under your skill score to succeed - making probability immediately intuitive to new players.</p>
+              <p><strong>Shadowrun and the World of Darkness</strong> games use "dice pools" - rolling large handfuls of D6s and counting how many land on 5 or 6 (successes). This creates a smooth probability curve where more skilled characters are reliably better, not just occasionally luckier. Understanding which system your game uses will tell you exactly which dice in this roller you will be reaching for most often.</p>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ===================== DISCLAIMER ===================== -->
+      <div class="disclaimer" role="note">
+        <strong>Fair Play Guarantee:</strong> This roller uses the browser's cryptographic API for true, unbiased results. It is fully local, private, and does not store or transmit your rolls.
+      </div>
+
+    </main>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer>
+      <a href="/about.html">About</a>
+      <span class="sep">|</span>
+      <a href="/privacy.html">Privacy</a>
+      <span class="sep">|</span>
+      <a href="/contact.html">Contact</a>
+      <p style="margin-top:8px;font-size:0.7rem;color:#4a3a20;">&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</p>
+    </footer>
+
+  </div><!-- /.wrapper -->
+
+  <!-- =====================================================================
+       JAVASCRIPT - All logic in one block
+  ===================================================================== -->
+  <script>
+    'use strict';
+
+    // ----------------------------------------------------------------
+    // CONFIG: Dice types and their display properties
+    // ----------------------------------------------------------------
+    const DICE_CONFIG = [
+      { faces: 4,   symbol: '&#9671;', color: '#e84040' },
+      { faces: 6,   symbol: '&#9632;', color: '#e86a20' },
+      { faces: 8,   symbol: '&#9674;', color: '#d4a020' },
+      { faces: 10,  symbol: '&#10022;', color: '#40b840' },
+      { faces: 12,  symbol: '&#9670;', color: '#4080e8' },
+      { faces: 20,  symbol: '&#9651;', color: '#a040e8' },
+      { faces: 100, symbol: '&#37;',   color: '#e840b0' },
+    ];
+
+    // Tracks how many of each die the user has selected
+    // Key: faces (number), Value: count (number)
+    const selection = {};
+
+    // Roll history array - stores last 10 roll objects
+    const rollHistory = [];
+
+    // ----------------------------------------------------------------
+    // CSRNG UTILITY
+    // Generates a cryptographically secure integer in the range [1, max]
+    // Uses window.crypto.getRandomValues() - NOT Math.random()
+    // ----------------------------------------------------------------
+    function secureRandInt(max) {
+      // We need a range of [0, max-1] then add 1
+      // To avoid modulo bias, we reject values outside an even multiple of max
+      const limit = Math.floor(0x100000000 / max) * max;
+      const arr = new Uint32Array(1);
+      let val;
+      do {
+        window.crypto.getRandomValues(arr);
+        val = arr[0];
+      } while (val >= limit);
+      return (val % max) + 1;
+    }
+
+    // ----------------------------------------------------------------
+    // BUILD DICE TRAY BUTTONS
+    // ----------------------------------------------------------------
+    function buildDiceTray() {
+      const tray = document.getElementById('dice-tray');
+      DICE_CONFIG.forEach(die => {
+        const btn = document.createElement('button');
+        btn.className = 'die-btn';
+        btn.setAttribute('aria-label', `Add D${die.faces} to roll`);
+        btn.dataset.faces = die.faces;
+        btn.innerHTML = `
+          <span class="die-face" aria-hidden="true">${die.symbol}</span>
+          <span class="die-label">D${die.faces}</span>
+          <span class="die-count-badge" id="badge-${die.faces}">0</span>
+        `;
+        btn.addEventListener('click', () => addDie(die.faces));
+        // Right-click to remove one die of this type
+        btn.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          removeDie(die.faces);
+        });
+        tray.appendChild(btn);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // SELECTION MANAGEMENT
+    // ----------------------------------------------------------------
+    function addDie(faces) {
+      selection[faces] = (selection[faces] || 0) + 1;
+      updateUI();
+    }
+
+    function removeDie(faces) {
+      if (!selection[faces] || selection[faces] === 0) return;
+      selection[faces]--;
+      if (selection[faces] === 0) delete selection[faces];
+      updateUI();
+    }
+
+    function clearSelection() {
+      Object.keys(selection).forEach(k => delete selection[k]);
+      updateUI();
+    }
+
+    // ----------------------------------------------------------------
+    // UPDATE UI AFTER SELECTION CHANGE
+    // ----------------------------------------------------------------
+    function updateUI() {
+      const hasDice = Object.keys(selection).length > 0;
+
+      // Update badges
+      DICE_CONFIG.forEach(die => {
+        const badge = document.getElementById(`badge-${die.faces}`);
+        const btn = badge.closest('.die-btn');
+        const count = selection[die.faces] || 0;
+        badge.textContent = count;
+        btn.classList.toggle('has-count', count > 0);
+        btn.setAttribute('aria-label', count > 0
+          ? `Add D${die.faces} to roll (${count} selected)`
+          : `Add D${die.faces} to roll`
+        );
+      });
+
+      // Update formula display
+      const formulaEl = document.getElementById('formula-display');
+      if (!hasDice) {
+        formulaEl.innerHTML = '<span class="empty">Click dice above to build your roll...</span>';
+      } else {
+        const parts = buildFormulaParts();
+        const mod = parseInt(document.getElementById('modifier-input').value) || 0;
+        let formula = parts.join(' + ');
+        if (mod > 0) formula += ` + ${mod}`;
+        else if (mod < 0) formula += ` - ${Math.abs(mod)}`;
+        formulaEl.textContent = formula;
+      }
+
+      // Enable/disable roll button
+      document.getElementById('btn-roll').disabled = !hasDice;
+    }
+
+    // Returns array of strings like ["3d6", "1d20"]
+    function buildFormulaParts() {
+      return Object.entries(selection)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([faces, count]) => `${count}d${faces}`);
+    }
+
+    // ----------------------------------------------------------------
+    // ROLLING ENGINE
+    // ----------------------------------------------------------------
+    function rollDice() {
+      const btn = document.getElementById('btn-roll');
+      btn.disabled = true;
+
+      const modifier = parseInt(document.getElementById('modifier-input').value) || 0;
+      const rolls = []; // { faces, value }
+
+      // Generate all rolls using CSRNG
+      Object.entries(selection)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .forEach(([faces, count]) => {
+          for (let i = 0; i < count; i++) {
+            rolls.push({ faces: Number(faces), value: secureRandInt(Number(faces)) });
+          }
+        });
+
+      const rawSum = rolls.reduce((acc, r) => acc + r.value, 0);
+      const total = rawSum + modifier;
+      const formula = buildFormulaParts().join(' + ') +
+        (modifier > 0 ? ` + ${modifier}` : modifier < 0 ? ` - ${Math.abs(modifier)}` : '');
+
+      // Display results
+      displayResults(rolls, rawSum, total, modifier);
+
+      // Add to history
+      addToHistory(formula, rolls, total, modifier);
+
+      // Re-enable after animation
+      setTimeout(() => { btn.disabled = false; }, 650);
+    }
+
+    // ----------------------------------------------------------------
+    // DISPLAY RESULTS
+    // ----------------------------------------------------------------
+    function displayResults(rolls, rawSum, total, modifier) {
+      const placeholder = document.getElementById('result-placeholder');
+      const indivEl = document.getElementById('individual-results');
+      const totalSumEl = document.getElementById('total-sum');
+      const totalValueEl = document.getElementById('total-value');
+      const modLineEl = document.getElementById('modifier-line');
+
+      placeholder.hidden = true;
+      indivEl.hidden = false;
+      totalSumEl.hidden = false;
+
+      // Build individual result cards
+      indivEl.innerHTML = '';
+      rolls.forEach((r, i) => {
+        const card = document.createElement('div');
+        card.className = 'single-die-result';
+        card.innerHTML = `
+          <span class="die-type">D${r.faces}</span>
+          <span class="die-value">${r.value}</span>
+        `;
+        indivEl.appendChild(card);
+        // Trigger spin animation with staggered delay
+        setTimeout(() => {
+          card.classList.add('rolling');
+        }, i * 40);
+      });
+
+      // Total with bounce animation
+      totalValueEl.textContent = total;
+      totalSumEl.classList.remove('animate');
+      void totalSumEl.offsetWidth; // force reflow to restart animation
+      totalSumEl.classList.add('animate');
+
+      // Modifier line
+      if (modifier !== 0) {
+        modLineEl.hidden = false;
+        modLineEl.textContent = `Dice sum: ${rawSum} ${modifier > 0 ? '+ ' + modifier : '- ' + Math.abs(modifier)} modifier = ${total}`;
+      } else {
+        modLineEl.hidden = true;
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // HISTORY LOG
+    // ----------------------------------------------------------------
+    function addToHistory(formula, rolls, total, modifier) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const rollValues = rolls.map(r => r.value).join(', ');
+
+      rollHistory.unshift({ formula, rollValues, total, timeStr });
+      if (rollHistory.length > 10) rollHistory.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const log = document.getElementById('history-log');
+      log.innerHTML = '';
+
+      if (rollHistory.length === 0) {
+        log.innerHTML = '<li class="history-empty" id="history-empty">No rolls yet.</li>';
+        return;
+      }
+
+      rollHistory.forEach((entry, index) => {
+        const li = document.createElement('li');
+        if (index === 0) li.classList.add('newest');
+        li.innerHTML = `
+          <span class="hist-formula">${entry.formula} [${entry.rollValues}]</span>
+          <span class="hist-total">= ${entry.total}</span>
+          <span class="hist-time">${entry.timeStr}</span>
+        `;
+        log.appendChild(li);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // PROBABILITY CHART
+    // ----------------------------------------------------------------
+    function buildProbChart() {
+      const chart = document.getElementById('dice-chart');
+      const maxFaces = 100;
+      const barColors = [
+        '#e84040', '#e86a20', '#d4a020',
+        '#40b840', '#4080e8', '#a040e8', '#e840b0'
+      ];
+
+      DICE_CONFIG.forEach((die, i) => {
+        const pct = (die.faces / maxFaces) * 100;
+        const row = document.createElement('div');
+        row.className = 'dice-row';
+        row.innerHTML = `
+          <span class="dlabel">D${die.faces}</span>
+          <div class="dbar-wrap">
+            <div class="dbar" style="width:${pct}%;background:${barColors[i]};">
+              ${die.faces >= 20 ? '1 to ' + die.faces : ''}
+            </div>
+          </div>
+          <span class="drange">1 - ${die.faces} (${die.faces} equal outcomes)</span>
+        `;
+        chart.appendChild(row);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // FAQ ACCORDION
+    // ----------------------------------------------------------------
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      const isOpen = item.classList.contains('open');
+      // Close all others
+      document.querySelectorAll('.faq-item.open').forEach(el => {
+        el.classList.remove('open');
+        el.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+      });
+      // Toggle clicked item
+      if (!isOpen) {
+        item.classList.add('open');
+        item.querySelector('.faq-question').setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // EVENT LISTENERS & INIT
+    // ----------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+      buildDiceTray();
+      buildProbChart();
+
+      document.getElementById('btn-roll').addEventListener('click', rollDice);
+      document.getElementById('btn-clear').addEventListener('click', clearSelection);
+      document.getElementById('btn-clear-history').addEventListener('click', () => {
+        rollHistory.length = 0;
+        renderHistory();
+      });
+      document.getElementById('modifier-input').addEventListener('input', updateUI);
+
+      // Keyboard shortcut: Enter to roll when dice are selected
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !document.getElementById('btn-roll').disabled &&
+            document.activeElement !== document.getElementById('modifier-input')) {
+          rollDice();
+        }
+      });
+
+      // Tip: right-click to remove - show tooltip once
+      document.getElementById('dice-tray').addEventListener('mouseenter', () => {}, { once: true });
+
+      // Footer year
+      document.getElementById('footer-year').textContent = new Date().getFullYear();
+    });
+  </script>
+
+</body>
+</html>

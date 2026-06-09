@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diff Checker - Compare Two Blocks of Text or Code Side by Side | AxiomApe</title>
+  <meta name="description" content="Free online diff checker tool. Paste two blocks of text or code side by side to instantly highlight differences, additions, and deletions. Split view, unified view, whitespace control, and character-level tracking - all in your browser." />
+  <meta name="keywords" content="diff checker, text comparison, code diff, compare text online, find differences, split view diff, unified diff, character level diff" />
+
+  <!-- jsdiff library for accurate diff computation via CDN -->
+  <!-- jsdiff implements the Myers diff algorithm, the same algorithm used by Git -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    /* ============================================================
+       GLOBAL RESET AND BASE STYLES
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --color-bg: #f4f6f9;
+      --color-surface: #ffffff;
+      --color-border: #dde1e7;
+      --color-primary: #2563eb;
+      --color-primary-hover: #1d4ed8;
+      --color-text: #1e293b;
+      --color-text-muted: #64748b;
+      --color-delete-bg: #fde8e8;
+      --color-delete-inline: #fca5a5;
+      --color-delete-strong: #dc2626;
+      --color-insert-bg: #dcfce7;
+      --color-insert-inline: #86efac;
+      --color-insert-strong: #16a34a;
+      --color-equal-bg: #ffffff;
+      --color-linenumber: #94a3b8;
+      --color-linenumber-bg: #f8fafc;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-nav {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 10px 0;
+      text-align: center;
+    }
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--color-primary);
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+    .page-header p {
+      font-size: 15px;
+      color: var(--color-text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       MAIN CONTENT WRAPPER
+    ============================================================ */
+    .main-wrap {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px;
+      flex: 1;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - Leaderboard (728x90)
+       Replace this block with your Google AdSense unit code.
+    ============================================================ */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      background: #eef2f7;
+      border: 1px dashed #b0bec5;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      color: #90a4ae;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ============================================================
+       MAIN CARD
+    ============================================================ */
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* ============================================================
+       INPUT PANEL - Side by Side Text Areas
+    ============================================================ */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 768px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    .input-panel label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .input-panel textarea {
+      width: 100%;
+      height: 220px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--color-text);
+      resize: vertical;
+      transition: border-color 0.2s;
+      background: #fafbfc;
+      line-height: 1.55;
+    }
+    .input-panel textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      background: #fff;
+    }
+    .input-panel textarea::placeholder {
+      color: #b0bec5;
+    }
+
+    /* ============================================================
+       ACTION BAR
+    ============================================================ */
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-compare {
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-compare:hover {
+      background: var(--color-primary-hover);
+    }
+    .btn-compare:active {
+      transform: scale(0.98);
+    }
+
+    .btn-clear {
+      background: transparent;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-clear:hover {
+      border-color: #94a3b8;
+      color: var(--color-text);
+    }
+
+    /* Whitespace toggle */
+    .ws-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .ws-toggle input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: var(--color-primary);
+    }
+
+    /* ============================================================
+       OUTPUT CONFIGURATION - View Toggle
+    ============================================================ */
+    .output-config {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .output-config .config-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-toggle button.active {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .view-toggle button:not(.active):hover {
+      background: #f1f5f9;
+    }
+
+    /* ============================================================
+       SUMMARY METRICS BANNER
+    ============================================================ */
+    .metrics-banner {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .metrics-banner.visible {
+      display: grid;
+    }
+    @media (max-width: 540px) {
+      .metrics-banner { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      border-radius: 6px;
+      padding: 14px 18px;
+      border: 1px solid var(--color-border);
+      text-align: center;
+    }
+    .metric-card.removed {
+      background: var(--color-delete-bg);
+      border-color: #fca5a5;
+    }
+    .metric-card.added {
+      background: var(--color-insert-bg);
+      border-color: #86efac;
+    }
+    .metric-card.total {
+      background: #eff6ff;
+      border-color: #93c5fd;
+    }
+    .metric-card .metric-num {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+      display: block;
+    }
+    .metric-card.removed .metric-num { color: var(--color-delete-strong); }
+    .metric-card.added  .metric-num { color: var(--color-insert-strong); }
+    .metric-card.total  .metric-num { color: var(--color-primary); }
+    .metric-card .metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       DIFF OUTPUT AREA
+    ============================================================ */
+    #diff-output {
+      display: none;
+    }
+    #diff-output.visible {
+      display: block;
+    }
+
+    /* Empty / no-diff state */
+    .diff-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--color-text-muted);
+      font-size: 15px;
+      border: 1px dashed var(--color-border);
+      border-radius: 6px;
+    }
+    .diff-empty span {
+      display: block;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    /* ============================================================
+       SPLIT VIEW
+    ============================================================ */
+    .split-view-wrap {
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .split-view-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .split-view-header div {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-muted);
+    }
+    .split-view-header div:first-child {
+      border-right: 1px solid var(--color-border);
+    }
+
+    .split-view-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    .split-pane {
+      overflow-y: auto;
+      overflow-x: auto;
+      max-height: 600px;
+    }
+    .split-pane:first-child {
+      border-right: 1px solid var(--color-border);
+    }
+
+    /* ============================================================
+       UNIFIED VIEW
+    ============================================================ */
+    .unified-view-wrap {
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .unified-view-header {
+      background: #f8fafc;
+      border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-muted);
+    }
+    .unified-body {
+      overflow-y: auto;
+      overflow-x: auto;
+      max-height: 600px;
+    }
+
+    /* ============================================================
+       DIFF LINE TABLE (shared by both views)
+    ============================================================ */
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .diff-table td {
+      padding: 1px 0;
+      white-space: pre;
+      vertical-align: top;
+    }
+
+    /* Line number column */
+    .td-ln {
+      width: 48px;
+      min-width: 48px;
+      text-align: right;
+      padding-right: 14px !important;
+      padding-left: 8px !important;
+      color: var(--color-linenumber);
+      background: var(--color-linenumber-bg);
+      border-right: 1px solid var(--color-border);
+      user-select: none;
+      font-size: 11px;
+    }
+
+    /* Sign column (+/-) */
+    .td-sign {
+      width: 22px;
+      min-width: 22px;
+      text-align: center;
+      font-weight: 700;
+      user-select: none;
+      font-size: 13px;
+    }
+
+    /* Content column */
+    .td-content {
+      padding-left: 8px !important;
+      padding-right: 16px !important;
+      width: 100%;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Row background colors */
+    tr.line-del td {
+      background: var(--color-delete-bg);
+    }
+    tr.line-del .td-sign {
+      color: var(--color-delete-strong);
+    }
+    tr.line-ins td {
+      background: var(--color-insert-bg);
+    }
+    tr.line-ins .td-sign {
+      color: var(--color-insert-strong);
+    }
+    tr.line-eq td {
+      background: var(--color-equal-bg);
+    }
+
+    /* Character-level inline highlights */
+    .char-del {
+      background: var(--color-delete-inline);
+      border-radius: 2px;
+    }
+    .char-ins {
+      background: var(--color-insert-inline);
+      border-radius: 2px;
+    }
+
+    /* ============================================================
+       SEO EDUCATIONAL SECTION
+    ============================================================ */
+    .seo-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 36px;
+      margin-bottom: 24px;
+    }
+    .seo-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 24px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--color-border);
+    }
+    .seo-section h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 10px;
+    }
+    .seo-section p {
+      font-size: 15px;
+      color: #374151;
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    /* FAQ accordion */
+    .faq-list {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 28px;
+    }
+    .faq-item {
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      background: #f8fafc;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .faq-question:hover {
+      background: #f1f5f9;
+    }
+    .faq-question .faq-icon {
+      font-size: 18px;
+      color: var(--color-primary);
+      transition: transform 0.2s;
+    }
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+    }
+    .faq-answer {
+      display: none;
+      padding: 16px 18px;
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.75;
+      background: #fff;
+      border-top: 1px solid var(--color-border);
+    }
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    /* Example comparison matrix */
+    .example-matrix {
+      background: #f8fafc;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+    .example-matrix-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #e2e8f0;
+      font-weight: 700;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-muted);
+    }
+    .example-matrix-header div {
+      padding: 8px 14px;
+    }
+    .example-matrix-header div:first-child {
+      border-right: 1px solid var(--color-border);
+    }
+    .example-matrix-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: 1px solid var(--color-border);
+    }
+    .example-matrix-row div {
+      padding: 7px 14px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .example-matrix-row div:first-child {
+      border-right: 1px solid var(--color-border);
+      background: var(--color-delete-bg);
+    }
+    .example-matrix-row div:last-child {
+      background: var(--color-insert-bg);
+    }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .disclaimer-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .disclaimer p {
+      font-size: 14px;
+      color: #1e40af;
+      line-height: 1.6;
+      margin: 0;
+    }
+    .disclaimer strong {
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    footer a {
+      color: var(--color-text-muted);
+      margin: 0 10px;
+      transition: color 0.15s;
+    }
+    footer a:hover {
+      color: var(--color-primary);
+    }
+    footer .footer-links {
+      margin-bottom: 6px;
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/diff-checker/" />
+</head>
+<body>
+
+  <!-- ===== TOP NAVIGATION ===== -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- ===== PAGE HEADER ===== -->
+  <header class="page-header">
+    <h1>Diff Checker</h1>
+    <p>Paste two blocks of text or code side by side to instantly highlight every addition, deletion, and modification - down to the individual character.</p>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-wrap">
+
+    <!-- AD PLACEHOLDER: Leaderboard 728x90 - Replace with AdSense unit -->
+    <div class="ad-leaderboard">Advertisement (728 x 90)</div>
+
+    <!-- ===== PRIMARY TOOL CARD ===== -->
+    <div class="card">
+
+      <!-- INPUT PANELS -->
+      <div class="input-grid">
+        <div class="input-panel">
+          <label for="text-a">Original Text (Version A)</label>
+          <textarea id="text-a" placeholder="Paste your original text or code here..."></textarea>
+        </div>
+        <div class="input-panel">
+          <label for="text-b">Changed Text (Version B)</label>
+          <textarea id="text-b" placeholder="Paste your modified text or code here..."></textarea>
+        </div>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="action-bar">
+        <button class="btn-compare" id="btn-compare" onclick="runDiff()">Compare</button>
+        <button class="btn-clear" onclick="clearAll()">Clear</button>
+        <label class="ws-toggle" title="When checked, differences caused only by extra spaces or tab characters will be ignored during comparison.">
+          <input type="checkbox" id="ignore-whitespace" />
+          Ignore Whitespace Changes
+          <span style="font-size:11px;color:#94a3b8;margin-left:2px;" title="Strips leading/trailing spaces from each line before comparing">(what is this?)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ===== RESULTS CARD ===== -->
+    <div class="card" id="results-card" style="display:none;">
+
+      <!-- METRICS BANNER -->
+      <div class="metrics-banner" id="metrics-banner">
+        <div class="metric-card removed">
+          <span class="metric-num" id="m-removed">0</span>
+          <div class="metric-label">Lines Removed</div>
+        </div>
+        <div class="metric-card added">
+          <span class="metric-num" id="m-added">0</span>
+          <div class="metric-label">Lines Added</div>
+        </div>
+        <div class="metric-card total">
+          <span class="metric-num" id="m-total">0</span>
+          <div class="metric-label">Total Differences Found</div>
+        </div>
+      </div>
+
+      <!-- OUTPUT CONFIGURATION -->
+      <div class="output-config">
+        <span class="config-label">View:</span>
+        <div class="view-toggle">
+          <button id="btn-split" class="active" onclick="setView('split')">Split View</button>
+          <button id="btn-unified" onclick="setView('unified')">Unified View</button>
+        </div>
+        <span style="font-size:12px;color:#94a3b8;">
+          Split: Original and Changed side by side with synced scroll.
+          Unified: All changes in one continuous stream.
+        </span>
+      </div>
+
+      <!-- DIFF OUTPUT -->
+      <div id="diff-output" class="visible"></div>
+
+    </div>
+
+    <!-- ===== SEO / EDUCATIONAL SECTION ===== -->
+    <section class="seo-section">
+      <h2>The Ultimate Guide to Text Comparison and Diff Utilities</h2>
+
+      <p>
+        A diff checker is a software utility that compares two versions of a text file or code block and surfaces every point of divergence between them. The word "diff" comes directly from the Unix command-line program of the same name, first created at Bell Labs in the early 1970s. Today, the underlying mathematics powering that original tool still drives every modern code review platform - from GitHub's pull request viewer to Google Docs' version history panel. Understanding how a diff checker works unlocks a deeper appreciation for version control, document auditing, and software quality practices.
+      </p>
+
+      <!-- FAQ SECTION -->
+      <h3>Frequently Asked Questions</h3>
+      <ul class="faq-list" id="faq-list">
+
+        <li class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            What is a diff checker and how does a diff algorithm work?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              A diff checker is a tool that accepts two text inputs - often called the "original" and the "modified" version - and produces a structured report showing exactly what was added, removed, or left unchanged between them. Under the hood, this report is generated by a diff algorithm.
+            </p>
+            <p>
+              The most widely used algorithm is the Myers Diff Algorithm, published by Eugene Myers in 1986. It works by framing the problem as a shortest-path search: given two sequences of lines, what is the minimum number of edit operations (insertions and deletions) needed to transform one into the other? This minimum set of changes is called the Longest Common Subsequence (LCS), and everything outside that subsequence represents a true difference.
+            </p>
+            <p>
+              This tool uses the open-source jsdiff library, which faithfully implements the Myers algorithm. For any two blocks of text you provide, jsdiff computes the edit script at both the line level and - where lines differ - at the individual character level, so you can spot a single changed letter inside a long line of code.
+            </p>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            What is the difference between Split View and Unified View text comparison?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              Split View (also called Side-by-Side View) renders the original text in a left pane and the modified text in a right pane simultaneously. Deleted lines appear highlighted in the left pane, and inserted lines appear highlighted in the right pane, directly opposite each other. Both panes scroll together in perfect synchronization. This format is ideal for reviewing structural changes because your eye can track a line from its original form on the left to its replacement on the right without any mental reordering.
+            </p>
+            <p>
+              Unified View (also called Inline View) collapses both versions into a single, linear stream. Lines prefixed with a minus sign (-) are deletions from the original, and lines prefixed with a plus sign (+) are insertions into the new version. Lines without a prefix are unchanged context lines that appear in both versions. This is the classic format produced by the Unix diff command and is also the format used by Git patch files. Unified view requires less horizontal screen space and is well-suited for reading long, sequential changelogs or reviewing a series of small, isolated edits.
+            </p>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            Why should programmers ignore trailing whitespace when reviewing code changes?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              Whitespace Sensitivity refers to whether a comparison tool treats a difference in spaces, tabs, or line endings as a meaningful change. By default, most diff tools are whitespace-sensitive: if someone saves a file with two trailing spaces at the end of a line instead of zero, that line will appear as "changed" even though the visible content is identical.
+            </p>
+            <p>
+              This creates noise. When reviewing a code pull request, a developer who reformatted a file with a different editor (for example, converting from tabs to spaces, or using an auto-formatter that strips trailing whitespace) can produce a diff where hundreds of lines appear "changed" even though zero logical content was modified. This makes it extremely difficult to identify the lines that were substantively changed.
+            </p>
+            <p>
+              The "Ignore Whitespace Changes" checkbox in this tool trims leading and trailing whitespace from each line before running the comparison, ensuring that only differences in actual code or text content are reported. For document writers, this has an equivalent use case: comparing two drafts where one was exported from a word processor that adds extra spacing around paragraphs.
+            </p>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            How can writers and editors use comparison tools to audit document revision histories?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              Diff checkers are not exclusively a programmer's tool. Journalists, lawyers, academic researchers, and content editors use text comparison utilities to surface unauthorized edits in contracts, track ghostwriter revisions in long-form articles, compare two versions of a legal deposition, or audit whether a published web page has been silently updated after publication.
+            </p>
+            <p>
+              The Character-Level Tracking feature of this tool is especially valuable in these contexts. It does not just highlight that a sentence changed - it highlights the precise words or even individual letters that were substituted. This makes it possible to catch subtle edits like a changed number (from "15 days" to "30 days" in a contract clause), a swapped name, or a reworded disclaimer that carries very different legal meaning.
+            </p>
+            <p>
+              To use this tool for document auditing: paste the original version of your document into the left panel and the revised version into the right panel, then click Compare. The Summary Board at the top will tell you how many lines were added or removed at a glance, and the diff output will let you read through every specific change in context.
+            </p>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            What is Character-Level Tracking and why does it matter for spotting typos?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>
+              Character-Level Tracking (sometimes called Inline Diff or Word-Level Diff) is a second pass of the diff algorithm applied within a single changed line. When the tool detects that a line was modified rather than completely replaced, it runs the Myers algorithm again - this time comparing the characters of the old line against the characters of the new line. The result is that only the specific substring that changed is highlighted with a darker, more saturated color, while the unchanged portions of that line remain in the softer background color.
+            </p>
+            <p>
+              Without character-level tracking, a diff checker tells you "this line changed" but forces you to manually read both the old and new version to find the discrepancy. With it, a single-character typo correction, a transposed number, or a renamed variable stands out immediately even inside a 200-character minified code line. This dramatically reduces code review fatigue and is one of the key quality-of-life features that distinguishes a professional diff viewer from a basic one.
+            </p>
+          </div>
+        </li>
+
+      </ul>
+
+      <!-- EXAMPLE COMPARISON MATRIX -->
+      <h3>Example Comparison Matrix: Original vs. Modified Line</h3>
+      <p>The table below demonstrates how a diff checker maps an original line to its deleted and inserted components at the character level.</p>
+
+      <div class="example-matrix">
+        <div class="example-matrix-header">
+          <div>- Original Line (Deleted)</div>
+          <div>+ Modified Line (Inserted)</div>
+        </div>
+        <div class="example-matrix-row">
+          <div>const <span class="char-del">apiUrl</span> = "https://api.example.com";</div>
+          <div>const <span class="char-ins">endpointUrl</span> = "https://api.example.com";</div>
+        </div>
+        <div class="example-matrix-row">
+          <div>return <span class="char-del">res</span>.status(<span class="char-del">200</span>);</div>
+          <div>return <span class="char-ins">response</span>.status(<span class="char-ins">404</span>);</div>
+        </div>
+        <div class="example-matrix-row">
+          <div>// Fetch user data from <span class="char-del">databse</span></div>
+          <div>// Fetch user data from <span class="char-ins">database</span></div>
+        </div>
+      </div>
+
+      <p>
+        Notice how only the changed substrings are highlighted with the higher-contrast color, while the surrounding unchanged text remains in the softer background shade. The third row demonstrates a real-world typo correction ("databse" to "database") - exactly the kind of subtle change that character-level tracking is designed to catch instantly, without requiring a careful word-by-word reading of the full line.
+      </p>
+
+    </section>
+
+    <!-- ===== PRIVACY DISCLAIMER ===== -->
+    <div class="disclaimer">
+      <div class="disclaimer-icon">🔒</div>
+      <p>
+        <strong>Privacy First:</strong> Your text analysis takes place entirely inside your web browser. No text files, comparisons, or proprietary data are ever uploaded, saved, or sent to external servers.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div>&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let currentView = 'split'; // 'split' or 'unified'
+    let lastDiffData = null;   // Stores computed diff for re-rendering on view toggle
+
+    // Set footer year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ============================================================
+    // UTILITY: Escape HTML special characters for safe innerHTML injection
+    // ============================================================
+    function escHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ============================================================
+    // UTILITY: Character-level inline diff between two strings
+    // Returns an HTML string with <span class="char-del"> and
+    // <span class="char-ins"> wrapping changed character ranges.
+    // ============================================================
+    function charDiff(oldStr, newStr, type) {
+      // Use jsdiff at the character level for precise inline highlighting
+      const parts = Diff.diffChars(oldStr, newStr);
+      let result = '';
+      for (const part of parts) {
+        const text = escHtml(part.value);
+        if (part.added && type === 'ins') {
+          result += '<span class="char-ins">' + text + '</span>';
+        } else if (part.removed && type === 'del') {
+          result += '<span class="char-del">' + text + '</span>';
+        } else if (!part.added && !part.removed) {
+          result += text;
+        }
+        // Skip the counterpart (added chars when rendering del side, etc.)
+      }
+      return result;
+    }
+
+    // ============================================================
+    // MAIN: Run the diff computation
+    // ============================================================
+    function runDiff() {
+      const textA = document.getElementById('text-a').value;
+      const textB = document.getElementById('text-b').value;
+      const ignoreWS = document.getElementById('ignore-whitespace').checked;
+
+      // Normalize: optionally strip whitespace from each line
+      function prepLines(text) {
+        let lines = text.split('\n');
+        if (ignoreWS) {
+          lines = lines.map(l => l.trim());
+        }
+        return lines;
+      }
+
+      const linesA = prepLines(textA);
+      const linesB = prepLines(textB);
+
+      // Run jsdiff line-by-line comparison
+      // Diff.diffArrays compares two arrays element by element
+      const rawDiff = Diff.diffArrays(linesA, linesB);
+
+      // Flatten the diff result into a structured array of line objects:
+      // Each object: { type: 'del'|'ins'|'eq', text: string, lineNumA, lineNumB }
+      let lineNumA = 1;
+      let lineNumB = 1;
+      const lines = [];
+
+      for (const part of rawDiff) {
+        if (part.removed) {
+          for (const l of part.value) {
+            lines.push({ type: 'del', text: l, lineNumA: lineNumA++, lineNumB: null });
+          }
+        } else if (part.added) {
+          for (const l of part.value) {
+            lines.push({ type: 'ins', text: l, lineNumA: null, lineNumB: lineNumB++ });
+          }
+        } else {
+          for (const l of part.value) {
+            lines.push({ type: 'eq', text: l, lineNumA: lineNumA++, lineNumB: lineNumB++ });
+          }
+        }
+      }
+
+      // Pair consecutive del/ins lines for character-level comparison
+      // This associates each deleted line with the next inserted line (if any)
+      // so we can run charDiff between them for inline highlighting.
+      const pairedLines = pairDelIns(lines);
+
+      // Store for re-render on view toggle
+      lastDiffData = pairedLines;
+
+      // Calculate metrics
+      let removed = 0, added = 0;
+      for (const l of pairedLines) {
+        if (l.type === 'del') removed++;
+        if (l.type === 'ins') added++;
+      }
+      const total = removed + added;
+
+      // Update metrics banner
+      document.getElementById('m-removed').textContent = removed;
+      document.getElementById('m-added').textContent   = added;
+      document.getElementById('m-total').textContent   = total;
+      document.getElementById('metrics-banner').classList.add('visible');
+
+      // Show results card
+      document.getElementById('results-card').style.display = 'block';
+
+      // Render the diff in the current view
+      renderDiff(pairedLines, currentView);
+    }
+
+    // ============================================================
+    // PAIR DELETION / INSERTION LINES for character-level comparison
+    // When a block of deletions is immediately followed by a block of
+    // insertions of equal count, pair them 1:1 for charDiff rendering.
+    // ============================================================
+    function pairDelIns(lines) {
+      const result = [];
+      let i = 0;
+      while (i < lines.length) {
+        if (lines[i].type === 'del') {
+          // Collect consecutive deletions and insertions
+          let dels = [];
+          let ins  = [];
+          while (i < lines.length && lines[i].type === 'del') dels.push(lines[i++]);
+          while (i < lines.length && lines[i].type === 'ins') ins.push(lines[i++]);
+          // Pair them up as much as possible
+          const pairCount = Math.min(dels.length, ins.length);
+          for (let j = 0; j < pairCount; j++) {
+            dels[j].pairWith = ins[j].text;
+            ins[j].pairWith  = dels[j].text;
+          }
+          result.push(...dels, ...ins);
+        } else {
+          result.push(lines[i++]);
+        }
+      }
+      return result;
+    }
+
+    // ============================================================
+    // RENDER DIFF - routes to split or unified renderer
+    // ============================================================
+    function renderDiff(lines, view) {
+      const container = document.getElementById('diff-output');
+      container.innerHTML = '';
+
+      const removed = lines.filter(l => l.type === 'del').length;
+      const added   = lines.filter(l => l.type === 'ins').length;
+
+      if (removed === 0 && added === 0) {
+        container.innerHTML = `
+          <div class="diff-empty">
+            <span>✓</span>
+            No differences found. The two texts are identical.
+          </div>`;
+        return;
+      }
+
+      if (view === 'split') {
+        renderSplitView(lines, container);
+      } else {
+        renderUnifiedView(lines, container);
+      }
+    }
+
+    // ============================================================
+    // SPLIT VIEW RENDERER
+    // Left pane: original (del + eq lines)
+    // Right pane: modified (ins + eq lines)
+    // Synchronized scrolling via JavaScript event listeners
+    // ============================================================
+    function renderSplitView(lines, container) {
+      // Build left (original) and right (modified) line arrays in parallel,
+      // inserting placeholder rows to keep the two sides visually aligned.
+      const leftLines  = [];
+      const rightLines = [];
+
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (line.type === 'eq') {
+          leftLines.push(line);
+          rightLines.push(line);
+          i++;
+        } else if (line.type === 'del') {
+          // Collect a block of del/ins for alignment padding
+          const dels = [];
+          const ins  = [];
+          while (i < lines.length && lines[i].type === 'del') dels.push(lines[i++]);
+          while (i < lines.length && lines[i].type === 'ins') ins.push(lines[i++]);
+
+          const maxLen = Math.max(dels.length, ins.length);
+          for (let j = 0; j < maxLen; j++) {
+            leftLines.push(j < dels.length ? dels[j] : null);
+            rightLines.push(j < ins.length  ? ins[j]  : null);
+          }
+        } else if (line.type === 'ins') {
+          // Orphan insertion with no preceding deletion
+          leftLines.push(null);
+          rightLines.push(line);
+          i++;
+        } else {
+          i++;
+        }
+      }
+
+      // Build the HTML table rows for each pane
+      function buildRows(lineList, side) {
+        let html = '';
+        for (const l of lineList) {
+          if (l === null) {
+            // Placeholder row to maintain alignment with the other pane
+            html += `<tr class="line-eq"><td class="td-ln"></td><td class="td-sign"></td><td class="td-content">&nbsp;</td></tr>`;
+          } else if (l.type === 'eq') {
+            const ln = side === 'left' ? l.lineNumA : l.lineNumB;
+            html += `<tr class="line-eq"><td class="td-ln">${ln}</td><td class="td-sign"></td><td class="td-content">${escHtml(l.text) || '&nbsp;'}</td></tr>`;
+          } else if (l.type === 'del' && side === 'left') {
+            const content = l.pairWith !== undefined
+              ? charDiff(l.text, l.pairWith, 'del')
+              : escHtml(l.text);
+            html += `<tr class="line-del"><td class="td-ln">${l.lineNumA}</td><td class="td-sign">-</td><td class="td-content">${content || '&nbsp;'}</td></tr>`;
+          } else if (l.type === 'ins' && side === 'right') {
+            const content = l.pairWith !== undefined
+              ? charDiff(l.pairWith, l.text, 'ins')
+              : escHtml(l.text);
+            html += `<tr class="line-ins"><td class="td-ln">${l.lineNumB}</td><td class="td-sign">+</td><td class="td-content">${content || '&nbsp;'}</td></tr>`;
+          }
+        }
+        return html;
+      }
+
+      const leftHtml  = buildRows(leftLines,  'left');
+      const rightHtml = buildRows(rightLines, 'right');
+
+      container.innerHTML = `
+        <div class="split-view-wrap">
+          <div class="split-view-header">
+            <div>- Original (Version A)</div>
+            <div>+ Changed (Version B)</div>
+          </div>
+          <div class="split-view-body" id="split-body">
+            <div class="split-pane" id="pane-left">
+              <table class="diff-table"><tbody>${leftHtml}</tbody></table>
+            </div>
+            <div class="split-pane" id="pane-right">
+              <table class="diff-table"><tbody>${rightHtml}</tbody></table>
+            </div>
+          </div>
+        </div>`;
+
+      // Wire up synchronized scrolling between the two split panes
+      const paneLeft  = document.getElementById('pane-left');
+      const paneRight = document.getElementById('pane-right');
+
+      let syncingLeft  = false;
+      let syncingRight = false;
+
+      paneLeft.addEventListener('scroll', function () {
+        if (syncingLeft) return;
+        syncingRight = true;
+        paneRight.scrollTop  = paneLeft.scrollTop;
+        paneRight.scrollLeft = paneLeft.scrollLeft;
+        syncingRight = false;
+      });
+
+      paneRight.addEventListener('scroll', function () {
+        if (syncingRight) return;
+        syncingLeft = true;
+        paneLeft.scrollTop  = paneRight.scrollTop;
+        paneLeft.scrollLeft = paneRight.scrollLeft;
+        syncingLeft = false;
+      });
+    }
+
+    // ============================================================
+    // UNIFIED VIEW RENDERER
+    // Single column showing all changes in chronological order.
+    // Deletions (-), insertions (+), and context (unchanged) lines.
+    // ============================================================
+    function renderUnifiedView(lines, container) {
+      let html = '';
+      for (const l of lines) {
+        if (l.type === 'eq') {
+          const ln = `${l.lineNumA}`;
+          html += `<tr class="line-eq"><td class="td-ln">${ln}</td><td class="td-sign"></td><td class="td-content">${escHtml(l.text) || '&nbsp;'}</td></tr>`;
+        } else if (l.type === 'del') {
+          const content = l.pairWith !== undefined
+            ? charDiff(l.text, l.pairWith, 'del')
+            : escHtml(l.text);
+          html += `<tr class="line-del"><td class="td-ln">${l.lineNumA}</td><td class="td-sign">-</td><td class="td-content">${content || '&nbsp;'}</td></tr>`;
+        } else if (l.type === 'ins') {
+          const content = l.pairWith !== undefined
+            ? charDiff(l.pairWith, l.text, 'ins')
+            : escHtml(l.text);
+          html += `<tr class="line-ins"><td class="td-ln">${l.lineNumB}</td><td class="td-sign">+</td><td class="td-content">${content || '&nbsp;'}</td></tr>`;
+        }
+      }
+
+      container.innerHTML = `
+        <div class="unified-view-wrap">
+          <div class="unified-view-header">Unified Diff - Original vs. Changed</div>
+          <div class="unified-body">
+            <table class="diff-table"><tbody>${html}</tbody></table>
+          </div>
+        </div>`;
+    }
+
+    // ============================================================
+    // VIEW TOGGLE
+    // ============================================================
+    function setView(view) {
+      currentView = view;
+      document.getElementById('btn-split').classList.toggle('active',   view === 'split');
+      document.getElementById('btn-unified').classList.toggle('active', view === 'unified');
+      if (lastDiffData) {
+        renderDiff(lastDiffData, view);
+      }
+    }
+
+    // ============================================================
+    // CLEAR ALL
+    // ============================================================
+    function clearAll() {
+      document.getElementById('text-a').value = '';
+      document.getElementById('text-b').value = '';
+      document.getElementById('results-card').style.display = 'none';
+      document.getElementById('metrics-banner').classList.remove('visible');
+      lastDiffData = null;
+    }
+
+    // ============================================================
+    // FAQ ACCORDION
+    // ============================================================
+    function toggleFaq(questionEl) {
+      const item = questionEl.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // ============================================================
+    // KEYBOARD SHORTCUT: Ctrl+Enter / Cmd+Enter to run comparison
+    // ============================================================
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        runDiff();
+      }
+    });
+  </script>
+
+</body>
+</html>

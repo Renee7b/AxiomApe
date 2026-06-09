@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word to PDF Converter - Convert .docx Files to Print-Ready PDFs | AxiomApe</title>
+  <meta name="description" content="Convert Word .docx files to polished, print-ready PDF documents instantly inside your browser. No uploads. No servers. 100% private client-side processing." />
+  <meta name="keywords" content="word to pdf converter, docx to pdf, convert word document, free pdf converter, offline pdf tool, browser pdf generator" />
+
+  <!-- mammoth.js: Parses .docx Open XML format and extracts paragraphs, tables, bold text, and inline images as clean HTML -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <!-- html2pdf.js: Combines jsPDF and html2canvas to render HTML content into a structured, vector-quality PDF blob -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --border: #e2e6ea;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-light: #eff6ff;
+      --text-primary: #1a1d23;
+      --text-secondary: #5a6473;
+      --text-muted: #8c96a3;
+      --success: #16a34a;
+      --warning: #d97706;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.13);
+      --shadow-doc: 0 6px 40px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       TOP NAV BAR
+    ============================================= */
+    .top-nav {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      padding: 10px 20px;
+    }
+    .top-nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    .top-nav a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    /* =============================================
+       PAGE LAYOUT
+    ============================================= */
+    .page-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* =============================================
+       AD PLACEHOLDER - LEADERBOARD (728x90)
+       Replace the contents of this div with your
+       Google AdSense <ins> tag when ready.
+    ============================================= */
+    .ad-leaderboard {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #e9ecef;
+      border: 2px dashed #ced4da;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* =============================================
+       PAGE HEADER
+    ============================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .page-header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       CARD COMPONENT
+    ============================================= */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-header .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-header .icon svg { width: 17px; height: 17px; fill: var(--accent); }
+    .card-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .card-header p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .card-body { padding: 22px; }
+
+    /* =============================================
+       DRAG AND DROP UPLOAD ZONE
+    ============================================= */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-zone .upload-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 14px;
+      background: var(--accent-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drop-zone .upload-icon svg { width: 26px; height: 26px; fill: var(--accent); }
+    .drop-zone h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .drop-zone p { font-size: 13px; color: var(--text-secondary); }
+    .drop-zone .file-badge {
+      display: inline-block;
+      margin-top: 8px;
+      background: #e2eaff;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    /* File loaded state */
+    .drop-zone.file-loaded {
+      border-color: var(--success);
+      background: #f0fdf4;
+    }
+    .drop-zone.file-loaded h3 { color: var(--success); }
+
+    /* =============================================
+       GEOMETRY CONTROL STRIP
+    ============================================= */
+    .control-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .control-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .control-group select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: var(--font);
+      color: var(--text-primary);
+      background: var(--card);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238c96a3' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .control-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .control-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    /* =============================================
+       LIVE PREVIEW SECTION
+    ============================================= */
+    .preview-section { display: none; }
+    .preview-section.visible { display: block; }
+
+    .preview-scroll-wrap {
+      background: #d1d5db;
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      max-height: 680px;
+      overflow-y: auto;
+    }
+
+    /* The "paper sheet" that mimics a physical document page */
+    #doc-preview {
+      background: #fff;
+      box-shadow: var(--shadow-doc);
+      border-radius: 2px;
+      width: 100%;
+      max-width: 794px; /* ~A4 width at 96dpi */
+      min-height: 1123px;
+      margin: 0 auto;
+      padding: 96px 96px; /* 1-inch margins default */
+      font-family: 'Times New Roman', Georgia, serif;
+      font-size: 12pt;
+      line-height: 1.7;
+      color: #1a1a1a;
+      word-wrap: break-word;
+      transition: padding 0.3s;
+    }
+
+    /* Typography inside the preview */
+    #doc-preview h1 { font-size: 22pt; margin: 0 0 14px; line-height: 1.3; }
+    #doc-preview h2 { font-size: 17pt; margin: 18px 0 10px; line-height: 1.35; }
+    #doc-preview h3 { font-size: 14pt; margin: 14px 0 8px; }
+    #doc-preview h4, #doc-preview h5, #doc-preview h6 { font-size: 12pt; margin: 10px 0 6px; }
+    #doc-preview p { margin: 0 0 10px; }
+    #doc-preview ul, #doc-preview ol { margin: 6px 0 10px 24px; }
+    #doc-preview li { margin-bottom: 4px; }
+    #doc-preview table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 11pt;
+    }
+    #doc-preview table td,
+    #doc-preview table th {
+      border: 1px solid #888;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    #doc-preview table th { background: #f4f4f4; font-weight: 700; }
+    #doc-preview img { max-width: 100%; height: auto; display: block; margin: 10px 0; }
+    #doc-preview strong { font-weight: 700; }
+    #doc-preview em { font-style: italic; }
+
+    /* Landscape preview adjustment */
+    #doc-preview.landscape {
+      max-width: 1123px;
+      min-height: 794px;
+    }
+
+    /* =============================================
+       GENERATE BUTTON
+    ============================================= */
+    .generate-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px 24px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+      letter-spacing: 0.01em;
+      margin-top: 4px;
+    }
+    .generate-btn:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.45);
+      transform: translateY(-1px);
+    }
+    .generate-btn:active { transform: translateY(0); }
+    .generate-btn:disabled {
+      background: #9db4e8;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .generate-btn svg { width: 20px; height: 20px; fill: #fff; flex-shrink: 0; }
+
+    /* =============================================
+       LOADING OVERLAY
+    ============================================= */
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 20, 30, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+    }
+    #loading-overlay.active { display: flex; }
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 5px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay p {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* =============================================
+       STATUS BAR
+    ============================================= */
+    .status-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .status-bar.visible { display: flex; }
+    .status-bar.info { background: var(--accent-light); color: var(--accent); border: 1px solid #bfdbfe; }
+    .status-bar.success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+    .status-bar.error { background: #fff5f5; color: #c0392b; border: 1px solid #fecaca; }
+    .status-bar svg { width: 16px; height: 16px; flex-shrink: 0; fill: currentColor; }
+
+    /* =============================================
+       PRIVACY DISCLAIMER
+    ============================================= */
+    .disclaimer {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .disclaimer svg { width: 20px; height: 20px; fill: var(--warning); flex-shrink: 0; margin-top: 1px; }
+    .disclaimer p { font-size: 13px; color: #78350f; line-height: 1.55; }
+    .disclaimer strong { font-weight: 700; }
+
+    /* =============================================
+       SEO CONTENT - TECHNICAL MANUAL
+    ============================================= */
+    .seo-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 32px 32px;
+      margin-top: 32px;
+    }
+    .seo-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .seo-section .seo-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 26px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .seo-section p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 18px;
+    }
+    .seo-section p strong { color: var(--text-primary); font-weight: 700; }
+
+    /* FAQ accordion */
+    .faq-list { margin-top: 26px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+      font-family: var(--font);
+      line-height: 1.4;
+    }
+    .faq-question:hover { background: var(--accent-light); }
+    .faq-question .chevron {
+      width: 18px;
+      height: 18px;
+      fill: var(--text-muted);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-question .chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.72;
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-answer p { margin-top: 12px; }
+    .faq-answer ul { margin: 10px 0 0 20px; }
+    .faq-answer li { margin-bottom: 5px; }
+    .faq-answer strong { color: var(--text-primary); font-weight: 700; }
+
+    /* Glossary chips */
+    .glossary-chip {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      margin: 2px 2px 0;
+      vertical-align: middle;
+    }
+
+    /* =============================================
+       FOOTER
+    ============================================= */
+    footer {
+      text-align: center;
+      padding: 28px 20px 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+    footer nav {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    footer nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    footer nav a:hover { color: var(--accent); }
+    footer p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 600px) {
+      .page-wrap { padding: 20px 14px 40px; }
+      .card-body { padding: 16px; }
+      #doc-preview { padding: 40px 28px; font-size: 10.5pt; min-height: 600px; }
+      .seo-section { padding: 22px 18px; }
+      .control-strip { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/word-to-pdf-converter/" />
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- LOADING OVERLAY - shown while PDF is being compiled -->
+  <div id="loading-overlay" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <p>Compiling your PDF - please wait...</p>
+  </div>
+
+  <main class="page-wrap">
+
+    <!-- AD PLACEHOLDER: Leaderboard 728x90 -->
+    <!-- ADSENSE INJECTION POINT: Replace the div below with your AdSense <ins> tag -->
+    <div class="ad-leaderboard" aria-hidden="true">Advertisement - 728 x 90</div>
+
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+      <h1>Word to PDF Converter</h1>
+      <p>Convert .docx files to polished, print-ready PDF documents entirely inside your browser. No uploads. No account required. Completely private.</p>
+    </header>
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer" role="note">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a9 9 0 100 18A9 9 0 0010 1zm.75 4a.75.75 0 00-1.5 0v5a.75.75 0 001.5 0V5zm-.75 8.25a1 1 0 110-2 1 1 0 010 2z" clip-rule="evenodd"/></svg>
+      <p><strong>Privacy First:</strong> Document parsing and stylesheet compiling take place completely inside your local web browser canvas. Your corporate files, personal resumes, and document text are never uploaded, cached, or transmitted to external web servers.</p>
+    </div>
+
+    <!-- STATUS BAR - dynamically shown -->
+    <div id="status-bar" class="status-bar" role="alert">
+      <svg id="status-icon" viewBox="0 0 20 20" aria-hidden="true"></svg>
+      <span id="status-text"></span>
+    </div>
+
+    <!-- CARD 1: UPLOAD + GEOMETRY CONTROLS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4z"/></svg>
+        </div>
+        <div>
+          <h2>Upload Your Word Document</h2>
+          <p>Drag and drop a .docx file, or click to browse your computer</p>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- DRAG AND DROP ZONE -->
+        <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload .docx file">
+          <input type="file" id="file-input" accept=".docx" aria-label="Select .docx file" />
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM12 17l-4-4h2.5v-4h3v4H16l-4 4z"/></svg>
+          </div>
+          <h3 id="drop-title">Drop your .docx file here</h3>
+          <p id="drop-sub">or click anywhere in this area to select a file</p>
+          <span class="file-badge">.DOCX FILES ONLY</span>
+        </div>
+
+        <!-- GEOMETRY CONTROL STRIP -->
+        <div class="control-strip" role="group" aria-label="Document layout options">
+
+          <div class="control-group">
+            <label for="page-size">Page Size</label>
+            <select id="page-size">
+              <option value="letter">Letter (8.5 x 11 in)</option>
+              <option value="a4">A4 (210 x 297 mm)</option>
+            </select>
+            <div class="control-hint">Letter is standard in North America. A4 is the international standard used in most other countries.</div>
+          </div>
+
+          <div class="control-group">
+            <label for="orientation">Orientation</label>
+            <select id="orientation">
+              <option value="portrait">Portrait (vertical)</option>
+              <option value="landscape">Landscape (horizontal)</option>
+            </select>
+            <div class="control-hint">Portrait is taller than it is wide. Landscape is wider than it is tall - useful for wide tables or charts.</div>
+          </div>
+
+          <div class="control-group">
+            <label for="margins">Document Margins</label>
+            <select id="margins">
+              <option value="normal">Normal (1 inch)</option>
+              <option value="narrow">Narrow (0.5 inch)</option>
+              <option value="wide">Wide (1.5 inches)</option>
+            </select>
+            <div class="control-hint">Margins are the blank border zones around your text. Narrower margins fit more content per page. Wider margins improve readability.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: LIVE DOCUMENT PREVIEW -->
+    <div class="card preview-section" id="preview-card">
+      <div class="card-header">
+        <div class="icon">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+        </div>
+        <div>
+          <h2>Live Document Layout Preview</h2>
+          <p>Review your document's typography and page alignment before generating the PDF</p>
+        </div>
+      </div>
+      <div class="card-body" style="padding: 18px;">
+        <div class="preview-scroll-wrap">
+          <div id="doc-preview" role="document" aria-label="Document preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: GENERATE PDF BUTTON -->
+    <div class="card" id="generate-card" style="display:none;">
+      <div class="card-body" style="padding: 18px;">
+        <button class="generate-btn" id="generate-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-7 9H5v2h14v-2h-7z"/></svg>
+          Generate and Download Print-Ready PDF
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SEO CONTENT: TECHNICAL MANUAL -->
+  <section class="seo-section page-wrap" aria-label="Technical manual">
+    <h2>The Ultimate Technical Manual for Word to PDF Conversion and Document Fidelity</h2>
+    <p class="seo-subtitle">Expert guidance for achieving precise, professional PDF output every time</p>
+
+    <p>
+      <strong>Understanding Client-Side Processing:</strong> Traditional file converters send your document to a remote server where it is processed, stored temporarily (or permanently), and then returned to you as a download. <span class="glossary-chip">Client-Side Processing</span> means the entire operation - reading the file bytes, parsing the XML structure, rendering the layout, and compiling the PDF - happens exclusively inside the JavaScript engine of your local web browser. No byte of your document data ever leaves your device. This architecture is particularly important for professionals handling confidential legal briefs, medical records, corporate financial models, or personal identity documents where data sovereignty is a strict compliance requirement.
+    </p>
+
+    <p>
+      <strong>What Causes Layout Reflow Errors Between Word and PDF Standards:</strong> Microsoft Word documents are dynamic, flowing containers. Their layout is calculated at render time based on the installed font metrics, printer driver settings, and display resolution of your local machine. <span class="glossary-chip">Layout Reflow</span> errors occur when these rendering assumptions break down during conversion. A line that fits on one page in Word may overflow to a second page in the PDF because the PDF renderer uses slightly different character spacing tables or a different default line-height baseline. To minimize reflow, this tool applies a fixed-width paper canvas at 96dpi equivalent and maps Word paragraph styles to standard web typography rules before passing the document to the PDF engine.
+    </p>
+
+    <p>
+      <strong>Font Embedding and Table Cell Boundary Precision:</strong> <span class="glossary-chip">Font Embedding</span> is the process of including the complete font file data within the PDF container itself, so that any reader on any device renders the text in the exact typeface you authored it in - without needing that font installed locally. When fonts are not embedded, PDF viewers substitute system fonts, causing character spacing shifts and broken table cell alignment. This tool renders your document using universally available serif web fonts (equivalent to Times New Roman) and monospace fallbacks, which are then captured and embedded by the html2pdf engine during PDF bundle compilation. Table cell boundaries are preserved through standard HTML table markup with explicit border declarations, ensuring cell walls do not collapse or merge during the vector rendering pass.
+    </p>
+
+    <p>
+      <strong>Vector Assets vs. Flattened Raster Images - and Why It Matters:</strong> A <span class="glossary-chip">Vector Asset</span> is a PDF page where text is stored as mathematical character outlines, meaning it can be scaled to any size (for example, printed on a billboard) without losing sharpness. An unsearchable flattened document is the opposite: every page is converted to a bitmap photograph of the text, which looks correct at normal zoom but becomes blurry when enlarged, cannot be selected or searched, and results in dramatically larger file sizes. <span class="glossary-chip">Resolution Loss</span> in raster-converted PDFs is measured in DPI (dots per inch): a page photographed at 72dpi will appear visibly pixelated when printed at standard office print quality (300dpi). This converter uses the html2pdf vector pipeline to preserve text as real searchable character data wherever possible. Inline images extracted from your .docx file are rendered at their native resolution.
+    </p>
+
+    <p>
+      <strong>Document Metadata and PDF Standards Compliance:</strong> Every PDF file contains a hidden header block called <span class="glossary-chip">Document Metadata</span>. This block stores authorship, title, creation date, software version, and PDF specification version (for example, PDF 1.4 or PDF/A-1b). PDF/A is an ISO-standardized archival format used in legal, government, and academic contexts specifically because it mandates font embedding, prohibits encryption, and requires all content to be self-contained within the file. While this browser-based tool generates standard PDF 1.4 compatible output - suitable for all office, print, and digital distribution scenarios - organizations with long-term archival compliance requirements (court records, academic submissions, government filings) should verify their specific format standard with their institution.
+    </p>
+
+    <!-- FAQ SECTION -->
+    <div class="faq-list" role="list" aria-label="Frequently asked questions">
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false" type="button">
+          Why is executing file conversions in a local browser sandbox drastically safer for data security?
+          <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>When a conversion tool requires you to upload your file to a server, several security risks activate simultaneously. Your document travels over the internet as a data packet that can be intercepted. The server operator may log, index, or retain your file for undefined periods. Server breaches - which are a routine occurrence at even large tech companies - could expose your document to unauthorized parties.</p>
+          <p>A browser-based sandbox processes the file entirely within your operating system's memory allocation for the browser tab. The file bytes move from your hard drive into RAM, get processed by the JavaScript engine, and are output as a new file - all without a single network packet being transmitted. Your antivirus, firewall, and corporate data loss prevention (DLP) software continue to protect the data throughout this process because it never leaves your local network perimeter.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false" type="button">
+          What causes layout differences between how my document looks in Word and in the final PDF?
+          <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>This is one of the most common pain points in document conversion workflows. The root cause is that Word's layout engine and a browser's HTML rendering engine use different baseline typographic measurement systems. Word calculates line height in "points" tied to your physical printer's DPI settings. HTML renders in CSS pixels. These two systems use slightly different character-advance widths for the same font, meaning a paragraph that fits in 8 lines in Word may wrap to 9 lines in the converted output.</p>
+          <p>Additionally, complex Word features like floating text boxes, multi-column newspaper layouts, advanced tab stop grids, and revision tracking marks have no direct HTML equivalent and will be simplified or omitted during conversion. To minimize surprises, simplify heavily formatted documents before converting: use standard heading styles, avoid floating objects, and use regular paragraph formatting rather than manual spacing overrides.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false" type="button">
+          How can I ensure my fonts and table cell boundaries render precisely?
+          <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>For maximum rendering consistency, author your source document using standard, universally installed system fonts. Custom or decorative fonts that are only installed on your personal machine will not transfer through the browser conversion pipeline. The recommended base fonts for conversion reliability are:</p>
+          <ul>
+            <li><strong>Body text:</strong> Times New Roman, Georgia, or Calibri equivalents</li>
+            <li><strong>Headings:</strong> Arial, Helvetica, or Trebuchet MS</li>
+            <li><strong>Code or technical data:</strong> Courier New or Consolas</li>
+          </ul>
+          <p>For tables, ensure all cells have explicit border styles applied rather than relying on Word's automatic table style themes. The converter maps Word's table XML nodes to standard HTML table markup with declared borders, which produces reliable cell boundary lines in the final PDF.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false" type="button">
+          What is the difference between a searchable text-layer PDF and an unsearchable flattened image PDF?
+          <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>A <strong>text-layer PDF</strong> contains real character data stored as Unicode strings with associated font metrics and glyph outlines. You can highlight words, use Ctrl+F to search the document, copy and paste paragraphs into other applications, and screen readers for accessibility can interpret and vocalize the text. These PDFs are also far smaller in file size because text glyph outlines are mathematically compact.</p>
+          <p>A <strong>flattened image PDF</strong> is essentially a photograph of each page, stored as a compressed JPEG or PNG bitmap inside a PDF wrapper. There is no actual text data - only colored pixels arranged to look like letters. You cannot search it, copy from it, or have it read aloud. Scanned paper documents and some print-to-PDF workflows produce this type. This converter generates true text-layer output because it uses the HTML text content extracted from your .docx file as the direct input source rather than screenshotting a rendered visual.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-question" aria-expanded="false" type="button">
+          What .docx features are supported and which are simplified during conversion?
+          <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p><strong>Fully supported features:</strong> Paragraphs and headings (H1-H6), bold and italic inline formatting, bulleted and numbered lists, tables (including nested tables), inline images, hyperlinks, and block quotes.</p>
+          <p><strong>Features that will be simplified:</strong> Custom font faces not available in standard web font stacks, floating text boxes and WordArt objects, SmartArt diagrams, embedded Excel charts, revision tracking markup, comments and annotations, headers and footers with dynamic field codes (like auto-page-numbering), footnotes and endnotes, and multi-column newspaper-style layouts.</p>
+          <p>For documents heavily relying on the simplified features listed above, Microsoft Word's own built-in "Export to PDF" function (File - Export - Create PDF/XPS) will produce the most faithful output as it has direct access to Word's internal rendering engine.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <nav aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p>2025 AxiomApe.com - Free Browser-Based Productivity Tools</p>
+  </footer>
+
+  <script>
+    /* =============================================
+       STATE
+    ============================================= */
+    let currentFile = null;    // The loaded File object
+    let currentFileName = '';  // Original file name (without extension)
+
+    /* =============================================
+       ELEMENT REFERENCES
+    ============================================= */
+    const dropZone     = document.getElementById('drop-zone');
+    const fileInput    = document.getElementById('file-input');
+    const dropTitle    = document.getElementById('drop-title');
+    const dropSub      = document.getElementById('drop-sub');
+    const previewCard  = document.getElementById('preview-card');
+    const generateCard = document.getElementById('generate-card');
+    const docPreview   = document.getElementById('doc-preview');
+    const generateBtn  = document.getElementById('generate-btn');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const statusBar    = document.getElementById('status-bar');
+    const statusIcon   = document.getElementById('status-icon');
+    const statusText   = document.getElementById('status-text');
+
+    // Geometry controls
+    const pageSizeSelect  = document.getElementById('page-size');
+    const orientationSelect = document.getElementById('orientation');
+    const marginsSelect   = document.getElementById('margins');
+
+    /* =============================================
+       STATUS BAR HELPER
+    ============================================= */
+    function showStatus(type, message) {
+      // type: 'info' | 'success' | 'error'
+      statusBar.className = 'status-bar visible ' + type;
+      statusText.textContent = message;
+
+      // Swap icon path based on type
+      const icons = {
+        info:    'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z',
+        success: 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z',
+        error:   'M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
+      };
+      statusIcon.setAttribute('viewBox', '0 0 20 20');
+      statusIcon.innerHTML = `<path fill-rule="evenodd" d="${icons[type]}" clip-rule="evenodd"/>`;
+    }
+
+    function hideStatus() {
+      statusBar.className = 'status-bar';
+    }
+
+    /* =============================================
+       DRAG AND DROP HANDLERS
+    ============================================= */
+    dropZone.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+      // Only remove class if leaving the drop zone itself (not a child)
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('dragover');
+      }
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) processFile(file);
+    });
+
+    // Keyboard accessibility for drop zone
+    dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) processFile(fileInput.files[0]);
+    });
+
+    /* =============================================
+       FILE VALIDATION AND PARSING
+    ============================================= */
+    function processFile(file) {
+      // Validate file extension
+      if (!file.name.toLowerCase().endsWith('.docx')) {
+        showStatus('error', 'Invalid file type. Please upload a .docx Word document.');
+        return;
+      }
+
+      // Validate file size - warn over 50MB
+      if (file.size > 52428800) {
+        showStatus('error', 'File size exceeds 50MB. Large documents may take extra time to process.');
+      } else {
+        hideStatus();
+      }
+
+      currentFile = file;
+      // Store clean file name (strip extension for later PDF naming)
+      currentFileName = file.name.replace(/\.docx$/i, '');
+
+      // Update drop zone to "loaded" state
+      dropZone.classList.add('file-loaded');
+      dropTitle.textContent = file.name;
+      dropSub.textContent = 'File loaded - ' + (file.size / 1024).toFixed(1) + ' KB. Drop another file to replace.';
+
+      // Parse the document with mammoth.js
+      showStatus('info', 'Parsing document structure...');
+      parseDocx(file);
+    }
+
+    /* =============================================
+       MAMMOTH.JS PARSING PIPELINE
+       mammoth.js reads the Open XML (.docx) buffer
+       and converts Word XML nodes into clean HTML markup.
+    ============================================= */
+    function parseDocx(file) {
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+
+        // Custom style map: preserve heading levels and common inline styles
+        const options = {
+          styleMap: [
+            "p[style-name='Heading 1'] => h1:fresh",
+            "p[style-name='Heading 2'] => h2:fresh",
+            "p[style-name='Heading 3'] => h3:fresh",
+            "p[style-name='Heading 4'] => h4:fresh",
+            "p[style-name='Heading 5'] => h5:fresh",
+            "p[style-name='Heading 6'] => h6:fresh",
+            "p[style-name='Title'] => h1.doc-title:fresh",
+            "p[style-name='Subtitle'] => p.doc-subtitle:fresh",
+            "r[style-name='Strong'] => strong",
+            "r[style-name='Emphasis'] => em",
+            "p[style-name='Quote'] => blockquote > p:fresh",
+            "p[style-name='Intense Quote'] => blockquote > p:fresh",
+            "p[style-name='List Paragraph'] => p:fresh",
+          ],
+          convertImage: mammoth.images.imgElement(function(image) {
+            // Convert embedded images to base64 data URIs for inline display
+            return image.read('base64').then(function(imageBase64) {
+              return {
+                src: 'data:' + image.contentType + ';base64,' + imageBase64
+              };
+            });
+          })
+        };
+
+        mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, options)
+          .then(function(result) {
+            if (result.value) {
+              renderPreview(result.value);
+              if (result.messages.length > 0) {
+                showStatus('info', 'Document parsed. Some complex formatting was simplified for compatibility.');
+              } else {
+                showStatus('success', 'Document parsed successfully. Review the preview below, then generate your PDF.');
+              }
+            } else {
+              showStatus('error', 'Could not extract content from this document. Ensure it is a valid .docx file.');
+            }
+          })
+          .catch(function(err) {
+            console.error('mammoth error:', err);
+            showStatus('error', 'Document parsing failed: ' + err.message);
+          });
+      };
+
+      reader.onerror = function() {
+        showStatus('error', 'Could not read the file. Please try again.');
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    /* =============================================
+       RENDER PREVIEW
+       Injects the mammoth HTML output into the
+       paper canvas and applies geometry styles.
+    ============================================= */
+    function renderPreview(htmlContent) {
+      docPreview.innerHTML = htmlContent;
+      applyGeometry();
+
+      // Show preview and generate sections
+      previewCard.classList.add('visible');
+      generateCard.style.display = 'block';
+
+      // Smooth scroll to preview
+      setTimeout(() => {
+        previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+
+    /* =============================================
+       GEOMETRY APPLICATION
+       Maps user control selections to CSS styles
+       on the preview doc canvas in real time.
+    ============================================= */
+    function applyGeometry() {
+      const size        = pageSizeSelect.value;
+      const orientation = orientationSelect.value;
+      const margin      = marginsSelect.value;
+
+      // Margin pixel values at 96dpi screen approximation:
+      // 1 inch = 96px, 0.5 inch = 48px, 1.5 inch = 144px
+      const marginMap = {
+        normal: '96px',
+        narrow: '48px',
+        wide:   '144px'
+      };
+      const marginValue = marginMap[margin];
+
+      docPreview.style.padding = marginValue;
+
+      // Page size dimensions (portrait base)
+      // Letter: 816 x 1056px at 96dpi
+      // A4:     794 x 1123px at 96dpi
+      const sizeMap = {
+        letter: { w: 816, h: 1056 },
+        a4:     { w: 794, h: 1123 }
+      };
+      const dims = sizeMap[size];
+
+      if (orientation === 'landscape') {
+        docPreview.style.maxWidth   = dims.h + 'px';
+        docPreview.style.minHeight  = dims.w + 'px';
+        docPreview.classList.add('landscape');
+      } else {
+        docPreview.style.maxWidth   = dims.w + 'px';
+        docPreview.style.minHeight  = dims.h + 'px';
+        docPreview.classList.remove('landscape');
+      }
+    }
+
+    // Re-apply geometry whenever controls change
+    pageSizeSelect.addEventListener('change', applyGeometry);
+    orientationSelect.addEventListener('change', applyGeometry);
+    marginsSelect.addEventListener('change', applyGeometry);
+
+    /* =============================================
+       PDF GENERATION PIPELINE
+       html2pdf.js reads the preview element and
+       the selected geometry attributes, then
+       compiles a vector PDF blob and triggers download.
+    ============================================= */
+    generateBtn.addEventListener('click', function() {
+      if (!currentFile || !docPreview.innerHTML.trim()) {
+        showStatus('error', 'Please upload a .docx file first.');
+        return;
+      }
+
+      // Gather geometry settings
+      const size        = pageSizeSelect.value;
+      const orientation = orientationSelect.value;
+      const margin      = marginsSelect.value;
+
+      // Map margin selection to html2pdf margin values (in inches)
+      const marginInchMap = { normal: 1, narrow: 0.5, wide: 1.5 };
+      const marginInch = marginInchMap[margin];
+
+      // Page format string for jsPDF
+      const formatMap = { letter: 'letter', a4: 'a4' };
+      const pdfFormat = formatMap[size];
+
+      // Show loading overlay and disable button
+      loadingOverlay.classList.add('active');
+      generateBtn.disabled = true;
+
+      // html2pdf options configuration:
+      // - margin: whitespace around content in the PDF output
+      // - filename: output file name preserving original document name
+      // - image.quality: JPEG quality for any raster images in the doc
+      // - html2canvas.scale: render resolution multiplier (2 = retina quality)
+      // - jsPDF.format: paper size standard
+      // - jsPDF.orientation: portrait or landscape
+      const opt = {
+        margin:       marginInch,
+        filename:     currentFileName + '.pdf',
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          letterRendering: true
+        },
+        jsPDF: {
+          unit: 'in',
+          format: pdfFormat,
+          orientation: orientation
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      // Clone the preview node so we can safely modify styles for PDF rendering
+      // without affecting the visible preview on screen
+      const cloneNode = docPreview.cloneNode(true);
+      cloneNode.style.boxShadow = 'none';
+      cloneNode.style.maxWidth  = 'none';
+      cloneNode.style.width     = '100%';
+
+      html2pdf()
+        .set(opt)
+        .from(cloneNode)
+        .save()
+        .then(function() {
+          loadingOverlay.classList.remove('active');
+          generateBtn.disabled = false;
+          showStatus('success', 'PDF generated and downloaded successfully as "' + currentFileName + '.pdf"');
+        })
+        .catch(function(err) {
+          console.error('html2pdf error:', err);
+          loadingOverlay.classList.remove('active');
+          generateBtn.disabled = false;
+          showStatus('error', 'PDF generation failed. Try a simpler document or a different browser.');
+        });
+    });
+
+    /* =============================================
+       FAQ ACCORDION LOGIC
+    ============================================= */
+    document.querySelectorAll('.faq-question').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+
+        // Close all open items
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+          openItem.classList.remove('open');
+          openItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+
+        // Toggle current item
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

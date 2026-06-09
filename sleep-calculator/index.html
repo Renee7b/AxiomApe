@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Calculator | Axiomape</title>
+    <meta name="description" content="Calculate your ideal bedtime or wake-up time based on natural 90-minute sleep cycles. Wake up refreshed, not groggy.">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* =====================================================
+           RESET & CSS CUSTOM PROPERTIES
+        ===================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            /* Background palette — deep navy → purple-tinged dark */
+            --bg-primary:      #07091a;
+            --bg-secondary:    #0d1128;
+            --bg-card:         #111830;
+            --bg-card-hover:   #17203d;
+
+            /* Brand gradient (purple → blue) */
+            --accent-gradient: linear-gradient(135deg, #7b5ea7 0%, #4e8ef7 100%);
+            --accent-purple:   #7b5ea7;
+            --accent-blue:     #4e8ef7;
+
+            /* Optimal-result highlight (warm gold) */
+            --gold:            #f9c74f;
+            --gold-bg:         rgba(249, 199,  79, 0.10);
+            --gold-border:     rgba(249, 199,  79, 0.38);
+
+            /* Typography */
+            --text-primary:    #e6eaf6;
+            --text-secondary:  #8390a8;
+            --text-muted:      #48566a;
+
+            /* Borders */
+            --border:          rgba(255, 255, 255, 0.07);
+            --border-focus:    rgba(123,  94, 167, 0.65);
+
+            /* Shadows */
+            --shadow-card:     0 12px 40px rgba(0, 0, 0, 0.5);
+            --shadow-glow:     0  0  60px rgba(78, 142, 247, 0.10);
+
+            /* Geometry */
+            --radius-lg: 18px;
+            --radius-md: 11px;
+            --radius-sm:  7px;
+
+            /* Motion */
+            --ease: cubic-bezier(0.22, 1, 0.36, 1);
+            --transition: 0.22s var(--ease);
+        }
+
+        /* =====================================================
+           BASE
+        ===================================================== */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+
+            /* Subtle starfield gradient */
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(123,94,167,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 110%, rgba(78,142,247,0.10) 0%, transparent 60%);
+            background-attachment: fixed;
+
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* =====================================================
+           PAGE WRAPPER
+        ===================================================== */
+        .page-wrapper {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 40px 16px 72px;
+        }
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+        .site-header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .header-moon {
+            font-size: 52px;
+            display: block;
+            margin-bottom: 14px;
+            filter: drop-shadow(0 0 24px rgba(78, 142, 247, 0.7));
+            animation: float 5s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(-5deg); }
+            50%       { transform: translateY(-8px) rotate(5deg); }
+        }
+
+        .site-header h1 {
+            font-size: clamp(26px, 5.5vw, 36px);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .site-header p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* =====================================================
+           AD BANNER — TOP  (Leaderboard 728×90)
+           ─────────────────────────────────────────────────
+           TO MONETISE: Remove the placeholder <div> content
+           and paste your Google AdSense <ins> tag inside
+           the .ad-banner-top container.
+        ===================================================== */
+        .ad-banner-top {
+            width: 100%;
+            max-width: 728px;
+            min-height: 90px;
+            margin: 0 auto 32px;
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            border: 1px dashed var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Placeholder label — remove when AdSense is live */
+        .ad-placeholder-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* =====================================================
+           MAIN CARD
+        ===================================================== */
+        .main-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-card), var(--shadow-glow);
+            overflow: hidden;
+        }
+
+        /* =====================================================
+           TAB BAR
+        ===================================================== */
+        .tab-bar {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 6px;
+            gap: 6px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-gradient);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(78, 142, 247, 0.30);
+        }
+
+        .tab-icon { font-size: 15px; }
+
+        /* =====================================================
+           TAB PANELS
+        ===================================================== */
+        .tab-panel {
+            display: none;
+            padding: 28px 24px 26px;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: panelIn 0.28s var(--ease) both;
+        }
+
+        @keyframes panelIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0);   }
+        }
+
+        /* =====================================================
+           FORM ELEMENTS
+        ===================================================== */
+        .field-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        /* Time picker */
+        .time-input {
+            width: 100%;
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            font-family: inherit;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            outline: none;
+            cursor: pointer;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            color-scheme: dark; /* makes the native time-picker dark on supported browsers */
+        }
+
+        .time-input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(123, 94, 167, 0.18);
+        }
+
+        /* "Sleep now" — live clock display */
+        .current-time-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: 22px;
+        }
+
+        .current-time-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .current-time-value {
+            font-size: 22px;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.3px;
+        }
+
+        /* =====================================================
+           CALCULATE BUTTON
+        ===================================================== */
+        .calc-btn {
+            width: 100%;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: #fff;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .calc-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0);
+            transition: background 0.18s ease;
+        }
+
+        .calc-btn:hover {
+            box-shadow: 0 6px 28px rgba(78, 142, 247, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .calc-btn:hover::after {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .calc-btn:active {
+            transform: scale(0.985) translateY(0);
+        }
+
+        /* =====================================================
+           RESULTS AREA
+        ===================================================== */
+        .results-wrapper {
+            margin-top: 28px;
+            overflow: hidden;
+        }
+
+        .results-wrapper.hidden {
+            display: none;
+        }
+
+        /* Decorative divider with centred label */
+        .results-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .results-heading span {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            white-space: nowrap;
+        }
+
+        .results-heading::before,
+        .results-heading::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* List of result cards */
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        /* =====================================================
+           INDIVIDUAL RESULT CARD
+        ===================================================== */
+        .result-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+
+            /* Staggered entrance animation — set via inline style */
+            animation: cardIn 0.35s var(--ease) both;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0);    }
+        }
+
+        .result-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(78, 142, 247, 0.25);
+            transform: translateX(4px);
+        }
+
+        /* ── Optimal variant ── */
+        .result-card.optimal {
+            background: var(--gold-bg);
+            border-color: var(--gold-border);
+        }
+
+        .result-card.optimal:hover {
+            background: rgba(249, 199, 79, 0.15);
+        }
+
+        /* Left cluster: big time + metadata */
+        .card-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .card-time {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+            min-width: 90px; /* prevents layout shift between AM/PM widths */
+        }
+
+        .result-card.optimal .card-time {
+            color: var(--gold);
+        }
+
+        .card-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .card-cycles {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .card-hours {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Right cluster: badge + mini progress bar */
+        .card-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        /* "Optimal" pill — hidden by default, shown only on .optimal cards */
+        .optimal-badge {
+            display: none;
+            padding: 3px 10px;
+            background: rgba(249, 199, 79, 0.18);
+            color: var(--gold);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            border-radius: 20px;
+            border: 1px solid rgba(249, 199, 79, 0.28);
+        }
+
+        .result-card.optimal .optimal-badge {
+            display: block;
+        }
+
+        /* Mini progress bar representing sleep duration */
+        .sleep-bar {
+            width: 72px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .sleep-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--accent-gradient);
+            /* Width is set inline by JS */
+            transition: width 0.55s var(--ease);
+        }
+
+        .result-card.optimal .sleep-bar-fill {
+            background: linear-gradient(90deg, var(--gold), #f8961e);
+        }
+
+        /* =====================================================
+           INFORMATIONAL TIP BOX
+        ===================================================== */
+        .tip-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            margin-top: 18px;
+            padding: 14px 16px;
+            background: rgba(78, 142, 247, 0.06);
+            border: 1px solid rgba(78, 142, 247, 0.14);
+            border-radius: var(--radius-md);
+        }
+
+        .tip-icon {
+            font-size: 17px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .tip-text {
+            font-size: 13px;
+            line-height: 1.65;
+            color: var(--text-secondary);
+        }
+
+        .tip-text strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .tip-highlight {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* =====================================================
+           AD BANNER — BOTTOM  (Leaderboard 728×90)
+           ─────────────────────────────────────────────────
+           TO MONETISE: Remove the placeholder <div> content
+           and paste your Google AdSense <ins> tag inside
+           the .ad-banner-bottom container.
+        ===================================================== */
+        .ad-banner-bottom {
+            width: 100%;
+            max-width: 728px;
+            min-height: 90px;
+            margin: 30px auto 0;
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            border: 1px dashed var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+        .site-footer {
+            text-align: center;
+            margin-top: 28px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .site-footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        .site-footer a:hover {
+            color: var(--accent-blue);
+        }
+
+        /* =====================================================
+           RESPONSIVE — MOBILE ADJUSTMENTS
+        ===================================================== */
+        @media (max-width: 480px) {
+            .page-wrapper { padding: 24px 12px 56px; }
+
+            .tab-btn      { font-size: 13px; gap: 5px; }
+
+            .tab-panel    { padding: 20px 14px 18px; }
+
+            .time-input   { font-size: 20px; }
+
+            .card-time    { font-size: 19px; min-width: 80px; }
+
+            .sleep-bar    { width: 54px; }
+
+            .site-header h1 { font-size: 24px; }
+        }
+
+        @media (max-width: 360px) {
+            .tab-btn .tab-label { display: none; } /* show only icon on very small screens */
+        }
+
+    </style>
+  <link rel="canonical" href="https://axiomape.com/sleep-calculator/" />
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- ===================================================
+         HEADER
+    ==================================================== -->
+    <header class="site-header">
+        <span class="header-moon" aria-hidden="true">🌙</span>
+        <h1>Sleep Calculator</h1>
+        <p>Wake up refreshed by timing your sleep to natural 90-minute cycles.</p>
+    </header>
+
+
+    <!-- ===================================================
+         AD BANNER — TOP  ·  Leaderboard 728×90
+         ───────────────────────────────────────────────────
+         STEP 1: Delete the <div class="ad-placeholder-label"> line below.
+         STEP 2: Paste your AdSense <ins class="adsbygoogle" ...> tag here.
+    ==================================================== -->
+    <div class="ad-banner-top" id="ad-top">
+        <div class="ad-placeholder-label">Advertisement · 728 × 90</div>
+    </div>
+    <!-- END AD BANNER — TOP -->
+
+
+    <!-- ===================================================
+         MAIN CALCULATOR CARD
+    ==================================================== -->
+    <main class="main-card" role="main">
+
+        <!-- Tab navigation -->
+        <div class="tab-bar" role="tablist" aria-label="Calculator mode">
+
+            <button
+                class="tab-btn active"
+                id="tab-bedtime"
+                role="tab"
+                aria-selected="true"
+                aria-controls="panel-bedtime"
+                onclick="switchTab('bedtime')"
+            >
+                <span class="tab-icon" aria-hidden="true">⏰</span>
+                <span class="tab-label">Find Bedtime</span>
+            </button>
+
+            <button
+                class="tab-btn"
+                id="tab-wakeup"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-wakeup"
+                onclick="switchTab('wakeup')"
+            >
+                <span class="tab-icon" aria-hidden="true">☀️</span>
+                <span class="tab-label">Find Wake-Up Time</span>
+            </button>
+
+        </div><!-- /.tab-bar -->
+
+
+        <!-- ===============================================
+             PANEL A — Find Bedtime
+             User enters a wake-up time; calculator
+             works BACKWARDS to suggest bedtimes.
+        ================================================ -->
+        <div class="tab-panel active" id="panel-bedtime" role="tabpanel" aria-labelledby="tab-bedtime">
+
+            <label class="field-label" for="wake-time-input">I want to wake up at</label>
+
+            <input
+                type="time"
+                class="time-input"
+                id="wake-time-input"
+                value="07:00"
+                aria-label="Desired wake-up time"
+            >
+
+            <button class="calc-btn" onclick="calculateBedtimes()">
+                🌙&nbsp; Calculate My Bedtimes
+            </button>
+
+            <!-- Results injected by JS -->
+            <section class="results-wrapper hidden" id="bedtime-results" aria-live="polite" aria-label="Recommended bedtimes">
+                <div class="results-heading"><span>Recommended Bedtimes</span></div>
+                <div class="results-list" id="bedtime-list"></div>
+                <div class="tip-box">
+                    <span class="tip-icon" aria-hidden="true">💡</span>
+                    <p class="tip-text">
+                        <strong>Tip:</strong> The <span class="tip-highlight">highlighted times</span>
+                        deliver 5–6 complete sleep cycles (7.5–9 hrs) — the sweet spot for most adults.
+                        Completing full cycles supports memory consolidation, hormone balance, and waking
+                        up naturally without needing an alarm.
+                    </p>
+                </div>
+            </section>
+
+        </div><!-- /#panel-bedtime -->
+
+
+        <!-- ===============================================
+             PANEL B — Find Wake-Up Time
+             Uses the current system time, adds 15 min
+             fall-asleep buffer, then steps FORWARD in
+             90-min increments.
+        ================================================ -->
+        <div class="tab-panel" id="panel-wakeup" role="tabpanel" aria-labelledby="tab-wakeup">
+
+            <!-- Live clock — updates every second via JS -->
+            <div class="current-time-box" aria-label="Current time">
+                <span class="current-time-label">Current time</span>
+                <span class="current-time-value" id="live-clock" aria-live="off">--:-- --</span>
+            </div>
+
+            <button class="calc-btn" onclick="calculateWakeUpTimes()">
+                ☀️&nbsp; If I Sleep Right Now…
+            </button>
+
+            <!-- Results injected by JS -->
+            <section class="results-wrapper hidden" id="wakeup-results" aria-live="polite" aria-label="Recommended wake-up times">
+                <div class="results-heading"><span>Recommended Wake-Up Times</span></div>
+                <div class="results-list" id="wakeup-list"></div>
+                <div class="tip-box">
+                    <span class="tip-icon" aria-hidden="true">💡</span>
+                    <p class="tip-text">
+                        <strong>Tip:</strong> These times include a <strong>15-minute</strong> fall-asleep buffer.
+                        Aim for a <span class="tip-highlight">highlighted time</span> to complete 5–6 full cycles
+                        and wake between cycles rather than mid-cycle — that's what prevents morning grogginess.
+                    </p>
+                </div>
+            </section>
+
+        </div><!-- /#panel-wakeup -->
+
+    </main><!-- /.main-card -->
+
+
+    <!-- ===================================================
+         AD BANNER — BOTTOM  ·  Leaderboard 728×90
+         ───────────────────────────────────────────────────
+         STEP 1: Delete the <div class="ad-placeholder-label"> line below.
+         STEP 2: Paste your AdSense <ins class="adsbygoogle" ...> tag here.
+    ==================================================== -->
+    <div class="ad-banner-bottom" id="ad-bottom">
+        <div class="ad-placeholder-label">Advertisement · 728 × 90</div>
+    </div>
+    <!-- END AD BANNER — BOTTOM -->
+
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>Based on 90-minute sleep cycle research &mdash;
+           <a href="/" target="_blank" rel="noopener">axiomape.com</a>
+        </p>
+    </footer>
+
+</div><!-- /.page-wrapper -->
+
+
+<!-- =====================================================
+     SLEEP CALCULATOR — JAVASCRIPT
+     ─────────────────────────────────────────────────
+     CONSTANTS
+       CYCLE_MIN       : minutes in one sleep cycle (90)
+       FALLASLEEP_MIN  : average time to fall asleep (15)
+       RESULTS_COUNT   : number of options shown (5)
+       OPTIMAL_MIN/MAX : "optimal" cycle range (5–6)
+       MAX_CYCLES      : highest cycle count shown  (6)
+
+     UTILITIES
+       pad()          — zero-pad single digits
+       formatTime()   — minutes-since-midnight → "10:30 PM"
+       formatDuration — minutes → "7h 30m"
+       parseInput()   — "HH:MM" string → minutes
+       nowMinutes()   — current time → minutes
+
+     CORE FUNCTIONS
+       calculateBedtimes()     — Scenario A (wake-up → bedtime)
+       calculateWakeUpTimes()  — Scenario B (sleep now → wake-up)
+       buildCard()             — creates a single result DOM node
+
+     UI
+       switchTab()   — handles tab switching
+       updateClock() — ticks the live clock every second
+====================================================== -->
+<script>
+    /* ── Constants ─────────────────────────────────── */
+    const CYCLE_MIN      = 90;   // one sleep cycle in minutes
+    const FALLASLEEP_MIN = 15;   // average time to fall asleep
+    const RESULTS_COUNT  = 5;    // how many options to display
+    const OPTIMAL_MIN    = 5;    // 5 cycles = 7 h 30 m  ← optimal start
+    const OPTIMAL_MAX    = 6;    // 6 cycles = 9 h 00 m  ← optimal end
+    const MAX_CYCLES     = 6;    // highest cycle count to generate from
+
+    /* ── Utilities ─────────────────────────────────── */
+
+    /** Zero-pad a number to 2 digits. */
+    function pad(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    /**
+     * Convert minutes-since-midnight to a 12-hour clock string.
+     * Handles overflow/underflow (e.g. 1500 min, -30 min).
+     * @param  {number} totalMin
+     * @returns {string} e.g. "10:30 PM"
+     */
+    function formatTime(totalMin) {
+        totalMin = ((totalMin % 1440) + 1440) % 1440; // normalise 0–1439
+        const h24  = Math.floor(totalMin / 60);
+        const min  = totalMin % 60;
+        const ampm = h24 >= 12 ? 'PM' : 'AM';
+        const h12  = h24 % 12 || 12;
+        return `${h12}:${pad(min)} ${ampm}`;
+    }
+
+    /**
+     * Format a minutes duration as "Xh Ym".
+     * @param  {number} totalMin
+     * @returns {string} e.g. "7h 30m"
+     */
+    function formatDuration(totalMin) {
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    }
+
+    /**
+     * Parse a native <input type="time"> value ("HH:MM")
+     * into minutes since midnight.
+     * @param  {string} value  e.g. "07:30"
+     * @returns {number}
+     */
+    function parseInput(value) {
+        const [h, m] = value.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    /**
+     * Return the current time as minutes since midnight.
+     * @returns {number}
+     */
+    function nowMinutes() {
+        const d = new Date();
+        return d.getHours() * 60 + d.getMinutes();
+    }
+
+
+    /* ── Tab Switching ─────────────────────────────── */
+
+    /**
+     * Switch between "Find Bedtime" and "Find Wake-Up" tabs.
+     * Also hides any existing results to avoid stale data showing.
+     * @param {'bedtime'|'wakeup'} tab
+     */
+    function switchTab(tab) {
+        /* Update button states */
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            const isActive = btn.id === `tab-${tab}`;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', String(isActive));
+        });
+
+        /* Show the correct panel */
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.toggle('active', panel.id === `panel-${tab}`);
+        });
+
+        /* Clear stale results */
+        document.getElementById('bedtime-results').classList.add('hidden');
+        document.getElementById('wakeup-results').classList.add('hidden');
+    }
+
+
+    /* ── Scenario A: Calculate Bedtimes ────────────── */
+
+    /**
+     * Given a desired wake-up time the user has chosen, work BACKWARDS
+     * through sleep cycles to suggest when they should go to bed.
+     *
+     * Formula (for each option):
+     *   bedtime = wakeTime − (cycles × 90 min) − 15 min
+     *
+     * Displays RESULTS_COUNT options, from MAX_CYCLES down.
+     * Options with 5–6 cycles are flagged as optimal.
+     */
+    function calculateBedtimes() {
+        const inputEl = document.getElementById('wake-time-input');
+        if (!inputEl.value) return;
+
+        const wakeMin  = parseInput(inputEl.value);
+        const listEl   = document.getElementById('bedtime-list');
+        const wrapper  = document.getElementById('bedtime-results');
+        const minCycle = MAX_CYCLES - RESULTS_COUNT + 1; // = 2 when MAX=6, COUNT=5
+
+        /* Clear previous results */
+        listEl.innerHTML = '';
+
+        for (let cycles = MAX_CYCLES; cycles >= minCycle; cycles--) {
+            const sleepDuration = cycles * CYCLE_MIN;                 // actual sleep time
+            const bedtimeMin    = wakeMin - sleepDuration - FALLASLEEP_MIN; // when to get into bed
+            const isOptimal     = cycles >= OPTIMAL_MIN && cycles <= OPTIMAL_MAX;
+            const delay         = (MAX_CYCLES - cycles) * 0.065;     // staggered animation
+
+            listEl.appendChild(buildCard({
+                timeStr:  formatTime(bedtimeMin),
+                cycles,
+                duration: sleepDuration,
+                isOptimal,
+                delay
+            }));
+        }
+
+        /* Reveal results with smooth scroll into view */
+        wrapper.classList.remove('hidden');
+        setTimeout(() => {
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+    }
+
+
+    /* ── Scenario B: Calculate Wake-Up Times ──────── */
+
+    /**
+     * Takes the current system time, adds the fall-asleep buffer,
+     * then steps FORWARD in 90-min increments to suggest wake-up times.
+     *
+     * Formula (for each option):
+     *   wakeTime = now + 15 min + (cycles × 90 min)
+     *
+     * Displays RESULTS_COUNT options, from fewest → most cycles.
+     * Options with 5–6 cycles are flagged as optimal.
+     */
+    function calculateWakeUpTimes() {
+        const currentMin = nowMinutes();
+        const asleepMin  = currentMin + FALLASLEEP_MIN; // when they'll be asleep
+        const listEl     = document.getElementById('wakeup-list');
+        const wrapper    = document.getElementById('wakeup-results');
+        const startCycle = MAX_CYCLES - RESULTS_COUNT + 1; // = 2
+
+        /* Clear previous results */
+        listEl.innerHTML = '';
+
+        for (let cycles = startCycle; cycles <= MAX_CYCLES; cycles++) {
+            const sleepDuration = cycles * CYCLE_MIN;
+            const wakeMin       = asleepMin + sleepDuration;
+            const isOptimal     = cycles >= OPTIMAL_MIN && cycles <= OPTIMAL_MAX;
+            const delay         = (cycles - startCycle) * 0.065;
+
+            listEl.appendChild(buildCard({
+                timeStr:  formatTime(wakeMin),
+                cycles,
+                duration: sleepDuration,
+                isOptimal,
+                delay
+            }));
+        }
+
+        /* Reveal results */
+        wrapper.classList.remove('hidden');
+        setTimeout(() => {
+            wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+    }
+
+
+    /* ── Build a Single Result Card ────────────────── */
+
+    /**
+     * Create and return a styled result card DOM element.
+     *
+     * @param {object} opts
+     * @param {string}  opts.timeStr   — formatted time string, e.g. "11:00 PM"
+     * @param {number}  opts.cycles    — number of sleep cycles
+     * @param {number}  opts.duration  — total sleep in minutes (cycles × 90)
+     * @param {boolean} opts.isOptimal — whether to apply the optimal style
+     * @param {number}  opts.delay     — CSS animation delay in seconds
+     * @returns {HTMLElement}
+     */
+    function buildCard({ timeStr, cycles, duration, isOptimal, delay }) {
+        const card = document.createElement('div');
+        card.className = `result-card${isOptimal ? ' optimal' : ''}`;
+        card.style.animationDelay = `${delay}s`;
+
+        /* Sleep bar: fill% relative to longest option (MAX_CYCLES × 90 min) */
+        const fillPct = Math.round((duration / (MAX_CYCLES * CYCLE_MIN)) * 100);
+
+        card.innerHTML = `
+            <div class="card-left">
+                <div class="card-time">${timeStr}</div>
+                <div class="card-meta">
+                    <span class="card-cycles">${cycles} sleep cycle${cycles !== 1 ? 's' : ''}</span>
+                    <span class="card-hours">${formatDuration(duration)} of sleep</span>
+                </div>
+            </div>
+            <div class="card-right">
+                <span class="optimal-badge" aria-label="Optimal">✦ Optimal</span>
+                <div class="sleep-bar" role="progressbar" aria-valuenow="${fillPct}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="sleep-bar-fill" style="width:${fillPct}%"></div>
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+
+    /* ── Live Clock ────────────────────────────────── */
+
+    /** Update the "current time" display in Panel B. */
+    function updateClock() {
+        const d    = new Date();
+        const h    = d.getHours();
+        const m    = d.getMinutes();
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12  = h % 12 || 12;
+        document.getElementById('live-clock').textContent = `${h12}:${pad(m)} ${ampm}`;
+    }
+
+    /* Tick every second */
+    updateClock();
+    setInterval(updateClock, 1000);
+
+
+    /* ── Auto-run on load ──────────────────────────── */
+
+    /**
+     * Run the bedtime calculator immediately on page load
+     * using the default 7:00 AM wake-up time.
+     * This gives users an instant example result without
+     * any interaction required.
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+        calculateBedtimes();
+    });
+
+</script>
+
+</body>
+</html>

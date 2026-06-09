@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BPM Counter - Tap the Spacebar to Find Any Song's Tempo | AxiomApe</title>
+  <meta name="description" content="Free online BPM counter. Tap the spacebar or screen to the beat of any song to instantly calculate its tempo in Beats Per Minute. No sign-up, no downloads - runs entirely in your browser." />
+  <meta name="keywords" content="BPM counter, beats per minute, tempo finder, tap BPM, music tempo calculator, DJ BPM tool, beatmatching, song tempo" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://axiomape.com/bpm-counter/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="BPM Counter - Tap to Find Any Song's Tempo" />
+  <meta property="og:description" content="Instantly find the BPM of any song by tapping the spacebar to the beat. Free, private, and runs entirely in your browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://axiomape.com/bpm-counter/" />
+
+  <style>
+    /* ============================================================
+       ROOT VARIABLES & RESET
+    ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-page:        #0f1117;
+      --bg-card:        #1a1d27;
+      --bg-tap:         #141720;
+      --bg-tap-active:  #1e2235;
+      --accent:         #4f8ef7;
+      --accent-glow:    rgba(79, 142, 247, 0.35);
+      --accent-2:       #7c5cbf;
+      --text-primary:   #e8eaf0;
+      --text-secondary: #8b91a8;
+      --text-muted:     #555d75;
+      --border:         #272b3a;
+      --border-light:   #323750;
+      --bpm-color:      #ffffff;
+      --pulse-ring:     rgba(79, 142, 247, 0.5);
+      --success:        #3ecf8e;
+      --warning:        #f6a623;
+      --radius-card:    18px;
+      --radius-btn:     10px;
+      --font-main:      'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono:      'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --transition:     0.18s ease;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    a:hover {
+      color: #7aacff;
+      text-decoration: underline;
+    }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-nav {
+      text-align: center;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .top-nav a:hover {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ============================================================
+       MAIN LAYOUT
+    ============================================================ */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ============================================================
+       PAGE TITLE BLOCK
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .page-header h1 span {
+      color: var(--accent);
+    }
+
+    .page-header p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER (leaderboard banner - 728x90 standard)
+       Swap this div's contents with your AdSense snippet when ready.
+    ============================================================ */
+    .ad-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-light);
+      border-radius: var(--radius-btn);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       MAIN TOOL CARD
+    ============================================================ */
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    }
+
+    /* ============================================================
+       BPM DISPLAY AREA
+    ============================================================ */
+    .bpm-display-wrap {
+      background: var(--bg-tap);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 20px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background pulse ring - animated on tap */
+    .bpm-display-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--pulse-ring);
+      transform: scale(0);
+      opacity: 0;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .bpm-display-wrap.pulse::before {
+      animation: ring-pulse 0.5s ease-out forwards;
+    }
+
+    @keyframes ring-pulse {
+      0%   { transform: scale(0.5); opacity: 0.7; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    .bpm-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    /* The giant BPM number */
+    #bpm-number {
+      font-size: clamp(72px, 18vw, 140px);
+      font-weight: 900;
+      line-height: 1;
+      color: var(--bpm-color);
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      transition: transform 0.1s ease;
+      display: inline-block;
+      min-width: 3ch;
+      text-align: center;
+    }
+
+    #bpm-number.bump {
+      animation: number-bump 0.15s ease-out;
+    }
+
+    @keyframes number-bump {
+      0%   { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+
+    .bpm-unit {
+      font-size: clamp(22px, 5vw, 38px);
+      font-weight: 700;
+      color: var(--accent);
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* Status line below BPM */
+    #status-line {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-height: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    #status-line .tap-count {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       TAP AREA (clickable button)
+    ============================================================ */
+    .tap-area-wrap {
+      padding: 28px 24px;
+      background: var(--bg-tap);
+    }
+
+    #tap-btn {
+      display: block;
+      width: 100%;
+      padding: 38px 20px;
+      background: linear-gradient(145deg, #1e2337, #171b2c);
+      border: 2px solid var(--border-light);
+      border-radius: 14px;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-align: center;
+      transition: border-color var(--transition), background var(--transition), transform 0.08s ease;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #tap-btn:hover {
+      border-color: var(--accent);
+      background: linear-gradient(145deg, #202540, #1a1f34);
+    }
+
+    #tap-btn:active,
+    #tap-btn.tapped {
+      transform: scale(0.97);
+      border-color: var(--accent);
+      background: var(--bg-tap-active);
+    }
+
+    #tap-btn .tap-icon {
+      display: block;
+      font-size: 36px;
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+
+    #tap-btn .tap-hint {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-top: 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Ripple effect on tap */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(79, 142, 247, 0.25);
+      transform: scale(0);
+      animation: ripple-anim 0.55s linear;
+      pointer-events: none;
+    }
+
+    @keyframes ripple-anim {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* ============================================================
+       CONTROLS ROW
+    ============================================================ */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px 24px 24px;
+      background: var(--bg-card);
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 22px;
+      border-radius: var(--radius-btn);
+      font-family: var(--font-main);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition);
+      letter-spacing: 0.02em;
+    }
+
+    .btn-reset {
+      background: rgba(255,255,255,0.05);
+      border-color: var(--border-light);
+      color: var(--text-secondary);
+    }
+    .btn-reset:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .btn-copy {
+      background: rgba(79, 142, 247, 0.1);
+      border-color: rgba(79, 142, 247, 0.35);
+      color: var(--accent);
+    }
+    .btn-copy:hover {
+      background: rgba(79, 142, 247, 0.2);
+      border-color: var(--accent);
+    }
+    .btn-copy.copied {
+      background: rgba(62, 207, 142, 0.15);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* ============================================================
+       STATS ROW
+    ============================================================ */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-cell {
+      background: var(--bg-card);
+      padding: 16px 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       GENRE QUICK REFERENCE CHIPS
+    ============================================================ */
+    .genre-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .genre-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-light);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: default;
+      transition: all var(--transition);
+    }
+
+    .genre-chip:hover {
+      background: rgba(79,142,247,0.1);
+      border-color: rgba(79,142,247,0.4);
+      color: var(--accent);
+    }
+
+    .genre-chip .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.7;
+    }
+
+    .chips-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      width: 100%;
+      margin-bottom: 2px;
+    }
+
+    /* ============================================================
+       GLOSSARY / INFO BOXES
+    ============================================================ */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .info-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .info-box h3 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .info-box p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    .info-box strong {
+      color: var(--text-primary);
+    }
+
+    /* ============================================================
+       SEO CONTENT SECTION
+    ============================================================ */
+    .seo-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 40px 36px;
+      margin-bottom: 28px;
+    }
+
+    .seo-section h2 {
+      font-size: clamp(1.3rem, 3.5vw, 1.75rem);
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 28px;
+      line-height: 1.3;
+    }
+
+    .seo-section h2 .accent {
+      color: var(--accent);
+    }
+
+    /* FAQ accordion */
+    .faq-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      background: rgba(255,255,255,0.02);
+      gap: 12px;
+      list-style: none;
+      transition: background var(--transition);
+      user-select: none;
+    }
+
+    .faq-question:hover {
+      background: rgba(79,142,247,0.06);
+    }
+
+    .faq-question::after {
+      content: '+';
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: transform var(--transition);
+    }
+
+    .faq-item.open .faq-question::after {
+      transform: rotate(45deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.2s ease;
+    }
+
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+    }
+
+    .faq-answer-inner {
+      padding: 0 20px 20px;
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: var(--text-secondary);
+    }
+
+    .faq-answer-inner p + p {
+      margin-top: 12px;
+    }
+
+    .faq-answer-inner strong {
+      color: var(--text-primary);
+    }
+
+    /* ============================================================
+       GENRE TABLE
+    ============================================================ */
+    .table-section {
+      margin-top: 36px;
+    }
+
+    .table-section h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .genre-table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead {
+      background: rgba(79,142,247,0.1);
+    }
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 16px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: rgba(255,255,255,0.02);
+      color: var(--text-primary);
+    }
+
+    td:first-child {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    td.bpm-range {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: linear-gradient(135deg, rgba(79,142,247,0.08), rgba(124,92,191,0.08));
+      border: 1px solid rgba(79,142,247,0.25);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .disclaimer-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .disclaimer p {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .disclaimer strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .footer-links a:hover {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 600px) {
+      .seo-section {
+        padding: 28px 20px;
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .controls-row {
+        padding: 16px;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAV -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <main>
+
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+      <h1>BPM Counter: <span>Tap the Spacebar</span> to Find Any Song's Tempo</h1>
+      <p>Tap the spacebar or the button below in sync with any song's beat. Your tempo in Beats Per Minute (BPM) appears instantly.</p>
+    </header>
+
+    <!-- AD PLACEHOLDER
+         Replace the content of this div with your Google AdSense leaderboard (728x90) code.
+         Standard IAB leaderboard format: 728px wide x 90px tall.
+    -->
+    <div class="ad-placeholder" aria-hidden="true">
+      [ Ad Space - 728x90 Leaderboard ]
+    </div>
+
+    <!-- MAIN TOOL CARD -->
+    <div class="tool-card" role="main" aria-label="BPM Counter Tool">
+
+      <!-- BPM DISPLAY -->
+      <div class="bpm-display-wrap" id="display-wrap">
+        <div class="bpm-label">Current Tempo</div>
+        <div>
+          <span id="bpm-number">---</span><span class="bpm-unit">BPM</span>
+        </div>
+        <div id="status-line">Press Spacebar or tap the button to begin</div>
+      </div>
+
+      <!-- TAP BUTTON -->
+      <div class="tap-area-wrap">
+        <button id="tap-btn" aria-label="Tap to count BPM">
+          <span class="tap-icon" aria-hidden="true">🎵</span>
+          Tap Here to the Beat
+          <span class="tap-hint">or press the Spacebar on your keyboard</span>
+        </button>
+      </div>
+
+      <!-- CONTROLS ROW -->
+      <div class="controls-row">
+        <button class="btn btn-reset" id="reset-btn" aria-label="Reset BPM counter">
+          <span aria-hidden="true">↺</span> Reset Counter
+        </button>
+        <button class="btn btn-copy" id="copy-btn" aria-label="Copy BPM value to clipboard">
+          <span aria-hidden="true">⎘</span> Copy BPM
+        </button>
+      </div>
+
+      <!-- STATS ROW -->
+      <div class="stats-row" aria-label="Tap statistics">
+        <div class="stat-cell">
+          <span class="stat-value" id="stat-taps">0</span>
+          <span class="stat-label">Total Taps</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-value" id="stat-low">---</span>
+          <span class="stat-label">Lowest BPM</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-value" id="stat-high">---</span>
+          <span class="stat-label">Highest BPM</span>
+        </div>
+      </div>
+
+      <!-- GENRE CHIPS - quick reference -->
+      <div class="genre-chips" aria-label="Genre BPM reference">
+        <span class="chips-label">Common BPM ranges by genre:</span>
+        <span class="genre-chip"><span class="dot"></span>Hip-Hop: 80-100</span>
+        <span class="genre-chip"><span class="dot"></span>R&amp;B: 60-80</span>
+        <span class="genre-chip"><span class="dot"></span>Pop: 100-130</span>
+        <span class="genre-chip"><span class="dot"></span>House: 120-130</span>
+        <span class="genre-chip"><span class="dot"></span>Techno: 130-150</span>
+        <span class="genre-chip"><span class="dot"></span>Drum &amp; Bass: 160-180</span>
+        <span class="genre-chip"><span class="dot"></span>Ambient: 60-80</span>
+        <span class="genre-chip"><span class="dot"></span>Reggae: 60-90</span>
+        <span class="genre-chip"><span class="dot"></span>Metal: 120-200</span>
+      </div>
+
+    </div><!-- end tool-card -->
+
+    <!-- GLOSSARY INFO BOXES -->
+    <div class="info-grid" aria-label="Music terminology explained">
+
+      <div class="info-box">
+        <h3>What Is BPM?</h3>
+        <p><strong>BPM (Beats Per Minute)</strong> measures how many individual beats occur in one minute of music. A higher BPM means a faster, more energetic song. A lower BPM means a slower, more relaxed feel. BPM is the universal language of tempo across every genre and instrument.</p>
+      </div>
+
+      <div class="info-box">
+        <h3>What Is Tempo?</h3>
+        <p><strong>Tempo</strong> is the speed or pace of a piece of music. It is expressed as a BPM value. Tempo determines the "energy" of a track - a 70 BPM ballad feels completely different from a 140 BPM dance track, even if both use the same chord progression.</p>
+      </div>
+
+      <div class="info-box">
+        <h3>Rolling Average</h3>
+        <p>Instead of averaging all taps since the beginning (which creates a slow, sluggish reading), a <strong>Rolling Average</strong> only considers your most recent 8-10 taps. This means the counter adjusts quickly if the song speeds up or if you start a new song without pressing reset.</p>
+      </div>
+
+      <div class="info-box">
+        <h3>Latency</h3>
+        <p><strong>Latency</strong> is the delay between an input (your keypress) and the output (the BPM updating). This tool records your tap timestamp the instant the key event fires, using <code>Date.now()</code>, so input-to-display lag is under 5 milliseconds on any modern browser.</p>
+      </div>
+
+      <div class="info-box">
+        <h3>Beatmatching</h3>
+        <p><strong>Beatmatching</strong> is the DJ technique of synchronizing two tracks so their beats align perfectly. Knowing the exact BPM of both songs is the first step. DJs use BPM counters like this one to identify a song's tempo before mixing it into a set.</p>
+      </div>
+
+    </div>
+
+    <!-- SEO CONTENT SECTION -->
+    <section class="seo-section" aria-label="Guide to BPM, Tempo, and Beatmatching">
+
+      <h2>The Ultimate Guide to <span class="accent">BPM, Tempo,</span> and Beatmatching</h2>
+
+      <ul class="faq-list" role="list">
+
+        <li class="faq-item">
+          <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+            What does BPM stand for and why does it matter to musicians, producers, and fitness coaches?
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p><strong>BPM stands for Beats Per Minute</strong>, and it is the single most universal measurement in music production, live performance, and even fitness training. Every musical beat represents one rhythmic pulse - think of a drummer hitting the snare, a kick drum landing, or the tick of a metronome. The BPM value tells you exactly how many of those pulses occur within 60 seconds.</p>
+              <p>For <strong>music producers</strong>, knowing BPM is foundational. Digital Audio Workstations (DAWs) like Ableton Live, Logic Pro, and FL Studio are all organized around a BPM grid. Every sample, loop, and MIDI note locks to this grid. Importing a sample with an unknown tempo into your project without knowing its BPM will cause it to sound out of sync with your other elements.</p>
+              <p>For <strong>fitness coaches and athletes</strong>, BPM is a powerful motivational tool. Research has shown that workout performance correlates strongly with music tempo. High-intensity interval training (HIIT) benefits from tracks in the 140-160 BPM range, while a moderate-pace run aligns well with 120-140 BPM. Knowing the BPM of your playlist allows you to precisely engineer your workout's energy arc from warm-up through peak effort and cool-down.</p>
+            </div>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+            How do DJs use BPM for beatmatching and why is precision critical?
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p><strong>Beatmatching is the art of synchronizing two different songs so their rhythmic pulses align perfectly</strong>, creating a seamless transition between tracks. Before software pitch-shifting and sync buttons existed, every DJ had to manually match tempos by ear - using pitch faders on CDJs or turntables to speed up or slow down the incoming track until both kick drums hit at exactly the same time.</p>
+              <p>The first step in beatmatching is always identifying each song's BPM. If Track A is 124 BPM and Track B is 128 BPM, the DJ knows they need to pitch Track B down by approximately 3.2% to achieve a perfect match. A difference of even 0.5 BPM will cause the beats to drift out of alignment within 30-60 seconds - an audible and embarrassing train-wreck on a professional dancefloor.</p>
+              <p>Modern DJ software like Serato, Traktor, and rekordbox analyzes BPM automatically using algorithmic detection. However, <strong>manual tap-based BPM counting</strong> remains valuable because algorithmic detectors can fail on tracks with irregular timing, half-time or double-time grooves, live recordings, or complex polyrhythmic structures where the computer misidentifies the true "beat one."</p>
+            </div>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+            Why is manual tap-tempo sometimes more accurate than algorithmic BPM detection software?
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>Algorithmic BPM detectors analyze a waveform by looking for periodic transient spikes - typically kick drum hits or other percussive accents. They work extremely well on <strong>four-on-the-floor electronic music</strong> with a consistent, metronomic pulse. But they have well-documented failure modes that human ears do not share.</p>
+              <p>First, algorithmic detectors frequently make <strong>octave errors</strong> - reporting a song as 75 BPM when it is actually 150 BPM, or vice versa, because they detect the half-time sub-pattern instead of the true tempo. Second, songs with <strong>tempo variations</strong> (live recordings, tracks with rubato sections, or music with intentional tempo shifts) produce averaged readings that are inaccurate for any single section. Third, genres like <strong>reggae, hip-hop, and jazz</strong> often have swing, syncopation, and ghost notes that confuse pattern-matching algorithms.</p>
+              <p>A human ear intuitively locks onto the <strong>musical downbeat</strong> - the felt rhythmic emphasis - rather than the loudest transient. When you tap along to a song, you are performing a sophisticated cognitive task that accounts for rhythm, feel, meter, and musical context simultaneously. For complex or unusual music, this approach will consistently outperform any automated detection algorithm available today.</p>
+            </div>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+            What are the standard BPM ranges for the most popular music genres?
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p>BPM ranges are not rigid rules - they are widely observed conventions that reflect each genre's cultural and functional origins. Dance music is engineered around tempos that feel natural for the human body in motion. Ambient music is designed for mental states rather than physical movement, so its tempos mirror relaxed heart rates. Here is a breakdown of the most common genre-tempo relationships:</p>
+              <p><strong>Slow and Soulful (50-90 BPM):</strong> Ballads, R&amp;B slow jams, reggae, dub, ambient, downtempo, trip-hop, and lo-fi hip-hop all live in this range. These tempos feel deliberate, spacious, and emotionally resonant. A classic R&amp;B ballad like a wedding song will typically clock in around 65-75 BPM.</p>
+              <p><strong>Mid-Tempo Groove (90-120 BPM):</strong> This is the home of mainstream hip-hop (80-100 BPM), classic rock, most pop music (100-130 BPM), reggaeton (90-100 BPM), and funk. These tempos feel natural to walk to, nod your head to, or do moderate-intensity exercise to.</p>
+              <p><strong>High-Energy Dance (120-145 BPM):</strong> House music (120-130 BPM), deep house, electro-house, progressive house, nu-disco, and most mainstream EDM festival music occupy this zone. 128 BPM has become something of an unofficial standard for commercial house and EDM due to its near-universal appeal on dancefloors.</p>
+              <p><strong>Hard and Fast (145-180 BPM):</strong> Techno (130-150 BPM), trance (128-145 BPM), hardstyle (150-160 BPM), and drum &amp; bass (160-180 BPM) all push into this high-energy territory. At these tempos, the body's natural rhythm response shifts from dancing to more intense movement patterns.</p>
+            </div>
+          </div>
+        </li>
+
+        <li class="faq-item">
+          <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+            How do I use this BPM counter most accurately? Tips for getting a precise reading.
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              <p><strong>Listen to the song for a full 4-8 bars before you start tapping.</strong> Familiarize yourself with where the beat falls before you commit to tapping. Many people make the mistake of starting to tap immediately, then having to correct their timing mid-count, which throws off the rolling average.</p>
+              <p><strong>Tap on the downbeat, not the off-beat or hi-hat.</strong> The "downbeat" is beat 1 of each bar - the main rhythmic pulse you feel most strongly. In a typical rock or pop song, this is often the kick drum hit. In reggae, it might be the chord "skank" on beat 3. Always tap the same rhythmic subdivision on every tap for a consistent reading.</p>
+              <p><strong>Use the Spacebar instead of clicking</strong> for the most accurate timing. Keyboard key events register faster than mouse click events in most browsers because they bypass certain browser gesture-detection layers. The difference is small (typically under 10 milliseconds) but it adds up across many taps.</p>
+              <p><strong>Wait for the rolling window to stabilize.</strong> The counter will show a BPM after just 2 taps, but this reading is unreliable. After 6-8 consistent taps, the rolling average will have settled into an accurate, stable reading. The tool automatically keeps only your last 8-10 intervals, so old data is discarded and your reading reflects only recent, consistent tapping.</p>
+              <p><strong>Let the auto-reset work for you.</strong> If you stop tapping for 3 seconds, the counter clears itself automatically. This means you can tap one song, stop to listen to another, and start tapping again without touching any button. The slate is clean every time you resume.</p>
+            </div>
+          </div>
+        </li>
+
+      </ul>
+
+      <!-- GENRE REFERENCE TABLE -->
+      <div class="table-section">
+        <h3>BPM Reference Table: Common Tempos Across Music Genres</h3>
+        <div class="genre-table-wrap">
+          <table aria-label="BPM ranges for music genres">
+            <thead>
+              <tr>
+                <th>Genre</th>
+                <th>BPM Range</th>
+                <th>Typical Use Case</th>
+                <th>Notable Artists / Subgenres</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Ambient / Downtempo</td>
+                <td class="bpm-range">50 - 80</td>
+                <td>Relaxation, focus sessions, sleep playlists</td>
+                <td>Brian Eno, Moby, Bonobo</td>
+              </tr>
+              <tr>
+                <td>Slow R&amp;B / Neo-Soul</td>
+                <td class="bpm-range">60 - 85</td>
+                <td>Romantic, emotional ballads</td>
+                <td>Frank Ocean, Erykah Badu, SZA</td>
+              </tr>
+              <tr>
+                <td>Reggae / Dub</td>
+                <td class="bpm-range">60 - 90</td>
+                <td>Laid-back groove, roots music</td>
+                <td>Bob Marley, Lee "Scratch" Perry</td>
+              </tr>
+              <tr>
+                <td>Hip-Hop / Trap</td>
+                <td class="bpm-range">65 - 100</td>
+                <td>Head-nodding, street, club rap</td>
+                <td>J. Cole, Travis Scott, Kendrick Lamar</td>
+              </tr>
+              <tr>
+                <td>Lo-Fi Hip-Hop</td>
+                <td class="bpm-range">70 - 90</td>
+                <td>Study, work, background listening</td>
+                <td>ChilledCow, Nujabes, J Dilla</td>
+              </tr>
+              <tr>
+                <td>Reggaeton / Latin</td>
+                <td class="bpm-range">85 - 100</td>
+                <td>Dance, party, Latin clubs</td>
+                <td>Bad Bunny, J Balvin, Daddy Yankee</td>
+              </tr>
+              <tr>
+                <td>Pop (mainstream)</td>
+                <td class="bpm-range">100 - 130</td>
+                <td>Radio singles, workout playlists</td>
+                <td>Dua Lipa, Taylor Swift, The Weeknd</td>
+              </tr>
+              <tr>
+                <td>Classic / Alternative Rock</td>
+                <td class="bpm-range">100 - 140</td>
+                <td>Guitar-driven, stadium anthems</td>
+                <td>Foo Fighters, AC/DC, Nirvana</td>
+              </tr>
+              <tr>
+                <td>Deep House</td>
+                <td class="bpm-range">118 - 125</td>
+                <td>Underground clubs, late-night sets</td>
+                <td>Larry Heard, Larry Heard, Moodymann</td>
+              </tr>
+              <tr>
+                <td>House / Tech House</td>
+                <td class="bpm-range">122 - 132</td>
+                <td>Club dancefloors, festival warm-ups</td>
+                <td>Fisher, Chris Lake, Disclosure</td>
+              </tr>
+              <tr>
+                <td>Progressive House / EDM</td>
+                <td class="bpm-range">126 - 132</td>
+                <td>Festival mainstage, radio EDM</td>
+                <td>Martin Garrix, Avicii, Swedish House Mafia</td>
+              </tr>
+              <tr>
+                <td>Trance</td>
+                <td class="bpm-range">128 - 145</td>
+                <td>Euphoric peaks, rave culture</td>
+                <td>Armin van Buuren, Paul van Dyk</td>
+              </tr>
+              <tr>
+                <td>Techno</td>
+                <td class="bpm-range">130 - 150</td>
+                <td>Industrial raves, Berlin clubs</td>
+                <td>Aphex Twin, Jeff Mills, Nina Kraviz</td>
+              </tr>
+              <tr>
+                <td>Hardstyle / Hardcore</td>
+                <td class="bpm-range">148 - 165</td>
+                <td>Hard dance events, festival "hard" stages</td>
+                <td>Headhunterz, Angerfist, Noisecontrollers</td>
+              </tr>
+              <tr>
+                <td>Drum and Bass / Jungle</td>
+                <td class="bpm-range">160 - 180</td>
+                <td>UK rave culture, high-energy club music</td>
+                <td>Andy C, Goldie, Chase and Status</td>
+              </tr>
+              <tr>
+                <td>Metal / Extreme Metal</td>
+                <td class="bpm-range">100 - 220+</td>
+                <td>Live concerts, intense workout playlists</td>
+                <td>Metallica, Slayer, Meshuggah</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div><!-- end table-section -->
+
+    </section><!-- end seo-section -->
+
+    <!-- PRIVACY DISCLAIMER -->
+    <div class="disclaimer" role="note" aria-label="Privacy guarantee">
+      <span class="disclaimer-icon" aria-hidden="true">🔒</span>
+      <p>
+        <strong>Privacy Guarantee:</strong> This tempo tracking tool operates entirely within your local web browser. Your keystrokes and tap data are never uploaded, logged, or transmitted to any external servers. No data leaves your device at any point during use.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <p class="footer-copy">&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</p>
+  </footer>
+
+
+  <script>
+    /**
+     * BPM Counter - Core Logic
+     *
+     * Architecture overview:
+     *   1. Record a Date.now() timestamp on every user tap.
+     *   2. Compute inter-tap intervals (milliseconds between consecutive taps).
+     *   3. Store the last WINDOW_SIZE intervals in a rolling array.
+     *   4. Average those intervals, then convert to BPM: 60,000ms / avg_interval.
+     *   5. Auto-reset if more than RESET_TIMEOUT ms pass without a tap.
+     */
+
+    // -------------------------------------------------------
+    // CONFIGURATION
+    // -------------------------------------------------------
+    const WINDOW_SIZE   = 8;      // How many recent intervals to average
+    const RESET_TIMEOUT = 3000;   // Auto-reset after 3 seconds of inactivity (ms)
+    const MIN_INTERVAL  = 200;    // Ignore taps faster than this (debounce ghost taps)
+
+    // -------------------------------------------------------
+    // STATE
+    // -------------------------------------------------------
+    let tapTimestamps  = [];   // Raw timestamps of each tap
+    let intervals      = [];   // Rolling array of inter-tap intervals
+    let resetTimer     = null; // setTimeout handle for auto-reset
+    let totalTaps      = 0;    // Session tap counter (shown in stats)
+    let lowestBPM      = Infinity;
+    let highestBPM     = 0;
+    let lastTapTime    = 0;    // Timestamp of the most recent tap
+
+    // -------------------------------------------------------
+    // DOM REFERENCES
+    // -------------------------------------------------------
+    const bpmNumber   = document.getElementById('bpm-number');
+    const statusLine  = document.getElementById('status-line');
+    const tapBtn      = document.getElementById('tap-btn');
+    const resetBtn    = document.getElementById('reset-btn');
+    const copyBtn     = document.getElementById('copy-btn');
+    const displayWrap = document.getElementById('display-wrap');
+    const statTaps    = document.getElementById('stat-taps');
+    const statLow     = document.getElementById('stat-low');
+    const statHigh    = document.getElementById('stat-high');
+
+    // -------------------------------------------------------
+    // CORE: Record a tap
+    // -------------------------------------------------------
+    function recordTap() {
+      const now = Date.now();
+
+      // Debounce: ignore if less than MIN_INTERVAL since last tap
+      if (now - lastTapTime < MIN_INTERVAL) return;
+
+      // Cancel any pending auto-reset and start a fresh one
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(autoReset, RESET_TIMEOUT);
+
+      // Compute interval since last tap (skip the very first tap)
+      if (lastTapTime > 0) {
+        const interval = now - lastTapTime;
+        intervals.push(interval);
+
+        // Rolling window - keep only the last WINDOW_SIZE intervals
+        if (intervals.length > WINDOW_SIZE) {
+          intervals.shift();
+        }
+
+        // Calculate and display BPM
+        calculateAndDisplay();
+      } else {
+        // First tap - just show a waiting message
+        updateStatus('Keep tapping to calculate BPM...');
+      }
+
+      lastTapTime = now;
+      totalTaps++;
+      updateStats();
+      triggerVisualFeedback();
+    }
+
+    // -------------------------------------------------------
+    // CORE: Calculate BPM from rolling interval average
+    // -------------------------------------------------------
+    function calculateAndDisplay() {
+      if (intervals.length === 0) return;
+
+      // Average of all intervals in the rolling window
+      const sum = intervals.reduce((a, b) => a + b, 0);
+      const avgInterval = sum / intervals.length;
+
+      // Convert average interval in milliseconds to BPM
+      // Formula: 60,000ms per minute / avgInterval
+      const bpm = Math.round(60000 / avgInterval);
+
+      // Guard against nonsensical readings
+      if (bpm < 20 || bpm > 400) return;
+
+      // Update the display
+      bpmNumber.textContent = bpm;
+
+      // Track session low/high
+      if (bpm < lowestBPM)  lowestBPM  = bpm;
+      if (bpm > highestBPM) highestBPM = bpm;
+
+      // Status message - varies by how many taps we have
+      const tapWord = totalTaps === 1 ? 'tap' : 'taps';
+      const accuracy = intervals.length >= WINDOW_SIZE
+        ? 'Full rolling average (very accurate)'
+        : `Building average (${intervals.length}/${WINDOW_SIZE} taps used)`;
+
+      updateStatus(
+        `<span class="tap-count">${totalTaps}</span> ${tapWord} - ${accuracy}`
+      );
+    }
+
+    // -------------------------------------------------------
+    // UI HELPERS
+    // -------------------------------------------------------
+    function updateStatus(html) {
+      statusLine.innerHTML = html;
+    }
+
+    function updateStats() {
+      statTaps.textContent  = totalTaps;
+      statLow.textContent   = lowestBPM  === Infinity ? '---' : lowestBPM;
+      statHigh.textContent  = highestBPM === 0        ? '---' : highestBPM;
+    }
+
+    // Trigger CSS pulse animations on both the button and the display area
+    function triggerVisualFeedback() {
+      // Bump animation on the BPM number
+      bpmNumber.classList.remove('bump');
+      // Force reflow so the animation re-triggers even on rapid taps
+      void bpmNumber.offsetWidth;
+      bpmNumber.classList.add('bump');
+
+      // Pulse ring on the display wrap
+      displayWrap.classList.remove('pulse');
+      void displayWrap.offsetWidth;
+      displayWrap.classList.add('pulse');
+
+      // Scale feedback on the tap button
+      tapBtn.classList.add('tapped');
+      setTimeout(() => tapBtn.classList.remove('tapped'), 150);
+
+      // Ripple effect on the tap button
+      createRipple(tapBtn);
+    }
+
+    // Create a CSS ripple effect at the center of the button
+    function createRipple(element) {
+      const ripple  = document.createElement('span');
+      const rect    = element.getBoundingClientRect();
+      const size    = Math.max(rect.width, rect.height);
+      const x       = rect.width  / 2 - size / 2;
+      const y       = rect.height / 2 - size / 2;
+
+      ripple.className = 'ripple';
+      ripple.style.cssText = `
+        width:  ${size}px;
+        height: ${size}px;
+        left:   ${x}px;
+        top:    ${y}px;
+      `;
+
+      element.appendChild(ripple);
+      // Remove ripple element after animation completes
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    // -------------------------------------------------------
+    // RESET LOGIC
+    // -------------------------------------------------------
+    function resetCounter(silent) {
+      clearTimeout(resetTimer);
+      intervals    = [];
+      tapTimestamps = [];
+      lastTapTime  = 0;
+      lowestBPM    = Infinity;
+      highestBPM   = 0;
+      totalTaps    = 0;
+
+      bpmNumber.textContent = '---';
+      updateStatus(silent
+        ? 'Auto-reset after 3s pause - tap a new song to begin'
+        : 'Counter reset - tap a new song to begin'
+      );
+      updateStats();
+    }
+
+    // Auto-reset fires after RESET_TIMEOUT ms of inactivity
+    function autoReset() {
+      if (totalTaps > 0) {
+        resetCounter(true);
+      }
+    }
+
+    // -------------------------------------------------------
+    // EVENT LISTENERS
+    // -------------------------------------------------------
+
+    // Tap button click (works for mouse and touch)
+    tapBtn.addEventListener('click', recordTap);
+
+    // Spacebar tap - global listener, prevents default page scroll
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space' || e.keyCode === 32) {
+        e.preventDefault(); // Stop the page from scrolling on spacebar
+        recordTap();
+      }
+    });
+
+    // Manual reset button
+    resetBtn.addEventListener('click', function() {
+      resetCounter(false);
+    });
+
+    // Copy BPM to clipboard
+    copyBtn.addEventListener('click', function() {
+      const currentBPM = bpmNumber.textContent;
+      if (currentBPM === '---') return;
+
+      navigator.clipboard.writeText(currentBPM + ' BPM').then(function() {
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = '<span aria-hidden="true">✓</span> Copied!';
+        setTimeout(function() {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = '<span aria-hidden="true">⎘</span> Copy BPM';
+        }, 2000);
+      }).catch(function() {
+        // Fallback for older browsers
+        const el = document.createElement('textarea');
+        el.value = currentBPM + ' BPM';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        copyBtn.innerHTML = '<span aria-hidden="true">✓</span> Copied!';
+        setTimeout(function() {
+          copyBtn.innerHTML = '<span aria-hidden="true">⎘</span> Copy BPM';
+        }, 2000);
+      });
+    });
+
+    // -------------------------------------------------------
+    // FAQ ACCORDION
+    // -------------------------------------------------------
+    document.querySelectorAll('.faq-question').forEach(function(question) {
+      question.addEventListener('click', function() {
+        const item = this.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+
+        // Close all open items
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+          openItem.classList.remove('open');
+          openItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+
+        // Toggle the clicked item
+        if (!isOpen) {
+          item.classList.add('open');
+          this.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      // Keyboard accessibility for FAQ items
+      question.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.click();
+        }
+      });
+    });
+
+    // -------------------------------------------------------
+    // FOOTER YEAR
+    // -------------------------------------------------------
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+  </script>
+</body>
+</html>

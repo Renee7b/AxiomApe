@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF to JPG Converter - Turn Each Page Into a High-Resolution Image | AxiomApe</title>
+  <meta name="description" content="Free, private PDF to JPG converter. Rasterize every page of a PDF into high-resolution JPG images at 72, 150, or 300 DPI - entirely in your browser. No uploads. No servers." />
+  <meta name="keywords" content="PDF to JPG, PDF converter, rasterize PDF, PDF to image, 300 DPI, high resolution, browser-based, no upload, private PDF converter" />
+
+  <!-- pdf.js by Mozilla - parses and renders PDF documents onto HTML5 Canvas elements -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- JSZip - bundles multiple image files into a single downloadable .zip archive -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* =====================================================
+       ROOT VARIABLES & RESET
+    ===================================================== */
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --accent-light: #dbeafe;
+      --success: #16a34a;
+      --success-light: #dcfce7;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --shadow-hover: 0 8px 32px rgba(0,0,0,0.14);
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =====================================================
+       SITE HEADER LINK
+    ===================================================== */
+    .site-topbar {
+      text-align: center;
+      padding: 14px 20px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+    .site-topbar a {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+
+    /* =====================================================
+       PAGE LAYOUT
+    ===================================================== */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    .page-title {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-title h1 {
+      font-size: clamp(1.5rem, 4vw, 2.1rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .page-title p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* =====================================================
+       CARD
+    ===================================================== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 28px;
+    }
+
+    /* =====================================================
+       AD PLACEHOLDER - Standard Leaderboard (728x90)
+       Replace this div with your AdSense unit code.
+    ===================================================== */
+    .ad-leaderboard-placeholder {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: #f8fafc;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-style: italic;
+      /* ADSENSE INJECTION POINT - remove display:flex and insert <ins> tag here */
+    }
+
+    /* =====================================================
+       DRAG AND DROP UPLOAD ZONE
+    ===================================================== */
+    .upload-zone {
+      border: 2.5px dashed #93c5fd;
+      border-radius: var(--radius);
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      background: #f8fbff;
+      position: relative;
+    }
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      background: var(--accent-light);
+      border-color: var(--accent);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .upload-zone h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .upload-zone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .file-name-display {
+      margin-top: 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--success);
+      display: none;
+    }
+
+    /* =====================================================
+       QUALITY SETTINGS PANEL
+    ===================================================== */
+    .settings-panel {
+      margin-top: 28px;
+    }
+    .settings-panel h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .settings-panel .help-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .quality-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .quality-option {
+      flex: 1;
+      min-width: 180px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .quality-option:hover { border-color: var(--accent); background: #f8fbff; }
+    .quality-option input[type="radio"] { display: none; }
+    .quality-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .quality-option .label {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 3px;
+    }
+    .quality-option .desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* =====================================================
+       CONVERT BUTTON
+    ===================================================== */
+    .btn-convert {
+      display: block;
+      width: 100%;
+      margin-top: 28px;
+      padding: 16px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 2px 10px rgba(37,99,235,0.25);
+    }
+    .btn-convert:hover:not(:disabled) {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    }
+    .btn-convert:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* =====================================================
+       PROGRESS BAR
+    ===================================================== */
+    .progress-section { display: none; margin-top: 28px; }
+    .progress-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* =====================================================
+       THUMBNAIL GRID
+    ===================================================== */
+    .thumbnail-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+    .thumb-card {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: box-shadow 0.2s, transform 0.2s;
+      text-align: center;
+    }
+    .thumb-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-3px);
+    }
+    .thumb-card img {
+      width: 100%;
+      display: block;
+    }
+    .thumb-card .thumb-label {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      padding: 5px 6px;
+      font-weight: 600;
+    }
+
+    /* =====================================================
+       DOWNLOAD BUTTON
+    ===================================================== */
+    .btn-download {
+      display: none;
+      width: 100%;
+      margin-top: 28px;
+      padding: 20px;
+      background: var(--success);
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 800;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 2px 12px rgba(22,163,74,0.3);
+    }
+    .btn-download:hover {
+      background: #15803d;
+      transform: translateY(-1px);
+      box-shadow: 0 5px 18px rgba(22,163,74,0.4);
+    }
+
+    /* =====================================================
+       TERMINOLOGY EXPLAINER CHIPS
+    ===================================================== */
+    .term-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .term-chip {
+      background: var(--bg);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 14px 16px;
+    }
+    .term-chip .term-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: var(--accent);
+    }
+    .term-chip p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* =====================================================
+       FAQ / GUIDE SECTION
+    ===================================================== */
+    .guide-section h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .guide-section .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: #f8fafc;
+      border: none;
+      text-align: left;
+      padding: 16px 20px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--accent-light); }
+    .faq-question .chevron {
+      font-size: 1.1rem;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-question.open .chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 18px 20px;
+      font-size: 0.92rem;
+      color: var(--text);
+      line-height: 1.75;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+    }
+    .faq-answer.open { display: block; }
+    .faq-answer p { margin-bottom: 12px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+
+    /* =====================================================
+       DISCLAIMER
+    ===================================================== */
+    .disclaimer-box {
+      background: var(--success-light);
+      border: 1.5px solid #86efac;
+      border-radius: var(--radius-sm);
+      padding: 18px 22px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .disclaimer-box .icon { font-size: 1.4rem; flex-shrink: 0; }
+    .disclaimer-box p {
+      font-size: 0.9rem;
+      color: #15803d;
+      font-weight: 500;
+      line-height: 1.6;
+    }
+
+    /* =====================================================
+       FOOTER
+    ===================================================== */
+    footer {
+      text-align: center;
+      padding: 28px 20px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    footer .footer-links { margin-bottom: 8px; }
+    footer .footer-links a {
+      margin: 0 10px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    footer .footer-links a:hover { color: var(--accent); }
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+    @media (max-width: 600px) {
+      .card { padding: 20px 16px; }
+      .quality-option { min-width: 100%; }
+      .term-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/pdf-to-jpg-converter/" />
+</head>
+<body>
+
+  <!-- Site navigation bar -->
+  <div class="site-topbar">
+    Free Tools by <a href="/" target="_blank" rel="noopener">axiomape.com</a>
+  </div>
+
+  <div class="page-wrapper">
+
+    <!-- Page heading -->
+    <div class="page-title">
+      <h1>PDF to JPG Converter</h1>
+      <p>Turn every page of a PDF into a high-resolution JPG image - instantly, privately, and entirely inside your browser.</p>
+    </div>
+
+    <!-- =====================================================
+         AD LEADERBOARD PLACEHOLDER (728x90)
+         To monetize: remove the inner text content and paste
+         your Google AdSense <ins> tag inside this div.
+    ===================================================== -->
+    <div class="ad-leaderboard-placeholder">
+      Advertisement Placeholder - 728x90 Leaderboard
+    </div>
+
+    <!-- =====================================================
+         MAIN TOOL CARD
+    ===================================================== -->
+    <div class="card">
+
+      <!-- Step 1: Upload -->
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="pdfInput" accept="application/pdf" />
+        <span class="upload-icon">📄</span>
+        <h2>Drag and Drop Your PDF Here</h2>
+        <p>Or click anywhere in this box to browse and select a file from your computer.</p>
+        <div class="file-name-display" id="fileNameDisplay"></div>
+      </div>
+
+      <!-- Step 2: Quality settings -->
+      <div class="settings-panel">
+        <h3>Quality and Resolution Settings</h3>
+        <p class="help-text">
+          Resolution is measured in DPI (Dots Per Inch) - the number of image dots packed into every inch of output.
+          Higher DPI means sharper, larger images. Lower DPI means smaller file sizes suited for screens.
+        </p>
+        <div class="quality-options" id="qualityOptions">
+
+          <label class="quality-option" id="opt72">
+            <input type="radio" name="quality" value="1.0" />
+            <div class="label">Standard Web Quality</div>
+            <div class="desc">72 DPI - Optimized for websites, emails, and social media previews. Smallest file size.</div>
+          </label>
+
+          <label class="quality-option selected" id="opt150">
+            <input type="radio" name="quality" value="2.0" checked />
+            <div class="label">High Quality</div>
+            <div class="desc">150 DPI - Great all-round balance between image clarity and file size. Recommended default.</div>
+          </label>
+
+          <label class="quality-option" id="opt300">
+            <input type="radio" name="quality" value="4.167" />
+            <div class="label">Maximum Print Quality</div>
+            <div class="desc">300 DPI - Professional print-grade resolution for graphic design, brochures, and physical media.</div>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- Convert button -->
+      <button class="btn-convert" id="btnConvert" disabled>
+        Convert to JPG Images
+      </button>
+
+      <!-- Progress bar section (hidden until conversion starts) -->
+      <div class="progress-section" id="progressSection">
+        <div class="progress-label" id="progressLabel">Preparing conversion...</div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <!-- Live thumbnail preview grid (populates during conversion) -->
+      <div class="thumbnail-grid" id="thumbnailGrid"></div>
+
+      <!-- Download ZIP button (revealed after all pages converted) -->
+      <button class="btn-download" id="btnDownload">
+        Download All Images as ZIP
+      </button>
+
+    </div>
+    <!-- end main tool card -->
+
+    <!-- =====================================================
+         TECHNICAL TERMS EXPLAINER
+    ===================================================== -->
+    <div class="card">
+      <h2 style="font-size:1.1rem; font-weight:800; margin-bottom:6px;">Key Technical Terms Explained</h2>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">New to image conversion? Here is a plain-English glossary for every technical concept this tool uses.</p>
+      <div class="term-grid">
+
+        <div class="term-chip">
+          <div class="term-title">Rasterization</div>
+          <p>The process of converting a vector-based document (like a PDF, which uses mathematical shapes) into a pixel-based raster image (like a JPG). This tool rasterizes each PDF page onto an HTML5 Canvas and then exports it as a JPG.</p>
+        </div>
+
+        <div class="term-chip">
+          <div class="term-title">DPI / Dots Per Inch</div>
+          <p>A measurement of image resolution. 72 DPI has 72 dots in every inch of the image - sufficient for screens. 300 DPI packs 300 dots into each inch, producing far more detail that holds up when printed on paper.</p>
+        </div>
+
+        <div class="term-chip">
+          <div class="term-title">Canvas API</div>
+          <p>A built-in browser feature (part of HTML5) that allows JavaScript to draw graphics directly in the browser window. This tool uses it as a temporary drawing surface to render each PDF page before saving it as an image.</p>
+        </div>
+
+        <div class="term-chip">
+          <div class="term-title">ZIP Compression</div>
+          <p>A file format that bundles multiple files into a single archive and applies lossless compression to reduce the total download size. This tool uses JSZip to package all your converted JPG images into one convenient .zip file.</p>
+        </div>
+
+        <div class="term-chip">
+          <div class="term-title">Lossy vs. Lossless</div>
+          <p>Lossy compression (used by JPG) achieves smaller files by permanently discarding some image data. Lossless formats (like PNG) preserve every pixel exactly. JPG at quality 0.9 (used here) is an excellent balance: very high visual fidelity with manageable file sizes.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================
+         GUIDE / SEO SECTION
+    ===================================================== -->
+    <div class="card guide-section">
+      <h2>The Ultimate Guide to Rasterizing PDFs and Image Resolution</h2>
+      <p class="subtitle">Everything a graphic designer, student, or social media manager needs to know about PDF-to-image conversion.</p>
+
+      <!-- FAQ 1 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFAQ(this)">
+          Why Convert a PDF to JPG Format?
+          <span class="chevron">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>PDFs are designed to be precise, printable documents - they preserve fonts, layouts, and vector graphics perfectly across devices. However, they are not universally viewable as standalone images. A JPG, by contrast, is one of the most universally supported image formats on the planet. Every social media platform, email client, website CMS, presentation tool, and image editor accepts JPG files without any special software.</p>
+          <p>Converting a PDF to JPG is therefore the most practical approach when you need to share document content visually - for example, embedding a page from a contract into a presentation, uploading a certificate to LinkedIn, sharing a product spec sheet on Instagram, or placing a report page into a design mockup in Figma or Photoshop. Rasterizing the PDF into a JPG also "flattens" the document, stripping out interactive elements, JavaScript layers, and metadata that you may not want to share.</p>
+          <p>For graphic designers, having each page as a separate JPG also means you can apply filters, overlays, and brand edits non-destructively in any image editing application without needing a dedicated PDF editor license.</p>
+        </div>
+      </div>
+
+      <!-- FAQ 2 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFAQ(this)">
+          What Is the Difference Between 72 DPI and 300 DPI?
+          <span class="chevron">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>DPI stands for Dots Per Inch - it measures how many individual pixels or printed dots exist within one linear inch of an image. This number directly controls the physical size and sharpness of the output. A 72 DPI image has only 72 pixels per inch of its printed width. This is perfectly adequate for computer monitors and mobile screens, where the human eye cannot distinguish individual pixels at normal viewing distances. Most web browsers and social media platforms display images at an effective screen resolution of 72-96 PPI (Pixels Per Inch).</p>
+          <p>A 300 DPI image contains 300 pixels per every inch of printed output. When a commercial inkjet or laser printer lays ink on paper, it can reproduce this density of detail, resulting in crisp text and sharp photo edges. The professional printing industry has standardized on 300 DPI as the minimum acceptable resolution for any product that will be physically printed - business cards, brochures, magazines, product packaging, and banners.</p>
+          <p>Practically speaking: if your JPG images will only ever appear on a screen, 72 DPI or 150 DPI is sufficient and will produce much smaller file sizes. If you intend to print the images or supply them to a print house, always export at 300 DPI. This tool applies a pixel scaling factor when rendering the pdf.js viewport, so "300 DPI" produces an image that is approximately 4x the pixel dimensions of the same page at 72 DPI.</p>
+        </div>
+      </div>
+
+      <!-- FAQ 3 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFAQ(this)">
+          Why Is It Safer to Rasterize Confidential PDFs Locally in the Browser?
+          <span class="chevron">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>The vast majority of online PDF converters operate by uploading your file to a remote server, processing it in the cloud, and then letting you download the result. While convenient, this model introduces serious privacy risks. Every server that receives your document is a potential attack surface - from data breaches and insider access to legal subpoenas and third-party data sharing policies buried in lengthy terms of service agreements. For documents containing financial data, legal contracts, medical records, personal identification, or proprietary business information, this is an unacceptable risk.</p>
+          <p>This tool is architecturally different. It uses two open-source JavaScript libraries - Mozilla's pdf.js and JSZip - which run entirely within the JavaScript sandbox of your own web browser. Your PDF file is read from your hard drive directly into browser memory using the FileReader API. It is rendered onto HTML5 Canvas elements on your screen. The resulting images are bundled into a ZIP archive in memory. At no point is any data sent over a network connection. You can verify this yourself by opening your browser's network inspector (F12 - Network tab) and confirming zero outbound requests during conversion.</p>
+          <p>This "local-first" architecture means your documents are protected by the same security boundary as your operating system - not by the privacy policy of an unknown third-party server operator. It also means the tool works entirely offline once the page and its CDN libraries have loaded.</p>
+        </div>
+      </div>
+
+      <!-- FAQ 4 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFAQ(this)">
+          How Does a ZIP File Help When Downloading Multiple Images at Once?
+          <span class="chevron">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>A ZIP archive is a container format that packages multiple files into a single downloadable unit. Without it, a 40-page PDF conversion would require 40 separate browser download prompts - one for each JPG - which is deeply impractical and often blocked by default browser settings. By packaging all converted images into a ZIP file first, the user downloads a single file and then extracts the images using the built-in archive utility on any operating system: the Files app on macOS and Windows both support ZIP extraction natively, with no third-party software required.</p>
+          <p>ZIP compression is "lossless" - meaning it reorganizes and compresses the data in the archive without discarding any information. Every image byte you put in comes back out identically when you extract the archive. This tool uses the JSZip library to construct the archive entirely in browser memory using JavaScript, then triggers a local file download using a temporary Blob URL. The ZIP file never touches an external server.</p>
+          <p>For power users managing large document libraries, the consistent file naming convention used by this tool (page_001.jpg, page_002.jpg, etc.) also ensures that files sort correctly in any operating system file explorer, making it easy to work with the images immediately after extraction.</p>
+        </div>
+      </div>
+
+      <!-- FAQ 5 -->
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFAQ(this)">
+          Who Should Use a PDF to JPG Converter - and When?
+          <span class="chevron">&#8964;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Graphic designers regularly need to import static snapshots of PDF pages into tools like Adobe Illustrator, Canva, or Figma as reference images or background layers. Since these tools do not natively import multi-page PDFs as editable layers, converting pages to high-resolution JPGs first is the standard professional workflow.</p>
+          <p>Social media managers often receive marketing materials, press releases, or product catalogs in PDF format from clients or brand teams. To share these visually on Instagram, LinkedIn, Twitter/X, or Facebook - where PDF uploads are not supported - converting to individual JPG images is the only option. At 150-300 DPI, the images remain sharp even when zoomed in on a high-resolution phone display.</p>
+          <p>Students and academics benefit from converting PDF textbook pages, research papers, or lecture slides into JPG images that can be annotated directly in note-taking apps like Notability, GoodNotes, or OneNote, which offer richer handwriting and markup tools than most PDF viewers. Medical and legal professionals frequently need to embed specific pages from lengthy reports into summary documents or presentations, where a JPG image is far more portable and universally renderable than an embedded PDF object.</p>
+        </div>
+      </div>
+
+    </div>
+    <!-- end guide section -->
+
+    <!-- Privacy disclaimer above footer -->
+    <div class="disclaimer-box">
+      <span class="icon">🔒</span>
+      <p><strong>Privacy First:</strong> This document rasterization tool operates entirely within your local web browser. Your confidential PDFs and generated images are never uploaded, stored, or transmitted to external servers.</p>
+    </div>
+
+  </div>
+  <!-- end page-wrapper -->
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-links">
+      <a href="/about.html" target="_blank" rel="noopener">About</a>
+      <a href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      <a href="/contact.html" target="_blank" rel="noopener">Contact</a>
+    </div>
+    <div>&copy; <span id="footerYear"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <!-- =====================================================
+       JAVASCRIPT ENGINE
+  ===================================================== -->
+  <script>
+    // Set the copyright year dynamically
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+    // Configure pdf.js worker - required for pdf.js to parse documents in a background thread
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // -------------------------------------------------------
+    // STATE
+    // -------------------------------------------------------
+    let selectedFile = null;         // The File object chosen by the user
+    let generatedImages = [];        // Array of { name, dataUrl } for each converted page
+
+    // -------------------------------------------------------
+    // DOM REFERENCES
+    // -------------------------------------------------------
+    const uploadZone     = document.getElementById('uploadZone');
+    const pdfInput       = document.getElementById('pdfInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const btnConvert     = document.getElementById('btnConvert');
+    const progressSection = document.getElementById('progressSection');
+    const progressLabel  = document.getElementById('progressLabel');
+    const progressFill   = document.getElementById('progressFill');
+    const thumbnailGrid  = document.getElementById('thumbnailGrid');
+    const btnDownload    = document.getElementById('btnDownload');
+
+    // -------------------------------------------------------
+    // DRAG AND DROP HANDLERS
+    // -------------------------------------------------------
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') {
+        handleFileSelection(file);
+      } else {
+        alert('Please drop a valid PDF file.');
+      }
+    });
+
+    // File input change handler (click-to-browse path)
+    pdfInput.addEventListener('change', () => {
+      if (pdfInput.files[0]) handleFileSelection(pdfInput.files[0]);
+    });
+
+    // Process the chosen PDF file
+    function handleFileSelection(file) {
+      selectedFile = file;
+      fileNameDisplay.textContent = 'Selected: ' + file.name;
+      fileNameDisplay.style.display = 'block';
+      btnConvert.disabled = false;
+      // Reset any previous conversion state
+      thumbnailGrid.style.display = 'none';
+      thumbnailGrid.innerHTML = '';
+      btnDownload.style.display = 'none';
+      progressSection.style.display = 'none';
+      generatedImages = [];
+    }
+
+    // -------------------------------------------------------
+    // QUALITY OPTION SELECTION HIGHLIGHT
+    // -------------------------------------------------------
+    document.querySelectorAll('.quality-option').forEach((label) => {
+      label.addEventListener('click', () => {
+        document.querySelectorAll('.quality-option').forEach(l => l.classList.remove('selected'));
+        label.classList.add('selected');
+      });
+    });
+
+    // Read the currently selected scale factor from the radio buttons
+    function getSelectedScale() {
+      const checked = document.querySelector('input[name="quality"]:checked');
+      return checked ? parseFloat(checked.value) : 2.0;
+    }
+
+    // -------------------------------------------------------
+    // CONVERT BUTTON - main async pipeline
+    // -------------------------------------------------------
+    btnConvert.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      // Disable the button during processing to prevent double-clicks
+      btnConvert.disabled = true;
+      btnConvert.textContent = 'Converting...';
+      generatedImages = [];
+
+      // Clear previous thumbnails
+      thumbnailGrid.style.display = 'none';
+      thumbnailGrid.innerHTML = '';
+      btnDownload.style.display = 'none';
+
+      try {
+        const scale = getSelectedScale();
+
+        // Read the file into an ArrayBuffer for pdf.js
+        const arrayBuffer = await readFileAsArrayBuffer(selectedFile);
+
+        // Load the PDF document using pdf.js
+        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const totalPages = pdfDoc.numPages;
+
+        // Show progress UI
+        progressSection.style.display = 'block';
+        thumbnailGrid.style.display = 'grid';
+
+        // Loop through every page and render it to a canvas
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+
+          // Update the progress bar
+          updateProgress(pageNum, totalPages);
+
+          // Fetch the individual page from the PDF
+          const page = await pdfDoc.getPage(pageNum);
+
+          // Build the viewport at the requested scale factor
+          // A scale of 1.0 = 72 DPI, 2.0 = 144 DPI, 4.167 = 300 DPI
+          const viewport = page.getViewport({ scale });
+
+          // Create an off-screen canvas sized to the page viewport
+          const canvas  = document.createElement('canvas');
+          canvas.width  = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          const ctx     = canvas.getContext('2d');
+
+          // Render the PDF page into the canvas context
+          await page.render({ canvasContext: ctx, viewport }).promise;
+
+          // Export the canvas as a JPG data URL
+          // Quality parameter 0.9 = 90% quality (lossy but visually excellent)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+          // Store the image for ZIP packaging later
+          const imgName = 'page_' + String(pageNum).padStart(3, '0') + '.jpg';
+          generatedImages.push({ name: imgName, dataUrl });
+
+          // Add a thumbnail to the preview grid
+          addThumbnail(dataUrl, imgName, pageNum);
+        }
+
+        // All pages done - show the final progress state
+        progressLabel.textContent = 'Conversion complete - ' + totalPages + ' pages converted!';
+        progressFill.style.width = '100%';
+
+        // Reveal the download button
+        btnDownload.style.display = 'block';
+
+      } catch (err) {
+        console.error('PDF conversion error:', err);
+        alert('Something went wrong while converting the PDF. Please make sure the file is a valid, non-password-protected PDF and try again.');
+      }
+
+      // Re-enable the convert button
+      btnConvert.disabled = false;
+      btnConvert.textContent = 'Convert to JPG Images';
+    });
+
+    // -------------------------------------------------------
+    // HELPER: Read a File object as an ArrayBuffer (Promise-based)
+    // -------------------------------------------------------
+    function readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // -------------------------------------------------------
+    // HELPER: Update the progress bar and label text
+    // -------------------------------------------------------
+    function updateProgress(current, total) {
+      const pct = Math.round((current / total) * 100);
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent =
+        'Converting page ' + current + ' of ' + total + '... (' + pct + '%)';
+    }
+
+    // -------------------------------------------------------
+    // HELPER: Add a thumbnail card to the preview grid
+    // -------------------------------------------------------
+    function addThumbnail(dataUrl, name, pageNum) {
+      const card = document.createElement('div');
+      card.className = 'thumb-card';
+
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.alt = 'Page ' + pageNum;
+      img.loading = 'lazy';
+
+      const label = document.createElement('div');
+      label.className = 'thumb-label';
+      label.textContent = 'Page ' + pageNum;
+
+      card.appendChild(img);
+      card.appendChild(label);
+      thumbnailGrid.appendChild(card);
+    }
+
+    // -------------------------------------------------------
+    // DOWNLOAD BUTTON - build and trigger ZIP download
+    // -------------------------------------------------------
+    btnDownload.addEventListener('click', async () => {
+      if (generatedImages.length === 0) return;
+
+      btnDownload.textContent = 'Building ZIP archive...';
+      btnDownload.disabled = true;
+
+      try {
+        const zip = new JSZip();
+
+        // Add each base64 JPG image into the ZIP archive
+        generatedImages.forEach(({ name, dataUrl }) => {
+          // Strip the data URL prefix ("data:image/jpeg;base64,") to get raw base64
+          const base64Data = dataUrl.split(',')[1];
+          zip.file(name, base64Data, { base64: true });
+        });
+
+        // Generate the ZIP blob asynchronously
+        const blob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }   // Balanced speed vs. compression ratio
+        });
+
+        // Create a temporary anchor element to trigger the browser download dialog
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href     = url;
+        link.download = 'converted_pages.zip';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Release the temporary object URL to free browser memory
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      } catch (err) {
+        console.error('ZIP generation error:', err);
+        alert('There was an error creating the ZIP file. Please try again.');
+      }
+
+      btnDownload.textContent = 'Download All Images as ZIP';
+      btnDownload.disabled = false;
+    });
+
+    // -------------------------------------------------------
+    // FAQ ACCORDION TOGGLE
+    // -------------------------------------------------------
+    function toggleFAQ(btn) {
+      const answer = btn.nextElementSibling;
+      const isOpen = answer.classList.contains('open');
+      // Close all open answers first
+      document.querySelectorAll('.faq-answer.open').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.faq-question.open').forEach(b => b.classList.remove('open'));
+      // If it was closed before, open it now
+      if (!isOpen) {
+        answer.classList.add('open');
+        btn.classList.add('open');
+      }
+    }
+  </script>
+
+</body>
+</html>

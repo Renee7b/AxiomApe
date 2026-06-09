@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Splitter - Extract Specific Pages From a PDF | AxiomApe</title>
+  <meta name="description" content="Free, private PDF splitter. Extract specific pages from any PDF directly in your browser. No uploads, no servers, 100% private client-side processing." />
+  <meta name="keywords" content="PDF splitter, extract PDF pages, split PDF online, free PDF tool, client-side PDF, private PDF splitter, PDF page extractor" />
+
+  <!-- pdf.js by Mozilla: Renders PDF pages as visual canvas thumbnails so users can see what is on each page -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- pdf-lib: Handles the actual mathematical splitting and byte-level creation of the new PDF output file -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <style>
+    /* ===========================
+       GLOBAL RESET & BASE STYLES
+       =========================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ===========================
+       TOP NAV BAR
+       =========================== */
+    .top-nav {
+      text-align: center;
+      padding: 10px 0;
+      background: #ffffff;
+      border-bottom: 1px solid #e8eaed;
+    }
+
+    .top-nav a {
+      color: #4a6cf7;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .top-nav a:hover {
+      text-decoration: underline;
+    }
+
+    /* ===========================
+       PAGE LAYOUT WRAPPER
+       =========================== */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 60px;
+    }
+
+    /* ===========================
+       HERO HEADER
+       =========================== */
+    .hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .hero h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+
+    .hero h1 span {
+      color: #4a6cf7;
+    }
+
+    .hero p {
+      color: #555;
+      font-size: 1rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ===========================
+       MAIN CARD
+       =========================== */
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    /* ===========================
+       AD PLACEHOLDER - TOP LEADERBOARD
+       Standard leaderboard: 728x90 (desktop), collapses gracefully on mobile
+       Replace this div's contents with your Google AdSense <ins> tag when ready
+       =========================== */
+    .ad-leaderboard {
+      width: 100%;
+      min-height: 90px;
+      background: #f8f9ff;
+      border-bottom: 1px solid #e8eaed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 0.78rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ===========================
+       CARD INNER PADDING
+       =========================== */
+    .card-body {
+      padding: 32px;
+    }
+
+    /* ===========================
+       UPLOAD / DROP ZONE
+       =========================== */
+    .drop-zone {
+      border: 2.5px dashed #c5cfe8;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: #fafbff;
+      position: relative;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #4a6cf7;
+      background: #eef1ff;
+    }
+
+    .drop-zone .drop-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+      line-height: 1;
+    }
+
+    .drop-zone h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+
+    .drop-zone p {
+      color: #777;
+      font-size: 0.9rem;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .btn-browse {
+      display: inline-block;
+      margin-top: 14px;
+      background: #4a6cf7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 28px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      pointer-events: none; /* click is handled by the file input overlay */
+    }
+
+    .drop-zone:hover .btn-browse,
+    .drop-zone.drag-over .btn-browse {
+      background: #3558e8;
+    }
+
+    /* ===========================
+       FILE INFO BAR
+       =========================== */
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: #eef1ff;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .file-info.visible {
+      display: flex;
+    }
+
+    .file-info .file-icon {
+      font-size: 1.8rem;
+    }
+
+    .file-info .file-details {
+      flex: 1;
+    }
+
+    .file-info .file-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1a1a2e;
+    }
+
+    .file-info .file-meta {
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .btn-clear {
+      background: none;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    /* ===========================
+       SECTION DIVIDER
+       =========================== */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 28px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .badge {
+      background: #eef1ff;
+      color: #4a6cf7;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    /* ===========================
+       SELECTED PAGES TEXT INPUT
+       =========================== */
+    .page-range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .page-range-row label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #444;
+      white-space: nowrap;
+    }
+
+    .page-range-input {
+      flex: 1;
+      min-width: 200px;
+      border: 1.5px solid #dde2f0;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.9rem;
+      color: #1a1a2e;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .page-range-input:focus {
+      border-color: #4a6cf7;
+    }
+
+    .page-range-hint {
+      font-size: 0.78rem;
+      color: #888;
+    }
+
+    .btn-select-all,
+    .btn-clear-selection {
+      border: 1.5px solid #dde2f0;
+      background: #fafbff;
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-select-all:hover { border-color: #4a6cf7; color: #4a6cf7; }
+    .btn-clear-selection:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* ===========================
+       PAGE THUMBNAIL GRID
+       =========================== */
+    #page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .page-thumb {
+      position: relative;
+      cursor: pointer;
+      border-radius: 8px;
+      background: #f5f6fa;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      overflow: visible;
+      user-select: none;
+    }
+
+    .page-thumb:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+    }
+
+    /* Selected state: thick blue border + checkmark overlay */
+    .page-thumb.selected {
+      outline: 3px solid #4a6cf7;
+      box-shadow: 0 0 0 4px rgba(74,108,247,0.18), 0 4px 14px rgba(74,108,247,0.2);
+    }
+
+    .page-thumb canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+
+    .page-thumb .page-label {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #666;
+      padding: 5px 4px 6px;
+      font-weight: 600;
+    }
+
+    /* Checkmark overlay badge */
+    .page-thumb .check-badge {
+      display: none;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      background: #4a6cf7;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      box-shadow: 0 2px 6px rgba(74,108,247,0.4);
+      z-index: 2;
+    }
+
+    .page-thumb.selected .check-badge {
+      display: flex;
+    }
+
+    /* Skeleton loader for thumbnails while rendering */
+    .page-thumb.loading canvas {
+      background: linear-gradient(90deg, #e8eaed 25%, #f5f6fa 50%, #e8eaed 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      min-height: 170px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ===========================
+       STATUS / PROGRESS BAR
+       =========================== */
+    .render-progress {
+      display: none;
+      background: #eef1ff;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      color: #4a6cf7;
+      font-weight: 600;
+    }
+
+    .render-progress.visible {
+      display: block;
+    }
+
+    .progress-bar-track {
+      height: 5px;
+      background: #dde2f0;
+      border-radius: 99px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #4a6cf7;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ===========================
+       ACTION BUTTONS ROW
+       =========================== */
+    .action-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    .btn-extract {
+      flex: 1;
+      min-width: 220px;
+      background: linear-gradient(135deg, #4a6cf7, #6a3de8);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 28px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 16px rgba(74,108,247,0.35);
+    }
+
+    .btn-extract:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-extract:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-extract:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Download button - hidden until extraction complete */
+    .btn-download {
+      display: none;
+      flex: 1;
+      min-width: 200px;
+      background: #27ae60;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 16px 28px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      text-align: center;
+      text-decoration: none;
+      box-shadow: 0 4px 16px rgba(39,174,96,0.3);
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+    }
+
+    /* Status message under action row */
+    .status-msg {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+
+    .status-msg.error { color: #e74c3c; }
+    .status-msg.success { color: #27ae60; font-weight: 600; }
+    .status-msg.processing { color: #4a6cf7; font-weight: 600; }
+
+    /* ===========================
+       EXPLANATION BOXES (beginner education)
+       =========================== */
+    .explainer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin: 24px 0 0;
+    }
+
+    .explainer-card {
+      background: #fafbff;
+      border: 1px solid #e8eaed;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .explainer-card .ex-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #4a6cf7;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .explainer-card p {
+      font-size: 0.78rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    /* ===========================
+       DISCLAIMER
+       =========================== */
+    .disclaimer {
+      background: linear-gradient(135deg, #eef1ff, #f5f0ff);
+      border: 1px solid #d5dcff;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .disclaimer .shield-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .disclaimer-text strong {
+      display: block;
+      font-size: 1rem;
+      color: #1a1a2e;
+      margin-bottom: 4px;
+    }
+
+    .disclaimer-text p {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ===========================
+       SEO / GUIDE SECTION
+       =========================== */
+    .guide-section {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      padding: 40px 36px;
+      margin-bottom: 32px;
+    }
+
+    .guide-section h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+
+    .guide-section .guide-subtitle {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 32px;
+      border-bottom: 1px solid #e8eaed;
+      padding-bottom: 20px;
+    }
+
+    /* FAQ accordions */
+    .faq-item {
+      border: 1px solid #e8eaed;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: #fafbff;
+      border: none;
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .faq-question:hover {
+      background: #eef1ff;
+    }
+
+    .faq-question .faq-arrow {
+      font-size: 0.75rem;
+      color: #4a6cf7;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    .faq-item.open .faq-arrow {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      display: none;
+      padding: 0 20px 18px;
+      font-size: 0.9rem;
+      color: #555;
+      line-height: 1.75;
+      background: #fff;
+      border-top: 1px solid #e8eaed;
+    }
+
+    .faq-answer p + p {
+      margin-top: 10px;
+    }
+
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    /* ===========================
+       FOOTER
+       =========================== */
+    footer {
+      text-align: center;
+      padding: 24px 16px;
+      color: #999;
+      font-size: 0.82rem;
+    }
+
+    footer a {
+      color: #666;
+      text-decoration: none;
+      margin: 0 10px;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: #4a6cf7;
+    }
+
+    footer .footer-divider {
+      color: #ddd;
+      margin: 0 2px;
+    }
+
+    /* ===========================
+       RESPONSIVE TWEAKS
+       =========================== */
+    @media (max-width: 600px) {
+      .card-body { padding: 20px 16px; }
+      .hero h1 { font-size: 1.45rem; }
+      .guide-section { padding: 28px 18px; }
+      #page-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/pdf-splitter/" />
+</head>
+<body>
+
+  <!-- =====================
+       TOP NAV LINK
+       ===================== -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <div class="page-wrapper">
+
+    <!-- =====================
+         HERO HEADER
+         ===================== -->
+    <header class="hero">
+      <h1>PDF Splitter: <span>Extract Specific Pages</span> Into a New File</h1>
+      <p>Click or drag your PDF to visually select exactly which pages you need. Your document never leaves your browser.</p>
+    </header>
+
+    <!-- =====================
+         MAIN TOOL CARD
+         ===================== -->
+    <div class="card">
+
+      <!-- AD PLACEHOLDER: Standard Leaderboard (728x90)
+           Replace the contents of this div with your AdSense <ins> tag when ready.
+           The container is already styled to the correct minimum height. -->
+      <div class="ad-leaderboard">
+        Advertisement - 728x90
+      </div>
+
+      <div class="card-body">
+
+        <!-- ---- UPLOAD ZONE ---- -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="application/pdf" />
+          <span class="drop-icon">📄</span>
+          <h2>Drag and Drop Your PDF Here</h2>
+          <p>Or click anywhere in this box to browse your files.</p>
+          <button class="btn-browse" tabindex="-1">Browse Files</button>
+        </div>
+
+        <!-- ---- FILE INFO BAR (shown after upload) ---- -->
+        <div class="file-info" id="file-info">
+          <span class="file-icon">📄</span>
+          <div class="file-details">
+            <div class="file-name" id="file-name-display">document.pdf</div>
+            <div class="file-meta" id="file-meta-display">0 pages - 0 KB</div>
+          </div>
+          <button class="btn-clear" id="btn-clear">Remove File</button>
+        </div>
+
+        <!-- ---- RENDER PROGRESS BAR ---- -->
+        <div class="render-progress" id="render-progress">
+          <span id="render-progress-text">Rendering page thumbnails... 0 of 0</span>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- ---- PAGE SELECTION CONTROLS (shown after upload) ---- -->
+        <div id="selection-controls" style="display:none;">
+          <div class="section-title">
+            Select Pages to Extract
+            <span class="badge" id="selection-count-badge">0 selected</span>
+          </div>
+
+          <div class="page-range-row">
+            <label for="range-input">Selected Pages:</label>
+            <input
+              type="text"
+              class="page-range-input"
+              id="range-input"
+              placeholder="e.g. 1, 3, 5-7"
+            />
+            <span class="page-range-hint">Use commas and hyphens for ranges</span>
+            <button class="btn-select-all" id="btn-select-all">Select All</button>
+            <button class="btn-clear-selection" id="btn-clear-selection">Clear</button>
+          </div>
+        </div>
+
+        <!-- ---- VISUAL PAGE THUMBNAIL GRID ---- -->
+        <div id="page-grid"></div>
+
+        <!-- ---- EXTRACT ACTION BUTTON ---- -->
+        <div id="action-area" style="display:none;">
+          <div class="action-row">
+            <button class="btn-extract" id="btn-extract" disabled>
+              Extract Selected Pages
+            </button>
+            <a class="btn-download" id="btn-download" download>
+              Download Extracted PDF
+            </a>
+          </div>
+          <div class="status-msg" id="status-msg"></div>
+        </div>
+
+        <!-- ---- BEGINNER EDUCATION EXPLAINERS ---- -->
+        <div class="explainer-grid" id="explainer-grid" style="display:none;">
+          <div class="explainer-card">
+            <div class="ex-title">&#128274; Client-Side Processing</div>
+            <p>This means all work is done by your own web browser on your computer. No data is sent to any server. Think of it like running a desktop app - but inside your browser tab.</p>
+          </div>
+          <div class="explainer-card">
+            <div class="ex-title">&#128444; PDF Rendering</div>
+            <p>PDF Rendering means converting the raw PDF code into actual pictures you can see. This tool uses Mozilla's pdf.js library to draw each page onto an HTML5 Canvas element so you can preview it before extracting.</p>
+          </div>
+          <div class="explainer-card">
+            <div class="ex-title">&#9986; Page Extraction</div>
+            <p>Page Extraction means reading the raw byte-level data of only your chosen pages from the original Document Buffer and writing them into a brand new PDF. The pdf-lib library handles this calculation entirely in memory.</p>
+          </div>
+          <div class="explainer-card">
+            <div class="ex-title">&#128203; Document Buffers</div>
+            <p>A Document Buffer is a temporary chunk of computer memory that holds your file's raw binary data while the tool is running. It is automatically cleared the moment you close or refresh the tab.</p>
+          </div>
+          <div class="explainer-card">
+            <div class="ex-title">&#127912; Canvas API</div>
+            <p>The Canvas API is a built-in browser feature that lets JavaScript draw graphics directly onto your screen. This tool uses it to paint miniature pictures of your PDF pages into each thumbnail box you see above.</p>
+          </div>
+        </div>
+
+      </div><!-- /.card-body -->
+    </div><!-- /.card -->
+
+    <!-- =====================
+         PRIVACY DISCLAIMER
+         ===================== -->
+    <div class="disclaimer">
+      <span class="shield-icon">&#128737;</span>
+      <div class="disclaimer-text">
+        <strong>Privacy First: Your Documents Stay On Your Device</strong>
+        <p>This tool renders and splits your documents entirely within your local web browser. Your private PDFs, legal documents, and sensitive data are never uploaded, stored, or sent to external servers. The entire process happens in your browser's memory and is discarded when you close the tab.</p>
+      </div>
+    </div>
+
+    <!-- =====================
+         SEO GUIDE SECTION
+         ===================== -->
+    <div class="guide-section">
+      <h2>The Ultimate Guide to Splitting PDFs and Securing Document Privacy</h2>
+      <p class="guide-subtitle">Everything office workers, legal professionals, and students need to know about extracting pages safely.</p>
+
+      <div class="faq-item open">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Why is it dangerous to upload sensitive PDFs to free online splitters?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>When you upload a PDF to a typical online tool, your document travels over the internet to a third-party server, is processed on hardware you have no visibility into, and is typically stored on disk for hours, days, or even weeks. For most free services, this storage is a core part of their business model - the contents of your file may be indexed, analyzed by machine learning systems, or retained for a period defined only in their fine print.</p>
+          <p>For lawyers, accountants, human resources professionals, and students, this creates serious risk. A contract, a tax return, a medical record, or a thesis draft contains personally identifiable information (PII) that could be exposed by a data breach at the third-party company. Many corporate security policies explicitly prohibit uploading internal documents to unvetted cloud services for this exact reason. Using a browser-based tool that performs all processing locally eliminates this risk at its root: no upload means no exposure, no breach risk, and no data retention questions to worry about.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          How does browser-based PDF extraction actually work?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Modern browsers are remarkably powerful computing environments. When you load a PDF file into this tool, JavaScript reads the file's raw binary data into an in-memory ArrayBuffer - a temporary data structure that exists only for the duration of your browser session. Two specialized libraries then take over.</p>
+          <p>First, Mozilla's pdf.js - the same rendering engine that powers the PDF viewer built into Firefox - decodes each page of the document and uses the HTML5 Canvas API to paint a visual preview. The Canvas API is a browser-native feature that lets code draw pixel-by-pixel images directly onto your screen without any server involvement. Second, when you click "Extract," the pdf-lib library reads the same ArrayBuffer, identifies the internal byte offsets that correspond to your chosen page indexes, and writes a brand new PDFDocument object containing only those pages. The final output is converted to a Blob - a binary object stored in memory - and a temporary download link is created pointing to it. When you click download, the file is saved directly from memory to your hard drive. At no point does any of this data leave your machine.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Will extracting pages reduce the quality or resolution of my document?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>No - and this is one of the most important technical distinctions between a browser-based tool like this one and a screenshot-based or print-to-PDF approach. When pdf-lib copies pages from your original document into the new file, it is copying the raw page description data byte-for-byte. It does not convert the page to an image, re-compress any embedded photographs, re-rasterize any vector graphics, or re-encode any embedded fonts.</p>
+          <p>The result is a mathematically identical copy of those specific pages at their original resolution, with all embedded fonts preserved, all vector artwork intact, and all image data at its original compression level. A 300 DPI scanned legal document extracted with this tool will remain at exactly 300 DPI. A beautifully typeset report with embedded custom fonts will retain every glyph perfectly. This is the same fidelity you would get from professional desktop software like Adobe Acrobat, and it is exactly what makes this approach suitable for professional and legal use.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Can I extract pages from a password-protected PDF?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>This depends on the type of password protection applied to the document. PDFs support two distinct levels of encryption: an "open password" (also called a user password) that prevents the file from being opened at all, and a "permissions password" (also called an owner password) that restricts actions like printing, copying, or editing while still allowing the document to be opened.</p>
+          <p>If your PDF requires you to enter a password simply to open it, this tool will not be able to process it - the raw bytes are encrypted and neither pdf.js nor pdf-lib can interpret them without the decryption key. However, if your PDF opens freely in any viewer but shows a notice that editing or copying is restricted, those restrictions are enforced by honor system in most software, and browser-based libraries such as pdf-lib are typically able to read and copy the page content without issue. The safest approach is to try loading your document - if the thumbnail grid renders successfully, your pages can be extracted.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What is the best way to extract non-consecutive pages from large PDFs?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>This tool is specifically designed for exactly this use case and offers two complementary methods. The first is the visual thumbnail grid: scroll through the rendered previews of every page, click each one you want to include, and the selection input updates automatically to reflect your choices. This is ideal for documents where you need to browse before deciding, such as a 60-page report from which you want to pull the executive summary, a specific data table, and the appendix.</p>
+          <p>The second method is direct text entry in the "Selected Pages" input field. If you already know exactly which pages you need - for example, pages 1, 5, 12 through 18, and 24 - you can type this directly as "1, 5, 12-18, 24" without needing to scroll the grid at all. This method is particularly efficient for large documents of 100 pages or more, where scrolling through every thumbnail would be time-consuming. Both methods are synchronized in real time: selecting thumbnails updates the text box, and typing a range highlights the corresponding thumbnails. You can freely mix both approaches for maximum efficiency.</p>
+        </div>
+      </div>
+
+    </div><!-- /.guide-section -->
+
+  </div><!-- /.page-wrapper -->
+
+  <!-- =====================
+       FOOTER
+       ===================== -->
+  <footer>
+    <div style="margin-bottom: 10px;">
+      <a href="/about.html">About</a>
+      <span class="footer-divider">|</span>
+      <a href="/privacy.html">Privacy</a>
+      <span class="footer-divider">|</span>
+      <a href="/contact.html">Contact</a>
+    </div>
+    <div>&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</div>
+  </footer>
+
+  <!-- =====================
+       JAVASCRIPT
+       ===================== -->
+  <script>
+    // ======================================================
+    // SETUP: Configure pdf.js worker
+    // The worker is a separate thread that does the heavy
+    // decoding work so the main page stays responsive.
+    // ======================================================
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // ======================================================
+    // STATE: All app state lives in one object for clarity
+    // ======================================================
+    const state = {
+      pdfBytes: null,        // Raw ArrayBuffer of the loaded PDF
+      pdfDoc: null,          // pdf.js document object for rendering
+      totalPages: 0,         // Total number of pages in the document
+      selectedPages: new Set(), // Set of 1-based page numbers currently selected
+      fileName: '',          // Original filename without extension
+      isRendering: false,    // True while thumbnail grid is being built
+    };
+
+    // ======================================================
+    // DOM REFERENCES
+    // ======================================================
+    const dropZone       = document.getElementById('drop-zone');
+    const fileInput      = document.getElementById('file-input');
+    const fileInfo       = document.getElementById('file-info');
+    const fileNameDisp   = document.getElementById('file-name-display');
+    const fileMetaDisp   = document.getElementById('file-meta-display');
+    const btnClear       = document.getElementById('btn-clear');
+    const renderProgress = document.getElementById('render-progress');
+    const renderProgText = document.getElementById('render-progress-text');
+    const progressFill   = document.getElementById('progress-bar-fill');
+    const selControls    = document.getElementById('selection-controls');
+    const pageGrid       = document.getElementById('page-grid');
+    const rangeInput     = document.getElementById('range-input');
+    const selCountBadge  = document.getElementById('selection-count-badge');
+    const btnSelectAll   = document.getElementById('btn-select-all');
+    const btnClearSel    = document.getElementById('btn-clear-selection');
+    const actionArea     = document.getElementById('action-area');
+    const btnExtract     = document.getElementById('btn-extract');
+    const btnDownload    = document.getElementById('btn-download');
+    const statusMsg      = document.getElementById('status-msg');
+    const explainerGrid  = document.getElementById('explainer-grid');
+
+    // Footer year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ======================================================
+    // DRAG AND DROP HANDLING
+    // ======================================================
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') {
+        loadFile(file);
+      } else {
+        showStatus('Please drop a valid PDF file.', 'error');
+      }
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) loadFile(file);
+    });
+
+    // ======================================================
+    // LOAD FILE: Read the PDF into memory and start rendering
+    // Uses FileReader to convert the file into an ArrayBuffer
+    // (raw binary data) without sending anything over the network
+    // ======================================================
+    function loadFile(file) {
+      resetUI();
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        state.pdfBytes = e.target.result;
+        state.fileName = file.name.replace(/\.pdf$/i, '');
+
+        // Show file info bar
+        fileNameDisp.textContent = file.name;
+        fileMetaDisp.textContent = `Loading pages... - ${formatBytes(file.size)}`;
+        fileInfo.classList.add('visible');
+
+        // Load the PDF with pdf.js to count pages and render thumbnails
+        try {
+          const loadingTask = pdfjsLib.getDocument({ data: state.pdfBytes });
+          state.pdfDoc = await loadingTask.promise;
+          state.totalPages = state.pdfDoc.numPages;
+          fileMetaDisp.textContent = `${state.totalPages} page${state.totalPages !== 1 ? 's' : ''} - ${formatBytes(file.size)}`;
+
+          // Show selection controls and action area
+          selControls.style.display = 'block';
+          actionArea.style.display = 'block';
+          explainerGrid.style.display = 'grid';
+
+          // Begin rendering all page thumbnails asynchronously
+          await renderAllThumbnails();
+        } catch (err) {
+          showStatus('Could not load PDF. The file may be corrupt or password-protected.', 'error');
+          console.error('PDF load error:', err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ======================================================
+    // RENDER ALL THUMBNAILS
+    // Iterates through every page and draws it onto a <canvas>
+    // Uses async/await so the browser stays responsive during
+    // rendering of large documents (50+ pages).
+    // ======================================================
+    async function renderAllThumbnails() {
+      state.isRendering = true;
+      renderProgress.classList.add('visible');
+      pageGrid.innerHTML = '';
+
+      // Pre-create all thumbnail placeholder elements for instant layout
+      const thumbEls = [];
+      for (let i = 1; i <= state.totalPages; i++) {
+        const thumb = createThumbElement(i);
+        pageGrid.appendChild(thumb);
+        thumbEls.push(thumb);
+      }
+
+      // Render each page's canvas in sequence
+      // (Rendering in parallel for large docs can crash low-memory devices)
+      for (let i = 1; i <= state.totalPages; i++) {
+        await renderPage(i, thumbEls[i - 1]);
+
+        // Update progress bar
+        const pct = Math.round((i / state.totalPages) * 100);
+        progressFill.style.width = pct + '%';
+        renderProgText.textContent = `Rendering page thumbnails... ${i} of ${state.totalPages}`;
+      }
+
+      renderProgress.classList.remove('visible');
+      state.isRendering = false;
+      updateExportButton();
+    }
+
+    // ======================================================
+    // CREATE THUMB ELEMENT: Builds the DOM for a single thumbnail
+    // ======================================================
+    function createThumbElement(pageNum) {
+      const thumb = document.createElement('div');
+      thumb.className = 'page-thumb loading';
+      thumb.dataset.page = pageNum;
+
+      const canvas = document.createElement('canvas');
+      const check = document.createElement('div');
+      check.className = 'check-badge';
+      check.textContent = '✓';
+
+      const label = document.createElement('div');
+      label.className = 'page-label';
+      label.textContent = `Page ${pageNum}`;
+
+      thumb.appendChild(canvas);
+      thumb.appendChild(check);
+      thumb.appendChild(label);
+
+      // Toggle selection on click
+      thumb.addEventListener('click', () => togglePage(pageNum, thumb));
+
+      return thumb;
+    }
+
+    // ======================================================
+    // RENDER PAGE: Uses pdf.js to draw one page onto a canvas
+    // The Canvas API "paints" the PDF content as pixels.
+    // Scale is set to produce a thumbnail roughly 160px wide.
+    // ======================================================
+    async function renderPage(pageNum, thumbEl) {
+      try {
+        const page = await state.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1 });
+
+        // Target width for the thumbnail in pixels
+        const targetWidth = 160;
+        const scale = targetWidth / viewport.width;
+        const scaledViewport = page.getViewport({ scale });
+
+        const canvas = thumbEl.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+        thumbEl.classList.remove('loading');
+      } catch (err) {
+        // If a single page fails to render, show a placeholder instead of crashing
+        thumbEl.classList.remove('loading');
+        const canvas = thumbEl.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 160;
+        canvas.height = 200;
+        ctx.fillStyle = '#f5f6fa';
+        ctx.fillRect(0, 0, 160, 200);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Preview unavailable', 80, 100);
+      }
+    }
+
+    // ======================================================
+    // TOGGLE PAGE: Select or deselect a single page
+    // ======================================================
+    function togglePage(pageNum, thumbEl) {
+      if (state.selectedPages.has(pageNum)) {
+        state.selectedPages.delete(pageNum);
+        thumbEl.classList.remove('selected');
+      } else {
+        state.selectedPages.add(pageNum);
+        thumbEl.classList.add('selected');
+      }
+      syncRangeInput();
+      updateExportButton();
+    }
+
+    // ======================================================
+    // SYNC RANGE INPUT: Convert the Set of selected page
+    // numbers into a compact human-readable range string
+    // e.g. {1,2,3,5,7,8} becomes "1-3, 5, 7-8"
+    // ======================================================
+    function syncRangeInput() {
+      if (state.selectedPages.size === 0) {
+        rangeInput.value = '';
+        selCountBadge.textContent = '0 selected';
+        return;
+      }
+
+      const sorted = Array.from(state.selectedPages).sort((a, b) => a - b);
+      const ranges = [];
+      let start = sorted[0];
+      let prev = sorted[0];
+
+      for (let i = 1; i <= sorted.length; i++) {
+        if (i < sorted.length && sorted[i] === prev + 1) {
+          prev = sorted[i];
+        } else {
+          ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+          if (i < sorted.length) {
+            start = sorted[i];
+            prev = sorted[i];
+          }
+        }
+      }
+
+      rangeInput.value = ranges.join(', ');
+      selCountBadge.textContent = `${state.selectedPages.size} selected`;
+    }
+
+    // ======================================================
+    // PARSE RANGE INPUT: Convert the text box string back
+    // into a Set of page numbers, then sync thumbnail states
+    // ======================================================
+    rangeInput.addEventListener('input', () => {
+      const parsed = parseRangeString(rangeInput.value, state.totalPages);
+      state.selectedPages = parsed;
+
+      // Update all thumbnail visual states to match the parsed selection
+      document.querySelectorAll('.page-thumb').forEach((thumb) => {
+        const pg = parseInt(thumb.dataset.page, 10);
+        if (state.selectedPages.has(pg)) {
+          thumb.classList.add('selected');
+        } else {
+          thumb.classList.remove('selected');
+        }
+      });
+
+      selCountBadge.textContent = `${state.selectedPages.size} selected`;
+      updateExportButton();
+    });
+
+    // ======================================================
+    // PARSE RANGE STRING: Turn "1, 3, 5-7" into a Set {1,3,5,6,7}
+    // ======================================================
+    function parseRangeString(str, maxPage) {
+      const result = new Set();
+      if (!str.trim()) return result;
+
+      const parts = str.split(',');
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        if (trimmed.includes('-')) {
+          const [a, b] = trimmed.split('-').map((n) => parseInt(n.trim(), 10));
+          if (!isNaN(a) && !isNaN(b)) {
+            const lo = Math.min(a, b);
+            const hi = Math.max(a, b);
+            for (let i = lo; i <= hi; i++) {
+              if (i >= 1 && i <= maxPage) result.add(i);
+            }
+          }
+        } else {
+          const n = parseInt(trimmed, 10);
+          if (!isNaN(n) && n >= 1 && n <= maxPage) result.add(n);
+        }
+      }
+      return result;
+    }
+
+    // ======================================================
+    // SELECT ALL / CLEAR BUTTONS
+    // ======================================================
+    btnSelectAll.addEventListener('click', () => {
+      for (let i = 1; i <= state.totalPages; i++) state.selectedPages.add(i);
+      document.querySelectorAll('.page-thumb').forEach((t) => t.classList.add('selected'));
+      syncRangeInput();
+      updateExportButton();
+    });
+
+    btnClearSel.addEventListener('click', () => {
+      state.selectedPages.clear();
+      document.querySelectorAll('.page-thumb').forEach((t) => t.classList.remove('selected'));
+      syncRangeInput();
+      updateExportButton();
+    });
+
+    // ======================================================
+    // UPDATE EXPORT BUTTON: Enable only when pages are selected
+    // ======================================================
+    function updateExportButton() {
+      btnExtract.disabled = state.selectedPages.size === 0 || state.isRendering;
+    }
+
+    // ======================================================
+    // EXTRACT: The core engine using pdf-lib
+    // 1. Load the original file bytes into a PDFDocument
+    // 2. Create a new blank PDFDocument
+    // 3. Copy only the selected page indexes into the new doc
+    // 4. Serialize to bytes and create a Blob download link
+    // ======================================================
+    btnExtract.addEventListener('click', async () => {
+      if (state.selectedPages.size === 0) return;
+
+      btnExtract.disabled = true;
+      btnDownload.style.display = 'none';
+      showStatus('Processing your document...', 'processing');
+
+      try {
+        // Load the original file bytes into pdf-lib
+        const sourcePdf = await PDFLib.PDFDocument.load(state.pdfBytes);
+
+        // Create a new empty PDF document
+        const newPdf = await PDFLib.PDFDocument.create();
+
+        // Sort the selected pages so the output order matches reading order
+        const sortedPages = Array.from(state.selectedPages).sort((a, b) => a - b);
+
+        // Copy pages: pdf-lib uses 0-based indexes internally
+        // so we subtract 1 from each 1-based page number
+        const zeroBasedIndexes = sortedPages.map((p) => p - 1);
+        const copiedPages = await newPdf.copyPages(sourcePdf, zeroBasedIndexes);
+        copiedPages.forEach((page) => newPdf.addPage(page));
+
+        // Serialize the new document to a Uint8Array byte sequence
+        const newPdfBytes = await newPdf.save();
+
+        // Create a Blob (binary object in memory) and a temporary download URL
+        const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        // Configure the download link
+        btnDownload.href = url;
+        btnDownload.download = `${state.fileName}-extracted.pdf`;
+        btnDownload.style.display = 'block';
+
+        showStatus(
+          `Done! ${sortedPages.length} page${sortedPages.length !== 1 ? 's' : ''} extracted into a new PDF.`,
+          'success'
+        );
+      } catch (err) {
+        showStatus('Extraction failed. The PDF may be encrypted or corrupted.', 'error');
+        console.error('Extraction error:', err);
+      }
+
+      btnExtract.disabled = false;
+      updateExportButton();
+    });
+
+    // ======================================================
+    // CLEAR FILE: Reset everything back to initial state
+    // ======================================================
+    btnClear.addEventListener('click', resetUI);
+
+    function resetUI() {
+      state.pdfBytes    = null;
+      state.pdfDoc      = null;
+      state.totalPages  = 0;
+      state.selectedPages.clear();
+      state.fileName    = '';
+      state.isRendering = false;
+
+      fileInput.value = '';
+      fileInfo.classList.remove('visible');
+      fileNameDisp.textContent = '';
+      fileMetaDisp.textContent = '';
+
+      pageGrid.innerHTML = '';
+      selControls.style.display = 'none';
+      actionArea.style.display  = 'none';
+      explainerGrid.style.display = 'none';
+      renderProgress.classList.remove('visible');
+      progressFill.style.width = '0%';
+      rangeInput.value = '';
+      selCountBadge.textContent = '0 selected';
+
+      btnDownload.style.display = 'none';
+      btnDownload.href = '';
+      showStatus('', '');
+    }
+
+    // ======================================================
+    // HELPERS
+    // ======================================================
+    function showStatus(msg, type) {
+      statusMsg.textContent = msg;
+      statusMsg.className = 'status-msg ' + (type || '');
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // ======================================================
+    // FAQ ACCORDION TOGGLE
+    // ======================================================
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSV to JSON Converter - Turn Spreadsheet Data Into JSON for Web Use | AxiomApe</title>
+  <meta name="description" content="Free online CSV to JSON converter. Paste or upload any spreadsheet CSV file and instantly convert it to clean JSON format for APIs and web development. 100% local - your data never leaves your browser." />
+  <meta name="keywords" content="csv to json, csv converter, json converter, spreadsheet to json, csv parser, data converter, free online tool" />
+  <link rel="canonical" href="https://axiomape.com/csv-to-json-converter/" />
+
+  <!-- PapaParse - robust CSV parsing library via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* ============================================================
+       GLOBAL RESET & BASE STYLES
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --bg-card:     #1a1d27;
+      --bg-pane:     #12141d;
+      --bg-input:    #0d0f17;
+      --border:      #2a2d3e;
+      --border-focus:#4f8ef7;
+      --accent:      #4f8ef7;
+      --accent2:     #7c5cbf;
+      --text:        #e2e4ef;
+      --text-muted:  #7b7f99;
+      --text-dim:    #4a4d66;
+      --green:       #3ecf8e;
+      --red:         #f76f6f;
+      --yellow:      #f7c948;
+      --font-mono:   'Consolas', 'Courier New', monospace;
+      --font-ui:     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --radius:      8px;
+      --radius-lg:   14px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.45);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       TOP NAV BAR
+    ============================================================ */
+    .top-nav {
+      text-align: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    .top-nav a {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ============================================================
+       PAGE TITLE
+    ============================================================ */
+    .page-title {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-title h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+    }
+    .page-title p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================================================
+       AD PLACEHOLDER - reserved for Google AdSense
+    ============================================================ */
+    /* AdSense Leaderboard (728x90) placeholder.
+       Replace this div's contents with your AdSense ad unit snippet. */
+    .ad-slot {
+      width: 100%;
+      max-width: 728px;
+      height: 90px;
+      margin: 0 auto 28px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       MAIN TOOL CARD
+    ============================================================ */
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ============================================================
+       SETTINGS BAR
+    ============================================================ */
+    .settings-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-pane);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+    }
+    .settings-bar label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .setting-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .setting-group label { white-space: nowrap; }
+
+    select, input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+    select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus { border-color: var(--border-focus); }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toggle {
+      position: relative;
+      width: 38px;
+      height: 20px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+    /* ============================================================
+       DUAL PANE LAYOUT
+    ============================================================ */
+    .dual-pane {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 720px) {
+      .dual-pane { grid-template-columns: 1fr; }
+    }
+
+    .pane { display: flex; flex-direction: column; gap: 10px; }
+    .pane-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pane-label .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .pane-label .dot.green { background: var(--green); }
+
+    /* ============================================================
+       DROP ZONE
+    ============================================================ */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(79,142,247,0.06);
+      color: var(--accent);
+    }
+    .drop-zone input[type="file"] { display: none; }
+    .drop-zone .drop-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+    /* ============================================================
+       CODE TEXTAREAS
+    ============================================================ */
+    .code-area {
+      width: 100%;
+      height: 340px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .code-area:focus { border-color: var(--border-focus); }
+    .code-area::placeholder { color: var(--text-dim); }
+
+    /* ============================================================
+       STATUS BAR
+    ============================================================ */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      min-height: 18px;
+    }
+    .status-ok   { color: var(--green); }
+    .status-warn { color: var(--yellow); }
+    .status-err  { color: var(--red); }
+    .status-idle { color: var(--text-dim); }
+
+    /* ============================================================
+       ACTION BUTTONS
+    ============================================================ */
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--bg-pane);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-danger {
+      background: rgba(247,111,111,0.12);
+      border: 1px solid rgba(247,111,111,0.35);
+      color: var(--red);
+    }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+
+    .copy-feedback {
+      font-size: 12px;
+      color: var(--green);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .copy-feedback.show { opacity: 1; }
+
+    /* ============================================================
+       PRIVACY NOTICE
+    ============================================================ */
+    .privacy-notice {
+      margin-top: 32px;
+      padding: 16px 20px;
+      background: rgba(62,207,142,0.07);
+      border: 1px solid rgba(62,207,142,0.22);
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      color: #a8f0d4;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .privacy-notice strong { color: var(--green); }
+
+    /* ============================================================
+       EDUCATIONAL CONTENT SECTION
+    ============================================================ */
+    .edu-section {
+      margin-top: 56px;
+    }
+    .edu-section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 24px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .edu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 720px) {
+      .edu-grid { grid-template-columns: 1fr; }
+    }
+
+    /* FAQ accordions */
+    .faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: var(--font-ui);
+    }
+    .faq-question:hover { background: rgba(255,255,255,0.03); }
+    .faq-arrow {
+      color: var(--accent);
+      font-size: 18px;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.25s;
+      padding: 0 20px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 600px;
+      padding: 0 20px 18px;
+    }
+    .faq-answer p { margin-bottom: 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--text); }
+    .faq-answer code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-input);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* Visual example block */
+    .example-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 32px;
+    }
+    .example-block h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .example-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 620px) { .example-cols { grid-template-columns: 1fr; } }
+    .example-col h4 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .code-sample {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .code-sample .k { color: #c792ea; }   /* key color */
+    .code-sample .s { color: #a3e9a4; }   /* string color */
+    .code-sample .n { color: #f78c6c; }   /* number color */
+    .code-sample .p { color: var(--text-muted); }  /* punctuation */
+
+    /* Prose article */
+    .edu-prose {
+      color: var(--text-muted);
+      font-size: 14.5px;
+      line-height: 1.8;
+    }
+    .edu-prose h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+    .edu-prose p { margin-bottom: 14px; }
+    .edu-prose strong { color: var(--text); }
+    .edu-prose code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background: var(--bg-input);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .site-footer {
+      margin-top: 56px;
+      padding: 24px 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .site-footer a {
+      color: var(--text-muted);
+      margin: 0 12px;
+    }
+    .site-footer a:hover { color: var(--accent); }
+    .footer-links { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP NAV
+  ============================================================ -->
+  <nav class="top-nav">
+    <a href="/">axiomape.com</a>
+  </nav>
+
+  <!-- ============================================================
+       PAGE WRAPPER
+  ============================================================ -->
+  <div class="page-wrapper">
+
+    <!-- PAGE TITLE -->
+    <header class="page-title">
+      <h1>CSV to JSON Converter</h1>
+      <p>Paste or upload any spreadsheet CSV file and instantly convert it to clean, structured JSON - ready for web APIs, JavaScript apps, and databases. All processing happens locally in your browser.</p>
+    </header>
+
+    <!-- AD SLOT - Replace inner content with your AdSense snippet -->
+    <div class="ad-slot" id="ad-leaderboard">
+      <!-- AdSense Leaderboard 728x90 - Insert ad unit code here -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         MAIN TOOL CARD
+    ============================================================ -->
+    <main class="tool-card">
+
+      <!-- SETTINGS BAR -->
+      <div class="settings-bar" role="group" aria-label="Conversion settings">
+
+        <!-- Delimiter selection -->
+        <div class="setting-group">
+          <label for="delimiter-select">Delimiter:</label>
+          <select id="delimiter-select" title="The character that separates each column value in your CSV file">
+            <option value=","  selected>Comma ( , )</option>
+            <option value="\t">Tab - TSV</option>
+            <option value=";">Semicolon ( ; )</option>
+            <option value="|">Pipe ( | )</option>
+          </select>
+        </div>
+
+        <!-- Header row toggle -->
+        <div class="setting-group">
+          <label class="toggle-wrap" title="If checked, the first row of your CSV is treated as column names, which become the JSON key names">
+            <span class="toggle">
+              <input type="checkbox" id="header-toggle" checked />
+              <span class="toggle-slider"></span>
+            </span>
+            <span>First Row = Headers</span>
+          </label>
+        </div>
+
+        <!-- Type inference toggle -->
+        <div class="setting-group">
+          <label class="toggle-wrap" title="When enabled, numbers like 42 become JSON numbers, and true/false become JSON booleans - instead of staying as text strings">
+            <span class="toggle">
+              <input type="checkbox" id="type-toggle" checked />
+              <span class="toggle-slider"></span>
+            </span>
+            <span>Smart Type Detection</span>
+          </label>
+        </div>
+
+        <!-- Pretty print toggle -->
+        <div class="setting-group">
+          <label class="toggle-wrap" title="Pretty Print formats the JSON with line breaks and indentation for human readability. Minified removes whitespace for smaller file sizes.">
+            <span class="toggle">
+              <input type="checkbox" id="pretty-toggle" checked />
+              <span class="toggle-slider"></span>
+            </span>
+            <span>Pretty Print</span>
+          </label>
+        </div>
+
+      </div>
+      <!-- END SETTINGS BAR -->
+
+      <!-- DUAL PANE -->
+      <div class="dual-pane">
+
+        <!-- INPUT PANE -->
+        <div class="pane">
+          <div class="pane-label">
+            <span class="dot"></span>
+            Input Data (CSV - Comma-Separated Values)
+          </div>
+
+          <!-- Drop zone for file upload -->
+          <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Drop a CSV file here or click to browse">
+            <input type="file" id="file-input" accept=".csv,.tsv,.txt" />
+            <span class="drop-icon">&#8613;</span>
+            Drop a .csv file here or <strong>click to browse</strong>
+          </div>
+
+          <textarea
+            class="code-area"
+            id="csv-input"
+            placeholder="Paste your CSV data here...
+
+Example:
+name,age,city,active
+Alice,32,New York,true
+Bob,28,Los Angeles,false
+Carol,41,Chicago,true"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+
+          <div class="status-bar" id="input-status">
+            <span class="status-idle">Waiting for input...</span>
+          </div>
+        </div>
+
+        <!-- OUTPUT PANE -->
+        <div class="pane">
+          <div class="pane-label">
+            <span class="dot green"></span>
+            Output Data (JSON - JavaScript Object Notation)
+          </div>
+
+          <!-- Spacer so output aligns with textarea (drop zone height) -->
+          <div style="height: 68px; display: flex; align-items: center; padding: 0 4px;">
+            <span style="font-size:12px; color:var(--text-dim);">Converted output appears below in real time.</span>
+          </div>
+
+          <textarea
+            class="code-area"
+            id="json-output"
+            placeholder="Your JSON output will appear here automatically..."
+            readonly
+            spellcheck="false"
+          ></textarea>
+
+          <div class="status-bar" id="output-status">
+            <span class="status-idle">No output yet.</span>
+          </div>
+        </div>
+
+      </div>
+      <!-- END DUAL PANE -->
+
+      <!-- ACTION BUTTONS -->
+      <div class="action-row">
+        <button class="btn btn-primary" id="copy-btn" disabled>
+          &#128203; Copy JSON to Clipboard
+        </button>
+        <button class="btn btn-secondary" id="download-btn" disabled>
+          &#8595; Download .json File
+        </button>
+        <button class="btn btn-danger" id="clear-btn">
+          &#10005; Clear Data
+        </button>
+        <span class="copy-feedback" id="copy-feedback">Copied!</span>
+      </div>
+
+      <!-- PRIVACY NOTICE -->
+      <div class="privacy-notice">
+        <strong>Privacy First:</strong> This data conversion takes place entirely within your local web browser. Your spreadsheets, customer lists, and database rows are never uploaded, cached, or transmitted to external servers.
+      </div>
+
+    </main>
+    <!-- END TOOL CARD -->
+
+    <!-- ============================================================
+         EDUCATIONAL CONTENT SECTION
+    ============================================================ -->
+    <section class="edu-section" aria-label="Technical guide to CSV and JSON">
+
+      <h2>The Complete Technical Guide to CSV and JSON Data Formats</h2>
+
+      <!-- VISUAL EXAMPLE -->
+      <div class="example-block">
+        <h3>Side-by-Side Example: CSV Input vs. JSON Output</h3>
+        <div class="example-cols">
+          <div class="example-col">
+            <h4>CSV Input (3 rows + header)</h4>
+            <div class="code-sample">name,age,city,active
+Alice,32,New York,true
+Bob,28,Los Angeles,false
+Carol,41,Chicago,true</div>
+          </div>
+          <div class="example-col">
+            <h4>JSON Output (Array of Objects)</h4>
+            <div class="code-sample"><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="k">"name"</span><span class="p">:</span> <span class="s">"Alice"</span><span class="p">,</span>
+    <span class="k">"age"</span><span class="p">:</span>  <span class="n">32</span><span class="p">,</span>
+    <span class="k">"city"</span><span class="p">:</span> <span class="s">"New York"</span><span class="p">,</span>
+    <span class="k">"active"</span><span class="p">:</span> <span class="n">true</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="k">"name"</span><span class="p">:</span> <span class="s">"Bob"</span><span class="p">,</span>
+    <span class="k">"age"</span><span class="p">:</span>  <span class="n">28</span><span class="p">,</span>
+    <span class="k">"city"</span><span class="p">:</span> <span class="s">"Los Angeles"</span><span class="p">,</span>
+    <span class="k">"active"</span><span class="p">:</span> <span class="n">false</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="k">"name"</span><span class="p">:</span> <span class="s">"Carol"</span><span class="p">,</span>
+    <span class="k">"age"</span><span class="p">:</span>  <span class="n">41</span><span class="p">,</span>
+    <span class="k">"city"</span><span class="p">:</span> <span class="s">"Chicago"</span><span class="p">,</span>
+    <span class="k">"active"</span><span class="p">:</span> <span class="n">true</span>
+  <span class="p">}</span>
+<span class="p">]</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ ACCORDIONS -->
+      <div class="edu-grid">
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What is CSV (Comma-Separated Values)?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>CSV stands for Comma-Separated Values.</strong> It is one of the oldest and most universal data exchange formats in computing. A CSV file is plain text, where each line represents a single record (like one row in a spreadsheet), and each individual data field within that row is separated by a <strong>delimiter</strong> - most commonly a comma, but sometimes a semicolon, tab character, or pipe symbol.</p>
+            <p>Because CSV files are plain text with no formatting, they are extremely lightweight and can be opened by any spreadsheet application (Microsoft Excel, Google Sheets, LibreOffice Calc) as well as any text editor. This portability is why CSV remains the standard export format for databases, CRMs, analytics platforms, and financial systems.</p>
+            <p>The main limitation of CSV is that it carries no data type information - every value is just a string of characters. There is no built-in way to say "this column holds integers" or "this field is a date." That ambiguity is precisely what makes a converter like this tool valuable.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What is JSON (JavaScript Object Notation)?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>JSON stands for JavaScript Object Notation.</strong> Despite the name, JSON is a language-independent data format used by virtually every modern programming language: Python, Java, Go, Ruby, PHP, and of course JavaScript. It was derived from JavaScript object syntax but standardized (RFC 8259) for universal use.</p>
+            <p>JSON structures data using two fundamental constructs: <strong>Objects</strong> (collections of key-value pairs wrapped in curly braces <code>{ }</code>) and <strong>Arrays</strong> (ordered lists of values wrapped in square brackets <code>[ ]</code>). A CSV file typically converts to a JSON array of objects - one object per row, where each column header becomes a key and the cell value becomes the associated value.</p>
+            <p>Unlike CSV, JSON is self-describing and supports distinct data types: strings (wrapped in quotes), numbers, booleans (<code>true</code>/<code>false</code>), arrays, objects, and <code>null</code>. This richness is why virtually every web API sends and receives data as JSON.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Why do web APIs require JSON instead of CSV spreadsheets?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Web APIs are the communication layer between software applications. They need a format that is fast to parse, supports nested and hierarchical data, and carries explicit type information. JSON satisfies all three requirements while CSV satisfies none of them well.</p>
+            <p>Consider a customer record. In CSV, you can only store a flat table - one customer per row, one piece of data per column. In JSON, you can store a customer object that contains a nested <code>address</code> object, an <code>orders</code> array with multiple purchase records, and a <code>preferences</code> object with boolean flags - all within a single logical record. CSV cannot represent this structure without complex workarounds.</p>
+            <p>Additionally, modern JavaScript frameworks like React, Vue, and Angular consume JSON natively through the <code>fetch()</code> API. Feeding a web app a CSV file requires extra parsing steps, while a JSON response can be used directly as a JavaScript object. This is why converting your CSV exports to JSON is an essential step when building data-driven web applications.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            How does Smart Type Detection (Type Inference) work?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p><strong>Type Inference</strong> is the process of examining a text string and determining what data type it most likely represents. Because CSV stores everything as plain text, a cell containing <code>42</code> is technically the two-character string "4" and "2" - not the number forty-two. Without type inference, your JSON would contain <code>"age": "42"</code> (a string), which would break any code trying to perform arithmetic on it.</p>
+            <p>When the "Smart Type Detection" toggle is enabled on this tool, the converter applies a series of checks to each cell value before writing it to JSON. If the value matches a numeric pattern (including decimals and negatives), it is written as a JSON number without quotes. If the value is exactly <code>true</code> or <code>false</code> (case-insensitive), it is written as a JSON boolean. Empty cells become <code>null</code>. Everything else remains a quoted string.</p>
+            <p>The result is semantically correct JSON: <code>"age": 32</code> instead of <code>"age": "32"</code>, which is critical for correct behavior in APIs, databases, and JavaScript applications that rely on strict type checking.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What if my CSV has commas or quotes inside a cell value?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>This is one of the most common and confusing edge cases in CSV parsing. The official RFC 4180 standard for CSV specifies that if a cell value contains the delimiter character (a comma), that value must be wrapped in double quotes. For example: <code>Alice,"New York, NY",32</code>. The parser knows the comma inside the quotes is part of the data, not a column separator.</p>
+            <p>But what if the cell value itself contains a double-quote character? The standard says you must escape it by doubling it: <code>Alice,"She said ""hello""",32</code>. The two consecutive double-quotes inside the outer quotes are interpreted as a single literal quote character in the output.</p>
+            <p>This tool uses <strong>PapaParse</strong>, a battle-tested open-source JavaScript CSV parsing library that fully implements the RFC 4180 specification and handles all of these edge cases correctly - including multi-line cell values, byte-order marks (BOM), and inconsistent line endings across operating systems. This is far more robust than a naive string-split approach, which would corrupt data on any complex real-world CSV file.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            What are Data Delimiters and when should I change them?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>A <strong>delimiter</strong> is the special character used to separate individual data fields within a CSV row. While the comma is the most common delimiter (hence the name "Comma-Separated Values"), many systems export data using different delimiters for practical reasons.</p>
+            <p>A <strong>tab-delimited file (TSV - Tab-Separated Values)</strong> uses a tab character as the separator. This is common in data exported from Microsoft Excel, database management tools like pgAdmin or MySQL Workbench, and scientific data files. Tabs are useful when the data itself frequently contains commas (such as numeric data with European decimal formatting or address fields).</p>
+            <p>A <strong>semicolon-delimited file</strong> is the default CSV export format in many European locales, because those regions use a comma as the decimal separator for numbers (e.g., <code>3,14</code> for pi instead of <code>3.14</code>). If you export a spreadsheet from a system set to a European locale and the values look jumbled, try switching the delimiter to semicolon.</p>
+            <p>The <strong>pipe character ( | )</strong> is used in legacy database exports and log file formats where neither commas nor tabs are reliable separators.</p>
+          </div>
+        </div>
+
+      </div>
+      <!-- END FAQ GRID -->
+
+      <!-- PROSE ARTICLE -->
+      <div class="edu-prose">
+
+        <h3>Understanding the Structure: Arrays and Key-Value Pairs</h3>
+        <p>When this tool converts a CSV file to JSON, the output follows a predictable, standard structure: a <strong>JSON Array of Objects</strong>. Understanding this structure is fundamental to working with data in any web context. An Array is an ordered list - in JSON it is represented with square brackets <code>[ ]</code>, and each item in the list is separated by a comma. In our case, each item in the array is a JSON Object: a collection of <strong>key-value pairs</strong> wrapped in curly braces <code>{ }</code>.</p>
+        <p>Each key-value pair maps directly to a column in your original spreadsheet. The key (always a quoted string) comes from the header row of your CSV - the column name. The value is the actual data from that row's cell. For example, the CSV row <code>Alice,32,New York</code> with the header <code>name,age,city</code> produces the object <code>{"name": "Alice", "age": 32, "city": "New York"}</code>. The header names become the keys, and the row cells become the values.</p>
+
+        <h3>Pretty Print vs. Minified JSON: When to Use Each</h3>
+        <p><strong>Pretty Printed JSON</strong> is formatted for human readability. Each key-value pair is on its own line, and nesting levels are indented with spaces (typically 2 or 4). This makes the structure immediately clear to any developer reading the file. It is the preferred format for configuration files, version-controlled data files, documentation, and any situation where a human will read or review the output.</p>
+        <p><strong>Minified JSON</strong> removes all whitespace that is not required by the syntax - no line breaks, no indentation, no extra spaces. A file that is 8 KB when pretty-printed might be 5 KB when minified. For high-traffic APIs that transmit JSON thousands of times per second, this reduction in payload size meaningfully reduces bandwidth and improves latency. Use minified JSON when the output will be consumed by a program rather than read by a person, and when file size or transmission speed is a priority.</p>
+
+        <h3>Handling Large Files and Performance Considerations</h3>
+        <p>This converter uses the browser's <strong>FileReader API</strong> to process uploaded CSV files entirely in memory on your local machine. For very large files (tens of thousands of rows or more), the browser may take a moment to complete parsing. PapaParse, the library powering this tool, is specifically optimized for performance and can handle files with hundreds of thousands of rows efficiently using streaming techniques. If you are working with extremely large datasets (multi-gigabyte files), a server-side tool or command-line utility such as <code>jq</code>, <code>csvkit</code>, or a Python script using the <code>pandas</code> library would be more appropriate than a browser-based converter.</p>
+
+      </div>
+
+    </section>
+    <!-- END EDUCATIONAL SECTION -->
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+      <div class="footer-links">
+        <a href="/about.html">About</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/contact.html">Contact</a>
+      </div>
+      <div>&copy; <span id="footer-year"></span> AxiomApe. All rights reserved.</div>
+    </footer>
+
+  </div>
+  <!-- END PAGE WRAPPER -->
+
+  <!-- ============================================================
+       JAVASCRIPT - CONVERSION ENGINE
+  ============================================================ -->
+  <script>
+    // ----------------------------------------------------------
+    // DOM REFERENCES
+    // ----------------------------------------------------------
+    const csvInput      = document.getElementById('csv-input');
+    const jsonOutput    = document.getElementById('json-output');
+    const dropZone      = document.getElementById('drop-zone');
+    const fileInput     = document.getElementById('file-input');
+    const copyBtn       = document.getElementById('copy-btn');
+    const downloadBtn   = document.getElementById('download-btn');
+    const clearBtn      = document.getElementById('clear-btn');
+    const copyFeedback  = document.getElementById('copy-feedback');
+    const inputStatus   = document.getElementById('input-status');
+    const outputStatus  = document.getElementById('output-status');
+
+    // Settings controls
+    const delimiterSelect = document.getElementById('delimiter-select');
+    const headerToggle    = document.getElementById('header-toggle');
+    const typeToggle      = document.getElementById('type-toggle');
+    const prettyToggle    = document.getElementById('pretty-toggle');
+
+    // Footer year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // ----------------------------------------------------------
+    // STATUS HELPERS
+    // ----------------------------------------------------------
+    function setStatus(el, type, msg) {
+      el.innerHTML = `<span class="status-${type}">${msg}</span>`;
+    }
+
+    // ----------------------------------------------------------
+    // CORE CONVERSION FUNCTION
+    // Uses PapaParse for robust RFC 4180 compliant CSV parsing.
+    // ----------------------------------------------------------
+    function convert() {
+      const rawCSV = csvInput.value.trim();
+
+      // Nothing to convert - reset to idle state
+      if (!rawCSV) {
+        jsonOutput.value = '';
+        setStatus(inputStatus,  'idle', 'Waiting for input...');
+        setStatus(outputStatus, 'idle', 'No output yet.');
+        copyBtn.disabled = true;
+        downloadBtn.disabled = true;
+        return;
+      }
+
+      // Resolve delimiter (tab stored as '\t' string in the option value)
+      const delimVal = delimiterSelect.value;
+      const delimiter = delimVal === '\\t' ? '\t' : delimVal;
+
+      const useHeaders   = headerToggle.checked;
+      const inferTypes   = typeToggle.checked;
+      const prettyPrint  = prettyToggle.checked;
+
+      // Parse using PapaParse
+      const result = Papa.parse(rawCSV, {
+        delimiter:        delimiter,
+        header:           useHeaders,
+        skipEmptyLines:   true,
+        dynamicTyping:    inferTypes,  // PapaParse handles type inference natively
+        transformHeader:  h => h.trim()
+      });
+
+      // Collect any parse warnings/errors
+      const errors = result.errors || [];
+
+      // Build row count for status
+      const rowCount = result.data ? result.data.length : 0;
+
+      if (rowCount === 0) {
+        setStatus(inputStatus,  'warn', 'Warning: No parseable rows found. Check your delimiter setting.');
+        setStatus(outputStatus, 'warn', 'No output generated.');
+        jsonOutput.value = '';
+        copyBtn.disabled = true;
+        downloadBtn.disabled = true;
+        return;
+      }
+
+      // Serialize to JSON
+      let jsonStr;
+      try {
+        jsonStr = prettyPrint
+          ? JSON.stringify(result.data, null, 2)
+          : JSON.stringify(result.data);
+      } catch (e) {
+        setStatus(outputStatus, 'err', 'Error: Could not serialize output. ' + e.message);
+        return;
+      }
+
+      jsonOutput.value = jsonStr;
+
+      // Update status messages
+      const colCount = useHeaders
+        ? (result.meta.fields ? result.meta.fields.length : '?')
+        : (result.data[0] ? result.data[0].length : '?');
+
+      setStatus(inputStatus, 'ok',
+        `Parsed ${rowCount} row${rowCount !== 1 ? 's' : ''}, ${colCount} column${colCount !== 1 ? 's' : ''}.`
+      );
+
+      if (errors.length > 0) {
+        // Surface first error as a warning without crashing
+        const e = errors[0];
+        setStatus(outputStatus, 'warn',
+          `Converted with ${errors.length} warning${errors.length > 1 ? 's' : ''}: Row ${e.row + 1} - ${e.message}`
+        );
+      } else {
+        const approxKB = (new Blob([jsonStr]).size / 1024).toFixed(1);
+        setStatus(outputStatus, 'ok', `Output ready - ${approxKB} KB.`);
+      }
+
+      copyBtn.disabled = false;
+      downloadBtn.disabled = false;
+    }
+
+    // ----------------------------------------------------------
+    // EVENT LISTENERS - live sync on any change
+    // ----------------------------------------------------------
+    csvInput.addEventListener('input', convert);
+    delimiterSelect.addEventListener('change', convert);
+    headerToggle.addEventListener('change', convert);
+    typeToggle.addEventListener('change', convert);
+    prettyToggle.addEventListener('change', convert);
+
+    // ----------------------------------------------------------
+    // FILE UPLOAD - via click on drop zone
+    // ----------------------------------------------------------
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+    });
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) loadFile(file);
+      // Reset input so the same file can be re-uploaded if needed
+      fileInput.value = '';
+    });
+
+    // ----------------------------------------------------------
+    // DRAG AND DROP
+    // ----------------------------------------------------------
+    ['dragenter', 'dragover'].forEach(evt => {
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'dragend', 'drop'].forEach(evt => {
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+      });
+    });
+
+    dropZone.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+
+    // Prevent drop on body from opening file in browser tab
+    document.body.addEventListener('dragover', e => e.preventDefault());
+    document.body.addEventListener('drop', e => e.preventDefault());
+
+    // ----------------------------------------------------------
+    // FILE READER - reads the file as text then injects into input
+    // ----------------------------------------------------------
+    function loadFile(file) {
+      // Validate file type loosely
+      const allowedTypes = ['text/csv', 'text/tab-separated-values', 'text/plain', 'application/vnd.ms-excel'];
+      const isText = file.type.startsWith('text/') || allowedTypes.includes(file.type) || file.name.endsWith('.csv') || file.name.endsWith('.tsv');
+
+      if (!isText) {
+        setStatus(inputStatus, 'err', 'Error: Please upload a .csv or .tsv text file.');
+        return;
+      }
+
+      setStatus(inputStatus, 'idle', 'Reading file...');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        csvInput.value = e.target.result;
+        convert();
+      };
+      reader.onerror = function() {
+        setStatus(inputStatus, 'err', 'Error: Could not read the file. Please try again.');
+      };
+      reader.readAsText(file);
+    }
+
+    // ----------------------------------------------------------
+    // COPY TO CLIPBOARD
+    // ----------------------------------------------------------
+    copyBtn.addEventListener('click', async () => {
+      if (!jsonOutput.value) return;
+      try {
+        await navigator.clipboard.writeText(jsonOutput.value);
+      } catch (err) {
+        // Fallback for older browsers
+        jsonOutput.select();
+        document.execCommand('copy');
+      }
+      copyFeedback.classList.add('show');
+      setTimeout(() => copyFeedback.classList.remove('show'), 2000);
+    });
+
+    // ----------------------------------------------------------
+    // DOWNLOAD AS .json FILE
+    // ----------------------------------------------------------
+    downloadBtn.addEventListener('click', () => {
+      if (!jsonOutput.value) return;
+      const blob = new Blob([jsonOutput.value], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'converted-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ----------------------------------------------------------
+    // CLEAR DATA
+    // ----------------------------------------------------------
+    clearBtn.addEventListener('click', () => {
+      csvInput.value  = '';
+      jsonOutput.value = '';
+      copyBtn.disabled = true;
+      downloadBtn.disabled = true;
+      setStatus(inputStatus,  'idle', 'Waiting for input...');
+      setStatus(outputStatus, 'idle', 'No output yet.');
+      csvInput.focus();
+    });
+
+    // ----------------------------------------------------------
+    // FAQ ACCORDION
+    // ----------------------------------------------------------
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.faq-item.open').forEach(el => {
+          el.classList.remove('open');
+          el.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+
+        // Open clicked one (unless it was already open)
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+  </script>
+
+</body>
+</html>
