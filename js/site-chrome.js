@@ -229,16 +229,17 @@
     'Nothing is ever saved, tracked, or sent to our servers.</span>';
   header.insertAdjacentElement('afterend', privacyBadge);
 
-  /* ── Build mandatory AdSense / estimate disclaimer ──────────
+  /* ── Build mandatory standard disclaimer ────────────────────
      Placed directly above the standard footer on every page. ── */
   const disclaimer = document.createElement('div');
   disclaimer.id = 'axiom-disclaimer';
   disclaimer.innerHTML =
-    '<p><strong>Disclaimer:</strong> AxiomApe and its tools are independent and are not affiliated with, ' +
-    'endorsed by, or sponsored by Google LLC. "AdSense" is a registered trademark of Google LLC, used here ' +
-    'for descriptive purposes only. All calculations, estimates, and projections provided by this site are ' +
-    'based on industry averages and general assumptions: actual results may vary, and no specific earnings ' +
-    'or outcomes are guaranteed.</p>';
+    '<p><strong>Disclaimer:</strong> All tools and utilities on this website, including calculators, ' +
+    'converters, generators, and analyzers, are provided "as-is" for informational and convenience purposes ' +
+    'only. We make no warranties, express or implied, regarding the accuracy, reliability, or completeness ' +
+    'of any results or outputs. You are solely responsible for verifying all data before relying on it for ' +
+    'professional, financial, or personal decisions. By using this website, you agree that we are not liable ' +
+    'for any errors, data loss, or damages arising from the use of our tools.</p>';
 
   /* ── Build standard footer ───────────────────────────────── */
   const footer = document.createElement('footer');
