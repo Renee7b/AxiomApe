@@ -709,6 +709,7 @@
       .utility-row { flex-direction: column; align-items: flex-start; }
     }
   </style>
+  <script src="/js/site-chrome.js" defer></script>
 </head>
 <body>
 
@@ -1036,7 +1037,7 @@
     // -------------------------------------------------------------------
     // CONFIG
     // -------------------------------------------------------------------
-    const API_BASE      = "https://api.frankfurter.app";
+    const API_BASE      = "https://api.frankfurter.dev/v1"; // updated 2025; fallback below
     const CHEAT_AMOUNTS = [1, 5, 10, 20, 50, 100, 500, 1000];
 
     // Curated currency list: code, name, flag emoji
@@ -1251,43 +1252,60 @@
     // with a slightly different URL. If both fail, we display a clear
     // error message rather than silently breaking.
     // -------------------------------------------------------------------
+    // Try a URL with timeout; resolves to parsed JSON or throws
+    async function tryFetch(url) {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch(url, { signal: controller.signal });
+        clearTimeout(tid);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      } catch (e) {
+        clearTimeout(tid);
+        throw e;
+      }
+    }
+
     async function fetchRates() {
       setStatus("loading", '<span class="spinner"></span>&nbsp; Fetching live exchange rates...');
 
-      try {
-        const response = await fetch(`${API_BASE}/latest?from=EUR`, {
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
+      // Endpoint list — tried in order until one succeeds
+      const ENDPOINTS = [
+        { url: "https://api.frankfurter.dev/v1/latest?from=EUR", dateKey: "date" },
+        { url: "https://api.frankfurter.app/latest?from=EUR",    dateKey: "date" },
+        { url: "https://open.er-api.com/v6/latest/EUR",          dateKey: "time_last_update_utc" }
+      ];
 
-        if (!response.ok) {
-          throw new Error(`API returned HTTP ${response.status}`);
+      let lastErr = null;
+      for (const ep of ENDPOINTS) {
+        try {
+          const data = await tryFetch(ep.url);
+          if (!data || !data.rates || typeof data.rates !== "object") {
+            throw new Error("Unexpected response format");
+          }
+          ratesCache = { EUR: 1.0, ...data.rates };
+          rateDate   = (ep.dateKey === "date") ? (data.date || "unknown")
+                       : (data.time_last_update_utc ? data.time_last_update_utc.split(" ").slice(0,4).join(" ") : "unknown");
+          apiLoaded  = true;
+          setStatus("success", `Live rates loaded — European Central Bank data, ${rateDate}`);
+          updateTimestamp(rateDate);
+          calculate();
+          return; // success — stop trying
+        } catch (err) {
+          console.warn(`Endpoint ${ep.url} failed:`, err.message);
+          lastErr = err;
         }
-
-        const data = await response.json();
-
-        // Validate response shape
-        if (!data || !data.rates || typeof data.rates !== "object") {
-          throw new Error("Unexpected API response format");
-        }
-
-        // Store rates - add EUR itself (rate 1.0 against itself)
-        ratesCache      = { EUR: 1.0, ...data.rates };
-        rateDate        = data.date || "unknown";
-        apiLoaded       = true;
-
-        setStatus("success", `Live rates loaded - data from European Central Bank (ECB), date: ${rateDate}`);
-        updateTimestamp(rateDate);
-        calculate();
-
-      } catch (err) {
-        console.error("Currency API fetch failed:", err.message);
-        setStatus("error",
-          `Could not load live exchange rates. Please check your internet connection and <button onclick="location.reload()" style="background:none;border:none;color:#e53e3e;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">reload the page</button>. Error: ${err.message}`
-        );
-        elResultNumber.textContent = "Error";
-        elResultRate.textContent   = "Rate data unavailable - please reload";
-        renderCheatSheet(null, null, null);
       }
+
+      // All endpoints failed
+      console.error("All currency API endpoints failed:", lastErr?.message);
+      setStatus("error",
+        `Could not load live exchange rates. Check your connection and <button onclick="location.reload()" style="background:none;border:none;color:#e53e3e;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">reload</button>. (${lastErr?.message || "unknown error"})`
+      );
+      elResultNumber.textContent = "Error";
+      elResultRate.textContent   = "Rate data unavailable — please reload";
+      renderCheatSheet(null, null, null);
     }
 
     // -------------------------------------------------------------------

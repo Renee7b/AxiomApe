@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player & Library – Organize, Save & Play Your Videos | AxiomApe</title>
+    <meta name="description" content="Free online video library. Save YouTube, Vimeo, and Dailymotion videos into nested folders, add notes, resume playback, build playlists, and export your entire library.">
+    <meta name="keywords" content="video library, save videos, organize videos, video folders, youtube playlist, video notes, resume video, video manager">
+    <link rel="canonical" href="https://axiomape.com/video-library/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="AxiomApe">
+    <meta property="og:title" content="Video Player & Library | AxiomApe">
+    <meta property="og:description" content="Save and organize YouTube, Vimeo, and Dailymotion videos into nested folders with notes and resume playback.">
+    <meta property="og:url" content="https://axiomape.com/video-library/">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Video Player & Library",
+      "description": "Save and organize YouTube, Vimeo, and Dailymotion videos into nested folders with notes and resume playback.",
+      "url": "https://axiomape.com/video-library/",
+      "applicationCategory": "UtilityApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "provider": { "@type": "Organization", "name": "AxiomApe", "url": "https://axiomape.com" }
+    }
+    </script>
+    <script src="/js/site-chrome.js" defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .app-header {
+            background: rgba(79, 70, 229, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(79, 70, 229, 0.3);
+        }
+        .app-header h1 { color: #4f46e5; margin-bottom: 15px; font-size: 2em; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        input[type="url"], input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid rgba(79, 70, 229, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .btn-secondary { background: linear-gradient(135deg, #374151 0%, #4b5563 100%); }
+        .btn-danger { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
+        .btn-small { padding: 6px 12px; font-size: 12px; }
+        .player-section {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+        }
+        .player-section .video-card-title-bottom,
+        .player-section .video-progress-bar,
+        .player-section .video-resume-badge,
+        .player-section .video-thumbnail-container {
+            display: none !important;
+        }
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #000;
+            margin-bottom: 15px;
+            isolation: isolate;
+        }
+        .video-wrapper iframe, .video-wrapper video {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+        .video-wrapper::before, .video-wrapper::after { display: none !important; }
+        #videoWrapper > *:not(iframe):not(video) { display: none !important; }
+
+        /* Editable video title in player */
+        .video-title {
+            font-size: 1.4em;
+            margin: 10px 0 4px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            outline: none;
+            border: 1px solid transparent;
+            cursor: text;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .video-title:hover { background: rgba(255,255,255,0.04); border-color: rgba(79,70,229,0.3); }
+        .video-title:focus { background: rgba(255,255,255,0.06); border-color: rgba(79,70,229,0.5); }
+        .video-title-hint { font-size: 11px; color: #6b7280; margin-bottom: 8px; padding-left: 8px; }
+        .video-info { margin-top: 0; }
+
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            border: 2px solid rgba(79, 70, 229, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .playlist-controls { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; align-items: center; }
+        .library-section { display: grid; grid-template-columns: 300px 1fr; gap: 20px; margin-top: 30px; }
+        .sidebar {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .folder-item {
+            margin: 3px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .folder-item:hover {
+            background: rgba(79, 70, 229, 0.2);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+        .folder-item.active {
+            background: rgba(79, 70, 229, 0.3);
+            border-left: 3px solid #4f46e5;
+        }
+        .folder-item.drag-over {
+            background: rgba(79, 70, 229, 0.5);
+            border: 2px dashed #4f46e5;
+            transform: scale(1.02);
+        }
+        .folder-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .folder-toggle {
+            width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; user-select: none;
+            font-size: 10px; color: #9ca3af;
+            transition: transform 0.2s;
+        }
+        .folder-toggle:hover { color: #4f46e5; }
+        .folder-toggle.expanded { transform: rotate(90deg); }
+        .folder-name {
+            flex: 1;
+            cursor: pointer;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .folder-actions {
+            display: flex; gap: 4px;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .folder-item:hover .folder-actions { opacity: 1; }
+        /* Folder notes snippet shown below folder header */
+        .folder-notes-snippet {
+            font-size: 11px;
+            color: #9ca3af;
+            font-style: italic;
+            padding: 0 10px 8px 34px;
+            line-height: 1.4;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .folder-children {
+            margin-left: 16px;
+            padding-left: 8px;
+            border-left: 1px solid rgba(79, 70, 229, 0.2);
+            display: none;
+            animation: slideDown 0.2s ease-out;
+        }
+        .folder-children.expanded { display: block; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .video-grid .video-thumbnail-container {
+            position: relative; width: 100%; height: 160px;
+        }
+        .video-grid .video-card-title-bottom {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 70%, transparent 100%);
+            padding: 30px 10px 10px;
+            color: white; font-size: 13px; font-weight: 600; line-height: 1.3;
+        }
+        .video-grid .video-progress-bar {
+            position: absolute; bottom: 0; left: 0;
+            height: 3px; background: #4f46e5; transition: width 0.3s; z-index: 1;
+        }
+        .video-grid .video-resume-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(79, 70, 229, 0.9); color: white;
+            padding: 4px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 600; z-index: 2;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .video-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+            transition: all 0.3s;
+            cursor: move;
+        }
+        .video-card:hover { transform: translateY(-5px); box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3); }
+        .video-card.dragging { opacity: 0.3; }
+        .video-thumbnail { width: 100%; height: 160px; object-fit: cover; background: #1a1a1a; cursor: pointer; }
+        .video-card-body { padding: 15px; }
+        .video-card-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; min-height: 40px; }
+        .video-folders { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+        .video-notes {
+            font-size: 12px; color: #d1d5db;
+            margin-bottom: 10px; font-style: italic;
+            max-height: 60px; overflow: hidden;
+        }
+        .video-card-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+        .video-card-actions button { flex: 1; padding: 8px; font-size: 12px; min-width: 60px; }
+        .reorder-controls { display: flex; gap: 3px; margin-top: 5px; }
+        .reorder-controls button { padding: 4px 8px; font-size: 11px; flex: 1; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content {
+            background: #2d2d2d; padding: 30px; border-radius: 12px;
+            max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-content h2 { margin-bottom: 16px; }
+        .modal-field { margin-bottom: 12px; }
+        .modal-field label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 5px; }
+        .modal-field input, .modal-field select, .modal-field textarea {
+            width: 100%; padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(79,70,229,0.3);
+            border-radius: 8px; color: #e0e0e0;
+            font-family: inherit; font-size: 14px;
+        }
+        .modal-field textarea { min-height: 80px; resize: vertical; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .folder-select { margin-bottom: 10px; }
+        .folder-select label { display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; cursor: pointer; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
+        .notif-toast {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(79,70,229,0.95); color: white;
+            padding: 15px 25px; border-radius: 8px;
+            z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: opacity 0.3s;
+        }
+        @media (max-width: 768px) {
+            .library-section { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <h1>🎬 Video Player &amp; Library</h1>
+            <div class="controls">
+                <input type="url" id="videoUrl" placeholder="Paste YouTube, Vimeo, or Dailymotion URL…">
+                <button onclick="addVideo()">Add Video</button>
+                <button onclick="createFolder()" class="btn-secondary">New Folder</button>
+                <button onclick="exportData()" class="btn-secondary">Export</button>
+                <button onclick="document.getElementById('importInput').click()" class="btn-secondary">Import</button>
+            </div>
+        </div>
+
+        <!-- Player -->
+        <div class="player-section" id="playerSection" style="display: none;">
+            <div class="video-wrapper" id="videoWrapper"></div>
+            <div class="video-info">
+                <div class="video-title" id="videoTitle" contenteditable="true" spellcheck="false" onblur="saveCurrentTitle()"></div>
+                <div class="video-title-hint">✏️ Click title above to rename</div>
+                <textarea id="videoNotes" placeholder="Add notes about this video…" onchange="saveCurrentNotes()"></textarea>
+                <div class="playlist-controls">
+                    <button onclick="prevVideo()">⏮ Prev</button>
+                    <button onclick="nextVideo()">Next ⏭</button>
+                    <button onclick="stopPlaylist()" class="btn-danger">⏹ Stop</button>
+                    <button onclick="toggleShuffle()" class="btn-secondary" id="shuffleBtn">🔀 Shuffle</button>
+                    <span id="playlistInfo" style="color: #9ca3af; font-size: 14px;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library -->
+        <div class="library-section">
+            <div class="sidebar">
+                <h2 style="margin-bottom: 12px;">Folders</h2>
+                <input type="text" id="searchInput" placeholder="Search videos…"
+                    style="width: 100%; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border: 2px solid rgba(79,70,229,0.3); border-radius: 8px; color: #e0e0e0;"
+                    oninput="renderVideos()">
+                <div id="folderTree"></div>
+            </div>
+            <div id="videoGrid" class="video-grid">
+                <div class="empty-state">
+                    <h3>Welcome to Your Video Library</h3>
+                    <p>Select a folder to view videos, or add a new video to get started.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Folder create/edit modal -->
+    <div class="modal" id="folderModal">
+        <div class="modal-content">
+            <h2 id="folderModalTitle">Create Folder</h2>
+            <div class="modal-field">
+                <label>Folder name</label>
+                <input type="text" id="folderNameInput" placeholder="e.g. Tutorials, Favorites…">
+            </div>
+            <div class="modal-field">
+                <label>Notes — describe what this folder is for</label>
+                <textarea id="folderNotesInput" placeholder="e.g. Beginner guitar lessons from YouTube…"></textarea>
+            </div>
+            <div class="modal-field">
+                <label>Parent folder</label>
+                <select id="parentSelect">
+                    <option value="">Root</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="btn-secondary">Cancel</button>
+                <button onclick="saveFolderModal()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign video to folders modal -->
+    <div class="modal" id="videoFoldersModal">
+        <div class="modal-content">
+            <h2>Assign to Folders</h2>
+            <div id="folderCheckboxes"></div>
+            <div class="modal-actions">
+                <button onclick="closeModal()" class="btn-secondary">Close</button>
+                <button onclick="saveVideoFolders()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleImport(event)">
+
+    <script>
+        let data = { videos: [], folders: [], folderStates: {} };
+        let currentFolder = 'dashboard';
+        let currentVideo = null;
+        let playlist = [];
+        let playlistIdx = 0;
+        let shuffle = false;
+        let editingFolder = null;
+        let editingVideo = null;
+
+        // ── Init ─────────────────────────────────────────────────────────
+        function init() {
+            const saved = localStorage.getItem('videoPlayerLibrary');
+            if (saved) {
+                try {
+                    data = JSON.parse(saved);
+                    if (!data.videos) data.videos = [];
+                    if (!data.folders) data.folders = [];
+                    if (!data.folderStates) data.folderStates = {};
+                    data.videos.forEach(v => {
+                        if (!v.folders) v.folders = [];
+                        if (!Array.isArray(v.folders)) v.folders = [];
+                        if (v.sortOrder === undefined) v.sortOrder = 0;
+                        if (v.lastPosition === undefined) v.lastPosition = 0;
+                        if (v.duration === undefined) v.duration = 0;
+                    });
+                } catch (e) {
+                    data = { videos: [], folders: [], folderStates: {} };
+                }
+            }
+            createSmartFolders();
+            renderFolders();
+            renderVideos();
+            setupDragDrop();
+        }
+
+        function save() {
+            localStorage.setItem('videoPlayerLibrary', JSON.stringify(data));
+        }
+
+        // ── Smart folders ────────────────────────────────────────────────
+        function createSmartFolders() {
+            const smart = [
+                { id: 'dashboard',     name: '🏠 Dashboard',      smart: true },
+                { id: 'all',           name: 'All Videos',         smart: true },
+                { id: 'recent-added',  name: 'Recently Added',     smart: true },
+                { id: 'recent-played', name: 'Recently Played',    smart: true }
+            ];
+            smart.forEach(s => {
+                if (!data.folders.find(f => f.id === s.id)) data.folders.unshift(s);
+            });
+        }
+
+        // ── URL parsing ──────────────────────────────────────────────────
+        function parseUrl(url) {
+            const yt = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const vm = /vimeo\.com\/(?:video\/)?(\d+)/;
+            const dm = /dailymotion\.com\/video\/([^_]+)/;
+            if (yt.test(url)) return { type: 'youtube',     id: url.match(yt)[1] };
+            if (vm.test(url)) return { type: 'vimeo',       id: url.match(vm)[1] };
+            if (dm.test(url)) return { type: 'dailymotion', id: url.match(dm)[1] };
+            if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) return { type: 'direct', url };
+            return null;
+        }
+
+        // ── Add video ────────────────────────────────────────────────────
+        function addVideo() {
+            const url = document.getElementById('videoUrl').value.trim();
+            if (!url) { showNotification('Paste a video URL first'); return; }
+            const p = parseUrl(url);
+            if (!p) { showNotification('URL not recognised — try YouTube, Vimeo, Dailymotion, or a direct .mp4 link'); return; }
+
+            const v = {
+                id: Date.now().toString(),
+                url,
+                type: p.type,
+                videoId: p.id || p.url,
+                title: p.type.charAt(0).toUpperCase() + p.type.slice(1) + ' Video',
+                thumbnail: p.type === 'youtube'
+                    ? `https://img.youtube.com/vi/${p.id}/hqdefault.jpg`
+                    : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="480" height="270"%3E%3Crect fill="%231a1a1a" width="480" height="270"/%3E%3Ctext fill="%234f46e5" font-size="20" x="50%25" y="50%25" text-anchor="middle"%3EVideo%3C/text%3E%3C/svg%3E',
+                notes: '',
+                folders: (currentFolder && !['dashboard','all','recent-added','recent-played'].includes(currentFolder)) ? [currentFolder] : [],
+                dateAdded: new Date().toISOString(),
+                lastPlayed: null,
+                sortOrder: data.videos.length,
+                lastPosition: 0,
+                duration: 0
+            };
+            data.videos.push(v);
+            save();
+            renderVideos();
+            document.getElementById('videoUrl').value = '';
+            showNotification('✓ Video added — click the title in the player to rename it');
+        }
+
+        // ── Play video ───────────────────────────────────────────────────
+        function playVideo(id, fromPlaylist = false) {
+            const v = data.videos.find(x => x.id === id);
+            if (!v) return;
+            v.lastPlayed = new Date().toISOString();
+            currentVideo = v;
+
+            document.getElementById('playerSection').style.display = 'block';
+            const w = document.getElementById('videoWrapper');
+
+            const onVideoEnd = () => {
+                if (playlist.length > 0) setTimeout(() => nextVideo(), 1000);
+            };
+            const saveProgress = () => {
+                if (!currentVideo) return;
+                const el = document.querySelector('#videoWrapper video');
+                if (el && !isNaN(el.currentTime) && !isNaN(el.duration)) {
+                    currentVideo.lastPosition = el.currentTime;
+                    currentVideo.duration = el.duration;
+                    save();
+                }
+            };
+
+            if (window.progressInterval) clearInterval(window.progressInterval);
+
+            if (v.type === 'youtube') {
+                const t = Math.floor(v.lastPosition || 0);
+                w.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}?autoplay=1&start=${t}&enablejsapi=1" allow="autoplay" allowfullscreen id="ytPlayer"></iframe>`;
+                if (window.YT && window.YT.Player) {
+                    setTimeout(() => {
+                        try {
+                            const player = new YT.Player('ytPlayer', {
+                                events: {
+                                    'onStateChange': e => { if (e.data === YT.PlayerState.ENDED) onVideoEnd(); },
+                                    'onReady': () => {
+                                        window.progressInterval = setInterval(() => {
+                                            if (currentVideo && player.getCurrentTime) {
+                                                try {
+                                                    currentVideo.lastPosition = player.getCurrentTime();
+                                                    currentVideo.duration = player.getDuration();
+                                                    save();
+                                                } catch(e) {}
+                                            }
+                                        }, 5000);
+                                    }
+                                }
+                            });
+                        } catch(e) {}
+                    }, 1000);
+                }
+            } else if (v.type === 'vimeo') {
+                const t = Math.floor(v.lastPosition || 0);
+                w.innerHTML = `<iframe src="https://player.vimeo.com/video/${v.videoId}?autoplay=1${t > 0 ? '#t=' + t + 's' : ''}" allow="autoplay" allowfullscreen></iframe>`;
+            } else if (v.type === 'dailymotion') {
+                const t = Math.floor(v.lastPosition || 0);
+                w.innerHTML = `<iframe src="https://www.dailymotion.com/embed/video/${v.videoId}?autoplay=1&start=${t}" allow="autoplay" allowfullscreen></iframe>`;
+            } else {
+                w.innerHTML = `<video src="${v.url}" controls autoplay id="directVideo"></video>`;
+                setTimeout(() => {
+                    const el = document.getElementById('directVideo');
+                    if (el) {
+                        if (v.lastPosition > 0) el.currentTime = v.lastPosition;
+                        el.addEventListener('ended', onVideoEnd);
+                        el.addEventListener('timeupdate', saveProgress);
+                        el.addEventListener('pause', saveProgress);
+                    }
+                }, 100);
+            }
+
+            save();
+            document.getElementById('videoTitle').textContent = v.title;
+            document.getElementById('videoNotes').value = v.notes || '';
+            if (fromPlaylist) updatePlaylistInfo();
+            document.getElementById('playerSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ── Inline title rename ──────────────────────────────────────────
+        function saveCurrentTitle() {
+            if (!currentVideo) return;
+            const newTitle = document.getElementById('videoTitle').textContent.trim();
+            if (newTitle && newTitle !== currentVideo.title) {
+                currentVideo.title = newTitle;
+                save();
+                renderVideos();
+                showNotification('✓ Title saved');
+            }
+        }
+
+        // ── Notes ────────────────────────────────────────────────────────
+        function saveCurrentNotes() {
+            if (currentVideo) {
+                currentVideo.notes = document.getElementById('videoNotes').value;
+                save();
+                renderVideos();
+            }
+        }
+
+        // ── Delete video ─────────────────────────────────────────────────
+        function deleteVideo(id) {
+            if (!confirm('Delete this video from your library?')) return;
+            data.videos = data.videos.filter(v => v.id !== id);
+            if (currentVideo && currentVideo.id === id) {
+                currentVideo = null;
+                document.getElementById('playerSection').style.display = 'none';
+            }
+            save();
+            renderVideos();
+        }
+
+        // ── Reorder ──────────────────────────────────────────────────────
+        function moveVideo(id, direction) {
+            const vids = getVideos(currentFolder);
+            const idx = vids.findIndex(v => v.id === id);
+            if (idx === -1) return;
+            if (direction === 'first') {
+                vids.forEach((v, i) => v.sortOrder = i === idx ? -1 : i);
+            } else if (direction === 'up' && idx > 0) {
+                [vids[idx].sortOrder, vids[idx-1].sortOrder] = [vids[idx-1].sortOrder, vids[idx].sortOrder];
+            } else if (direction === 'down' && idx < vids.length - 1) {
+                [vids[idx].sortOrder, vids[idx+1].sortOrder] = [vids[idx+1].sortOrder, vids[idx].sortOrder];
+            } else if (direction === 'last') {
+                vids.forEach((v, i) => v.sortOrder = i === idx ? 9999 : i);
+            }
+            vids.sort((a, b) => a.sortOrder - b.sortOrder);
+            vids.forEach((v, i) => v.sortOrder = i);
+            save();
+            renderVideos();
+        }
+
+        // ── Assign folders modal ─────────────────────────────────────────
+        function openVideoFolders(id) {
+            const v = data.videos.find(x => x.id === id);
+            if (!v) return;
+            editingVideo = v;
+            const userFolders = data.folders.filter(f => !f.smart);
+            const list = document.getElementById('folderCheckboxes');
+            if (userFolders.length === 0) {
+                list.innerHTML = '<p style="color:#9ca3af; padding: 8px;">No folders yet — create one first.</p>';
+            } else {
+                list.innerHTML = userFolders.map(f => `
+                    <div class="folder-select">
+                        <label>
+                            <input type="checkbox" value="${f.id}" ${v.folders.includes(f.id) ? 'checked' : ''}>
+                            📁 ${f.name}
+                        </label>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('videoFoldersModal').classList.add('show');
+        }
+
+        function saveVideoFolders() {
+            if (!editingVideo) return;
+            editingVideo.folders = Array.from(document.querySelectorAll('#folderCheckboxes input:checked')).map(cb => cb.value);
+            save();
+            renderVideos();
+            closeModal();
+        }
+
+        // ── Playlist ─────────────────────────────────────────────────────
+        function playFolder(id) {
+            const vids = getVideos(id);
+            if (vids.length === 0) { showNotification('Folder is empty'); return; }
+            playlist = shuffle ? shuffleArr([...vids]) : [...vids];
+            playlistIdx = 0;
+            playVideo(playlist[0].id, true);
+        }
+        function prevVideo() {
+            if (!playlist.length) return;
+            playlistIdx = (playlistIdx - 1 + playlist.length) % playlist.length;
+            playVideo(playlist[playlistIdx].id, true);
+        }
+        function nextVideo() {
+            if (!playlist.length) return;
+            playlistIdx = (playlistIdx + 1) % playlist.length;
+            playVideo(playlist[playlistIdx].id, true);
+        }
+        function stopPlaylist() {
+            playlist = []; playlistIdx = 0;
+            document.getElementById('playerSection').style.display = 'none';
+            if (window.progressInterval) clearInterval(window.progressInterval);
+            currentVideo = null;
+        }
+        function toggleShuffle() {
+            shuffle = !shuffle;
+            document.getElementById('shuffleBtn').textContent = shuffle ? '🔀 On' : '🔀 Shuffle';
+        }
+        function updatePlaylistInfo() {
+            if (playlist.length > 0)
+                document.getElementById('playlistInfo').textContent = `${playlistIdx + 1} / ${playlist.length}`;
+        }
+        function shuffleArr(a) {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // ── Get videos for folder ────────────────────────────────────────
+        function getVideos(fid) {
+            if (fid === 'dashboard') return [];
+            if (fid === 'all') return [...data.videos].sort((a, b) => a.sortOrder - b.sortOrder);
+            if (fid === 'recent-added') {
+                const week = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                return data.videos.filter(v => new Date(v.dateAdded) > week)
+                    .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+            }
+            if (fid === 'recent-played') {
+                return data.videos.filter(v => v.lastPlayed)
+                    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed))
+                    .slice(0, 20);
+            }
+            return data.videos.filter(v => v.folders && v.folders.includes(fid))
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+        }
+
+        // ── Folder expand/collapse ───────────────────────────────────────
+        function toggleFolder(id) {
+            data.folderStates[id] = !data.folderStates[id];
+            save();
+            renderFolders();
+        }
+
+        // ── Render sidebar ───────────────────────────────────────────────
+        function renderFolders() {
+            const renderF = (f) => {
+                const children = data.folders.filter(x => x.parent === f.id && !x.smart);
+                const cnt = getVideos(f.id).length;
+                const isExpanded = data.folderStates[f.id] || false;
+                const hasChildren = children.length > 0;
+                const icon = f.smart ? '' : '📁 ';
+
+                let html = `
+                    <div class="folder-item ${currentFolder === f.id ? 'active' : ''}"
+                         data-folder-id="${f.id}" ${!f.smart ? 'draggable="true"' : ''}>
+                        <div class="folder-header">
+                            <span class="folder-toggle ${isExpanded ? 'expanded' : ''}"
+                                onclick="event.stopPropagation(); toggleFolder('${f.id}')">${hasChildren ? '▶' : ''}</span>
+                            <span class="folder-name" onclick="selectFolder('${f.id}')">${icon}${f.name}${cnt > 0 ? ' <span style="color:#6b7280;font-weight:400">('+cnt+')</span>' : ''}</span>
+                            <div class="folder-actions" onclick="event.stopPropagation();">
+                                ${cnt > 0 ? `<button class="btn-secondary btn-small" onclick="event.stopPropagation(); playFolder('${f.id}')" title="Play all">▶</button>` : ''}
+                                ${!f.smart ? `
+                                    <button class="btn-secondary btn-small" onclick="event.stopPropagation(); editFolder('${f.id}')" title="Edit">✏️</button>
+                                    <button class="btn-danger btn-small" onclick="event.stopPropagation(); deleteFolder('${f.id}')" title="Delete">🗑️</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${f.notes ? `<div class="folder-notes-snippet">📝 ${f.notes}</div>` : ''}
+                `;
+                if (hasChildren) {
+                    html += `<div class="folder-children ${isExpanded ? 'expanded' : ''}">${children.map(c => renderF(c)).join('')}</div>`;
+                }
+                html += `</div>`;
+                return html;
+            };
+
+            const roots = data.folders.filter(f => !f.parent || f.smart);
+            document.getElementById('folderTree').innerHTML = roots.map(f => renderF(f)).join('');
+        }
+
+        function selectFolder(id) {
+            currentFolder = id;
+            renderFolders();
+            renderVideos();
+        }
+
+        // ── Render video grid ────────────────────────────────────────────
+        function renderVideos() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const grid = document.getElementById('videoGrid');
+
+            if (currentFolder === 'dashboard') {
+                const total = data.videos.length;
+                const withNotes = data.videos.filter(v => v.notes).length;
+                const folders = data.folders.filter(f => !f.smart).length;
+                const recent = data.videos.filter(v => new Date(v.dateAdded) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; padding:10px 0">
+                        ${[['🎬',total,'Total Videos'],['📁',folders,'Folders'],['📝',withNotes,'Have Notes'],['🆕',recent,'Added This Week']].map(([icon,n,label])=>`
+                            <div style="background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.3);border-radius:12px;padding:20px;text-align:center">
+                                <div style="font-size:2em;margin-bottom:8px">${icon}</div>
+                                <div style="font-size:2em;font-weight:700;color:#6366f1">${n}</div>
+                                <div style="font-size:12px;color:#9ca3af;margin-top:4px">${label}</div>
+                            </div>`).join('')}
+                    </div>
+                    <div style="grid-column:1/-1;color:#9ca3af;text-align:center;padding:10px 0;font-size:14px">
+                        Select a folder on the left, or click <strong style="color:#e0e0e0">All Videos</strong> to see everything.
+                    </div>`;
+                return;
+            }
+
+            let vids = getVideos(currentFolder);
+            if (search) {
+                vids = vids.filter(v =>
+                    v.title.toLowerCase().includes(search) ||
+                    (v.notes && v.notes.toLowerCase().includes(search))
+                );
+            }
+
+            if (vids.length === 0) {
+                grid.innerHTML = `<div class="empty-state"><h3>${search ? 'No results' : 'No videos here'}</h3><p>${search ? 'Try a different search.' : 'Add a video above or drag one from another folder.'}</p></div>`;
+                return;
+            }
+
+            const fallbackThumb = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22480%22 height=%22270%22%3E%3Crect fill=%22%231a1a1a%22 width=%22480%22 height=%22270%22/%3E%3Ctext fill=%22%234f46e5%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22%3EVideo%3C/text%3E%3C/svg%3E';
+
+            grid.innerHTML = vids.map(v => {
+                const fnames = (v.folders||[]).map(fid => data.folders.find(f => f.id===fid)).filter(Boolean).map(f => f.name).join(', ');
+                const progress = v.duration > 0 ? (v.lastPosition / v.duration) * 100 : 0;
+                const hasProgress = progress > 3 && progress < 97;
+                return `
+                    <div class="video-card" draggable="true" data-video-id="${v.id}">
+                        <div class="video-thumbnail-container">
+                            <img src="${v.thumbnail}" class="video-thumbnail" onclick="playVideo('${v.id}')" loading="lazy"
+                                onerror="this.src='${fallbackThumb}'">
+                            ${hasProgress ? `
+                                <div class="video-progress-bar" style="width:${progress.toFixed(1)}%"></div>
+                                <div class="video-resume-badge">${Math.floor(progress)}%</div>` : ''}
+                            <div class="video-card-title-bottom">${v.title}</div>
+                        </div>
+                        <div class="video-card-body">
+                            <div class="video-folders">📁 ${fnames || 'No folder'}</div>
+                            ${v.notes ? `<div class="video-notes">📝 ${v.notes}</div>` : '<div class="video-notes" style="color:#555">No notes</div>'}
+                            <div class="video-card-actions">
+                                <button onclick="playVideo('${v.id}')">▶ Play</button>
+                                <button onclick="openVideoFolders('${v.id}')" class="btn-secondary">Folders</button>
+                                <button onclick="deleteVideo('${v.id}')" class="btn-danger">Del</button>
+                            </div>
+                            <div class="reorder-controls">
+                                <button onclick="moveVideo('${v.id}','first')" class="btn-secondary" title="Move to first">⏮</button>
+                                <button onclick="moveVideo('${v.id}','up')" class="btn-secondary" title="Move up">↑</button>
+                                <button onclick="moveVideo('${v.id}','down')" class="btn-secondary" title="Move down">↓</button>
+                                <button onclick="moveVideo('${v.id}','last')" class="btn-secondary" title="Move to last">⏭</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── Folder CRUD ──────────────────────────────────────────────────
+        function createFolder() {
+            editingFolder = null;
+            document.getElementById('folderModalTitle').textContent = 'Create Folder';
+            document.getElementById('folderNameInput').value = '';
+            document.getElementById('folderNotesInput').value = '';
+            const sel = document.getElementById('parentSelect');
+            sel.innerHTML = '<option value="">Root</option>' +
+                data.folders.filter(f => !f.smart).map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+            document.getElementById('folderModal').classList.add('show');
+            setTimeout(() => document.getElementById('folderNameInput').focus(), 80);
+        }
+
+        function editFolder(id) {
+            const f = data.folders.find(x => x.id === id);
+            if (!f) return;
+            editingFolder = f;
+            document.getElementById('folderModalTitle').textContent = 'Edit Folder';
+            document.getElementById('folderNameInput').value = f.name;
+            document.getElementById('folderNotesInput').value = f.notes || '';
+            const sel = document.getElementById('parentSelect');
+            sel.innerHTML = '<option value="">Root</option>' +
+                data.folders.filter(x => !x.smart && x.id !== id).map(x =>
+                    `<option value="${x.id}" ${f.parent === x.id ? 'selected' : ''}>${x.name}</option>`
+                ).join('');
+            document.getElementById('folderModal').classList.add('show');
+        }
+
+        function deleteFolder(id) {
+            if (!confirm('Delete this folder? Videos inside will not be deleted.')) return;
+            data.videos.forEach(v => { if (v.folders) v.folders = v.folders.filter(fid => fid !== id); });
+            const removeF = fid => {
+                data.folders.filter(f => f.parent === fid).forEach(k => removeF(k.id));
+                data.folders = data.folders.filter(f => f.id !== fid);
+            };
+            removeF(id);
+            if (currentFolder === id) currentFolder = 'all';
+            save();
+            renderFolders();
+            renderVideos();
+        }
+
+        function saveFolderModal() {
+            const name = document.getElementById('folderNameInput').value.trim();
+            if (!name) { document.getElementById('folderNameInput').focus(); return; }
+            const parent = document.getElementById('parentSelect').value || null;
+            const notes = document.getElementById('folderNotesInput').value.trim();
+            if (editingFolder) {
+                editingFolder.name = name;
+                editingFolder.parent = parent;
+                editingFolder.notes = notes;
+            } else {
+                data.folders.push({ id: 'f-' + Date.now(), name, parent, notes, smart: false });
+            }
+            save();
+            renderFolders();
+            closeModal();
+            showNotification(editingFolder ? '✓ Folder updated' : '✓ Folder created');
+        }
+
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('show'));
+        }
+        document.addEventListener('click', e => {
+            if (e.target.classList.contains('modal')) closeModal();
+        });
+
+        // ── Export / Import ──────────────────────────────────────────────
+        function exportData() {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'video-library-' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function handleImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const imp = JSON.parse(ev.target.result);
+                    let importedFolders = 0, importedVideos = 0;
+
+                    if (imp.folders && Array.isArray(imp.folders)) {
+                        data.folders = imp.folders.filter(f => !f.isSeparator).map(f => {
+                            importedFolders++;
+                            const fid = String(f.id).startsWith('f-') ? String(f.id) : 'f-' + f.id;
+                            const rawPid = f.parentId || f.parent;
+                            const pid = rawPid ? (String(rawPid).startsWith('f-') ? String(rawPid) : 'f-' + rawPid) : null;
+                            return { id: fid, name: f.name, parent: pid, notes: f.notes || '', smart: false };
+                        });
+                    }
+
+                    const mapVid = v => {
+                        importedVideos++;
+                        let folders = [];
+                        if (v.folders && Array.isArray(v.folders)) {
+                            folders = v.folders.map(fid => { const s = String(fid); return s.startsWith('f-') ? s : 'f-' + s; });
+                        } else if (v.folderId) {
+                            const s = String(v.folderId); folders = [s.startsWith('f-') ? s : 'f-' + s];
+                        }
+                        return {
+                            id: v.id ? String(v.id) : Date.now() + '' + Math.random(),
+                            url: v.url || v.videoUrl || '',
+                            type: v.type || v.platform || 'youtube',
+                            videoId: v.videoId || v.embedId || '',
+                            title: v.title || 'Untitled Video',
+                            thumbnail: v.thumbnail || v.thumbnailUrl || '',
+                            notes: v.notes || v.description || '',
+                            folders,
+                            dateAdded: v.dateAdded || v.createdAt || new Date().toISOString(),
+                            lastPlayed: v.lastPlayed || v.lastWatched || null,
+                            sortOrder: v.sortOrder || 0,
+                            lastPosition: v.lastPosition || 0,
+                            duration: v.duration || 0
+                        };
+                    };
+
+                    if (imp.videos && Array.isArray(imp.videos)) {
+                        data.videos = imp.videos.map(mapVid);
+                    } else if (Array.isArray(imp)) {
+                        data.videos = imp.map(mapVid);
+                    }
+
+                    data.folderStates = {};
+                    save();
+                    createSmartFolders();
+                    renderFolders();
+                    renderVideos();
+                    showNotification(`✓ Imported ${importedVideos} video${importedVideos!==1?'s':''}, ${importedFolders} folder${importedFolders!==1?'s':''}`);
+                } catch (err) {
+                    showNotification('Import failed: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        // ── Drag & drop ──────────────────────────────────────────────────
+        function setupDragDrop() {
+            let draggedVideo = null;
+            let draggedFolder = null;
+
+            document.addEventListener('dragstart', e => {
+                const card = e.target.closest('.video-card');
+                const fi   = e.target.closest('.folder-item');
+                if (card) {
+                    draggedVideo = card.dataset.videoId;
+                    card.classList.add('dragging');
+                } else if (fi && fi.dataset.folderId && !['dashboard','all','recent-added','recent-played'].includes(fi.dataset.folderId)) {
+                    draggedFolder = fi.dataset.folderId;
+                    fi.classList.add('dragging');
+                }
+            });
+
+            document.addEventListener('dragend', () => {
+                document.querySelectorAll('.dragging, .drag-over').forEach(el => el.classList.remove('dragging','drag-over'));
+                draggedVideo = draggedFolder = null;
+            });
+
+            document.addEventListener('dragover', e => {
+                e.preventDefault();
+                const fi = e.target.closest('.folder-item');
+                if (fi) fi.classList.add('drag-over');
+            });
+
+            document.addEventListener('dragleave', e => {
+                const fi = e.target.closest('.folder-item');
+                if (fi && !fi.contains(e.relatedTarget)) fi.classList.remove('drag-over');
+            });
+
+            document.addEventListener('drop', e => {
+                e.preventDefault(); e.stopPropagation();
+                const fi = e.target.closest('.folder-item');
+                if (!fi) return;
+                const targetId = fi.dataset.folderId;
+                fi.classList.remove('drag-over');
+
+                if (draggedVideo && targetId) {
+                    if (['dashboard','all','recent-added','recent-played'].includes(targetId)) {
+                        showNotification('Cannot add to smart folders'); return;
+                    }
+                    const video = data.videos.find(v => v.id === draggedVideo);
+                    if (video) {
+                        if (!video.folders.includes(targetId)) {
+                            video.folders.push(targetId);
+                            save();
+                            setTimeout(() => {
+                                renderFolders(); renderVideos();
+                                showNotification(`✓ Added to "${data.folders.find(f => f.id===targetId)?.name||'folder'}"`);
+                            }, 50);
+                        } else { showNotification('Video already in that folder'); }
+                    }
+                } else if (draggedFolder && targetId && draggedFolder !== targetId) {
+                    if (['dashboard','all','recent-added','recent-played'].includes(targetId)) {
+                        showNotification('Cannot nest inside smart folders'); return;
+                    }
+                    const folder = data.folders.find(f => f.id === draggedFolder);
+                    if (folder) {
+                        folder.parent = targetId;
+                        save();
+                        setTimeout(() => { renderFolders(); showNotification('✓ Folder moved'); }, 50);
+                    }
+                }
+            });
+        }
+
+        // ── Toast ────────────────────────────────────────────────────────
+        function showNotification(message) {
+            const n = document.createElement('div');
+            n.className = 'notif-toast';
+            n.textContent = message;
+            document.body.appendChild(n);
+            setTimeout(() => { n.style.opacity = '0'; setTimeout(() => n.remove(), 300); }, 2500);
+        }
+
+        // ── YouTube IFrame API ───────────────────────────────────────────
+        const ytScript = document.createElement('script');
+        ytScript.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(ytScript);
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
