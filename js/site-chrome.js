@@ -79,6 +79,8 @@
     #axiom-privacy-badge {
       display: flex;
       align-items: center;
+      justify-content: center;
+      text-align: center;
       gap: 10px;
       max-width: 1100px;
       margin: 14px auto 0;
