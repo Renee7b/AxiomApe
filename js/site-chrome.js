@@ -83,31 +83,31 @@
       max-width: 1100px;
       margin: 14px auto 0;
       padding: 10px 16px;
-      background: rgba(34,197,94,0.08);
-      border: 1px solid rgba(34,197,94,0.25);
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
       border-radius: 8px;
-      color: #b8f0cc;
+      color: #166534;
       font-size: 0.82rem;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       line-height: 1.4;
     }
     #axiom-privacy-badge .apb-icon { font-size: 1.1rem; flex-shrink: 0; }
-    #axiom-privacy-badge strong { color: #e8eaf0; }
+    #axiom-privacy-badge strong { color: #14532d; }
 
     /* ── Mandatory AdSense / estimate disclaimer ── */
     #axiom-disclaimer {
       max-width: 1100px;
       margin: 32px auto 0;
       padding: 14px 18px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      color: #7a8094;
+      color: #64748b;
       font-size: 0.76rem;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       line-height: 1.6;
     }
-    #axiom-disclaimer strong { color: #9aa0b4; }
+    #axiom-disclaimer strong { color: #334155; }
 
     /* ── Ad placeholder: in-content leaderboard (728x90), desktop/tablet only ── */
     .axiom-ad-leaderboard {
