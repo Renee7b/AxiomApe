@@ -584,6 +584,86 @@
     }
   </style>
   <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+       SoftwareApplication: identifies this page as a free tool for
+       Google rich results and AdSense contextual targeting.
+       FAQPage: marks up the FAQ section near the bottom of the page.
+       ============================================================ -->
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "UUID Generator",
+      "description": "Free online UUID generator supporting Version 1, Version 4, and Version 7. Generate bulk UUIDs instantly in multiple formats: raw hex, uppercase, Base64, and code-ready output for JavaScript, Python, and SQL.",
+      "url": "https://axiomape.com/uuid-generator/",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the difference between Version 1, Version 4, and Version 7?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "All three versions produce a 128-bit UUID in the same 8-4-4-4-12 hex format, but they differ fundamentally in how those bits are filled. Version 1 was the original design. It encodes a 60-bit timestamp counting 100-nanosecond intervals since October 15, 1582 (the start of the Gregorian calendar reform), combined with a 48-bit Node ID derived from the machine's MAC (Media Access Control) address and a 14-bit clock sequence to handle clock resets. The problem: the timestamp bits are scattered across three separate UUID fields in a non-obvious byte order, making the resulting UUIDs non-sortable in databases without special handling. Additionally, embedding the MAC address raised privacy concerns. Version 4 abandoned time entirely. Every bit (except the 6 fixed version and variant bits) is independently random. This is the dominant choice for APIs and web systems because it reveals nothing about when or where it was created, and it is trivially simple to implement. Version 7, introduced in RFC 9562 in 2024, is the modern answer to v1's shortcomings. It places a standard 48-bit Unix millisecond timestamp in the most significant bits, followed by 74 bits of randomness. Because the timestamp occupies the highest-order bytes, v7 UUIDs sort naturally in lexicographic order, making them ideal for B-tree database indexes where sequential inserts dramatically outperform random ones."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is index fragmentation and why does UUIDv7 solve it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Most relational databases (PostgreSQL, MySQL, SQL Server) store table rows in a B-tree index ordered by the primary key. When you insert a new row, the database engine finds the correct sorted position in the index and places it there. If your primary key is an auto-incrementing integer, every new row goes to the end of the index - a sequential append that is extremely efficient. When your primary key is a Version 4 UUID, every new insert lands at a statistically random position deep inside the existing index tree. The database must split index pages to make room, rebalance nodes, and write changes across many scattered disk locations. This is called page fragmentation. In high-throughput systems inserting thousands of rows per second, v4 UUIDs can reduce write performance by 30% to 60% compared to sequential keys, and bloat the index size significantly due to wasted space in half-empty pages. Version 7 solves this because its leading 48 bits are a Unix millisecond timestamp. In practice, UUIDs generated within the same millisecond have the same timestamp prefix, so inserts cluster near the end of the index just like auto-increment integers. The trailing 74 random bits still guarantee global uniqueness across all nodes generating IDs simultaneously. You get the distributed uniqueness benefit of UUIDs and the index performance of sequential integers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Base64 encoding save space when transmitting identifiers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Base64 encoding is a method of representing arbitrary binary data using only 64 printable ASCII characters (A-Z, a-z, 0-9, +, /). A UUID in its standard hyphenated string form is 36 characters long (32 hex digits plus 4 hyphens). Each hex character represents 4 bits, meaning the full UUID is 128 bits of information packed into a 36-character ASCII string. If you instead encode the raw 16-byte (128-bit) UUID as Base64, you get a 24-character string (including the padding = sign). That is a 33% reduction in character count - meaningful at scale when transmitting millions of IDs per day in JSON payloads, HTTP headers, or database columns. Some systems use URL-safe Base64 (replacing + with - and / with _ ) to avoid encoding issues in URLs and cookies. The tradeoff is that Base64 UUIDs are less human-readable, harder to spot in logs, and require a decoding step before comparison. Base32 encoding (used in some systems like ULID) uses only uppercase letters and digits, avoiding ambiguous characters like O/0 and I/l. It produces 26-character identifiers from 128-bit UUIDs and is easier to type and dictate than Base64, though slightly longer."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can UUID collisions actually happen? What are the real odds?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For Version 4 UUIDs, the answer is technically yes but practically no. The birthday paradox tells us that collisions become probable once you have generated roughly the square root of the total space of identifiers. For a 122-bit random space (2^122 values), you would need to generate approximately 2^61 UUIDs - about 2.3 quintillion - before there is a 50% chance of any collision. At a rate of one billion UUIDs generated per second, reaching that threshold would take roughly 73 years of continuous generation. The more realistic collision risk is not mathematical - it is implementation failure. A broken CSPRNG, a low-entropy environment (a newly booted virtual machine with no network activity), or an incorrectly seeded random number library can produce correlated outputs that repeat. This is why production systems should always use OS-level randomness ( crypto.getRandomValues() in browsers, /dev/urandom on Linux, BCryptGenRandom on Windows) rather than language-level Math.random(), which is not cryptographically secure and uses a deterministic algorithm with a fixed seed. For Version 7, the timestamp prefix adds a practical layer of safety. Two UUIDs generated on different machines at different milliseconds cannot collide in their leading 48 bits, no matter how many are generated. Collision risk is confined to the 74-bit random suffix within a single millisecond window."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What exactly are the Version and Variant bits in a UUID?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A UUID is not 128 completely free bits. RFC 9562 reserves specific bit positions to encode metadata about the UUID's structure so any conforming parser can identify what kind of UUID it is reading. The Version bits occupy the four most significant bits of the third group (the 7th byte of the raw binary). For a v4 UUID, these bits are set to 0100 in binary (hex digit 4 ). For v1, they are 0001. For v7, they are 0111. This is why the third segment of any standard UUID always starts with 4 for v4, 1 for v1, or 7 for v7. The Variant bits occupy the two most significant bits of the fourth group (the 9th byte). RFC 9562-compliant UUIDs use the variant 10 in binary, meaning the first hex digit of the fourth segment is always 8, 9, a, or b. This is why every standard UUID you encounter has a digit in that position within that range. These bits distinguish RFC 9562 UUIDs from older formats (Microsoft's GUID variant, NCS backward-compatibility variant). Together, the version and variant fields consume exactly 6 bits, leaving 122 bits available for actual identifier data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "When should I use UUIDs instead of auto-increment integers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use UUIDs when: you are building a distributed system where multiple services or database shards must generate IDs independently without coordinating with a central sequence authority. Auto-increment integers require a single source of truth - in a sharded database this becomes a bottleneck or a single point of failure. UUIDs are also preferable when IDs will be exposed to end users or in URLs, because sequential integers reveal business information (your 1,000th customer gets ID 1000, revealing your total customer count). Additionally, UUIDs are naturally portable across systems - you can merge two databases without primary key conflicts. Use integers when: your application is a single-server relational database optimized for storage efficiency and query speed. A 4-byte integer versus a 16-byte UUID means foreign key columns, join tables, and indexes are all four times smaller. For applications that never need to merge datasets and operate from a single database instance, integer sequences offer better read performance and significantly smaller storage footprint. The emergence of Version 7 UUIDs has closed most of the performance gap for write-heavy workloads, making UUIDs a viable primary key choice even for demanding single-database applications where sequential insert performance was previously the decisive objection."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
 </head>
 <body>
 

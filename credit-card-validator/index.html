@@ -584,6 +584,78 @@
     }
   </style>
   <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+       SoftwareApplication: identifies this page as a free tool for
+       Google rich results and AdSense contextual targeting.
+       FAQPage: marks up the FAQ section near the bottom of the page.
+       ============================================================ -->
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Credit Card Validator",
+      "description": "Free, instant, 100% private credit card number validator. Verify any card number",
+      "url": "https://axiomape.com/credit-card-validator/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the Luhn Algorithm and why was it invented? &#9660;",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The Luhn Algorithm - also formally known as the Modulus 10 (or Mod 10) algorithm - was created by Hans Peter Luhn, a computer scientist at IBM, in 1954. Luhn's original goal was straightforward: design a fast, simple mathematical formula that could detect the most common type of data-entry error, a single mistyped digit, without requiring access to a database. The algorithm was patented by IBM but was quickly placed into the public domain, allowing it to be freely adopted across industries. Today it is the universal standard for validating not just credit card numbers, but also IMEI numbers on mobile phones, Canadian Social Insurance Numbers, and many other identification codes that require a built-in self-check. The core insight is elegant: by encoding a check digit (the last digit of every card number) based on all the preceding digits, any system can instantly verify whether a number is plausibly valid before even contacting a bank. This prevents simple typos from generating unnecessary and expensive bank authorization attempts. It is worth emphasizing that Luhn validation is a mathematical filter, not a security measure. A randomly generated number that passes the Luhn check is still completely fake and useless for any real transaction."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the difference between Luhn validation and actual bank authorization? &#9660;",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "This is the most critical distinction for any developer or merchant to understand. Luhn validation only checks whether a number's digits follow the correct mathematical pattern. It answers one narrow question: \"Is this sequence of digits structurally possible for a payment card?\" It says nothing about whether that card account exists, has sufficient funds, has not expired, has not been reported stolen, or has not been frozen. Bank authorization (also called a payment authorization or auth) is an entirely separate process. When a merchant submits a transaction, the payment gateway (such as Stripe or Braintree) encrypts the card data and sends it through the card network (Visa, Mastercard, etc.) directly to the cardholder's issuing bank. The bank checks the account in real time against its live records and returns an approval or a decline code. This process typically takes under two seconds but involves multiple secure server-to-server calls across multiple organizations. In a production eCommerce system, a smart implementation runs Luhn validation client-side (in the browser, instantly, as the user types) to catch obvious typos before the form is even submitted. This improves user experience and reduces wasted API calls. The actual bank authorization is then handled server-side (or via a tokenized client-side SDK like Stripe.js) after the user submits the form. Think of Luhn validation as the bouncer at the front door checking if a guest is on the list - it is fast but only a first filter. The bank is the final authority inside."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do the first digits identify the card network? (BIN and IIN explained) &#9660;",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Every payment card number is structured according to the ISO/IEC 7812 standard. The leading digits of a card number are not random - they encode metadata about the issuer and network. The first 6 digits are called the BIN (Bank Identification Number) or, using newer terminology, the IIN (Issuer Identification Number). The IIN term is preferred by modern standards bodies because it is more accurate: the prefix identifies the issuing institution, which may or may not be a traditional bank (it could be a credit union, a prepaid card provider, a fintech company, etc.). The very first digit of a card is called the MII (Major Industry Identifier) and gives a broad category. For example, 4 indicates banking and financial services (which is why all Visa cards start with 4). The BIN/IIN lookup logic used in this tool follows the well-known public detection rules: Visa starts with 4 (16 digits). Mastercard starts with 51-55 or 2221-2720 (16 digits). American Express starts with 34 or 37 (15 digits). Discover starts with 6011, 622126-622925, 644-649, or 65 (16 digits). JCB starts with 3528-3589. Diners Club starts with 300-305 or 36. Full BIN database lookups (which map a BIN to a specific bank, card type like debit or credit, country of issuance, and card level like Platinum or Signature) require subscriptions to commercial BIN databases maintained by the networks. This tool uses the publicly known prefix rules only, which are sufficient for identifying the network in real time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why is it safe to type card numbers into this specific browser tool? &#9660;",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "This is an entirely legitimate concern and you are right to ask it before using any online tool that handles payment data. The answer here is architectural: this tool is built as a static HTML/JavaScript page that runs entirely inside your own web browser. There is no backend server, no API call, and no network request of any kind triggered when you type a number into the input field. You can verify this yourself using your browser's built-in developer tools. Open the Network tab in DevTools (F12), then type a card number. You will see zero outgoing requests. Every calculation - the Luhn check, the BIN detection, the step-by-step breakdown - is performed by JavaScript code that was downloaded to your device when the page first loaded and then executes locally, in memory, in your browser's sandboxed JavaScript environment. Additionally, best security practice recommends using test card numbers (like those listed in the section below) rather than real card numbers when testing any tool of this nature. Test numbers are mathematically valid (they pass the Luhn check) but are not tied to any real account and cannot be used to conduct transactions. Real card numbers should only ever be entered into payment forms served by a PCI-DSS-compliant payment processor using tokenization (like Stripe.js or Braintree.js), which encrypts the number before it even leaves your browser."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is this tool useful for developers and QA engineers? &#9660;",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For frontend developers building checkout forms, this tool is a quick sanity check while writing or debugging client-side card validation logic. You can paste a number and instantly confirm whether your own implementation would accept or reject it, and compare against the step-by-step breakdown to find where your logic diverges from the standard Luhn spec. For QA engineers and testers, the test card section below provides a curated list of standard test numbers from major payment gateways (Stripe, PayPal). These numbers will pass Luhn validation and are recognized by sandbox/test environments, but they will always be declined in production. Running them through this tool before a testing session ensures they still check out structurally. For backend developers and security engineers, this tool illustrates why Luhn validation alone is never sufficient as a fraud prevention measure. Any fraudster knows the Luhn algorithm and can generate valid-looking numbers programmatically. Robust fraud prevention requires velocity checks, address verification (AVS), card security code verification (CVV/CVC), 3-D Secure authentication (Visa Secure, Mastercard Identity Check), and machine-learning-based risk scoring, all of which happen at the payment processor level after the Luhn pre-filter passes."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
 </head>
 <body>
 
@@ -597,10 +669,10 @@
   <!-- ============================================================
        MAIN PAGE WRAPPER
   ============================================================ -->
-  <main class="page-wrapper">
+  <main class="page-wrapper" id="main">
 
     <!-- Page Title -->
-    <header class="page-header">
+    <header class="page-header" role="banner">
       <h1>Credit Card Validator</h1>
       <p>Verify any card number's mathematical structure instantly using the Luhn Algorithm. 100% private - runs entirely in your browser.</p>
     </header>
