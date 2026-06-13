@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free Accounts Receivable DSO Calculator: measure your collections efficiency in real time. Enter total AR, credit sales, and a target DSO to instantly compute Days Sales Outstanding, average daily sales, DSO variance, and trapped cash. 100% client-side." />
+  <meta name="keywords" content="DSO calculator, days sales outstanding calculator, accounts receivable calculator, AR DSO, collections efficiency, cash conversion cycle calculator, credit sales calculator, average daily sales, trapped cash calculator, AR aging, invoice collections, receivables management, working capital calculator, net 30 calculator" />
+  <title>Accounts Receivable DSO Calculator: Track Collections Efficiency | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/accounts-receivable-dso/" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Accounts Receivable DSO Calculator",
+        "description": "Free Accounts Receivable DSO Calculator: measure your collections efficiency in real time. Enter total AR, credit sales, and a target DSO to instantly compute Days Sales Outstanding, average daily sales, DSO variance, and trapped cash. 100% client-side.",
+        "url": "https://axiomape.com/accounts-receivable-dso/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is considered a healthy DSO ratio?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A healthy DSO depends on your payment terms. As a general rule, your DSO should not exceed 1.5 times your standard net terms. If you offer Net 30, a DSO below 45 days is considered acceptable, while anything below 30 is excellent. B2B companies with Net 60 terms can reasonably operate with a DSO between 60 and 75 days. The critical benchmark is your own historical trend - a DSO that is rising quarter over quarter signals a worsening collections problem even if the absolute number still looks reasonable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why must I exclude cash sales from this calculation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Cash sales are collected at the point of transaction and never generate an accounts receivable balance. Including them in the denominator artificially inflates your credit sales figure, which makes your DSO look lower and healthier than it actually is. DSO is a measure of how quickly you collect on credit you have extended to customers. Blending cash transactions into the formula dilutes the signal and hides real collections problems. Always use only credit sales - invoiced amounts due at a future date - for an accurate result."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a high DSO affect corporate cash flow?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every extra day your DSO sits above your target represents cash that has been earned but not collected. That uncollected cash cannot pay suppliers, service debt, fund payroll, or be reinvested in growth. The effect compounds: a company with $50,000 in average daily sales and a DSO that is 10 days above target has $500,000 trapped in receivables. High DSO also increases the risk of bad debt write-offs, because the longer an invoice goes unpaid, the less likely it is to be collected in full."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are the best strategies to lower my DSO?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The most effective strategies are: invoice immediately upon delivery rather than batching invoices weekly or monthly; offer early-payment discounts such as 2/10 Net 30 to incentivize faster payment; implement automated payment reminders at 7, 3, and 1 day before the due date; require credit checks before extending terms to new customers; enforce late payment fees consistently; and review your payment terms - sometimes switching from Net 60 to Net 30 with a small discount is enough to substantially cut DSO. For chronic late payers, consider requiring partial prepayment or a deposit."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Brand palette - Corporate Accounting & Treasury */
+      --ledger-blue:       #3B82F6;
+      --ledger-blue-dark:  #2563EB;
+      --ledger-blue-bg:    rgba(59,130,246,.1);
+      --ledger-blue-pale:  rgba(59,130,246,.18);
+      --invoice-gray:      #64748B;
+      --invoice-gray-bg:   rgba(100,116,139,.1);
+
+      /* Page chrome */
+      --bg:          #0F1623;
+      --bg-card:     #1A2235;
+      --bg-card2:    #202C42;
+      --border:      #2D3F5C;
+      --border-light:#3A5070;
+
+      /* Text */
+      --text:        #E8EFF8;
+      --text-muted:  #8BA3C0;
+      --text-dim:    #5E7A99;
+
+      /* Status */
+      --green:       #10B981;
+      --green-bg:    rgba(16,185,129,.12);
+      --amber:       #F59E0B;
+      --amber-bg:    rgba(245,158,11,.15);
+      --red:         #EF4444;
+      --red-bg:      rgba(239,68,68,.15);
+
+      --radius:    14px;
+      --radius-sm: 9px;
+      --shadow:    0 4px 20px rgba(0,0,0,.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Hero header ─────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0A1929 0%, #0F2447 50%, #1A3A6E 100%);
+      padding: 52px 20px 44px;
+      text-align: center;
+      border-bottom: 3px solid var(--ledger-blue);
+    }
+
+    .tool-header h1 {
+      font-size: clamp(22px, 5vw, 33px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.025em;
+      color: #fff;
+    }
+
+    .tool-header h1 span { color: var(--ledger-blue); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: #93B4D8;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--ledger-blue);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 16px;
+      background: var(--ledger-blue);
+      border-radius: 2px;
+    }
+
+    /* ── Two-panel input grid ────────────────────────────────── */
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 580px) {
+      .panel-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+    }
+
+    .panel-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--invoice-gray);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .02em;
+    }
+
+    .field-note {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 13px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color .18s, box-shadow .18s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235E7A99' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      padding-right: 34px;
+      cursor: pointer;
+    }
+
+    select:focus,
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--ledger-blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    }
+
+    select option { background: #1A2235; }
+
+    /* Custom days field */
+    #custom-days-row { display: none; }
+
+    /* Target panel default value styling */
+    .target-default {
+      font-size: 11px;
+      color: var(--ledger-blue);
+      margin-top: 3px;
+    }
+
+    /* ── Output card ─────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .empty-state .es-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+      opacity: .5;
+    }
+
+    /* Hero DSO metric */
+    .hero-output {
+      text-align: center;
+      padding: 30px 20px 24px;
+      background: linear-gradient(135deg, rgba(59,130,246,.1) 0%, rgba(100,116,139,.06) 100%);
+      border: 1.5px solid rgba(59,130,246,.25);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      transition: border-color .3s, background .3s;
+    }
+
+    .hero-output.status-good {
+      border-color: rgba(16,185,129,.4);
+      background: linear-gradient(135deg, rgba(16,185,129,.1) 0%, rgba(16,185,129,.04) 100%);
+    }
+
+    .hero-output.status-warn {
+      border-color: rgba(245,158,11,.4);
+      background: linear-gradient(135deg, rgba(245,158,11,.1) 0%, rgba(245,158,11,.04) 100%);
+    }
+
+    .hero-output.status-danger {
+      border-color: rgba(239,68,68,.4);
+      background: linear-gradient(135deg, rgba(239,68,68,.1) 0%, rgba(239,68,68,.04) 100%);
+    }
+
+    .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-value {
+      font-size: clamp(42px, 10vw, 66px);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      color: var(--ledger-blue);
+      line-height: 1;
+      margin-bottom: 6px;
+      transition: color .3s;
+    }
+
+    .hero-value.status-good   { color: var(--green); }
+    .hero-value.status-warn   { color: var(--amber); }
+    .hero-value.status-danger { color: var(--red); }
+
+    .hero-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .status-badge.good   { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+    .status-badge.warn   { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+    .status-badge.danger { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+
+    /* Three-column metrics */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 560px) {
+      .metric-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 14px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ledger-blue);
+      letter-spacing: -.02em;
+      line-height: 1.1;
+    }
+
+    .metric-value.red   { color: var(--red); }
+    .metric-value.amber { color: var(--amber); }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    /* Trapped cash card - hidden by default */
+    #mc-trapped { display: none; }
+
+    /* ── Ad placements ───────────────────────────────────────── */
+    /* Controlled globally by site-chrome.js */
+
+    /* ── Glossary ────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 540px) {
+      .glossary-grid { grid-template-columns: 1fr; }
+    }
+
+    .glossary-item {
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--ledger-blue);
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ledger-blue);
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ─────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: -.02em;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 22px;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 10px;
+    }
+
+    .edu-section p {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ── FAQ accordion ───────────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      padding: 16px 18px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-card2);
+      transition: background .18s;
+    }
+
+    .faq-q:hover { background: var(--bg-card); }
+
+    .faq-chevron {
+      font-size: 12px;
+      color: var(--ledger-blue);
+      transition: transform .25s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 16px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── Tool disclaimer ─────────────────────────────────────── */
+    .tool-disclaimer {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 14px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+
+    /* ── Main layout spacing ─────────────────────────────────── */
+    main.main-content {
+      padding: 32px 0 60px;
+    }
+
+    .section-gap { margin-top: 24px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Tool header - no role="banner" (site-chrome.js provides the page banner) -->
+  <header class="tool-header">
+    <h1>Accounts Receivable <span>DSO Calculator</span></h1>
+    <p>Measure your collections efficiency instantly. Enter your AR balance, credit sales, and target DSO to see your Days Sales Outstanding and how much cash is tied up in receivables.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- == INPUT CARD =========================================== -->
+      <div class="card section-gap">
+
+        <div class="panel-grid">
+
+          <!-- Receivables Data Panel -->
+          <div class="panel">
+            <div class="panel-label">&#128196; Receivables Data</div>
+
+            <div class="field">
+              <label for="total-ar">Total Accounts Receivable ($)</label>
+              <input type="text" id="total-ar" placeholder="e.g. 150,000"
+                     oninput="fmtCurrency(this); recalculate()" />
+            </div>
+
+            <div class="field">
+              <label for="credit-sales">Total Credit Sales ($)</label>
+              <input type="text" id="credit-sales" placeholder="e.g. 600,000"
+                     oninput="fmtCurrency(this); recalculate()" />
+              <div class="field-note">Exclude cash sales, as they do not generate receivables.</div>
+            </div>
+
+            <div class="field">
+              <label for="reporting-period">Reporting Period</label>
+              <select id="reporting-period" onchange="handlePeriodChange()">
+                <option value="30">Monthly / 30 Days</option>
+                <option value="90">Quarterly / 90 Days</option>
+                <option value="365" selected>Annual / 365 Days</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div class="field" id="custom-days-row">
+              <label for="custom-days">Custom Days in Period</label>
+              <input type="text" id="custom-days" placeholder="e.g. 180"
+                     oninput="fmtInteger(this); recalculate()" />
+            </div>
+          </div>
+
+          <!-- Performance Targets Panel -->
+          <div class="panel">
+            <div class="panel-label">&#127919; Performance Targets</div>
+
+            <div class="field">
+              <label for="target-dso">Target DSO (Days)</label>
+              <input type="text" id="target-dso" value="45"
+                     oninput="fmtInteger(this); recalculate()" />
+              <div class="target-default">Industry benchmark: 30 to 45 days for Net 30 terms</div>
+            </div>
+          </div>
+
+        </div><!-- /panel-grid -->
+      </div><!-- /input card -->
+
+      <!-- == OUTPUT CARD ========================================== -->
+      <div class="card" id="output-card">
+
+        <div id="empty-state" class="empty-state">
+          <span class="es-icon">&#128202;</span>
+          Enter your accounts receivable and credit sales above to see your DSO analysis.
+        </div>
+
+        <div id="results" style="display:none">
+
+          <!-- Hero DSO metric -->
+          <div class="hero-output" id="hero-output">
+            <div class="hero-label">Days Sales Outstanding (DSO)</div>
+            <div class="hero-value" id="hero-value">--</div>
+            <div class="hero-sub">days to collect on average</div>
+            <div id="status-badge-container"></div>
+          </div>
+
+          <!-- Three-column metrics -->
+          <div class="metric-grid">
+
+            <div class="metric-card">
+              <div class="metric-label">Average Daily Sales</div>
+              <div class="metric-value" id="out-daily-sales">--</div>
+              <div class="metric-sub">revenue earned per day</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">Target DSO Variance</div>
+              <div class="metric-value" id="out-variance">--</div>
+              <div class="metric-sub" id="out-variance-sub">days vs. target</div>
+            </div>
+
+            <div class="metric-card" id="mc-trapped">
+              <div class="metric-label">Trapped Cash in Receivables</div>
+              <div class="metric-value red" id="out-trapped">--</div>
+              <div class="metric-sub">cash freed if target DSO met</div>
+            </div>
+
+          </div><!-- /metric-grid -->
+
+        </div><!-- /results -->
+      </div><!-- /output card -->
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- ============================================================
+           GLOSSARY
+      ============================================================ -->
+      <div class="card section-gap">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Days Sales Outstanding (DSO)</div>
+            <div class="glossary-def">The average number of days it takes a company to collect payment after a credit sale. Lower is better - a falling DSO means faster cash collection.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Accounts Receivable (AR)</div>
+            <div class="glossary-def">Money owed to a business by its customers for goods or services delivered on credit. AR sits on the balance sheet as a current asset until collected.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Credit Sales</div>
+            <div class="glossary-def">Sales made on account where payment is deferred to a future date - typically governed by terms like Net 30 or Net 60. Excludes cash and card transactions paid at the time of sale.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Average Daily Sales</div>
+            <div class="glossary-def">Total credit sales divided by the number of days in the period. This figure represents how much revenue is generated each day and is the denominator of the DSO formula.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Liquidity</div>
+            <div class="glossary-def">A company's ability to meet its short-term financial obligations. High DSO reduces liquidity because earned revenue is locked in receivables rather than available as cash.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Cash Conversion Cycle</div>
+            <div class="glossary-def">The total number of days it takes to convert investments in inventory and other resources into cash flows from sales. DSO is one of three components alongside DIO and DPO.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Net 30 Terms</div>
+            <div class="glossary-def">A common payment term requiring the invoice to be paid in full within 30 calendar days of the invoice date. Net 60 and Net 90 are common alternatives for longer payment windows.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">DSO Variance</div>
+            <div class="glossary-def">The difference between your actual DSO and your target DSO. A positive variance means you are collecting slower than your goal, and each extra day represents trapped cash equal to your average daily sales.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============================================================
+           EDUCATIONAL SECTION
+      ============================================================ -->
+      <div class="card edu-section section-gap">
+        <h2>The Complete Guide to Days Sales Outstanding (DSO)</h2>
+
+        <p class="section-intro">Days Sales Outstanding is one of the most important metrics in corporate treasury and accounts receivable management. It measures the average number of days between issuing an invoice and receiving payment. A company with tight DSO control collects its earned revenue quickly, keeps its working capital lean, and rarely needs to tap a line of credit to cover operational gaps. A company with a rising DSO is quietly bleeding cash - it has made the sales on paper but cannot use that money until the invoice is paid.</p>
+
+        <h3>How to use this calculator</h3>
+        <p>Start by selecting your reporting period - monthly, quarterly, or annual. Enter your total accounts receivable balance from your balance sheet and your total credit sales from your income statement for the same period. The calculator instantly computes your DSO, average daily sales, and compares the result against your target. If your actual DSO exceeds your target, the tool also shows you exactly how much cash is currently trapped in receivables above what it should be.</p>
+        <p>Set your Target DSO in the Performance Targets panel to match your standard payment terms. If you offer Net 30, try a target of 35 to 45 days. If you offer Net 60, set 65 to 75. The tool dynamically color-codes your DSO in green when you are at or below target, amber for a moderate overage, and red for a significant gap - so the health of your collections is immediately visible.</p>
+
+        <h3>The DSO formula explained</h3>
+        <p>DSO is calculated by dividing your accounts receivable balance by your total credit sales, then multiplying by the number of days in the period: DSO = (AR / Credit Sales) x Days. This tells you how many days of revenue is currently sitting uncollected. Average Daily Sales is simply Credit Sales divided by Days in the period, and represents the cash your business earns each day. Every day your DSO exceeds your target, you are forgoing one more day of that average daily sales figure.</p>
+
+        <h3>DSO benchmarks by industry</h3>
+        <p>Benchmark context matters as much as the raw number. Software and SaaS companies using monthly subscriptions often achieve DSO below 30 days because payments are automatic. Professional services firms with Net 30 terms typically run between 35 and 55 days. Manufacturing companies with Net 60 B2B terms often see 60 to 80 days as normal. Construction and government contracting can see DSO above 90 days due to lengthy approval cycles. The most meaningful benchmark is always your own standard payment terms - if your DSO is running 40 percent above your net terms, that signals a collections problem regardless of what industry peers do.</p>
+
+        <h3>How trapped cash ties into working capital</h3>
+        <p>Each day your DSO exceeds your target, additional cash is locked in receivables. If your average daily sales are $20,000 and you are running 10 days above your target DSO, that is $200,000 of earned revenue sitting uncollected. That money could eliminate a short-term borrowing need, fund a marketing campaign, or simply sit in a money market account earning interest. Reducing DSO is one of the fastest ways to improve free cash flow without changing the underlying business model at all.</p>
+
+        <!-- FAQ -->
+        <h3 style="margin-top:28px">Frequently Asked Questions</h3>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            What is considered a healthy DSO ratio?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">A healthy DSO depends on your payment terms. As a general rule, your DSO should not exceed 1.5 times your standard net terms. If you offer Net 30, a DSO below 45 days is considered acceptable, while anything below 30 is excellent. B2B companies with Net 60 terms can reasonably operate with a DSO between 60 and 75 days. The critical benchmark is your own historical trend - a DSO that is rising quarter over quarter signals a worsening collections problem even if the absolute number still looks reasonable.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            Why must I exclude cash sales from this calculation?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">Cash sales are collected at the point of transaction and never generate an accounts receivable balance. Including them in the denominator artificially inflates your credit sales figure, which makes your DSO look lower and healthier than it actually is. DSO is a measure of how quickly you collect on credit you have extended to customers. Blending cash transactions into the formula dilutes the signal and hides real collections problems. Always use only credit sales - invoiced amounts due at a future date - for an accurate result.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            How does a high DSO affect corporate cash flow?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">Every extra day your DSO sits above your target represents cash that has been earned but not collected. That uncollected cash cannot pay suppliers, service debt, fund payroll, or be reinvested in growth. The effect compounds: a company with $50,000 in average daily sales and a DSO that is 10 days above target has $500,000 trapped in receivables. High DSO also increases the risk of bad debt write-offs, because the longer an invoice goes unpaid, the less likely it is to be collected in full.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            What are the best strategies to lower my DSO?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">The most effective strategies are: invoice immediately upon delivery rather than batching invoices weekly or monthly; offer early-payment discounts such as 2/10 Net 30 to incentivize faster payment; implement automated payment reminders at 7, 3, and 1 day before the due date; require credit checks before extending terms to new customers; enforce late payment fees consistently; and review your payment terms - sometimes switching from Net 60 to Net 30 with a small discount is enough to substantially cut DSO. For chronic late payers, consider requiring partial prepayment or a deposit.</div>
+        </div>
+
+      </div><!-- /edu-section -->
+
+      <div class="tool-disclaimer section-gap">
+        This calculator is for informational and planning purposes only. Results are estimates based on the values you enter. Consult a qualified accountant, CPA, or treasury professional for financial decisions.
+      </div>
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       UTILITY: Format inputs
+    ============================================================ */
+    function fmtCurrency(el) {
+      const raw = el.value.replace(/[^0-9]/g, '');
+      el.value = raw ? Number(raw).toLocaleString('en-US') : '';
+    }
+
+    function fmtInteger(el) {
+      el.value = el.value.replace(/[^0-9]/g, '');
+    }
+
+    function parseVal(id) {
+      const raw = document.getElementById(id).value.replace(/[^0-9.]/g, '');
+      return parseFloat(raw) || 0;
+    }
+
+    function fmtMoney(n) {
+      if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
+      if (n >= 1_000)     return '$' + Math.round(n).toLocaleString('en-US');
+      return '$' + n.toFixed(2);
+    }
+
+    /* ============================================================
+       PERIOD DROPDOWN HANDLER
+    ============================================================ */
+    function handlePeriodChange() {
+      const sel = document.getElementById('reporting-period');
+      const customRow = document.getElementById('custom-days-row');
+      if (sel.value === 'custom') {
+        customRow.style.display = 'flex';
+      } else {
+        customRow.style.display = 'none';
+      }
+      recalculate();
+    }
+
+    function getDays() {
+      const sel = document.getElementById('reporting-period');
+      if (sel.value === 'custom') {
+        return parseVal('custom-days') || 0;
+      }
+      return parseInt(sel.value, 10);
+    }
+
+    /* ============================================================
+       MAIN CALCULATION ENGINE
+    ============================================================ */
+    function recalculate() {
+      const ar          = parseVal('total-ar');
+      const creditSales = parseVal('credit-sales');
+      const days        = getDays();
+      const targetDSO   = parseVal('target-dso') || 45;
+
+      const emptyState = document.getElementById('empty-state');
+      const results    = document.getElementById('results');
+
+      if (ar <= 0 || creditSales <= 0 || days <= 0) {
+        emptyState.style.display = 'block';
+        results.style.display    = 'none';
+        return;
+      }
+
+      /* -- Core DSO math -- */
+      const avgDailySales = creditSales / days;
+      const dso           = (ar / creditSales) * days;
+
+      /* -- Performance math -- */
+      const variance    = dso - targetDSO;
+      const trappedCash = variance > 0 ? variance * avgDailySales : 0;
+
+      /* -- Status classification -- */
+      // Good: at or below target
+      // Warn: up to 50% over target
+      // Danger: more than 50% over target
+      let status = 'good';
+      if (dso > targetDSO * 1.5) {
+        status = 'danger';
+      } else if (dso > targetDSO) {
+        status = 'warn';
+      }
+
+      /* -- Render hero -- */
+      const heroOut   = document.getElementById('hero-output');
+      const heroVal   = document.getElementById('hero-value');
+      const badgeCont = document.getElementById('status-badge-container');
+
+      heroVal.textContent = dso.toFixed(1);
+      heroOut.className   = 'hero-output';
+      heroVal.className   = 'hero-value';
+
+      if (status === 'good') {
+        heroOut.classList.add('status-good');
+        heroVal.classList.add('status-good');
+        badgeCont.innerHTML = '<span class="status-badge good">&#10003; On Target</span>';
+      } else if (status === 'warn') {
+        heroOut.classList.add('status-warn');
+        heroVal.classList.add('status-warn');
+        badgeCont.innerHTML = '<span class="status-badge warn">&#9651; Above Target</span>';
+      } else {
+        heroOut.classList.add('status-danger');
+        heroVal.classList.add('status-danger');
+        badgeCont.innerHTML = '<span class="status-badge danger">&#9888; Collections Alert</span>';
+      }
+
+      /* -- Render metric cards -- */
+      document.getElementById('out-daily-sales').textContent = fmtMoney(avgDailySales);
+
+      const varEl  = document.getElementById('out-variance');
+      const varSub = document.getElementById('out-variance-sub');
+      const varSign = variance >= 0 ? '+' : '';
+      varEl.textContent = varSign + variance.toFixed(1) + ' days';
+      if (variance > 0) {
+        varEl.className = 'metric-value red';
+        varSub.textContent = 'days over target';
+      } else if (variance < 0) {
+        varEl.className = 'metric-value';
+        varEl.style.color = 'var(--green)';
+        varSub.textContent = 'days under target';
+      } else {
+        varEl.className = 'metric-value';
+        varEl.style.color = '';
+        varSub.textContent = 'days vs. target';
+      }
+
+      /* -- Trapped cash card -- */
+      const trappedCard = document.getElementById('mc-trapped');
+      if (trappedCash > 0) {
+        document.getElementById('out-trapped').textContent = fmtMoney(trappedCash);
+        trappedCard.style.display = 'block';
+      } else {
+        trappedCard.style.display = 'none';
+      }
+
+      emptyState.style.display = 'none';
+      results.style.display    = 'block';
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>

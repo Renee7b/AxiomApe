@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Property Tax Estimator: Calculate Annual Taxes by Millage Rate | AxiomApe</title>
+  <meta name="description" content="Free property tax estimator. Enter your home's market value, assessment ratio, exemptions, and local millage rate to instantly calculate your annual and monthly property tax." />
+  <meta name="keywords" content="property tax estimator, millage rate calculator, assessed value calculator, homestead exemption, annual property tax, monthly escrow estimate, effective tax rate" />
+  <link rel="canonical" href="https://axiomape.com/property-tax-estimator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Property Tax Estimator",
+        "description": "Free property tax estimator. Enter your home's market value, assessment ratio, exemptions, and local millage rate to instantly calculate your annual and monthly property tax.",
+        "url": "https://axiomape.com/property-tax-estimator/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a millage rate and how does it work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A millage rate is the tax rate applied to a property's assessed value, expressed in mills. One mill equals $1 of tax for every $1,000 of assessed value. So a 20-mill rate on a $200,000 assessed value produces a $4,000 annual tax bill. Local governments - counties, cities, and school districts - each set their own millage rates, and your total rate is the sum of all applicable levies."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is my assessed value different from my home's market value?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Many states and counties only tax a fraction of a property's fair market value. This fraction is called the assessment ratio. For example, a state with a 40% assessment ratio taxes a $300,000 home as if it were worth $120,000. Some states assess at 100% of market value, while others use ratios as low as 10%. Your county assessor sets the assessed value based on periodic appraisals, and that number can lag actual market prices."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do homestead exemptions save me money?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A homestead exemption reduces the taxable value of your primary residence before the tax rate is applied, which directly lowers your bill. For example, if your assessed value is $250,000 and your county offers a $25,000 homestead exemption, you are only taxed on $225,000. Many states also offer additional exemptions for seniors, veterans, or people with disabilities. Enter the total dollar value of all your exemptions in this calculator to see your true taxable value."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are property taxes paid monthly or annually?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Property taxes are typically billed once or twice a year by your local government - not monthly. However, if you have a mortgage, your lender usually collects a prorated amount each month and holds it in an escrow account, then pays the tax bill on your behalf when it comes due. The monthly escrow estimate in this calculator shows what that monthly collection amount would be."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Civic Finance palette */
+      --civic-navy:      #1E3A8A;
+      --civic-navy-mid:  #1e40af;
+      --civic-navy-light:#2563eb;
+      --tax-green:       #10B981;
+      --tax-green-dark:  #059669;
+      --tax-green-glow:  rgba(16,185,129,.15);
+
+      /* Dark base */
+      --bg:          #0f172a;
+      --bg-card:     #1e293b;
+      --bg-input:    #0f172a;
+      --border:      #334155;
+      --border-focus:#1E3A8A;
+
+      --text-main:   #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-label:  #cbd5e1;
+
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.3);
+      --shadow-md:   0 4px 16px rgba(0,0,0,.4);
+      --shadow-lg:   0 10px 40px rgba(0,0,0,.5);
+
+      --radius:      14px;
+      --radius-sm:   8px;
+      --font:        'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* =============================================
+       TOP NAV (hidden by site-chrome)
+    ============================================= */
+    .top-nav {
+      background: var(--civic-navy);
+      padding: 10px 0;
+      text-align: center;
+    }
+    .top-nav a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    /* =============================================
+       PAGE HEADER
+    ============================================= */
+    .page-header {
+      background: linear-gradient(135deg, var(--civic-navy) 0%, var(--civic-navy-mid) 60%, #1e3a8a 100%);
+      color: #fff;
+      text-align: center;
+      padding: 52px 20px 44px;
+      border-bottom: 2px solid var(--tax-green);
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.3rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+    .page-header h1 span { color: var(--tax-green); }
+    .page-header p {
+      font-size: 1rem;
+      color: #bfdbfe;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       MAIN LAYOUT
+    ============================================= */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    /* =============================================
+       CARD
+    ============================================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px 24px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--tax-green);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 18px;
+      background: var(--tax-green);
+      border-radius: 2px;
+    }
+
+    /* =============================================
+       TOOL LAYOUT: TWO-COLUMN
+    ============================================= */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 700px) {
+      .tool-grid { grid-template-columns: 1fr; }
+    }
+
+    /* =============================================
+       INPUT GROUP
+    ============================================= */
+    .input-group {
+      margin-bottom: 20px;
+    }
+    .input-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text-label);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 7px;
+    }
+    label .label-note {
+      font-weight: 400;
+      text-transform: none;
+      color: var(--text-muted);
+      font-size: .78rem;
+      letter-spacing: 0;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-size: 1rem;
+      font-family: var(--font);
+      transition: border-color .2s, box-shadow .2s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    input[type="number"]:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--civic-navy-light);
+      box-shadow: 0 0 0 3px rgba(30,58,138,.35);
+    }
+
+    /* Range slider */
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--civic-navy-light);
+      border: 2px solid var(--tax-green);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--tax-green);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--civic-navy-light);
+      border: 2px solid var(--tax-green);
+      cursor: pointer;
+    }
+    .slider-val {
+      min-width: 52px;
+      text-align: right;
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--tax-green);
+    }
+
+    /* =============================================
+       TAX RATE FORMAT TOGGLE
+    ============================================= */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .toggle-label {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text-label);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .toggle-switch {
+      display: flex;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 30px;
+      overflow: hidden;
+    }
+    .toggle-switch button {
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 30px;
+      transition: background .2s, color .2s;
+      font-family: var(--font);
+    }
+    .toggle-switch button.active {
+      background: var(--civic-navy);
+      color: #fff;
+      box-shadow: 0 0 0 2px var(--tax-green) inset;
+    }
+
+    /* =============================================
+       OUTPUT SECTION
+    ============================================= */
+    .output-hero {
+      text-align: center;
+      padding: 28px 20px;
+      background: linear-gradient(135deg, #0f2044 0%, #1a3460 100%);
+      border: 1.5px solid var(--civic-navy-light);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(30,58,138,.25);
+    }
+    .output-hero-label {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #93c5fd;
+      margin-bottom: 6px;
+    }
+    .output-hero-value {
+      font-size: clamp(2.2rem, 6vw, 3.4rem);
+      font-weight: 900;
+      color: var(--tax-green);
+      line-height: 1;
+      letter-spacing: -.03em;
+    }
+    .output-hero-sub {
+      font-size: .82rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 580px) {
+      .metrics-row { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: #162032;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 14px;
+      text-align: center;
+      transition: border-color .2s;
+    }
+    .metric-card:hover { border-color: var(--civic-navy-mid); }
+    .metric-label {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+    .metric-value.green { color: var(--tax-green); }
+    .metric-value.blue  { color: #60a5fa; }
+
+    /* Zero-state helper */
+    .zero-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .9rem;
+      padding: 10px 0 2px;
+    }
+
+    /* =============================================
+       AD PLACEMENTS
+    ============================================= */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .75rem;
+      padding: 8px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      margin: 8px auto;
+    }
+
+    /* =============================================
+       GLOSSARY
+    ============================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: #162032;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--tax-green);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: .88rem;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: .8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* =============================================
+       EDUCATIONAL SECTION
+    ============================================= */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      font-size: .95rem;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--tax-green);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: .9rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      background: #162032;
+      border: none;
+      padding: 14px 18px;
+      text-align: left;
+      color: var(--text-main);
+      font-size: .92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font);
+      transition: background .2s;
+    }
+    .faq-q:hover { background: #1a2a42; }
+    .faq-q .chevron {
+      font-size: .75rem;
+      color: var(--tax-green);
+      transition: transform .25s;
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+    .faq-q[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      color: var(--text-muted);
+      font-size: .88rem;
+      line-height: 1.7;
+      background: #0f172a;
+      border-top: 1px solid var(--border);
+    }
+    .faq-a.open { display: block; }
+
+    /* tool-specific disclaimer */
+    .tool-disclaimer {
+      margin-top: 10px;
+      padding: 12px 16px;
+      background: rgba(30,58,138,.12);
+      border: 1px solid rgba(30,58,138,.4);
+      border-radius: var(--radius-sm);
+      font-size: .78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 500px) {
+      .card { padding: 20px 16px; }
+      .output-hero { padding: 20px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="top-nav"><a href="https://axiomape.com">axiomape.com</a></nav>
+
+  <header class="page-header">
+    <h1>Property Tax Estimator: <span>Calculate Annual Taxes by Millage Rate</span></h1>
+    <p>Enter your home's market value, assessment ratio, exemptions, and local millage rate. Your estimated annual tax, monthly escrow amount, and effective rate update instantly.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         TOOL CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="tool-grid">
+
+        <!-- LEFT: Property Valuation -->
+        <div>
+          <div class="card-title">Property Valuation</div>
+
+          <div class="input-group">
+            <label for="mktVal">Fair Market Value ($) <span class="label-note">Your home's current market price</span></label>
+            <input type="text" id="mktVal" inputmode="numeric" placeholder="350,000" value="350,000" oninput="sanitizeCurrency(this); compute();" />
+          </div>
+
+          <div class="input-group">
+            <label for="assessRatio">Assessment Ratio (%) <span class="label-note">Fraction of market value that is taxed</span></label>
+            <div class="slider-wrap">
+              <input type="range" id="assessRatioSlider" min="10" max="100" step="1" value="100"
+                oninput="document.getElementById('assessRatio').value=this.value; document.getElementById('ratioDisplay').textContent=this.value+'%'; compute();" />
+              <span class="slider-val" id="ratioDisplay">100%</span>
+            </div>
+            <input type="number" id="assessRatio" min="10" max="100" step="1" value="100" style="margin-top:8px;"
+              oninput="let v=Math.min(100,Math.max(10,+this.value||100)); document.getElementById('assessRatioSlider').value=v; document.getElementById('ratioDisplay').textContent=v+'%'; compute();" />
+          </div>
+
+          <div class="input-group">
+            <label for="exemptions">Total Exemptions ($) <span class="label-note">Homestead, senior, veteran, etc.</span></label>
+            <input type="text" id="exemptions" inputmode="numeric" placeholder="0" value="0" oninput="sanitizeCurrency(this); compute();" />
+          </div>
+        </div>
+
+        <!-- RIGHT: Local Tax Rates + Output -->
+        <div>
+          <div class="card-title">Local Tax Rate</div>
+
+          <div class="toggle-row">
+            <span class="toggle-label">Format:</span>
+            <div class="toggle-switch" role="group" aria-label="Tax rate format">
+              <button id="btnMill" class="active" onclick="setFormat('mill')">Millage (Mills)</button>
+              <button id="btnPct"  onclick="setFormat('pct')">Percentage (%)</button>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="taxRate" id="rateLabel">Local Tax Rate (Mills) <span class="label-note" id="rateHint">e.g. 20 mills = $20 per $1,000</span></label>
+            <input type="number" id="taxRate" min="0" step="0.01" value="20" inputmode="decimal"
+              oninput="compute();" onchange="compute();" />
+          </div>
+
+          <!-- Output hero -->
+          <div class="output-hero">
+            <div class="output-hero-label">Estimated Annual Property Tax</div>
+            <div class="output-hero-value" id="annualTax">$0</div>
+            <div class="output-hero-sub" id="taxHeroSub">Enter values above to calculate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Three-column metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">Taxable Property Value</div>
+          <div class="metric-value blue" id="taxableVal">$0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Monthly Escrow Estimate</div>
+          <div class="metric-value green" id="monthlyEscrow">$0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Effective Tax Rate</div>
+          <div class="metric-value" id="effectiveRate">0.00%</div>
+        </div>
+      </div>
+
+      <p class="zero-state" id="zeroNote" style="display:none;">Taxable value is $0 after exemptions - no property tax is due.</p>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Millage Rate (Mills)</div>
+          <div class="glossary-def">A tax rate expressed as dollars per $1,000 of assessed value. A 15-mill rate on a $100,000 assessed value = $1,500 in annual taxes.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Fair Market Value</div>
+          <div class="glossary-def">The price a buyer and seller would agree on in an open, arm's-length transaction. This is your home's realistic sale price.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Assessed Value</div>
+          <div class="glossary-def">The value assigned to your property by your local assessor's office. It equals Fair Market Value multiplied by the Assessment Ratio.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Taxable Value</div>
+          <div class="glossary-def">Assessed Value minus any exemptions you qualify for. This is the number the millage rate is applied to when computing your bill.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Assessment Ratio</div>
+          <div class="glossary-def">The percentage of fair market value that a jurisdiction uses as the taxable base. Many states use 100%, but some use fractional ratios (40%, 25%, etc.).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Homestead Exemption</div>
+          <div class="glossary-def">A flat dollar reduction applied to the assessed value of a primary residence. It can range from a few thousand dollars to well over $50,000 depending on the state.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Escrow</div>
+          <div class="glossary-def">An account managed by your mortgage lender that collects monthly property tax (and insurance) payments and then pays the annual bill on your behalf.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Effective Tax Rate</div>
+          <div class="glossary-def">Your annual property tax divided by your home's fair market value. This lets you compare the actual burden across different states or counties.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Property Taxes and Millage Rates</h2>
+      <p class="section-intro">Property taxes are one of the largest ongoing costs of homeownership, yet the calculation is surprisingly easy to understand once you know the components. This guide walks you through how assessed value, millage rates, and exemptions interact, and how to use this calculator to get a reliable estimate for any property in the U.S.</p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>Start with your home's Fair Market Value - this is what the home would sell for today. Then set the Assessment Ratio for your state or county. If you live in a state that taxes 100% of market value (like California at 100% of purchase price), leave the slider at 100. If you are in a fractional-assessment state (such as Illinois at 33.33% or South Carolina at 4% for owner-occupied homes), slide the ratio down to match.</p>
+      <p>Enter any exemptions you qualify for in total dollar terms. A $25,000 homestead exemption, a $10,000 senior freeze, and a $5,000 veterans exemption would be entered as $40,000 combined. Finally, enter your total local millage rate (or switch to percentage if your county publishes it that way) and all outputs update immediately.</p>
+
+      <h3>Understanding Millage vs. Percentage Rates</h3>
+      <p>Millage is just a shorthand for "per-thousand" - the Latin root "mille" means thousand. One mill is $1.00 per $1,000 of assessed value. A county with a 25-mill rate collects $25 for every $1,000 of taxable value. Some jurisdictions publish the same rate as a percentage (25 mills = 2.5%). Use the toggle above to enter whichever format your tax bill or county website uses.</p>
+
+      <h3>Where to Find Your Local Millage Rate</h3>
+      <p>Your total millage rate is usually the sum of several overlapping levies: county government, city or township, school district, community college, library district, and sometimes special assessment districts. You can find the breakdown on your most recent property tax bill, or search your county assessor's or treasurer's website for "millage rate" or "tax rate table." Look for the "total" line.</p>
+
+      <h3>How Exemptions Reduce Your Bill</h3>
+      <p>Exemptions are subtracted from your assessed value before the rate is applied, so a $25,000 exemption with a 20-mill rate saves you exactly $500 per year ($25,000 / 1,000 x 20). The most common exemptions are the homestead exemption for primary residences, senior citizen freezes, disabled veteran exemptions, and agricultural land classifications. Check your county assessor's site to see what you qualify for - many homeowners leave exemptions on the table simply because they never applied.</p>
+
+      <!-- FAQ -->
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          What is a millage rate and how does it work?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          A millage rate is the tax rate applied to a property's assessed value, expressed in mills. One mill equals $1 of tax for every $1,000 of assessed value. So a 20-mill rate on a $200,000 assessed value produces a $4,000 annual tax bill. Local governments - counties, cities, and school districts - each set their own millage rates, and your total rate is the sum of all applicable levies.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Why is my assessed value different from my home's market value?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          Many states and counties only tax a fraction of a property's fair market value. This fraction is called the assessment ratio. For example, a state with a 40% assessment ratio taxes a $300,000 home as if it were worth $120,000. Some states assess at 100% of market value, while others use ratios as low as 10%. Your county assessor sets the assessed value based on periodic appraisals, and that number can lag actual market prices.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          How do homestead exemptions save me money?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          A homestead exemption reduces the taxable value of your primary residence before the tax rate is applied, which directly lowers your bill. For example, if your assessed value is $250,000 and your county offers a $25,000 homestead exemption, you are only taxed on $225,000. Many states also offer additional exemptions for seniors, veterans, or people with disabilities. Enter the total dollar value of all your exemptions in this calculator to see your true taxable value.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Are property taxes paid monthly or annually?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          Property taxes are typically billed once or twice a year by your local government - not monthly. However, if you have a mortgage, your lender usually collects a prorated amount each month and holds it in an escrow account, then pays the tax bill on your behalf when it comes due. The monthly escrow estimate in this calculator shows what that monthly collection amount would be.
+        </div>
+      </div>
+
+      <div class="tool-disclaimer">
+        <strong>Estimate Only:</strong> This tool provides a general approximation based on the inputs you enter. Actual property tax bills depend on your local assessor's official valuation, applicable exemptions, special assessments, and any levy limits set by state law. This is not tax or legal advice. Consult your county assessor's office or a licensed tax professional for authoritative figures.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* =============================================
+       STATE
+    ============================================= */
+    let rateFormat = 'mill'; // 'mill' | 'pct'
+
+    /* =============================================
+       FORMAT TOGGLE
+    ============================================= */
+    function setFormat(fmt) {
+      rateFormat = fmt;
+      document.getElementById('btnMill').classList.toggle('active', fmt === 'mill');
+      document.getElementById('btnPct').classList.toggle('active',  fmt === 'pct');
+      document.getElementById('rateLabel').childNodes[0].textContent =
+        fmt === 'mill' ? 'Local Tax Rate (Mills) ' : 'Local Tax Rate (%) ';
+      document.getElementById('rateHint').textContent =
+        fmt === 'mill' ? 'e.g. 20 mills = $20 per $1,000' : 'e.g. 2.0% rate';
+      compute();
+    }
+
+    /* =============================================
+       CURRENCY INPUT SANITIZER
+    ============================================= */
+    function sanitizeCurrency(el) {
+      let raw = el.value.replace(/[^0-9.]/g, '');
+      let num = parseFloat(raw) || 0;
+      // Reformat with commas only on blur to avoid cursor jumping mid-type
+      el.dataset.raw = raw;
+    }
+
+    function parseCurrency(el) {
+      return parseFloat((el.dataset.raw || el.value).replace(/[^0-9.]/g, '')) || 0;
+    }
+
+    /* Format a number as currency string */
+    function fmtCurrency(n) {
+      if (!isFinite(n) || n < 0) n = 0;
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function fmtCurrencyDec(n) {
+      if (!isFinite(n) || n < 0) n = 0;
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* Auto-format currency fields on blur */
+    ['mktVal', 'exemptions'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('blur', () => {
+        let n = parseCurrency(el);
+        el.value = n === 0 ? '0' : n.toLocaleString('en-US');
+        el.dataset.raw = String(n);
+      });
+    });
+
+    /* =============================================
+       COMPUTATION ENGINE
+    ============================================= */
+    function compute() {
+      const mkt       = parseCurrency(document.getElementById('mktVal'));
+      const ratio     = Math.min(100, Math.max(0, parseFloat(document.getElementById('assessRatio').value) || 0));
+      const exempts   = parseCurrency(document.getElementById('exemptions'));
+      const rate      = parseFloat(document.getElementById('taxRate').value) || 0;
+
+      // Step 1: Assessed Value
+      const assessed  = mkt * (ratio / 100);
+
+      // Step 2: Taxable Value (floor at 0)
+      const taxable   = Math.max(0, assessed - exempts);
+
+      // Step 3: Annual Tax
+      let annualTax;
+      if (rateFormat === 'mill') {
+        annualTax = (taxable * rate) / 1000;
+      } else {
+        annualTax = taxable * (rate / 100);
+      }
+      annualTax = Math.max(0, annualTax);
+
+      // Step 4: Monthly
+      const monthly = annualTax / 12;
+
+      // Step 5: Effective rate (annual tax / market value)
+      const effective = mkt > 0 ? (annualTax / mkt) * 100 : 0;
+
+      // Update DOM
+      document.getElementById('annualTax').textContent   = fmtCurrencyDec(annualTax);
+      document.getElementById('taxableVal').textContent  = fmtCurrency(taxable);
+      document.getElementById('monthlyEscrow').textContent = fmtCurrencyDec(monthly);
+      document.getElementById('effectiveRate').textContent = effective.toFixed(3) + '%';
+
+      // Hero sub-label
+      const sub = document.getElementById('taxHeroSub');
+      if (mkt === 0) {
+        sub.textContent = 'Enter your property value above';
+      } else if (taxable === 0) {
+        sub.textContent = 'Exemptions eliminate taxable value';
+      } else {
+        sub.textContent = 'Assessed: ' + fmtCurrency(assessed) + '  |  Taxable: ' + fmtCurrency(taxable);
+      }
+
+      // Zero-tax note
+      document.getElementById('zeroNote').style.display = (mkt > 0 && taxable === 0) ? '' : 'none';
+    }
+
+    /* =============================================
+       FAQ ACCORDION
+    ============================================= */
+    function toggleFaq(btn) {
+      const ans = btn.nextElementSibling;
+      const open = ans.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+    }
+
+    /* =============================================
+       INIT
+    ============================================= */
+    compute();
+  </script>
+</body>
+</html>

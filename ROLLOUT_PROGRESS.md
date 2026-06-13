@@ -301,3 +301,142 @@ None. Rollout complete: all tools have been updated to the site-wide template.
 
 ## Batch 50 (new tools, built directly to template) - DONE
 - [x] concrete-slab-footing-calculator
+
+## Batch 51 (new tools, built directly to template) - DONE
+- [x] retaining-wall-estimator
+
+## Batch 52 (new tools, built directly to template) - DONE
+- [x] gravel-aggregate-calculator
+
+## Batch 53 (new tools, built directly to template) - DONE
+- [x] mulch-topsoil-calculator
+
+## Batch 53 (new tools, built directly to template) - DONE
+- [x] asphalt-driveway-estimator
+
+## Batch 53 (new tools, built directly to template) - DONE
+- [x] mortar-grout-mixer-estimator
+
+## Batch 54 (new tools, built directly to template) - DONE
+- [x] paver-patio-calculator
+
+## Batch 54 (new tools, built directly to template) - DONE
+- [x] drywall-sheetrock-estimator
+
+## Batch 54 (new tools, built directly to template) - DONE
+- [x] lumber-stud-finder
+
+## Batch 55 (new tools, built directly to template) - DONE
+- [x] roof-shingle-estimator
+
+## Batch 56 (new tools, built directly to template) - DONE
+- [x] siding-trim-estimator
+
+
+## Batch 56 (new tools, built directly to template) - DONE
+- [x] stair-stringer-calculator
+
+## Batch 57 (new tools, built directly to template) - DONE
+- [x] insulation-r-value-calculator
+## Batch 58 (new tools, built directly to template) - DONE
+- [x] fence-material-estimator
+
+## Batch 59 (new tools, built directly to template) - DONE
+- [x] decking-lumber-estimator
+
+## Batch 60 (new tools, built directly to template) - DONE
+- [x] drop-ceiling-grid-estimator
+
+## Batch 61 (new tools, built directly to template) - DONE
+- [x] wallpaper-coverage-tool
+
+## Batch 62 (new tools, built directly to template) - DONE
+- [x] hvac-sizing-calculator
+
+## Batch 63 (new tools, built directly to template) - DONE
+- [x] pipe-friction-loss-calculator
+
+## Batch 64 (new tools, built directly to template) - DONE
+- [x] circuit-load-estimator
+
+## Batch 65 (new tools, built directly to template) - DONE
+- [x] wire-size-voltage-drop-calculator
+
+## Batch 65 (new tools, built directly to template) - DONE
+- [x] sump-pump-sizing-calculator
+
+## Batch 66 (new tools, built directly to template) - DONE
+- [x] water-heater-sizing-calculator
+
+## Batch 67 (new tools, built directly to template) - DONE
+- [x] solar-panel-array-output-calculator
+
+## Batch 68 (new tools, built directly to template) - DONE
+- [x] lumen-to-watt-led-converter
+
+## Batch 69 (new tools, built directly to template) - DONE
+- [x] heloc-estimator
+
+## Batch 70 (new tools, built directly to template) - DONE
+- [x] debt-consolidation-loan-evaluator
+
+## Batch 71 (new tools, built directly to template) - DONE
+- [x] property-tax-estimator
+
+## Batch 70 (new tools, built directly to template) - DONE
+- [x] rent-vs-buy-calculator
+
+## Batch 72 (new tools, built directly to template) - DONE
+- [x] fha-vs-conventional-loan
+
+## Batch 72 (new tools, built directly to template) - DONE
+- [x] bi-weekly-mortgage-payment-calculator
+
+## Batch 73 (new tools, built directly to template) - DONE
+- [x] cap-rate-calculator
+
+## Batch 73 (new tools, built directly to template) - DONE
+- [x] brrrr-calculator
+
+## Batch 74 (new tools, built directly to template) - DONE
+- [x] 72t-distribution-calculator
+
+## Batch 75 (new tools, built directly to template) - DONE
+- [x] cac-ltv-calculator
+
+## Batch 74 (new tools, built directly to template) - DONE
+- [x] inventory-turnover-ratio
+
+## Batch 74 (new tools, built directly to template) - DONE
+- [x] saas-churn-mrr-forecaster
+
+## Batch 74 (new tools, built directly to template) - DONE
+- [x] equipment-lease-buy-calculator
+
+## Batch 75 (new tools, built directly to template) - DONE
+- [x] business-valuation-ebitda-multiplier
+
+## Batch 75 (new tools, built directly to template) - DONE
+- [x] accounts-receivable-dso
+
+## Batch 76 (new tools, built directly to template) - DONE
+- [x] working-capital-ratio-calculator
+
+## Batch 77 (new tools, built directly to template) - DONE
+- [x] depreciation-calculator
+
+## Batch 76 (new tools, built directly to template) - DONE
+- [x] cogs-calculator
+
+## Batch 78 (new tools, built directly to template) - DONE
+- [x] corporate-tax-flow-through-simulator
+
+## Batch 79 (new tools, built directly to template) - DONE
+- [x] drip-visualizer
+
+## Batch 80 (new tools, built directly to template) - DONE
+- [x] capital-gains-tax-estimator
+
+
+## Batch 81 (new tools, built directly to template) - DONE
+- [x] 401k-maxout-optimizer

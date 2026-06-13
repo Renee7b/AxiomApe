@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Panel Array Output Calculator: Estimate Generated Kilowatts | AxiomApe</title>
+  <meta name="description" content="Free Solar Panel Array Output Calculator: estimate daily, monthly, and yearly kilowatt-hour generation based on panel count, wattage, roof angle, and peak sun hours. 100% client-side." />
+  <meta name="keywords" content="solar panel output calculator, solar array kWh estimator, solar energy calculator, peak sun hours calculator, roof solar potential, solar panel wattage calculator, kilowatt hour solar estimate, solar system size calculator, derate factor solar, solar panel efficiency calculator, home solar output, solar energy production estimator" />
+  <link rel="canonical" href="https://axiomape.com/solar-panel-array-output-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Solar Panel Array Output Calculator",
+        "description": "Free Solar Panel Array Output Calculator: estimate daily, monthly, and yearly kilowatt-hour generation based on panel count, wattage, roof angle, and peak sun hours. 100% client-side.",
+        "url": "https://axiomape.com/solar-panel-array-output-calculator/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between a kilowatt (kW) and a kilowatt-hour (kWh)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A kilowatt (kW) is a measure of power - it describes the rate at which energy is produced or consumed at any given instant. A kilowatt-hour (kWh) is a measure of energy - it describes the total amount of energy produced or consumed over time. A 5 kW solar array running at full output for 1 hour produces 5 kWh. Your electric bill is measured in kWh, not kW. Think of kW as speed and kWh as distance traveled."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do solar panels never produce 100% of their rated wattage?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Panel wattage ratings are measured under Standard Test Conditions (STC): 25 degrees Celsius, full perpendicular sunlight, and no soiling. Real-world conditions are always less ideal. Inverter conversion from DC to AC loses roughly 3 to 5 percent. Wiring resistance loses another 1 to 2 percent. Dust, bird droppings, and shading cause additional losses. Temperature above 25 C reduces efficiency in most panels. Taken together, a well-maintained system typically operates at 75 to 85 percent of its rated capacity, which is why a derate factor of 80 percent is the industry standard starting point."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I find out my local Peak Sun Hours?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Peak Sun Hours (PSH) is not the same as hours of daylight. It represents the equivalent number of hours per day when sunlight intensity averages 1,000 watts per square meter. Most of the US Southwest gets 5.5 to 7 PSH. The Pacific Northwest averages 3 to 4. The Southeast averages 4.5 to 5.5. You can look up your exact location using NASA's POWER Data Access Viewer (power.larc.nasa.gov) or the NREL PVWatts Calculator, both of which provide historical solar irradiance data by zip code or GPS coordinates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does my roof need to face exactly South to use solar?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. In the Northern Hemisphere, true South (180 degrees azimuth) is optimal, but roofs facing South-East or South-West still capture about 95 percent of peak output - an almost negligible difference. East or West-facing arrays capture roughly 85 percent. Only North-facing roofs in the Northern Hemisphere are a poor choice for solar, typically capturing just 60 percent of potential output because they avoid direct midday sun entirely. Even then, solar can still be viable if your electricity costs are high enough, but the economics are much less favorable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What roof pitch or tilt angle is best for solar panels?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The optimal tilt angle for a fixed solar array is approximately equal to your latitude. For most of the continental US, this is between 25 and 45 degrees - which corresponds closely to a standard 5/12 to 10/12 roof pitch. A 30-degree tilt (roughly a 7/12 pitch) is close to ideal for most American locations. Very steep roofs (45+ degrees) lose a few percent of annual production but perform better in winter. Flat roofs lose the most production due to soiling and poor drainage, though flat-mount systems can use tilt racking to compensate."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset and base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark theme base */
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface-2:   #273449;
+      --border:      #334155;
+      --border-light:#3d5068;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-light:  #64748b;
+
+      /* Sunburst Yellow accent */
+      --yellow:      #F59E0B;
+      --yellow-dim:  rgba(245,158,11,.15);
+      --yellow-glow: rgba(245,158,11,.30);
+      --yellow-border:rgba(245,158,11,.40);
+
+      /* Eco Green accent */
+      --green:       #10B981;
+      --green-dim:   rgba(16,185,129,.15);
+      --green-glow:  rgba(16,185,129,.30);
+      --green-border:rgba(16,185,129,.40);
+
+      /* Warning */
+      --warn:        #EF4444;
+      --warn-dim:    rgba(239,68,68,.15);
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+      --shadow-lg: 0 10px 32px rgba(0,0,0,.5);
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Tool header ────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0c1a0e 0%, #1a2e10 50%, #243b14 100%);
+      border-bottom: 2px solid var(--yellow);
+      padding: 48px 20px 44px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(20px, 5vw, 30px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+
+    .tool-header h1 span { color: var(--yellow); }
+
+    .tool-header p {
+      font-size: 15px;
+      opacity: .85;
+      max-width: 520px;
+      margin: 0 auto;
+      color: var(--text-muted);
+    }
+
+    /* ── Main content ───────────────────────────────────────── */
+    .main-content { padding: 32px 0 48px; }
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Two-column input grid ──────────────────────────────── */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 620px) { .panels-grid { grid-template-columns: 1fr; } }
+
+    .input-panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+    }
+
+    .input-panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 18px;
+    }
+
+    .input-panel-title.yellow { color: var(--yellow); }
+    .input-panel-title.green  { color: var(--green); }
+
+    /* ── Form fields ────────────────────────────────────────── */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      padding: 9px 12px;
+      transition: border-color .2s;
+      -webkit-appearance: none;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px var(--yellow-dim);
+    }
+
+    select:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-dim); }
+
+    /* ── Slider ─────────────────────────────────────────────── */
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--yellow);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--yellow-glow);
+      transition: box-shadow .2s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 12px var(--yellow-glow);
+    }
+
+    .slider-val {
+      min-width: 52px;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--yellow);
+    }
+
+    /* ── Output card ────────────────────────────────────────── */
+    .output-card {
+      background: var(--surface);
+      border: 2px solid var(--green-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      transition: border-color .3s, box-shadow .3s;
+    }
+
+    .output-card.warn-north {
+      border-color: var(--warn);
+      box-shadow: 0 4px 16px rgba(239,68,68,.2);
+    }
+
+    .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+
+    .hero-val {
+      font-size: clamp(42px, 10vw, 64px);
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1;
+      letter-spacing: -.03em;
+    }
+
+    .hero-val .hero-unit {
+      font-size: .38em;
+      font-weight: 600;
+      color: var(--text-muted);
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
+    .hero-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      margin-bottom: 24px;
+    }
+
+    /* ── Stat grid ──────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr; } }
+
+    .stat-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--yellow);
+      line-height: 1.1;
+    }
+
+    .stat-unit {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── North warning banner ───────────────────────────────── */
+    .north-warning {
+      display: none;
+      background: var(--warn-dim);
+      border: 1px solid rgba(239,68,68,.4);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #fca5a5;
+      line-height: 1.5;
+    }
+
+    .north-warning.visible { display: flex; gap: 10px; align-items: flex-start; }
+
+    .north-warning .warn-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Efficiency bar ─────────────────────────────────────── */
+    .eff-bar-wrap {
+      margin-top: 20px;
+    }
+
+    .eff-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .eff-bar-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .eff-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--green), var(--yellow));
+      transition: width .4s ease;
+    }
+
+    /* ── Glossary ───────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    @media (max-width: 520px) { .glossary-grid { grid-template-columns: 1fr; } }
+
+    .glossary-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .glossary-item:nth-last-child(-n+2) { border-bottom: none; }
+
+    @media (max-width: 520px) {
+      .glossary-item:last-child { border-bottom: none; }
+      .glossary-item:nth-last-child(2) { border-bottom: 1px solid var(--border); }
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--yellow);
+      margin-bottom: 2px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding-right: 12px;
+    }
+
+    /* ── Educational section ────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: -.02em;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.7;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── FAQ accordion ──────────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface-2);
+      transition: background .2s;
+      gap: 12px;
+    }
+
+    .faq-question:hover { background: var(--border); }
+
+    .faq-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--yellow-dim);
+      color: var(--yellow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 400;
+      flex-shrink: 0;
+      transition: transform .25s;
+    }
+
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-item.open .faq-answer { display: block; }
+
+    /* ── Ad placements ──────────────────────────────────────── */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--text-light);
+      font-size: 12px;
+      margin-bottom: 24px;
+    }
+
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--text-light);
+      font-size: 12px;
+    }
+
+    /* ── Disclaimer ─────────────────────────────────────────── */
+    .tool-disclaimer {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 12px;
+      color: var(--text-light);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .hero-val { font-size: 52px; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="main-content" id="main">
+
+    <header class="tool-header">
+      <div class="container">
+        <h1>Solar Panel Array <span>Output Calculator</span></h1>
+        <p>Estimate daily, monthly, and yearly kilowatt-hour generation for any solar array based on panel count, wattage, roof orientation, and local sun hours.</p>
+      </div>
+    </header>
+
+    <div class="container">
+
+      <!-- ── Input card ────────────────────────────────────── -->
+      <div class="card" style="margin-top:32px;">
+        <div class="panels-grid">
+
+          <!-- Array Specifications -->
+          <div class="input-panel">
+            <div class="input-panel-title yellow">Array Specifications</div>
+
+            <div class="field">
+              <label for="num-panels">Number of Solar Panels</label>
+              <input type="number" id="num-panels" min="1" max="500" value="20" oninput="recalc()" />
+            </div>
+
+            <div class="field">
+              <label for="panel-wattage">Panel Wattage (W): <span id="wattage-display" style="color:var(--yellow);font-weight:700;">400W</span></label>
+              <div class="slider-wrap">
+                <input type="range" id="panel-wattage" min="250" max="500" step="5" value="400"
+                  oninput="document.getElementById('wattage-display').textContent=this.value+'W'; recalc()" />
+                <span class="slider-val" id="wattage-val">400W</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="system-eff">System Efficiency / Derate Factor: <span id="eff-display" style="color:var(--yellow);font-weight:700;">80%</span></label>
+              <div class="slider-wrap">
+                <input type="range" id="system-eff" min="60" max="90" step="1" value="80"
+                  oninput="document.getElementById('eff-display').textContent=this.value+'%'; recalc()" />
+                <span class="slider-val" id="eff-val">80%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Environmental Factors -->
+          <div class="input-panel">
+            <div class="input-panel-title green">Environmental Factors</div>
+
+            <div class="field">
+              <label for="sun-hours">Average Daily Peak Sun Hours (PSH)</label>
+              <input type="number" id="sun-hours" min="2.0" max="8.0" step="0.1" value="4.5" oninput="recalc()" />
+            </div>
+
+            <div class="field">
+              <label for="roof-direction">Roof Direction (Azimuth)</label>
+              <select id="roof-direction" onchange="recalc()">
+                <option value="1.00">South (optimal - 100%)</option>
+                <option value="0.95">South-East / South-West (95%)</option>
+                <option value="0.85">East / West (85%)</option>
+                <option value="0.60">North (60%)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="roof-pitch">Roof Pitch / Tilt</label>
+              <select id="roof-pitch" onchange="recalc()">
+                <option value="1.00">Optimal / 30 Degrees (best)</option>
+                <option value="0.95">Steep / 45 Degrees (95%)</option>
+                <option value="0.85">Flat Roof (85%)</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Output card ────────────────────────────────────── -->
+      <div class="output-card" id="output-card">
+
+        <div class="hero-label">Estimated Monthly Output</div>
+        <div class="hero-val" id="hero-monthly">0 <span class="hero-unit">kWh / mo</span></div>
+        <div class="hero-subtitle">Based on your array specs and local conditions</div>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Total System Size</div>
+            <div class="stat-value" id="stat-system-kw">0.0</div>
+            <div class="stat-unit">kW</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Est. Daily Output</div>
+            <div class="stat-value" id="stat-daily">0.0</div>
+            <div class="stat-unit">kWh / day</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Est. Yearly Output</div>
+            <div class="stat-value" id="stat-yearly">0</div>
+            <div class="stat-unit">kWh / year</div>
+          </div>
+        </div>
+
+        <!-- Efficiency bar -->
+        <div class="eff-bar-wrap">
+          <div class="eff-bar-label">
+            <span>Master Efficiency Multiplier</span>
+            <span id="master-mult-label" style="color:var(--green);font-weight:700;">0%</span>
+          </div>
+          <div class="eff-bar-track">
+            <div class="eff-bar-fill" id="eff-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- North-facing warning -->
+        <div class="north-warning" id="north-warning">
+          <span class="warn-icon">&#9888;</span>
+          <span>North-facing roofs receive very little direct sun in the Northern Hemisphere. Your estimated output reflects a significant reduction. Consider ground-mounted panels or a different roof surface if available.</span>
+        </div>
+
+      </div>
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- ── Glossary card ──────────────────────────────────── -->
+      <div class="card">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Kilowatt (kW)</div>
+            <div class="glossary-def">A unit of power equal to 1,000 watts. Describes how fast a system can produce or consume energy at any instant. Your solar array's rated size is measured in kW.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Kilowatt-hour (kWh)</div>
+            <div class="glossary-def">A unit of energy equal to 1 kW running for 1 hour. Your monthly electricity bill is measured in kWh. This is what solar panels actually produce over time.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Peak Sun Hours (PSH)</div>
+            <div class="glossary-def">The equivalent number of hours per day that the sun shines at exactly 1,000 W/m2. Not the same as daylight hours. The US average is roughly 4 to 5 PSH.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Azimuth</div>
+            <div class="glossary-def">The compass direction a surface faces. For solar, South (180 degrees) is optimal in the Northern Hemisphere because it receives the most direct midday sun.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Derate Factor</div>
+            <div class="glossary-def">A multiplier that accounts for all real-world losses between a panel's rated wattage and actual AC output at the meter. Typically 75 to 85 percent for a well-maintained home system.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Inverter Efficiency</div>
+            <div class="glossary-def">Solar panels produce DC power; your home runs on AC. The inverter converts DC to AC, losing 3 to 5 percent in the process. Modern string inverters are typically 96 to 98 percent efficient.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Grid-Tied System</div>
+            <div class="glossary-def">A solar installation connected to the utility grid. Excess energy is fed back (often credited via net metering) and grid power covers any shortfall. No batteries required.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Standard Test Conditions (STC)</div>
+            <div class="glossary-def">The lab conditions under which panel wattage ratings are measured: 25 degrees Celsius, 1,000 W/m2 irradiance, and no wind. Real-world output is always lower than STC ratings.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Educational section ───────────────────────────── -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Solar Array Output</h2>
+
+        <p class="section-intro">
+          Adding solar panels to your home is one of the largest financial decisions a homeowner can make. Before getting quotes from installers, understanding how much energy your system will actually produce - and why - gives you a powerful negotiating tool and a realistic payback timeline.
+        </p>
+
+        <h3>How to Use This Calculator</h3>
+        <p>
+          Start with the Array Specifications panel. Enter your panel count and use the wattage slider to match the panels you are considering (most residential panels today are 380W to 430W). Leave the derate factor at 80% unless you have a specific reason to change it - this is the industry-standard starting point recommended by the National Renewable Energy Laboratory (NREL).
+        </p>
+        <p>
+          In the Environmental Factors panel, enter your local Peak Sun Hours. If you are not sure, 4.5 is a reasonable national average for the contiguous US, but your actual number may be higher in Arizona or lower in Seattle. Select the compass direction your roof faces and its approximate pitch. The calculator combines all these factors in real time to show your estimated monthly, daily, and yearly output.
+        </p>
+
+        <h3>How the Math Works</h3>
+        <p>
+          The calculation proceeds in three steps. First, system capacity: multiply panel count by wattage and divide by 1,000 to get your array size in kilowatts. A 20-panel, 400W system is an 8 kW array. Second, the master efficiency multiplier: multiply your derate factor by the roof direction multiplier and the roof pitch multiplier. At 80% derate, South-facing, and optimal pitch, the master multiplier is 0.80 x 1.00 x 1.00 = 0.80. Third, daily output: multiply array size by peak sun hours by the master multiplier. An 8 kW array at 4.5 PSH with 0.80 master multiplier yields 28.8 kWh per day, or about 876 kWh per month.
+        </p>
+
+        <h3>What Affects Real-World Output</h3>
+        <p>
+          Temperature is one of the largest variables this calculator does not model. Silicon solar cells lose roughly 0.35 to 0.5% of output per degree Celsius above 25 degrees. On a hot summer day, panels sitting on a dark roof can reach 65 degrees Celsius, cutting output by 15 to 20% on the very days you expect peak performance. Shading is another major factor: a single shaded cell in a string can reduce output for the entire string, not just that panel, unless microinverters or power optimizers are used.
+        </p>
+        <p>
+          Soiling - dust, pollen, bird droppings - typically reduces output by 1 to 5% annually in most US climates, and significantly more in arid regions. Annual cleaning or a rainy climate keeps this loss minimal. Degradation is also real: most quality panels degrade at 0.5% per year, so a 20-year-old system produces roughly 10% less than it did when new.
+        </p>
+
+        <h3>Sizing Your System to Your Bill</h3>
+        <p>
+          To offset your electricity usage, find your annual kWh consumption on your utility bills (or use your monthly average and multiply by 12). Divide that by the yearly output this calculator estimates to find what percentage of your usage the system covers. Most homeowners target 80 to 100% offset, but local utility rates, net metering policies, and budget all factor into the optimal size.
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item" id="faq1">
+          <div class="faq-question" onclick="toggleFaq('faq1')">
+            What is the difference between a kilowatt (kW) and a kilowatt-hour (kWh)?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            A kilowatt (kW) is a measure of power - it describes the rate at which energy is produced or consumed at any given instant. A kilowatt-hour (kWh) is a measure of energy - it describes the total amount of energy produced or consumed over time. A 5 kW solar array running at full output for 1 hour produces 5 kWh. Your electric bill is measured in kWh, not kW. Think of kW as speed and kWh as distance traveled.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq2">
+          <div class="faq-question" onclick="toggleFaq('faq2')">
+            Why do solar panels never produce 100% of their rated wattage?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            Panel wattage ratings are measured under Standard Test Conditions (STC): 25 degrees Celsius, full perpendicular sunlight, and no soiling. Real-world conditions are always less ideal. Inverter conversion from DC to AC loses roughly 3 to 5 percent. Wiring resistance loses another 1 to 2 percent. Dust, bird droppings, and shading cause additional losses. Temperature above 25 C reduces efficiency in most panels. Taken together, a well-maintained system typically operates at 75 to 85 percent of its rated capacity, which is why a derate factor of 80 percent is the industry standard starting point.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq3">
+          <div class="faq-question" onclick="toggleFaq('faq3')">
+            How do I find out my local Peak Sun Hours?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            Peak Sun Hours (PSH) is not the same as hours of daylight. It represents the equivalent number of hours per day when sunlight intensity averages 1,000 watts per square meter. Most of the US Southwest gets 5.5 to 7 PSH. The Pacific Northwest averages 3 to 4. The Southeast averages 4.5 to 5.5. You can look up your exact location using NASA's POWER Data Access Viewer (power.larc.nasa.gov) or the NREL PVWatts Calculator, both of which provide historical solar irradiance data by zip code or GPS coordinates.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq4">
+          <div class="faq-question" onclick="toggleFaq('faq4')">
+            Does my roof need to face exactly South to use solar?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            No. In the Northern Hemisphere, true South (180 degrees azimuth) is optimal, but roofs facing South-East or South-West still capture about 95 percent of peak output - an almost negligible difference. East or West-facing arrays capture roughly 85 percent. Only North-facing roofs in the Northern Hemisphere are a poor choice for solar, typically capturing just 60 percent of potential output because they avoid direct midday sun entirely. Even then, solar can still be viable if your electricity costs are high enough, but the economics are much less favorable.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq5">
+          <div class="faq-question" onclick="toggleFaq('faq5')">
+            What roof pitch or tilt angle is best for solar panels?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            The optimal tilt angle for a fixed solar array is approximately equal to your latitude. For most of the continental US, this is between 25 and 45 degrees - which corresponds closely to a standard 5/12 to 10/12 roof pitch. A 30-degree tilt (roughly a 7/12 pitch) is close to ideal for most American locations. Very steep roofs (45+ degrees) lose a few percent of annual production but perform better in winter. Flat roofs lose the most production due to soiling and poor drainage, though flat-mount systems can use tilt racking to compensate.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tool-specific disclaimer -->
+      <div class="tool-disclaimer">
+        This calculator provides estimates for educational and planning purposes only. Actual solar production varies based on local weather patterns, shading, panel degradation, installation quality, and utility interconnection. Always get a site assessment and production estimate from a licensed solar installer before making purchasing decisions.
+      </div>
+
+    </div><!-- /.container -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ── Sync slider display values ─────────────────────────── */
+    function syncSliders() {
+      const wattage = document.getElementById('panel-wattage').value;
+      const eff     = document.getElementById('system-eff').value;
+      document.getElementById('wattage-display').textContent = wattage + 'W';
+      document.getElementById('wattage-val').textContent     = wattage + 'W';
+      document.getElementById('eff-display').textContent     = eff + '%';
+      document.getElementById('eff-val').textContent         = eff + '%';
+    }
+
+    /* ── Core calculation ───────────────────────────────────── */
+    function recalc() {
+      /* Read inputs */
+      const numPanels   = Math.max(1, parseFloat(document.getElementById('num-panels').value)   || 1);
+      const wattage     = parseFloat(document.getElementById('panel-wattage').value)             || 400;
+      const sysEff      = parseFloat(document.getElementById('system-eff').value)    / 100       || 0.80;
+      const sunHours    = Math.max(0, parseFloat(document.getElementById('sun-hours').value)     || 4.5);
+      const dirMult     = parseFloat(document.getElementById('roof-direction').value)             || 1.00;
+      const pitchMult   = parseFloat(document.getElementById('roof-pitch').value)                || 1.00;
+
+      /* Sync slider labels */
+      document.getElementById('wattage-display').textContent = wattage + 'W';
+      document.getElementById('wattage-val').textContent     = wattage + 'W';
+      document.getElementById('eff-display').textContent     = Math.round(sysEff * 100) + '%';
+      document.getElementById('eff-val').textContent         = Math.round(sysEff * 100) + '%';
+
+      /* Step 1: System capacity */
+      const systemKw = (numPanels * wattage) / 1000;
+
+      /* Step 2: Master efficiency multiplier */
+      const masterMult = sysEff * dirMult * pitchMult;
+
+      /* Step 3: Energy production */
+      const dailyKwh   = systemKw * sunHours * masterMult;
+      const monthlyKwh = dailyKwh * 30.4;
+      const yearlyKwh  = dailyKwh * 365;
+
+      /* Update hero */
+      document.getElementById('hero-monthly').innerHTML =
+        monthlyKwh.toLocaleString('en-US', {maximumFractionDigits:0}) +
+        ' <span class="hero-unit">kWh / mo</span>';
+
+      /* Update stats */
+      document.getElementById('stat-system-kw').textContent = systemKw.toFixed(2);
+      document.getElementById('stat-daily').textContent     = dailyKwh.toFixed(1);
+      document.getElementById('stat-yearly').textContent    = Math.round(yearlyKwh).toLocaleString('en-US');
+
+      /* Update efficiency bar */
+      const pct = Math.round(masterMult * 100);
+      document.getElementById('master-mult-label').textContent = pct + '%';
+      document.getElementById('eff-bar').style.width = Math.min(pct, 100) + '%';
+
+      /* North warning */
+      const isNorth = dirMult === 0.60;
+      document.getElementById('north-warning').classList.toggle('visible', isNorth);
+      document.getElementById('output-card').classList.toggle('warn-north', isNorth);
+    }
+
+    /* ── FAQ accordion ──────────────────────────────────────── */
+    function toggleFaq(id) {
+      document.getElementById(id).classList.toggle('open');
+    }
+
+    /* ── Init ───────────────────────────────────────────────── */
+    recalc();
+  </script>
+</body>
+</html>

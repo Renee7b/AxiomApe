@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circuit Load Estimator: Check Amperage Draw and Prevent Breaker Overloads | AxiomApe</title>
+  <meta name="description" content="Free Circuit Load Estimator: add appliances to a household circuit, instantly calculate total amperage draw, and see if you will trip the breaker. Applies the NEC 80% rule for continuous loads. 100% client-side." />
+  <meta name="keywords" content="circuit load calculator, circuit breaker amperage calculator, household circuit amp calculator, NEC 80 percent rule calculator, continuous load calculator, appliance amperage calculator, circuit overload checker, breaker load calculator, total amperage draw, electrical circuit capacity, amps from watts calculator, 120V circuit load, 240V circuit load, prevent tripped breaker" />
+  <link rel="canonical" href="https://axiomape.com/circuit-load-estimator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Circuit Load Estimator",
+        "description": "Free Circuit Load Estimator: add appliances to a household circuit, instantly calculate total amperage draw, and see if you will trip the breaker. Applies the NEC 80% rule for continuous loads. 100% client-side.",
+        "url": "https://axiomape.com/circuit-load-estimator/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the 80% rule for circuit breakers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The NEC 80% rule (National Electrical Code section 210.19 and 210.20) states that a circuit breaker must not carry more than 80% of its rated amperage for loads that run continuously - meaning 3 hours or longer. A 20-amp breaker on a continuous circuit should carry no more than 16 amps. This rule exists because breakers are thermal devices: running at 100% capacity for extended periods generates enough heat to degrade the breaker, cause nuisance trips, and in worst cases create a fire hazard. For short, intermittent loads, the full breaker rating is usable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does my space heater keep tripping the breaker?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A typical 1500-watt space heater draws 12.5 amps on a 120V circuit and runs continuously, putting it alone at 78% of a 15-amp breaker's safe continuous capacity. If anything else is on that circuit - a lamp, a phone charger, a TV - you push past the 80% threshold and the breaker trips. The fix is to plug the heater into a dedicated 20-amp circuit (it draws only 62.5% of that breaker's capacity), or to run it on a circuit with nothing else plugged in."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I calculate amps if my appliance only lists watts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Divide the appliance's wattage by the circuit voltage. For a standard 120V outlet: Amps = Watts divided by 120. For a 240V heavy appliance outlet: Amps = Watts divided by 240. Example: a 1200-watt microwave on a 120V circuit draws 10 amps. A 4800-watt electric water heater on a 240V circuit draws 20 amps. This calculator does the conversion automatically - just enter watts for any appliance and it will show the amp draw."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What requires a dedicated 240V circuit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Large appliances that require their own dedicated 240V circuit include: electric ranges and ovens (40-50 amp), clothes dryers (30 amp), central air conditioners (varies, typically 30-60 amp), electric water heaters (30 amp), EV chargers (Level 2, 30-50 amp), hot tubs and spas (50-60 amp), and electric furnaces. The NEC requires dedicated circuits for these because they draw far more power than a standard 120V branch circuit can safely supply. Sharing a circuit with other loads is a fire and equipment hazard."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I add more outlets to an existing circuit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can physically add more outlets to a circuit, but whether you should depends entirely on the total load. Use this calculator to map out everything that will ever run simultaneously on that circuit and compare to the breaker's safe capacity (80% for continuous loads). If the total is under the safe threshold, adding outlets is fine. If you are already near the limit, adding outlets means you need to be careful about what you plug in - or better yet, add a new dedicated circuit from the panel."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset and base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark theme base */
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface-2:   #273449;
+      --border:      #334155;
+      --border-light:#3d5068;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-light:  #64748b;
+
+      /* Electrician accents */
+      --yellow:      #EAB308;
+      --yellow-dim:  rgba(234,179,8,.15);
+      --yellow-glow: rgba(234,179,8,.30);
+      --gray:        #9CA3AF;
+      --gray-dim:    rgba(156,163,175,.12);
+
+      /* Safe / danger */
+      --safe:        #22c55e;
+      --safe-dim:    rgba(34,197,94,.12);
+      --danger:      #DC2626;
+      --danger-dim:  rgba(220,38,38,.15);
+      --danger-glow: rgba(220,38,38,.40);
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+      --shadow-lg: 0 10px 32px rgba(0,0,0,.5);
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Tool header ────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #1a1a0a 0%, #2d2a00 50%, #3d3800 100%);
+      border-bottom: 2px solid var(--yellow);
+      padding: 48px 20px 44px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(20px, 5vw, 30px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+
+    .tool-header h1 span { color: var(--yellow); }
+
+    .tool-header p {
+      font-size: 15px;
+      opacity: .85;
+      max-width: 500px;
+      margin: 0 auto;
+      color: var(--gray);
+    }
+
+    /* ── Main content ───────────────────────────────────────── */
+    .main-content { padding: 32px 0 48px; }
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Toggle (pill) ──────────────────────────────────────── */
+    .toggle-wrap {
+      display: flex;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 100px;
+      padding: 4px;
+      width: fit-content;
+      gap: 4px;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 8px 20px;
+      border-radius: 100px;
+      transition: background .2s, color .2s, box-shadow .2s;
+      white-space: nowrap;
+    }
+
+    .toggle-btn.active {
+      background: var(--yellow);
+      color: #000;
+      box-shadow: 0 2px 10px var(--yellow-glow);
+    }
+
+    .toggle-btn:not(.active):hover {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    /* ── Specs grid ─────────────────────────────────────────── */
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 600px) { .specs-grid { grid-template-columns: 1fr; } }
+
+    .spec-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+
+    .spec-group select {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 14px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color .2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .spec-group select:focus { border-color: var(--yellow); }
+
+    /* ── Appliance inventory ────────────────────────────────── */
+    .add-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .add-row { grid-template-columns: 1fr 1fr; }
+      .add-row .add-preset-wrap { grid-column: 1 / -1; }
+      .add-row .add-value-wrap { grid-column: 1; }
+      .add-row .add-unit-wrap  { grid-column: 2; }
+      .add-row .add-btn-wrap   { grid-column: 1 / -1; }
+    }
+
+    .add-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+
+    .add-row select,
+    .add-row input[type="text"],
+    .add-row input[type="number"] {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .add-row select:focus,
+    .add-row input:focus { border-color: var(--yellow); }
+
+    .add-row input::placeholder { color: var(--text-light); }
+
+    .btn-add {
+      background: var(--yellow);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #000;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 20px;
+      transition: opacity .2s;
+      white-space: nowrap;
+    }
+
+    .btn-add:hover { opacity: .85; }
+
+    /* ── Custom name input (shown when "Custom" selected) ───── */
+    #custom-name-wrap {
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    #custom-name-wrap input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--yellow);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+    }
+
+    /* ── Appliance list ─────────────────────────────────────── */
+    #appliance-list { margin-bottom: 8px; }
+
+    .appliance-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      animation: slideIn .2s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .appliance-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .appliance-watts {
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 80px;
+      text-align: right;
+    }
+
+    .appliance-amps {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--yellow);
+      min-width: 68px;
+      text-align: right;
+    }
+
+    .btn-remove {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 8px;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+
+    .btn-remove:hover {
+      background: var(--danger-dim);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+      padding: 28px 0;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ── Hero output ────────────────────────────────────────── */
+    .output-card {
+      background: var(--surface);
+      border: 2px solid var(--yellow);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      transition: border-color .3s, box-shadow .3s;
+    }
+
+    .output-card.overload {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 4px var(--danger-dim), var(--shadow-md);
+    }
+
+    .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gray);
+      margin-bottom: 4px;
+    }
+
+    .hero-value {
+      font-size: clamp(42px, 10vw, 64px);
+      font-weight: 800;
+      color: var(--yellow);
+      letter-spacing: -.03em;
+      line-height: 1;
+      margin-bottom: 4px;
+      transition: color .3s;
+    }
+
+    .hero-value.overload { color: var(--danger); }
+
+    .hero-unit {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* ── Overload banner ────────────────────────────────────── */
+    .overload-banner {
+      display: none;
+      background: var(--danger-dim);
+      border: 1.5px solid var(--danger);
+      border-radius: var(--radius-sm);
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 16px;
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    .overload-banner.visible { display: block; }
+
+    /* ── Three-column stat cards ────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      text-align: center;
+      transition: border-color .3s, background .3s;
+    }
+
+    .stat-card.overload {
+      border-color: var(--danger);
+      background: var(--danger-dim);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--yellow);
+      transition: color .3s;
+    }
+
+    .stat-value.danger { color: var(--danger); }
+    .stat-value.safe   { color: var(--safe); }
+
+    .stat-unit {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Progress bar ───────────────────────────────────────── */
+    .load-bar-wrap {
+      margin-top: 20px;
+    }
+
+    .load-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .load-bar-track {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      height: 12px;
+      overflow: hidden;
+    }
+
+    .load-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: var(--yellow);
+      transition: width .4s ease, background .3s;
+      width: 0%;
+    }
+
+    .load-bar-fill.overload { background: var(--danger); }
+
+    /* ── Glossary ───────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+    }
+
+    @media (max-width: 520px) { .glossary-grid { grid-template-columns: 1fr; } }
+
+    .glossary-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .glossary-item:nth-last-child(-n+2) { border-bottom: none; }
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--yellow);
+      margin-bottom: 3px;
+    }
+    .glossary-def { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Educational section ────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--yellow);
+      margin: 20px 0 8px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ── FAQ accordion ──────────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface-2);
+      user-select: none;
+      gap: 12px;
+    }
+
+    .faq-question:hover { background: var(--border); }
+
+    .faq-icon {
+      color: var(--yellow);
+      font-size: 18px;
+      font-weight: 400;
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-item.open .faq-answer { display: block; }
+
+    /* ── Disclaimer ─────────────────────────────────────────── */
+    .tool-disclaimer {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-light);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* ── Ad placements ──────────────────────────────────────── */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 0 0 24px;
+      color: var(--text-light);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="tool-header">
+      <div class="container">
+        <h1>Circuit Load <span>Estimator</span></h1>
+        <p>Add appliances to a circuit, instantly see total amperage draw, and find out if you are at risk of tripping your breaker.</p>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <div class="container">
+
+        <!-- ── CIRCUIT SPECIFICATIONS ──────────────────────── -->
+        <div class="card">
+          <div class="card-title">Circuit Specifications</div>
+          <div class="card-subtitle">Set your breaker size, voltage, and load type before adding appliances.</div>
+
+          <div class="specs-grid">
+            <!-- Breaker Size -->
+            <div class="spec-group">
+              <label for="breaker-size">Breaker Size</label>
+              <select id="breaker-size" onchange="recalc()">
+                <option value="15">15 Amp</option>
+                <option value="20" selected>20 Amp</option>
+                <option value="30">30 Amp</option>
+                <option value="40">40 Amp</option>
+                <option value="50">50 Amp</option>
+              </select>
+            </div>
+
+            <!-- Circuit Voltage -->
+            <div class="spec-group">
+              <label>Circuit Voltage</label>
+              <div class="toggle-wrap" id="voltage-toggle">
+                <button class="toggle-btn active" data-v="120" onclick="setVoltage(this)">120V Standard</button>
+                <button class="toggle-btn" data-v="240" onclick="setVoltage(this)">240V Heavy</button>
+              </div>
+            </div>
+
+            <!-- Load Type -->
+            <div class="spec-group">
+              <label>Load Type</label>
+              <div class="toggle-wrap" id="load-toggle">
+                <button class="toggle-btn active" data-l="standard" onclick="setLoad(this)">Standard</button>
+                <button class="toggle-btn" data-l="continuous" onclick="setLoad(this)">Continuous</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── APPLIANCE INVENTORY ─────────────────────────── -->
+        <div class="card">
+          <div class="card-title">Appliance Inventory</div>
+          <div class="card-subtitle">Add everything plugged into or wired to this circuit.</div>
+
+          <!-- Preset selector row -->
+          <div class="add-row">
+            <div class="add-preset-wrap">
+              <span class="add-label">Appliance Preset</span>
+              <select id="preset-select" onchange="onPresetChange()">
+                <option value="">-- Choose a preset or custom --</option>
+                <option value="Space Heater|1500">Space Heater - 1500W</option>
+                <option value="Microwave|1200">Microwave - 1200W</option>
+                <option value="Refrigerator|800">Refrigerator - 800W</option>
+                <option value="Dishwasher|1200">Dishwasher - 1200W</option>
+                <option value="Clothes Washer|500">Clothes Washer - 500W</option>
+                <option value="Clothes Dryer (electric)|5000">Clothes Dryer (electric) - 5000W</option>
+                <option value="Air Conditioner (window)|1440">Air Conditioner (window) - 1440W</option>
+                <option value="Hair Dryer|1875">Hair Dryer - 1875W</option>
+                <option value="Toaster Oven|1200">Toaster Oven - 1200W</option>
+                <option value="Coffee Maker|1000">Coffee Maker - 1000W</option>
+                <option value="Blender|300">Blender - 300W</option>
+                <option value="Television (large)|250">Television (large) - 250W</option>
+                <option value="Television (small)|150">Television (small) - 150W</option>
+                <option value="Desktop Computer|300">Desktop Computer - 300W</option>
+                <option value="Laptop|65">Laptop - 65W</option>
+                <option value="Phone Charger|25">Phone Charger - 25W</option>
+                <option value="LED Bulb|15">LED Bulb - 15W</option>
+                <option value="Incandescent Bulb|60">Incandescent Bulb - 60W</option>
+                <option value="Ceiling Fan|75">Ceiling Fan - 75W</option>
+                <option value="Garage Door Opener|500">Garage Door Opener - 500W</option>
+                <option value="Sump Pump|800">Sump Pump - 800W</option>
+                <option value="Well Pump|750">Well Pump - 750W</option>
+                <option value="Electric Water Heater|4500">Electric Water Heater - 4500W</option>
+                <option value="Pool Pump|1500">Pool Pump - 1500W</option>
+                <option value="custom|">Custom Item...</option>
+              </select>
+            </div>
+            <div class="add-value-wrap">
+              <span class="add-label" id="value-label">Value</span>
+              <input type="number" id="custom-value" min="0" step="any" placeholder="e.g. 1500" oninput="recalcPreview()" />
+            </div>
+            <div class="add-unit-wrap">
+              <span class="add-label">Unit</span>
+              <select id="custom-unit" onchange="recalcPreview()">
+                <option value="watts">Watts</option>
+                <option value="amps">Amps</option>
+              </select>
+            </div>
+            <div class="add-btn-wrap">
+              <span class="add-label" style="visibility:hidden">Add</span>
+              <button class="btn-add" onclick="addAppliance()">+ Add</button>
+            </div>
+          </div>
+
+          <!-- Custom name input (visible when Custom is selected) -->
+          <div id="custom-name-wrap">
+            <span class="add-label">Custom Appliance Name</span>
+            <input type="text" id="custom-name" placeholder="e.g. Workshop Table Saw" />
+          </div>
+
+          <!-- Appliance list -->
+          <div id="appliance-list">
+            <div class="empty-state" id="empty-state">No appliances added yet. Use the fields above to build your circuit inventory.</div>
+          </div>
+        </div>
+
+        <!-- ── RESULTS ─────────────────────────────────────── -->
+        <div class="output-card" id="output-card">
+          <div class="hero-label">Total Amps Drawn</div>
+          <div class="hero-value" id="hero-amps">0.0 <span class="hero-unit">A</span></div>
+
+          <div class="overload-banner" id="overload-banner">
+            Circuit Overloaded: Risk of tripped breaker or fire hazard.
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card" id="stat-watts">
+              <div class="stat-label">Total Watts Drawn</div>
+              <div class="stat-value" id="stat-watts-val">0</div>
+              <div class="stat-unit">Watts</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Max Safe Amps</div>
+              <div class="stat-value" id="stat-safe-val" style="color:var(--gray)">16.0</div>
+              <div class="stat-unit">Amps (NEC 80%)</div>
+            </div>
+            <div class="stat-card" id="stat-remaining">
+              <div class="stat-label">Amps Remaining</div>
+              <div class="stat-value safe" id="stat-remain-val">16.0</div>
+              <div class="stat-unit">Amps Available</div>
+            </div>
+          </div>
+
+          <div class="load-bar-wrap">
+            <div class="load-bar-labels">
+              <span>0%</span>
+              <span id="load-pct-label">0% of safe capacity</span>
+              <span>100%</span>
+            </div>
+            <div class="load-bar-track">
+              <div class="load-bar-fill" id="load-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── AD PLACEMENT 1 ──────────────────────────────── -->
+        <!-- ============================================================
+             AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+             Google AdSense 728x90 - shown on screens larger than 768px
+        ============================================================ -->
+        <div class="axiom-ad-leaderboard" aria-hidden="true">
+          Advertisement
+        </div>
+
+        <!-- ── GLOSSARY ────────────────────────────────────── -->
+        <div class="card">
+          <div class="card-title">Key Terms Explained</div>
+          <div class="glossary-grid">
+            <div class="glossary-item">
+              <div class="glossary-term">Amperage (Amps)</div>
+              <div class="glossary-def">The rate of electrical current flow through a circuit, measured in amperes (A). Think of it as the volume of electricity moving per second. Breakers are rated in amps.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Voltage (Volts)</div>
+              <div class="glossary-def">The electrical pressure pushing current through the circuit. Standard US household outlets are 120V; large appliances like dryers and ranges use 240V circuits.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Wattage (Watts)</div>
+              <div class="glossary-def">The rate of energy consumption. Watts = Amps x Volts. Most appliance labels list watts, which you can convert to amps by dividing by the circuit voltage.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Circuit Breaker</div>
+              <div class="glossary-def">A safety switch that automatically cuts power when the circuit draws more current than it is rated for. It protects wiring from overheating and prevents fires.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Continuous Load</div>
+              <div class="glossary-def">Any load that runs for 3 or more hours continuously. Space heaters, water heaters, and EV chargers are common examples. The NEC requires continuous loads to stay below 80% of breaker capacity.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">NEC 80% Rule</div>
+              <div class="glossary-def">National Electrical Code rule (210.19/210.20) limiting continuous loads to 80% of a circuit breaker's rated amperage. A 20A breaker may carry only 16A of continuous load safely.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Dedicated Circuit</div>
+              <div class="glossary-def">A circuit that supplies power to only one appliance and no other outlets. Large appliances like refrigerators, microwaves, and dryers often require or benefit from a dedicated circuit.</div>
+            </div>
+            <div class="glossary-item">
+              <div class="glossary-term">Load Capacity</div>
+              <div class="glossary-def">The maximum electrical load a circuit can safely handle. For continuous loads this is 80% of the breaker rating; for intermittent loads it equals the full breaker rating.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── EDUCATIONAL SECTION ─────────────────────────── -->
+        <div class="card edu-section">
+          <h2>The Complete Guide to Household Circuit Loads</h2>
+
+          <p class="section-intro">Overloaded circuits are one of the leading causes of house fires in the US. Understanding how much your outlets and appliances draw - and how that compares to your breaker's safe limit - is a practical skill every homeowner should have. This tool does the math instantly, but the guide below explains what the numbers mean and how to act on them.</p>
+
+          <h3>How to Use This Estimator</h3>
+          <p>Start by setting your breaker size (check the number printed on the breaker switch in your panel - common sizes are 15A and 20A for standard rooms). Choose the correct voltage (120V for standard outlets, 240V for heavy appliances like dryers and ranges). Then choose load type: select "Continuous" if any appliance runs 3 or more hours at a stretch, which is the more conservative and NEC-compliant setting.</p>
+          <p>Next, add every appliance or device that could be running on this circuit at the same time. Pick from the presets for common items or enter a custom watt or amp value for anything not listed. The results update in real time. If the load bar turns red and the overload banner appears, you need to either move appliances to a different circuit or talk to a licensed electrician about adding capacity.</p>
+
+          <h3>How Breaker Ratings Work</h3>
+          <p>A circuit breaker is a thermal and magnetic trip device. The thermal element responds to sustained overcurrent - heat builds up in the bimetal strip and eventually triggers the breaker. The magnetic element responds to short-circuit spikes almost instantly. This means a breaker at 110% of its rating will not trip immediately; it may take minutes or even hours. Running a breaker at or near its limit for extended periods degrades it and can cause nuisance tripping even at lower loads in the future.</p>
+          <p>Standard residential branch circuits use 14-gauge wire (rated for 15A) or 12-gauge wire (rated for 20A). The breaker size must match the wire gauge - a 20A breaker on 14-gauge wire is a code violation and a fire hazard, because the wire can overheat and melt before the breaker trips.</p>
+
+          <h3>The NEC 80% Continuous Load Rule Explained</h3>
+          <p>Article 210.19(A)(1) and 210.20(A) of the National Electrical Code require that branch circuits supplying continuous loads be sized at 125% of the load - which is mathematically equivalent to keeping the load at or below 80% of the circuit rating. The code defines "continuous load" as any load that is expected to continue for 3 hours or more. A space heater running all night, a grow light on a timer, a water pump on a well system - all of these qualify. When you select "Continuous Load" in this tool, the safe capacity shown reflects this 80% threshold.</p>
+
+          <h3>Common Causes of Tripped Breakers</h3>
+          <p>The most common cause is a circuit shared between a space heater and other devices. A 1500W space heater draws 12.5A alone on a 15A circuit - leaving only 2.5A for everything else. Add a 150W TV (1.25A) and a phone charger (0.2A) and you are at 14A on a 15A breaker before accounting for the continuous load rule.</p>
+          <p>Other common culprits include hair dryers (often 1875W, drawing 15.6A alone on 120V - enough to trip a 15A breaker by itself), vacuum cleaners, and motor-start surges from refrigerators and air conditioners. Motor loads have a high inrush current on startup that can be 3-6 times the running current, which can trip a breaker even when running load is within limits.</p>
+
+          <h3>When to Add a Dedicated Circuit</h3>
+          <p>Any appliance that frequently trips a breaker, or any device the NEC specifically lists as requiring a dedicated circuit, should be on its own circuit. The NEC requires dedicated 20A circuits for kitchen small appliance circuits, refrigerators, dishwashers, garbage disposals, and bathroom outlets. It requires dedicated circuits for ranges, dryers, water heaters, and EV chargers as well, but at higher amperages (30A to 60A). If this estimator shows your circuit is consistently over the safe limit, hiring an electrician to add a new circuit from the panel is the proper fix - not using extension cords or power strips to redistribute the load.</p>
+
+          <!-- FAQ -->
+          <h3 style="margin-top:28px">Frequently Asked Questions</h3>
+
+          <div class="faq-item" id="faq-1">
+            <div class="faq-question" onclick="toggleFaq('faq-1')">
+              What is the 80% rule for circuit breakers?
+              <span class="faq-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              The NEC 80% rule (National Electrical Code section 210.19 and 210.20) states that a circuit breaker must not carry more than 80% of its rated amperage for loads that run continuously - meaning 3 hours or longer. A 20-amp breaker on a continuous circuit should carry no more than 16 amps. This rule exists because breakers are thermal devices: running at 100% capacity for extended periods generates enough heat to degrade the breaker, cause nuisance trips, and in worst cases create a fire hazard. For short, intermittent loads, the full breaker rating is usable.
+            </div>
+          </div>
+
+          <div class="faq-item" id="faq-2">
+            <div class="faq-question" onclick="toggleFaq('faq-2')">
+              Why does my space heater keep tripping the breaker?
+              <span class="faq-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              A typical 1500-watt space heater draws 12.5 amps on a 120V circuit and runs continuously, putting it alone at 78% of a 15-amp breaker's safe continuous capacity. If anything else is on that circuit - a lamp, a phone charger, a TV - you push past the 80% threshold and the breaker trips. The fix is to plug the heater into a dedicated 20-amp circuit (it draws only 62.5% of that breaker's capacity), or to run it on a circuit with nothing else plugged in.
+            </div>
+          </div>
+
+          <div class="faq-item" id="faq-3">
+            <div class="faq-question" onclick="toggleFaq('faq-3')">
+              How do I calculate amps if my appliance only lists watts?
+              <span class="faq-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              Divide the appliance's wattage by the circuit voltage. For a standard 120V outlet: Amps = Watts divided by 120. For a 240V heavy appliance outlet: Amps = Watts divided by 240. Example: a 1200-watt microwave on a 120V circuit draws 10 amps. A 4800-watt electric water heater on a 240V circuit draws 20 amps. This calculator does the conversion automatically - just enter watts for any appliance and it will show the amp draw.
+            </div>
+          </div>
+
+          <div class="faq-item" id="faq-4">
+            <div class="faq-question" onclick="toggleFaq('faq-4')">
+              What requires a dedicated 240V circuit?
+              <span class="faq-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              Large appliances that require their own dedicated 240V circuit include: electric ranges and ovens (40-50 amp), clothes dryers (30 amp), central air conditioners (varies, typically 30-60 amp), electric water heaters (30 amp), EV chargers (Level 2, 30-50 amp), hot tubs and spas (50-60 amp), and electric furnaces. The NEC requires dedicated circuits for these because they draw far more power than a standard 120V branch circuit can safely supply. Sharing a circuit with other loads is a fire and equipment hazard.
+            </div>
+          </div>
+
+          <div class="faq-item" id="faq-5">
+            <div class="faq-question" onclick="toggleFaq('faq-5')">
+              Can I add more outlets to an existing circuit?
+              <span class="faq-icon">+</span>
+            </div>
+            <div class="faq-answer">
+              You can physically add more outlets to a circuit, but whether you should depends entirely on the total load. Use this calculator to map out everything that will ever run simultaneously on that circuit and compare to the breaker's safe capacity (80% for continuous loads). If the total is under the safe threshold, adding outlets is fine. If you are already near the limit, adding outlets means you need to be careful about what you plug in - or better yet, add a new dedicated circuit from the panel.
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TOOL DISCLAIMER ─────────────────────────────── -->
+        <div class="tool-disclaimer">
+          This tool provides estimates for informational and planning purposes only. It is not a substitute for professional electrical inspection or licensed electrician advice. Always consult a licensed electrician before modifying circuits, adding loads, or making electrical changes to your home. Electrical code requirements vary by jurisdiction.
+        </div>
+
+      </div><!-- /container -->
+    </div><!-- /main-content -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ── State ──────────────────────────────────────────────── */
+    let voltage  = 120;
+    let loadType = 'standard'; // 'standard' | 'continuous'
+    let appliances = [];       // [{name, watts, amps}]
+    let nextId = 0;
+
+    /* ── Preset data ────────────────────────────────────────── */
+    function onPresetChange() {
+      const sel = document.getElementById('preset-select');
+      const val = sel.value;
+      const customNameWrap = document.getElementById('custom-name-wrap');
+      const customValue    = document.getElementById('custom-value');
+      const customUnit     = document.getElementById('custom-unit');
+      const valueLabel     = document.getElementById('value-label');
+
+      if (!val) {
+        customValue.value = '';
+        customNameWrap.style.display = 'none';
+        valueLabel.textContent = 'Value';
+        return;
+      }
+
+      if (val === 'custom|') {
+        customNameWrap.style.display = 'block';
+        customValue.value = '';
+        customUnit.value = 'watts';
+        valueLabel.textContent = 'Watts';
+        document.getElementById('custom-name').value = '';
+      } else {
+        const [, watts] = val.split('|');
+        customValue.value = watts;
+        customUnit.value = 'watts';
+        customNameWrap.style.display = 'none';
+        valueLabel.textContent = 'Watts';
+      }
+      recalcPreview();
+    }
+
+    function recalcPreview() {
+      const unit = document.getElementById('custom-unit').value;
+      document.getElementById('value-label').textContent =
+        unit === 'watts' ? 'Watts' : 'Amps';
+    }
+
+    /* ── Voltage toggle ─────────────────────────────────────── */
+    function setVoltage(btn) {
+      document.querySelectorAll('#voltage-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      voltage = parseInt(btn.dataset.v, 10);
+      // Update amps on existing items
+      appliances.forEach(a => { a.amps = a.watts / voltage; });
+      renderList();
+      recalc();
+    }
+
+    /* ── Load type toggle ───────────────────────────────────── */
+    function setLoad(btn) {
+      document.querySelectorAll('#load-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadType = btn.dataset.l;
+      recalc();
+    }
+
+    /* ── Add appliance ──────────────────────────────────────── */
+    function addAppliance() {
+      const sel       = document.getElementById('preset-select');
+      const valInput  = document.getElementById('custom-value');
+      const unitSel   = document.getElementById('custom-unit');
+      const nameInput = document.getElementById('custom-name');
+
+      const presetVal = sel.value;
+      if (!presetVal) { valInput.focus(); return; }
+
+      let name, watts, amps;
+      const numVal = parseFloat(valInput.value);
+      if (isNaN(numVal) || numVal <= 0) { valInput.focus(); return; }
+
+      if (presetVal === 'custom|') {
+        name = nameInput.value.trim() || 'Custom Appliance';
+      } else {
+        name = presetVal.split('|')[0];
+      }
+
+      if (unitSel.value === 'watts') {
+        watts = numVal;
+        amps  = watts / voltage;
+      } else {
+        amps  = numVal;
+        watts = amps * voltage;
+      }
+
+      appliances.push({ id: nextId++, name, watts, amps });
+      renderList();
+      recalc();
+
+      // Reset form
+      sel.value = '';
+      valInput.value = '';
+      document.getElementById('custom-name').value = '';
+      document.getElementById('custom-name-wrap').style.display = 'none';
+    }
+
+    /* ── Remove appliance ───────────────────────────────────── */
+    function removeAppliance(id) {
+      appliances = appliances.filter(a => a.id !== id);
+      renderList();
+      recalc();
+    }
+
+    /* ── Render list ────────────────────────────────────────── */
+    function renderList() {
+      const list  = document.getElementById('appliance-list');
+      const empty = document.getElementById('empty-state');
+
+      if (appliances.length === 0) {
+        list.innerHTML = '';
+        list.appendChild(empty);
+        empty.style.display = 'block';
+        return;
+      }
+
+      list.innerHTML = '';
+      appliances.forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'appliance-item';
+        div.innerHTML =
+          '<span class="appliance-name">' + escHtml(a.name) + '</span>' +
+          '<span class="appliance-watts">' + Math.round(a.watts) + ' W</span>' +
+          '<span class="appliance-amps">' + a.amps.toFixed(2) + ' A</span>' +
+          '<button class="btn-remove" onclick="removeAppliance(' + a.id + ')">Remove</button>';
+        list.appendChild(div);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── Core calculation ───────────────────────────────────── */
+    function recalc() {
+      const breakerSize = parseFloat(document.getElementById('breaker-size').value);
+      const maxSafe     = loadType === 'continuous' ? breakerSize * 0.8 : breakerSize;
+      const maxSafeW    = maxSafe * voltage;
+
+      const totalAmps   = appliances.reduce((s, a) => s + a.amps, 0);
+      const totalWatts  = appliances.reduce((s, a) => s + a.watts, 0);
+      const remaining   = maxSafe - totalAmps;
+      const isOverload  = totalAmps > maxSafe;
+      const pct         = maxSafe > 0 ? Math.min((totalAmps / maxSafe) * 100, 150) : 0;
+
+      /* Hero */
+      const heroEl = document.getElementById('hero-amps');
+      heroEl.innerHTML = totalAmps.toFixed(1) + ' <span class="hero-unit">A</span>';
+      heroEl.classList.toggle('overload', isOverload);
+
+      /* Output card border */
+      document.getElementById('output-card').classList.toggle('overload', isOverload);
+
+      /* Overload banner */
+      document.getElementById('overload-banner').classList.toggle('visible', isOverload);
+
+      /* Stat: total watts */
+      document.getElementById('stat-watts-val').textContent = Math.round(totalWatts).toLocaleString();
+      document.getElementById('stat-watts').classList.toggle('overload', isOverload);
+
+      /* Stat: max safe amps */
+      document.getElementById('stat-safe-val').textContent = maxSafe.toFixed(1);
+      document.getElementById('stat-safe-val').style.color = isOverload ? 'var(--danger)' : 'var(--gray)';
+
+      /* Stat: remaining */
+      const remainEl = document.getElementById('stat-remain-val');
+      remainEl.textContent = remaining.toFixed(1);
+      remainEl.className   = 'stat-value ' + (isOverload ? 'danger' : 'safe');
+      document.getElementById('stat-remaining').classList.toggle('overload', isOverload);
+
+      /* Progress bar */
+      const bar = document.getElementById('load-bar');
+      bar.style.width = Math.min(pct, 100) + '%';
+      bar.classList.toggle('overload', isOverload);
+
+      /* Pct label */
+      document.getElementById('load-pct-label').textContent = pct.toFixed(0) + '% of safe capacity';
+    }
+
+    /* ── FAQ accordion ──────────────────────────────────────── */
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      item.classList.toggle('open');
+    }
+
+    /* ── Init ───────────────────────────────────────────────── */
+    recalc();
+  </script>
+</body>
+</html>
