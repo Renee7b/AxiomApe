@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Safe Typography Style Sheet Generator: Preview Fallback Stacks and Output CSS Variables | AxiomApe</title>
+  <meta name="description" content="Free web safe typography CSS generator. Choose OS-level font fallback stacks, set your modular scale ratio and base size, adjust line height and spacing, then instantly preview your typographic hierarchy and copy the generated CSS custom properties." />
+  <meta name="keywords" content="web safe font generator, CSS typography generator, font fallback stack, modular scale calculator, CSS custom properties generator, system font stack, typography CSS variables, rem font size calculator, typographic hierarchy tool, CSS variable generator, web font fallback, typography scale tool" />
+  <link rel="canonical" href="https://axiomape.com/web-safe-typography-style-sheet-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Web Safe Typography Style Sheet Generator",
+        "description": "Free web safe typography CSS generator. Choose OS-level font fallback stacks, set your modular scale ratio and base size, adjust line height and spacing, then instantly preview your typographic hierarchy and copy the generated CSS custom properties.",
+        "url": "https://axiomape.com/web-safe-typography-style-sheet-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why should I use web-safe fonts instead of Google Fonts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Web-safe font stacks load instantly because the fonts already exist on the user's operating system - no network request is needed. Google Fonts, while beautiful, add an extra DNS lookup, TCP connection, and file download on every first visit. For performance-critical pages, this can cost 200 to 600 milliseconds of render-blocking time. Web-safe stacks also work offline, are not subject to third-party service outages, and raise no GDPR data-transfer concerns since no request ever leaves the user's browser."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a modular typography scale work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A modular scale is a sequence of font sizes produced by multiplying a base size by a fixed ratio repeatedly. For example, with a 16px base and a 1.25 Major Third ratio, the scale produces 16px, 20px, 25px, 31.25px, 39.06px, and so on. Each heading level maps to one step up the scale. The result is a mathematically harmonious hierarchy where every size relates to every other by the same ratio, creating visual rhythm without arbitrary guesswork."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a system font stack?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A system font stack is a CSS font-family declaration that chains together the native interface fonts of major operating systems. The browser uses the first font in the list that is available. For example, -apple-system targets San Francisco on Apple devices, BlinkMacSystemFont covers Chrome on macOS, Segoe UI is used on Windows, and Roboto appears on Android. The stack ends with a generic fallback like sans-serif so the browser always has a safe last resort. These fonts render at native quality because they are tuned for the exact pixel grid of each display."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is rem preferred over px for font sizing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "rem (root em) scales relative to the root element font size, which browsers allow users to set in accessibility preferences. If a user sets their browser to 20px base, a value of 1rem becomes 20px automatically, so the whole layout scales correctly. px values are absolute and ignore that preference, breaking accessibility for users who rely on larger text. rem also makes responsive scaling trivial: change one :root font-size declaration and every rem value in your stylesheet adjusts proportionally."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET AND BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --indigo:       #4F46E5;
+      --indigo-dark:  #3730A3;
+      --indigo-light: #6366F1;
+      --blue:         #3B82F6;
+      --blue-light:   #60A5FA;
+      --bg:           #0F172A;
+      --surface:      #1E293B;
+      --surface2:     #263348;
+      --border:       #334155;
+      --border-light: #475569;
+      --text:         #E2E8F0;
+      --text-muted:   #94A3B8;
+      --text-dim:     #64748B;
+      --accent:       #4F46E5;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+      --radius:       12px;
+      --card:         #1E293B;
+      --green:        #10B981;
+      /* preview stage colors */
+      --preview-bg:   #F8FAFC;
+      --preview-text: #0F172A;
+      --preview-muted:#475569;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 60%, #1E3A5F 100%);
+      color: #fff;
+      padding: 48px 20px 40px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      letter-spacing: -0.02em;
+    }
+    .page-header h1 span { color: var(--blue-light); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: #94A3B8;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--indigo-light);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: "";
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--indigo);
+      border-radius: 2px;
+    }
+
+    /* ===================================================
+       TOOL CARD: 3-PANEL INPUT GRID
+    =================================================== */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .input-panels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+    }
+    .panel:last-child { border-right: none; }
+
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--indigo-light);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+    select:focus, input[type="number"]:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: var(--border-light);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--indigo);
+      border: 2px solid var(--indigo-light);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--indigo);
+      border: 2px solid var(--indigo-light);
+      cursor: pointer;
+    }
+    .slider-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--blue-light);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* ===================================================
+       OUTPUT DUAL-PANE
+    =================================================== */
+    .output-panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .pane-header {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 12px 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pane-header .pane-label-text { color: var(--indigo-light); }
+
+    /* Preview pane */
+    .preview-pane {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .preview-stage {
+      background: var(--preview-bg);
+      padding: 32px 28px;
+      min-height: 420px;
+    }
+
+    #preview-article { color: var(--preview-text); }
+    #preview-article .preview-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: #4F46E5;
+      color: #fff;
+      padding: 3px 9px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    #preview-article .preview-meta {
+      font-size: 0.78rem;
+      color: #64748B;
+      margin-bottom: 16px;
+    }
+    #preview-article blockquote {
+      border-left: 3px solid #4F46E5;
+      padding: 10px 16px;
+      margin: 20px 0;
+      background: #F1F5F9;
+      color: #334155;
+      border-radius: 0 6px 6px 0;
+    }
+    #preview-article hr {
+      border: none;
+      border-top: 1px solid #E2E8F0;
+      margin: 20px 0;
+    }
+    #preview-article .preview-small { color: #64748B; }
+
+    /* Code pane */
+    .code-pane {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+
+    .code-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #0D1117;
+    }
+    .code-scroll::-webkit-scrollbar { width: 6px; }
+    .code-scroll::-webkit-scrollbar-track { background: transparent; }
+    .code-scroll::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+    pre {
+      font-family: "Fira Code", "Cascadia Code", "Courier New", Courier, monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: #E2E8F0;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    /* Syntax colors */
+    .tok-selector { color: #F97316; }
+    .tok-prop     { color: #60A5FA; }
+    .tok-value    { color: #4ADE80; }
+    .tok-comment  { color: #475569; font-style: italic; }
+    .tok-punct    { color: #94A3B8; }
+
+    .copy-btn {
+      position: absolute;
+      top: 48px;
+      right: 12px;
+      background: var(--indigo);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.2s, transform 0.15s;
+      z-index: 10;
+    }
+    .copy-btn:hover { background: var(--indigo-dark); transform: translateY(-1px); }
+    .copy-btn.copied { background: var(--green); }
+
+    /* ===================================================
+       AD PLACEMENTS (site-chrome handles visibility)
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin-bottom: 24px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--blue-light);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .edu-section .section-intro {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--surface2); }
+    .faq-q::after { content: "+"; font-size: 1.1rem; color: var(--indigo-light); transition: transform 0.2s; }
+    .faq-item.open .faq-q::after { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ===================================================
+       RESPONSIVE
+    =================================================== */
+    @media (max-width: 900px) {
+      .input-panels { grid-template-columns: 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
+      .panel:last-child { border-bottom: none; }
+      .output-panes { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .preview-stage { padding: 20px 16px; }
+      .card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>Web Safe <span>Typography</span> Style Sheet Generator</h1>
+    <p>Choose font fallback stacks, set your modular scale, and get instant CSS custom properties with a live preview of your typographic hierarchy.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         TOOL CARD: INPUT PANELS
+    ============================================================ -->
+    <div class="tool-card">
+      <div class="input-panels">
+
+        <!-- PANEL 1: Web Safe Fallback Stacks -->
+        <div class="panel">
+          <div class="panel-label">Web Safe Fallback Stacks</div>
+
+          <div class="field">
+            <label for="fontPrimary">Primary Font (Headings)</label>
+            <select id="fontPrimary" onchange="generate()">
+              <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">System UI (Default)</option>
+              <option value="Arial, Helvetica, Liberation Sans, sans-serif">Arial / Helvetica</option>
+              <option value="Georgia, 'Times New Roman', Times, serif">Georgia / Times</option>
+              <option value="'Trebuchet MS', 'Helvetica Neue', Helvetica, Arial, sans-serif">Trebuchet MS</option>
+              <option value="'Courier New', Courier, 'Lucida Console', monospace">Courier New (Mono)</option>
+              <option value="Verdana, Geneva, Tahoma, sans-serif">Verdana</option>
+              <option value="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif">Palatino</option>
+              <option value="Impact, Haettenschweiler, 'Franklin Gothic Bold', Charcoal, sans-serif">Impact</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fontSecondary">Secondary Font (Body Text)</label>
+            <select id="fontSecondary" onchange="generate()">
+              <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">System UI (Default)</option>
+              <option value="Arial, Helvetica, Liberation Sans, sans-serif">Arial / Helvetica</option>
+              <option value="Georgia, 'Times New Roman', Times, serif" selected>Georgia / Times</option>
+              <option value="'Trebuchet MS', 'Helvetica Neue', Helvetica, Arial, sans-serif">Trebuchet MS</option>
+              <option value="'Courier New', Courier, 'Lucida Console', monospace">Courier New (Mono)</option>
+              <option value="Verdana, Geneva, Tahoma, sans-serif">Verdana</option>
+              <option value="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif">Palatino</option>
+              <option value="Impact, Haettenschweiler, 'Franklin Gothic Bold', Charcoal, sans-serif">Impact</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PANEL 2: Modular Scale Settings -->
+        <div class="panel">
+          <div class="panel-label">Modular Scale Settings</div>
+
+          <div class="field">
+            <label for="baseSize">Base Font Size (px)</label>
+            <input type="number" id="baseSize" value="16" min="10" max="32" step="1" oninput="generate()" />
+          </div>
+
+          <div class="field">
+            <label for="scaleRatio">Typography Scale Ratio</label>
+            <select id="scaleRatio" onchange="generate()">
+              <option value="1.125">1.125 - Major Second</option>
+              <option value="1.200" selected>1.200 - Minor Third</option>
+              <option value="1.250">1.250 - Major Third</option>
+              <option value="1.333">1.333 - Perfect Fourth</option>
+              <option value="1.414">1.414 - Augmented Fourth</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PANEL 3: Spacing Profile -->
+        <div class="panel">
+          <div class="panel-label">Spacing Profile</div>
+
+          <div class="field">
+            <label for="lineHeightBody">Base Line Height</label>
+            <div class="slider-row">
+              <input type="range" id="lineHeightBody" min="1.1" max="2.0" step="0.05" value="1.5" oninput="updateVal('lhBodyVal', this.value); generate()" />
+              <span class="slider-val" id="lhBodyVal">1.50</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="lineHeightHeading">Heading Line Height</label>
+            <div class="slider-row">
+              <input type="range" id="lineHeightHeading" min="1.0" max="1.5" step="0.05" value="1.2" oninput="updateVal('lhHeadVal', this.value); generate()" />
+              <span class="slider-val" id="lhHeadVal">1.20</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="paraMargin">Paragraph Margin Bottom (rem)</label>
+            <div class="slider-row">
+              <input type="range" id="paraMargin" min="0.5" max="3.0" step="0.1" value="1.5" oninput="updateVal('paraMarginVal', this.value); generate()" />
+              <span class="slider-val" id="paraMarginVal">1.50</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /input-panels -->
+    </div><!-- /tool-card -->
+
+    <!-- ============================================================
+         OUTPUT: DUAL PANE
+    ============================================================ -->
+    <div class="output-panes">
+
+      <!-- PANE 1: Live Preview Stage -->
+      <div class="preview-pane">
+        <div class="pane-header">
+          <span class="pane-label-text">Live Preview Stage</span>
+          <span style="color:var(--green);font-size:0.7rem;font-weight:700;">LIVE</span>
+        </div>
+        <div class="preview-stage">
+          <article id="preview-article">
+            <span class="preview-badge">Article</span>
+            <h1 id="prev-h1">The Art of Typographic Hierarchy</h1>
+            <p class="preview-meta">By a frontend designer &middot; 5 min read</p>
+            <h2 id="prev-h2">Why Type Scale Matters</h2>
+            <p id="prev-p1">Good typography is invisible. When a reader moves through an article without noticing the type choices, the designer has done their job. A modular scale produces sizes that relate to each other by a single ratio, creating rhythm throughout the page without arbitrary guesswork.</p>
+            <blockquote id="prev-bq">"Type is a beautiful group of letters, not a group of beautiful letters." - Matthew Carter</blockquote>
+            <h3 id="prev-h3">Choosing a Fallback Stack</h3>
+            <p id="prev-p2">System font stacks render at native quality on every operating system and add zero network overhead. Pair a serif heading stack with a sans-serif body stack to introduce contrast, or use a single coherent system stack for a modern, minimal feel.</p>
+            <hr />
+            <small id="prev-small" class="preview-small">All fonts above are OS-level web-safe stacks - no external requests required.</small>
+          </article>
+        </div>
+      </div>
+
+      <!-- PANE 2: CSS Code Output -->
+      <div class="code-pane">
+        <div class="pane-header">
+          <span class="pane-label-text">Generated CSS Output</span>
+        </div>
+        <button class="copy-btn" id="copyBtn" onclick="copyCSS()">Copy</button>
+        <div class="code-scroll">
+          <pre id="cssOutput"></pre>
+        </div>
+      </div>
+
+    </div><!-- /output-panes -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Web Safe Fonts</div>
+          <div class="glossary-def">Fonts that are preinstalled on virtually every operating system - Windows, macOS, iOS, and Android - and therefore guaranteed to render without any network request. Examples include Arial, Georgia, Verdana, and Courier New.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Fallback Stack</div>
+          <div class="glossary-def">A comma-separated list of fonts in the CSS font-family property. The browser uses the first font it finds on the user's system and falls through to the next if it is missing. The list always ends with a generic family like sans-serif or serif.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Modular Scale</div>
+          <div class="glossary-def">A sequence of font sizes produced by multiplying a base size by a fixed ratio repeatedly. Every size in the scale is mathematically related to every other, producing a hierarchy with inherent visual harmony instead of arbitrary jumps.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">System Fonts</div>
+          <div class="glossary-def">The native interface fonts of each operating system: San Francisco on Apple devices, Segoe UI on Windows, Roboto on Android, and so on. System font stacks target these fonts first, then fall back through a chain ending with a generic family.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">CSS Custom Properties (Variables)</div>
+          <div class="glossary-def">Values stored in the :root block with a -- prefix, such as --font-primary or --text-h1. Any CSS rule can reference them with var(--name). Changing the value in one place updates every element that uses it, making design tokens easy to maintain.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">REM vs EM vs PX</div>
+          <div class="glossary-def">px is an absolute unit that ignores user font preferences. em is relative to the parent element's font size and compounds through nested elements. rem (root em) is always relative to the root font size only, making it predictable and accessible. rem is the preferred unit for typography.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Typographic Hierarchy</div>
+          <div class="glossary-def">The visual ordering of text elements by size, weight, and spacing so that readers can scan a page and instantly understand which content is most important. A well-defined hierarchy guides the eye from headline to subhead to body without any conscious effort from the reader.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Scale Ratio</div>
+          <div class="glossary-def">The multiplier used to step between font sizes in a modular scale. Common ratios include the Perfect Fourth (1.333), Major Third (1.250), and Minor Third (1.200). A smaller ratio produces a subtle scale; a larger ratio creates more dramatic size jumps between heading levels.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Web Safe Typography Systems</h2>
+      <p class="section-intro">Typography is the single most read piece of design on any website. Before reaching for a web font service, understanding what your operating system already provides - and how to structure it with math - gives you a fast, accessible, privacy-respecting foundation that works everywhere.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Start with the Web Safe Fallback Stacks panel. Select a Primary Font for your headings and a Secondary Font for body text. The Live Preview stage on the right updates instantly so you can read actual prose in your chosen typefaces. Try pairing a serif stack (Georgia/Times) for headings with a System UI stack for body text to add editorial character without loading a single external file.</p>
+      <p>Next, adjust the Modular Scale Settings. The Base Font Size defaults to 16px, which matches most browser defaults. The Scale Ratio controls how aggressively heading sizes step up. A 1.200 Minor Third gives a calm, content-focused hierarchy. A 1.414 Augmented Fourth creates a bold, display-oriented scale better suited to landing pages or portfolios.</p>
+      <p>Finally, tune the Spacing Profile sliders to control the vertical rhythm of the page. A higher Base Line Height improves readability for long-form body text. A tighter Heading Line Height keeps multi-line headlines compact. The Paragraph Margin Bottom controls the breathing room between blocks of text.</p>
+
+      <h3>Understanding the Generated CSS Variables</h3>
+      <p>The output CSS uses the :root block to declare all values as custom properties. This means your entire site's typography can be changed by editing a single file. The --text-h1 through --text-h6 variables are calculated by the modular scale formula: size = base * ratio^power, then divided by 16 to convert to rem. The final output is ready to paste directly into any stylesheet.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why should I use web-safe fonts instead of Google Fonts?</div>
+        <div class="faq-a">Web-safe font stacks load instantly because the fonts already exist on the user's operating system - no network request is needed. Google Fonts, while beautiful, add an extra DNS lookup, TCP connection, and file download on every first visit. For performance-critical pages, this can cost 200 to 600 milliseconds of render-blocking time. Web-safe stacks also work offline, are not subject to third-party service outages, and raise no GDPR data-transfer concerns since no request ever leaves the user's browser.</div>
+      </div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How does a modular typography scale work?</div>
+        <div class="faq-a">A modular scale is a sequence of font sizes produced by multiplying a base size by a fixed ratio repeatedly. For example, with a 16px base and a 1.25 Major Third ratio, the scale produces 16px, 20px, 25px, 31.25px, 39.06px, and so on. Each heading level maps to one step up the scale. The result is a mathematically harmonious hierarchy where every size relates to every other by the same ratio, creating visual rhythm without arbitrary guesswork.</div>
+      </div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">What is a system font stack?</div>
+        <div class="faq-a">A system font stack is a CSS font-family declaration that chains together the native interface fonts of major operating systems. The browser uses the first font in the list that is available. For example, -apple-system targets San Francisco on Apple devices, BlinkMacSystemFont covers Chrome on macOS, Segoe UI is used on Windows, and Roboto appears on Android. The stack ends with a generic fallback like sans-serif so the browser always has a safe last resort. These fonts render at native quality because they are tuned for the exact pixel grid of each display.</div>
+      </div>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why is rem preferred over px for font sizing?</div>
+        <div class="faq-a">rem (root em) scales relative to the root element font size, which browsers allow users to set in accessibility preferences. If a user sets their browser to 20px base, a value of 1rem becomes 20px automatically, so the whole layout scales correctly. px values are absolute and ignore that preference, breaking accessibility for users who rely on larger text. rem also makes responsive scaling trivial: change one :root font-size declaration and every rem value in your stylesheet adjusts proportionally.</div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ===================================================
+       HELPERS
+    =================================================== */
+    function updateVal(id, val) {
+      document.getElementById(id).textContent = parseFloat(val).toFixed(2);
+    }
+
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+
+    /* ===================================================
+       MODULAR SCALE ENGINE
+    =================================================== */
+    function calcScale(base, ratio) {
+      // h1=5 steps, h2=4, h3=3, h4=2, h5=1, h6=0, p=base, small=-1
+      const steps = { h1:5, h2:4, h3:3, h4:2, h5:1, h6:0, p:0, small:-1 };
+      const sizes = {};
+      for (const [tag, power] of Object.entries(steps)) {
+        const px = base * Math.pow(ratio, power);
+        sizes[tag] = (px / 16).toFixed(4);
+      }
+      return sizes;
+    }
+
+    /* ===================================================
+       CSS GENERATION ENGINE
+    =================================================== */
+    function buildCSS(fp, fs, base, ratio, lhBody, lhHead, paraM) {
+      const s = calcScale(base, ratio);
+
+      const lines = [
+        '/* ============================================',
+        '   Web Safe Typography System',
+        '   Generated by AxiomApe Typography Generator',
+        '   axiomape.com/web-safe-typography-style-sheet-generator/',
+        '============================================ */',
+        '',
+        ':root {',
+        `  /* Font Stacks */`,
+        `  --font-primary:   ${fp};`,
+        `  --font-secondary: ${fs};`,
+        ``,
+        `  /* Modular Scale (base: ${base}px, ratio: ${ratio}) */`,
+        `  --text-base: ${(base/16).toFixed(4)}rem;  /* ${base}px */`,
+        `  --text-h1:   ${s.h1}rem;  /* ~${Math.round(base * Math.pow(ratio,5))}px */`,
+        `  --text-h2:   ${s.h2}rem;  /* ~${Math.round(base * Math.pow(ratio,4))}px */`,
+        `  --text-h3:   ${s.h3}rem;  /* ~${Math.round(base * Math.pow(ratio,3))}px */`,
+        `  --text-h4:   ${s.h4}rem;  /* ~${Math.round(base * Math.pow(ratio,2))}px */`,
+        `  --text-h5:   ${s.h5}rem;  /* ~${Math.round(base * Math.pow(ratio,1))}px */`,
+        `  --text-h6:   ${s.h6}rem;  /* ~${Math.round(base)}px */`,
+        `  --text-small: ${s.small}rem; /* ~${Math.round(base * Math.pow(ratio,-1))}px */`,
+        ``,
+        `  /* Spacing Profile */`,
+        `  --line-height-body:    ${parseFloat(lhBody).toFixed(2)};`,
+        `  --line-height-heading: ${parseFloat(lhHead).toFixed(2)};`,
+        `  --para-margin-bottom:  ${parseFloat(paraM).toFixed(2)}rem;`,
+        `}`,
+        ``,
+        `/* Body */`,
+        `body {`,
+        `  font-family: var(--font-secondary);`,
+        `  font-size: var(--text-base);`,
+        `  line-height: var(--line-height-body);`,
+        `}`,
+        ``,
+        `/* Headings */`,
+        `h1, h2, h3, h4, h5, h6 {`,
+        `  font-family: var(--font-primary);`,
+        `  line-height: var(--line-height-heading);`,
+        `  margin-bottom: calc(var(--para-margin-bottom) * 0.5);`,
+        `}`,
+        `h1 { font-size: var(--text-h1); }`,
+        `h2 { font-size: var(--text-h2); }`,
+        `h3 { font-size: var(--text-h3); }`,
+        `h4 { font-size: var(--text-h4); }`,
+        `h5 { font-size: var(--text-h5); }`,
+        `h6 { font-size: var(--text-h6); }`,
+        ``,
+        `/* Paragraphs */`,
+        `p {`,
+        `  font-size: var(--text-base);`,
+        `  line-height: var(--line-height-body);`,
+        `  margin-bottom: var(--para-margin-bottom);`,
+        `}`,
+        ``,
+        `small {`,
+        `  font-size: var(--text-small);`,
+        `}`,
+      ];
+
+      return lines.join('\n');
+    }
+
+    /* ===================================================
+       SYNTAX HIGHLIGHT (simple tokenizer)
+    =================================================== */
+    function highlight(css) {
+      return css
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        // comments
+        .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="tok-comment">$1</span>')
+        // selectors (lines not inside braces that end with {)
+        .replace(/^([^{<\n]+\{)/gm, '<span class="tok-selector">$1</span>')
+        // properties
+        .replace(/([ \t]+)(--[\w-]+|[\w-]+)(\s*:)/g,
+          '$1<span class="tok-prop">$2</span><span class="tok-punct">$3</span>')
+        // values (after colon up to ; or })
+        .replace(/:\s*([^;\n}<]+)(;?)/g, ': <span class="tok-value">$1</span>$2')
+        // closing braces
+        .replace(/^(\})/gm, '<span class="tok-punct">$1</span>');
+    }
+
+    /* ===================================================
+       LIVE PREVIEW UPDATER
+    =================================================== */
+    function updatePreview(fp, fs, s, lhBody, lhHead, paraM) {
+      const h1 = document.getElementById('prev-h1');
+      const h2 = document.getElementById('prev-h2');
+      const h3 = document.getElementById('prev-h3');
+      const p1 = document.getElementById('prev-p1');
+      const p2 = document.getElementById('prev-p2');
+      const bq = document.getElementById('prev-bq');
+      const sm = document.getElementById('prev-small');
+
+      const applyHead = el => {
+        el.style.fontFamily = fp;
+        el.style.lineHeight = lhHead;
+      };
+      const applyBody = el => {
+        el.style.fontFamily = fs;
+        el.style.lineHeight = lhBody;
+        el.style.marginBottom = paraM + 'rem';
+      };
+
+      h1.style.fontSize = s.h1 + 'rem'; applyHead(h1);
+      h2.style.fontSize = s.h2 + 'rem'; applyHead(h2);
+      h3.style.fontSize = s.h3 + 'rem'; applyHead(h3);
+      p1.style.fontSize = s.p + 'rem';  applyBody(p1);
+      p2.style.fontSize = s.p + 'rem';  applyBody(p2);
+      bq.style.fontFamily = fs;
+      bq.style.fontSize = (parseFloat(s.p) * 0.95) + 'rem';
+      bq.style.lineHeight = lhBody;
+      sm.style.fontFamily = fs;
+      sm.style.fontSize = s.small + 'rem';
+    }
+
+    /* ===================================================
+       MAIN GENERATE FUNCTION
+    =================================================== */
+    function generate() {
+      const fp    = document.getElementById('fontPrimary').value;
+      const fs    = document.getElementById('fontSecondary').value;
+      const base  = parseFloat(document.getElementById('baseSize').value) || 16;
+      const ratio = parseFloat(document.getElementById('scaleRatio').value);
+      const lhBody = parseFloat(document.getElementById('lineHeightBody').value);
+      const lhHead = parseFloat(document.getElementById('lineHeightHeading').value);
+      const paraM  = parseFloat(document.getElementById('paraMargin').value);
+
+      const s = calcScale(base, ratio);
+      const css = buildCSS(fp, fs, base, ratio, lhBody, lhHead, paraM);
+
+      // update code output
+      document.getElementById('cssOutput').innerHTML = highlight(css);
+      // store raw css for clipboard
+      document.getElementById('cssOutput').setAttribute('data-raw', css);
+
+      // update live preview
+      updatePreview(fp, fs, s, lhBody, lhHead, paraM);
+    }
+
+    /* ===================================================
+       CLIPBOARD
+    =================================================== */
+    function copyCSS() {
+      const raw = document.getElementById('cssOutput').getAttribute('data-raw') || '';
+      navigator.clipboard.writeText(raw).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      }).catch(() => {
+        // fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = raw;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      });
+    }
+
+    /* ===================================================
+       INIT
+    =================================================== */
+    generate();
+  </script>
+
+</body>
+</html>

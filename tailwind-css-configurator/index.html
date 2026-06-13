@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailwind CSS Configurator: Build Custom Color Themes and Spacing Utilities | AxiomApe</title>
+  <meta name="description" content="Free Tailwind CSS Configurator. Pick brand colors, set a custom spacing scale, and instantly export a ready-to-paste tailwind.config.js or theme.json file. 100% client-side, no installs required." />
+  <meta name="keywords" content="tailwind css configurator, tailwind color theme generator, tailwind config generator, tailwind spacing scale, tailwind theme extend, tailwind color palette, tailwind.config.js builder, tailwind json export, css theme generator, tailwind custom colors, tailwind shade generator, frontend tool, tailwind utility classes" />
+  <link rel="canonical" href="https://axiomape.com/tailwind-css-configurator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Tailwind CSS Configurator",
+        "description": "Free Tailwind CSS Configurator. Pick brand colors, set a custom spacing scale, and instantly export a ready-to-paste tailwind.config.js or theme.json file. 100% client-side, no installs required.",
+        "url": "https://axiomape.com/tailwind-css-configurator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I extend vs overwrite the default Tailwind theme?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Using theme.extend in your tailwind.config.js adds your custom colors and spacing on top of Tailwind's built-in defaults, so you keep utilities like gray-100 or p-4. Using theme (without extend) replaces Tailwind's defaults entirely, meaning only your custom values are available. This tool generates output inside theme.extend so your existing design system is preserved."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How are the 50-950 color shades mathematically calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Your chosen color is treated as the 500 weight. Lighter shades (50, 100, 200, 300, 400) are created by blending your base color with pure white at stepped percentages. Darker shades (600, 700, 800, 900, 950) blend your base color with pure black. The result is a perceptually natural 10-step palette that mirrors how Tailwind's default palettes are constructed."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is it better to use REM units for spacing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "REM units scale relative to the root font size (usually 16px). If a user changes their browser's default font size for accessibility reasons, REM-based spacing scales with it automatically, keeping proportions intact. PX values are absolute and do not respect user preferences. Tailwind itself uses REM for all spacing utilities, which is why this tool converts your pixel base unit to REM in the output."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I import this JSON file into my build process?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "After downloading theme.json, you can import it inside tailwind.config.js using: const theme = require('./theme.json'); Then spread its values inside theme.extend, for example: theme: { extend: { colors: theme.colors, spacing: theme.spacing } }. This keeps your config file clean and lets you version-control the theme separately from your Tailwind configuration."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a linear scale and a Golden Ratio scale for spacing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A linear scale adds the same amount to each step (e.g., 4px, 8px, 12px). A Golden Ratio scale (1.618) multiplies each step, creating rapid growth that feels naturally harmonious to the eye (4px, 6.5px, 10.5px). The 1.25x and 1.5x options fall between these extremes. Linear scales are predictable and great for dense UIs; ratio-based scales suit editorial and spacing-heavy layouts."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d2b;
+      --surface2:    #222535;
+      --border:      #2d3148;
+      --border2:     #3a3f5c;
+      --accent:      #06B6D4;
+      --accent2:     #3B82F6;
+      --text:        #e2e8f0;
+      --muted:       #8892a4;
+      --code-bg:     #0d0f18;
+      --code-text:   #e2e8f0;
+      --green:       #10b981;
+      --green-dim:   rgba(16,185,129,0.15);
+      --radius:      12px;
+      --radius-sm:   8px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.35);
+      --primary-dyn: #06B6D4;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* SiteChrome hides .top-nav automatically */
+    .top-nav {
+      text-align: center;
+      padding: 10px 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .top-nav a { font-weight: 600; color: var(--accent); }
+
+    /* =========================================================
+       LAYOUT
+    ========================================================= */
+    .page-wrapper {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 18px 60px;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      background: linear-gradient(135deg, #0d0f18 0%, #1a1d2b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.55rem, 4vw, 2.4rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      color: var(--text);
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* =========================================================
+       CARD
+    ========================================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 26px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title span { color: var(--accent); font-size: 1rem; }
+
+    /* =========================================================
+       TWO-COLUMN INPUT GRID
+    ========================================================= */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 800px) {
+      .tool-grid { grid-template-columns: 1fr; }
+    }
+
+    /* =========================================================
+       FORM ELEMENTS
+    ========================================================= */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.2px;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="color"] {
+      width: 44px;
+      height: 36px;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      cursor: pointer;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      flex-shrink: 0;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+    input[type="color"]::-webkit-color-swatch { border-radius: 5px; border: none; }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 8px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .hex-input { max-width: 110px; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border2);
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--surface);
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .range-val {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* =========================================================
+       DUAL-PANE OUTPUT LAYOUT
+    ========================================================= */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    /* =========================================================
+       VISUAL PREVIEW PANE
+    ========================================================= */
+    .preview-pane {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+    }
+    .preview-pane-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .palette-group { margin-bottom: 20px; }
+    .palette-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .swatch-row {
+      display: flex;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      height: 50px;
+    }
+    .swatch {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      transition: flex 0.15s;
+      position: relative;
+      min-width: 0;
+    }
+    .swatch:hover { flex: 2; }
+    .swatch-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .swatch:hover .swatch-label { opacity: 1; }
+    .swatch-hex {
+      font-size: 8px;
+      font-family: monospace;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.15s;
+      margin-top: 2px;
+    }
+    .swatch:hover .swatch-hex { opacity: 1; }
+
+    /* Spacing preview */
+    .spacing-preview-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .spacing-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .spacing-key {
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--muted);
+      min-width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .spacing-bar {
+      height: 12px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      flex-shrink: 0;
+      transition: width 0.3s;
+    }
+    .spacing-rem {
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--muted);
+    }
+    /* Scrollbar */
+    .spacing-preview-grid::-webkit-scrollbar { width: 5px; }
+    .spacing-preview-grid::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
+    .spacing-preview-grid::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    /* =========================================================
+       CODE OUTPUT PANE
+    ========================================================= */
+    .code-pane {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+    .code-pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-pane-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn-copy {
+      background: var(--accent2);
+      color: #fff;
+    }
+    .btn-dl {
+      background: var(--green);
+      color: #fff;
+    }
+    .code-pre {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 18px;
+      background: var(--code-bg);
+      border-radius: 0 0 var(--radius) var(--radius);
+      max-height: 480px;
+    }
+    .code-pre::-webkit-scrollbar { width: 6px; height: 6px; }
+    .code-pre::-webkit-scrollbar-track { background: #0a0c15; }
+    .code-pre::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 3px; }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 0.79rem;
+      line-height: 1.7;
+      color: var(--code-text);
+      white-space: pre;
+      display: block;
+    }
+
+    /* Syntax coloring */
+    .tok-key   { color: #93c5fd; }
+    .tok-str   { color: #86efac; }
+    .tok-num   { color: #fca5a5; }
+    .tok-punct { color: #94a3b8; }
+    .tok-cmt   { color: #4b5563; font-style: italic; }
+
+    /* =========================================================
+       COPY FEEDBACK
+    ========================================================= */
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .copy-toast.show { opacity: 1; transform: translateY(0); }
+
+    /* =========================================================
+       AD PLACEMENTS (handled by site-chrome CSS)
+    ========================================================= */
+
+    /* =========================================================
+       GLOSSARY
+    ========================================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       EDUCATIONAL SECTION
+    ========================================================= */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface2);
+      user-select: none;
+    }
+    .faq-q:hover { background: var(--border); }
+    .faq-q .arrow {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-q.open .arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .faq-a.open { display: block; }
+
+    code.inline {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      color: var(--accent);
+    }
+
+    /* =========================================================
+       RESPONSIVE TWEAKS
+    ========================================================= */
+    @media (max-width: 600px) {
+      .card { padding: 18px 14px; }
+      .swatch-row { height: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="top-nav">
+    <a href="https://axiomape.com">&larr; AxiomApe: All Free Tools</a>
+  </nav>
+
+  <header class="page-header">
+    <h1>Tailwind CSS <span>Configurator</span></h1>
+    <p>Build custom color palettes and spacing scales. Get an instant <code class="inline">tailwind.config.js</code> snippet or download <code class="inline">theme.json</code> - everything runs locally in your browser.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ====================================================
+         INPUT: TWO PANELS
+    ==================================================== -->
+    <div class="tool-grid">
+
+      <!-- PANEL 1: Brand Color Variables -->
+      <div class="card">
+        <div class="card-title"><span>&#9632;</span> Brand Color Variables</div>
+
+        <div class="form-group">
+          <label for="color-primary">Primary Color</label>
+          <div class="color-row">
+            <input type="color" id="color-primary-picker" value="#0EA5E9" oninput="syncHex('primary',this.value)" />
+            <input type="text" class="hex-input" id="color-primary" value="#0EA5E9" maxlength="7" oninput="syncPicker('primary',this.value)" placeholder="#000000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="color-secondary">Secondary Color</label>
+          <div class="color-row">
+            <input type="color" id="color-secondary-picker" value="#8B5CF6" oninput="syncHex('secondary',this.value)" />
+            <input type="text" class="hex-input" id="color-secondary" value="#8B5CF6" maxlength="7" oninput="syncPicker('secondary',this.value)" placeholder="#000000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="color-accent">Accent Color</label>
+          <div class="color-row">
+            <input type="color" id="color-accent-picker" value="#F43F5E" oninput="syncHex('accent',this.value)" />
+            <input type="text" class="hex-input" id="color-accent" value="#F43F5E" maxlength="7" oninput="syncPicker('accent',this.value)" placeholder="#000000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="color-neutral">Neutral / Gray Base</label>
+          <div class="color-row">
+            <input type="color" id="color-neutral-picker" value="#64748B" oninput="syncHex('neutral',this.value)" />
+            <input type="text" class="hex-input" id="color-neutral" value="#64748B" maxlength="7" oninput="syncPicker('neutral',this.value)" placeholder="#000000" />
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Custom Spacing Scale -->
+      <div class="card">
+        <div class="card-title"><span>&#9632;</span> Custom Spacing Scale</div>
+
+        <div class="form-group">
+          <label for="spacing-base">Base Spacing Unit (px)</label>
+          <input type="number" id="spacing-base" value="4" min="1" max="32" oninput="rebuild()" />
+        </div>
+
+        <div class="form-group">
+          <label for="spacing-mult">Scale Multiplier</label>
+          <select id="spacing-mult" onchange="rebuild()">
+            <option value="linear">Linear (equal steps)</option>
+            <option value="1.25">1.25x Geometric</option>
+            <option value="1.5">1.5x Geometric</option>
+            <option value="1.618">Golden Ratio (1.618x)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="spacing-steps">Max Spacing Steps: <span id="steps-val" style="color:var(--accent)">20</span></label>
+          <div class="range-row">
+            <input type="range" id="spacing-steps" min="10" max="50" value="20" oninput="document.getElementById('steps-val').textContent=this.value; rebuild();" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================
+         DUAL-PANE OUTPUT
+    ==================================================== -->
+    <div class="output-grid">
+
+      <!-- PANE 1: Visual Theme Preview -->
+      <div class="preview-pane">
+        <div class="preview-pane-title">Visual Theme Preview</div>
+        <div id="palette-container"></div>
+        <div class="palette-label" style="margin-top:18px">Custom Spacing Scale</div>
+        <div id="spacing-preview" class="spacing-preview-grid"></div>
+      </div>
+
+      <!-- PANE 2: Config Code Output -->
+      <div class="code-pane">
+        <div class="code-pane-header">
+          <div class="code-pane-title">tailwind.config.js</div>
+          <div class="btn-row">
+            <button class="btn btn-copy" onclick="copyConfig()">&#128203; Copy Config</button>
+            <button class="btn btn-dl" onclick="downloadJSON()">&#8659; Download JSON</button>
+          </div>
+        </div>
+        <div class="code-pre">
+          <code id="config-output"></code>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ====================================================
+         GLOSSARY
+    ==================================================== -->
+    <div class="card">
+      <div class="card-title"><span>&#128218;</span> Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Utility-First CSS</div>
+          <div class="glossary-def">A CSS methodology where you style elements by composing small, single-purpose class names (like <code class="inline">p-4</code> or <code class="inline">text-blue-500</code>) directly in HTML rather than writing custom CSS rules. Tailwind is the most popular utility-first framework.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">tailwind.config.js</div>
+          <div class="glossary-def">The central configuration file for a Tailwind CSS project. It lives at the root of your project and controls your custom theme, plugins, content paths for purging, and any overrides to Tailwind's built-in design tokens.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Theme Extension</div>
+          <div class="glossary-def">Adding your custom design tokens inside the <code class="inline">theme.extend</code> key merges them with Tailwind's defaults. The opposite approach - using <code class="inline">theme</code> without <code class="inline">extend</code> - replaces Tailwind's defaults entirely, removing all built-in utilities unless you redefine them.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Color Interpolation</div>
+          <div class="glossary-def">The mathematical process of generating in-between color values. This tool blends your base color with white (for lighter shades) or black (for darker shades) at stepped percentages to create a full 10-step palette from a single chosen color.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">REM vs PX</div>
+          <div class="glossary-def">PX (pixels) are absolute units. REM (Root EM) units scale relative to the browser's root font size, typically 16px. At 16px root, 1rem = 16px. REM-based spacing respects user accessibility settings; PX does not. Tailwind uses REM for all spacing utilities.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Scale Multiplier</div>
+          <div class="glossary-def">Determines how each successive spacing step grows. A linear scale adds the same base unit each step. A ratio multiplier (e.g. 1.618 Golden Ratio) multiplies each step, creating harmonic proportional growth - larger values space out faster. Ratio-based scales feel more natural to the eye in visual design.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================
+         EDUCATIONAL SECTION
+    ==================================================== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Tailwind CSS Theme Configuration</h2>
+      <p class="section-intro">Tailwind CSS ships with a beautifully designed default theme - but almost every real project needs to extend it with brand colors, a custom type scale, or a tighter spacing system. Understanding how the config file works lets you take full advantage of the framework instead of fighting against it.</p>
+
+      <h3>How to use this tool</h3>
+      <p>Select your brand colors using the pickers on the left. Each color you choose becomes the "500" weight of a full 10-step palette, generated by blending toward white and black. In the spacing panel, set your base unit in pixels (Tailwind's default is 4px), choose a scale type, and drag the steps slider. The visual preview and config output update instantly. When you're happy, click "Copy Config" to paste directly into your project, or "Download JSON" to save <code class="inline">theme.json</code> for use with a build pipeline.</p>
+
+      <h3>Extending vs. overwriting the default theme</h3>
+      <p>The output this tool generates lives inside <code class="inline">theme.extend</code>. That means your custom colors and spacing values are added alongside Tailwind's built-ins - you keep all 22 default color palettes, all default spacing steps, and every other utility. If you instead paste the output into <code class="inline">theme</code> directly (without <code class="inline">extend</code>), you will replace Tailwind's defaults and those built-in classes will disappear from your generated CSS.</p>
+
+      <h3>How the color math works</h3>
+      <p>Your chosen color is placed at the 500 weight. Shades 50, 100, 200, 300, and 400 are created by linearly blending your color with pure white: shade 50 is 95% white, shade 100 is 90%, up to shade 400 at 20% white. Shades 600, 700, 800, 900, and 950 blend toward pure black at the same graduated ratio. This mirrors the methodology Tailwind's core team used to design the default palette, so your custom colors will feel harmonically consistent with system colors like <code class="inline">slate</code> or <code class="inline">stone</code>.</p>
+
+      <h3>Choosing the right spacing scale</h3>
+      <p>The default 4px linear scale works well for component-dense UIs like dashboards and admin panels - steps are predictable and the numbers map to familiar Tailwind utilities (p-1 = 4px, p-2 = 8px). A 1.25x ratio scale adds gentle acceleration and suits most marketing sites. The Golden Ratio (1.618) creates dramatic spacing jumps that work beautifully for editorial layouts, large typography, and landing pages where whitespace is a design element. The right choice depends on your content density.</p>
+
+      <h3>FAQ</h3>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How do I extend vs overwrite the default Tailwind theme? <span class="arrow">&#9660;</span></div>
+        <div class="faq-a">Using <code class="inline">theme.extend</code> in your <code class="inline">tailwind.config.js</code> adds your custom colors and spacing on top of Tailwind's built-in defaults, so you keep utilities like <code class="inline">gray-100</code> or <code class="inline">p-4</code>. Using <code class="inline">theme</code> (without extend) replaces Tailwind's defaults entirely, meaning only your custom values are available. This tool generates output inside <code class="inline">theme.extend</code> so your existing design system is preserved.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How are the 50-950 color shades mathematically calculated? <span class="arrow">&#9660;</span></div>
+        <div class="faq-a">Your chosen color is treated as the 500 weight. Lighter shades (50, 100, 200, 300, 400) are created by blending your base color with pure white at stepped percentages. Darker shades (600, 700, 800, 900, 950) blend your base color with pure black. The result is a perceptually natural 10-step palette that mirrors how Tailwind's default palettes are constructed.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Why is it better to use REM units for spacing? <span class="arrow">&#9660;</span></div>
+        <div class="faq-a">REM units scale relative to the root font size (usually 16px). If a user changes their browser's default font size for accessibility reasons, REM-based spacing scales with it automatically, keeping proportions intact. PX values are absolute and do not respect user preferences. Tailwind itself uses REM for all spacing utilities, which is why this tool converts your pixel base unit to REM in the output.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How do I import this JSON file into my build process? <span class="arrow">&#9660;</span></div>
+        <div class="faq-a">After downloading <code class="inline">theme.json</code>, you can import it inside <code class="inline">tailwind.config.js</code> using: <code class="inline">const theme = require('./theme.json');</code> Then spread its values inside <code class="inline">theme.extend</code>, for example: <code class="inline">theme: { extend: { colors: theme.colors, spacing: theme.spacing } }</code>. This keeps your config file clean and lets you version-control the theme separately from your Tailwind configuration.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">What is the difference between a linear scale and a Golden Ratio scale for spacing? <span class="arrow">&#9660;</span></div>
+        <div class="faq-a">A linear scale adds the same amount to each step (e.g., 4px, 8px, 12px). A Golden Ratio scale (1.618) multiplies each step, creating rapid growth that feels naturally harmonious to the eye. The 1.25x and 1.5x options fall between these extremes. Linear scales are predictable and great for dense UIs; ratio-based scales suit editorial and spacing-heavy layouts.</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <div class="copy-toast" id="copy-toast">Config copied to clipboard!</div>
+
+  <script>
+    /* ==================================================
+       COLOR MATH UTILITIES
+    ================================================== */
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      return {
+        r: parseInt(hex.substring(0, 2), 16),
+        g: parseInt(hex.substring(2, 4), 16),
+        b: parseInt(hex.substring(4, 6), 16)
+      };
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(v => {
+        const h = Math.round(Math.max(0, Math.min(255, v))).toString(16);
+        return h.length === 1 ? '0' + h : h;
+      }).join('');
+    }
+
+    function blendHex(hex, toWhite, t) {
+      // t = 0..1, blend hex toward white (toWhite=true) or black (toWhite=false)
+      const base = hexToRgb(hex);
+      const target = toWhite ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
+      return rgbToHex(
+        base.r + (target.r - base.r) * t,
+        base.g + (target.g - base.g) * t,
+        base.b + (target.b - base.b) * t
+      );
+    }
+
+    function generatePalette(hex) {
+      return {
+        50:  blendHex(hex, true,  0.95),
+        100: blendHex(hex, true,  0.90),
+        200: blendHex(hex, true,  0.75),
+        300: blendHex(hex, true,  0.55),
+        400: blendHex(hex, true,  0.30),
+        500: hex,
+        600: blendHex(hex, false, 0.20),
+        700: blendHex(hex, false, 0.38),
+        800: blendHex(hex, false, 0.54),
+        900: blendHex(hex, false, 0.68),
+        950: blendHex(hex, false, 0.78)
+      };
+    }
+
+    /* Determine if text on this bg should be dark or light */
+    function contrastText(hex) {
+      const { r, g, b } = hexToRgb(hex);
+      const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return lum > 0.55 ? '#1a1d2b' : '#f1f5f9';
+    }
+
+    /* ==================================================
+       SPACING MATH
+    ================================================== */
+    function generateSpacing(baseUnit, mult, steps) {
+      const spacing = {};
+      const multVal = parseFloat(mult);
+      const isLinear = (mult === 'linear');
+
+      // Generate standard Tailwind-style spacing keys
+      const twKeys = [
+        '0.5','1','1.5','2','2.5','3','3.5','4','5','6','7','8','9','10',
+        '11','12','14','16','20','24','28','32','36','40','44','48','52','56','60','64',
+        '72','80','96','112','128'
+      ];
+
+      for (let i = 0; i < steps; i++) {
+        let px;
+        if (isLinear) {
+          px = baseUnit * (i + 1);
+        } else {
+          px = baseUnit * Math.pow(multVal, i);
+        }
+        const rem = (px / 16).toFixed(4).replace(/\.?0+$/, '');
+        const key = twKeys[i] !== undefined ? twKeys[i] : String(Math.round(px));
+        spacing[key] = rem + 'rem';
+      }
+      return spacing;
+    }
+
+    /* ==================================================
+       STATE
+    ================================================== */
+    const colors = {
+      primary:   '#0EA5E9',
+      secondary: '#8B5CF6',
+      accent:    '#F43F5E',
+      neutral:   '#64748B'
+    };
+    const colorNames = {
+      primary: 'brand-primary',
+      secondary: 'brand-secondary',
+      accent: 'brand-accent',
+      neutral: 'brand-neutral'
+    };
+
+    /* ==================================================
+       SYNC COLOR PICKERS
+    ================================================== */
+    function syncHex(key, val) {
+      colors[key] = val;
+      document.getElementById('color-' + key).value = val;
+      if (key === 'primary') updateDynAccent(val);
+      rebuild();
+    }
+
+    function syncPicker(key, val) {
+      if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        colors[key] = val;
+        document.getElementById('color-' + key + '-picker').value = val;
+        if (key === 'primary') updateDynAccent(val);
+        rebuild();
+      }
+    }
+
+    function updateDynAccent(hex) {
+      document.documentElement.style.setProperty('--accent', hex);
+      document.documentElement.style.setProperty('--primary-dyn', hex);
+    }
+
+    /* ==================================================
+       RENDER PALETTE SWATCHES
+    ================================================== */
+    function renderSwatches(palettes) {
+      const cont = document.getElementById('palette-container');
+      cont.innerHTML = '';
+      const labelMap = {
+        primary: 'Primary', secondary: 'Secondary',
+        accent: 'Accent', neutral: 'Neutral'
+      };
+      Object.entries(palettes).forEach(([key, pal]) => {
+        const group = document.createElement('div');
+        group.className = 'palette-group';
+        const lbl = document.createElement('div');
+        lbl.className = 'palette-label';
+        lbl.textContent = labelMap[key];
+        group.appendChild(lbl);
+        const row = document.createElement('div');
+        row.className = 'swatch-row';
+        Object.entries(pal).forEach(([weight, hex]) => {
+          const sw = document.createElement('div');
+          sw.className = 'swatch';
+          sw.style.background = hex;
+          sw.title = weight + ': ' + hex;
+          const slbl = document.createElement('span');
+          slbl.className = 'swatch-label';
+          slbl.style.color = contrastText(hex);
+          slbl.textContent = weight;
+          const shex = document.createElement('span');
+          shex.className = 'swatch-hex';
+          shex.style.color = contrastText(hex);
+          shex.textContent = hex.toUpperCase();
+          sw.appendChild(slbl);
+          sw.appendChild(shex);
+          row.appendChild(sw);
+        });
+        group.appendChild(row);
+        cont.appendChild(group);
+      });
+    }
+
+    /* ==================================================
+       RENDER SPACING BARS
+    ================================================== */
+    function renderSpacingBars(spacing) {
+      const cont = document.getElementById('spacing-preview');
+      cont.innerHTML = '';
+      const entries = Object.entries(spacing);
+      const maxPx = parseFloat(entries[entries.length - 1][1]) * 16;
+      entries.forEach(([key, val]) => {
+        const pxVal = parseFloat(val) * 16;
+        const barW = Math.max(4, (pxVal / maxPx) * 140);
+        const row = document.createElement('div');
+        row.className = 'spacing-bar-row';
+        const kEl = document.createElement('span');
+        kEl.className = 'spacing-key';
+        kEl.textContent = key;
+        const bar = document.createElement('div');
+        bar.className = 'spacing-bar';
+        bar.style.width = barW + 'px';
+        const remEl = document.createElement('span');
+        remEl.className = 'spacing-rem';
+        remEl.textContent = val + ' (' + pxVal.toFixed(1) + 'px)';
+        row.appendChild(kEl);
+        row.appendChild(bar);
+        row.appendChild(remEl);
+        cont.appendChild(row);
+      });
+    }
+
+    /* ==================================================
+       BUILD CONFIG OUTPUT (highlighted)
+    ================================================== */
+    function buildConfigString(palettes, spacing) {
+      const lines = [];
+      lines.push('// tailwind.config.js');
+      lines.push('/** @type {import(\'tailwindcss\').Config} */');
+      lines.push('module.exports = {');
+      lines.push('  content: [\'./src/**/*.{html,js,jsx,ts,tsx}\'],');
+      lines.push('  theme: {');
+      lines.push('    extend: {');
+      lines.push('      colors: {');
+
+      const colorKeys = Object.keys(palettes);
+      colorKeys.forEach((key, ki) => {
+        const pal = palettes[key];
+        const name = colorNames[key];
+        lines.push('        \'' + name + '\': {');
+        const weights = Object.keys(pal);
+        weights.forEach((w, wi) => {
+          const comma = wi < weights.length - 1 ? ',' : '';
+          lines.push('          \'' + w + '\': \'' + pal[w].toUpperCase() + '\'' + comma);
+        });
+        const trailComma = ki < colorKeys.length - 1 ? ',' : '';
+        lines.push('        }' + trailComma);
+      });
+
+      lines.push('      },');
+      lines.push('      spacing: {');
+      const spKeys = Object.keys(spacing);
+      spKeys.forEach((k, i) => {
+        const comma = i < spKeys.length - 1 ? ',' : '';
+        lines.push('        \'' + k + '\': \'' + spacing[k] + '\'' + comma);
+      });
+      lines.push('      }');
+      lines.push('    }');
+      lines.push('  },');
+      lines.push('  plugins: []');
+      lines.push('};');
+
+      return lines.join('\n');
+    }
+
+    function syntaxHighlight(raw) {
+      // Simple tokenizer for the config string
+      return raw
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        // Comments
+        .replace(/(\/\/[^\n]*)/g, '<span class="tok-cmt">$1</span>')
+        // Keys in single quotes followed by colon
+        .replace(/'([^']+)'(\s*:)/g, '<span class="tok-key">\'$1\'</span><span class="tok-punct">$2</span>')
+        // String values
+        .replace(/:\s*'([^']+)'/g, (m, v) => ': <span class="tok-str">\'' + v + '\'</span>')
+        // Brackets and punctuation
+        .replace(/([{}[\],])/g, '<span class="tok-punct">$1</span>');
+    }
+
+    /* ==================================================
+       MAIN REBUILD
+    ================================================== */
+    function rebuild() {
+      const baseUnit = parseFloat(document.getElementById('spacing-base').value) || 4;
+      const mult = document.getElementById('spacing-mult').value;
+      const steps = parseInt(document.getElementById('spacing-steps').value);
+
+      const palettes = {};
+      Object.keys(colors).forEach(k => {
+        palettes[k] = generatePalette(colors[k]);
+      });
+
+      const spacing = generateSpacing(baseUnit, mult, steps);
+
+      renderSwatches(palettes);
+      renderSpacingBars(spacing);
+
+      const raw = buildConfigString(palettes, spacing);
+      document.getElementById('config-output').innerHTML = syntaxHighlight(raw);
+
+      // Store for copy/download
+      window._configRaw = raw;
+      window._themeJSON = buildThemeJSON(palettes, spacing);
+    }
+
+    /* ==================================================
+       THEME JSON BUILD
+    ================================================== */
+    function buildThemeJSON(palettes, spacing) {
+      const colors = {};
+      Object.keys(palettes).forEach(k => {
+        colors[colorNames[k]] = {};
+        Object.entries(palettes[k]).forEach(([w, hex]) => {
+          colors[colorNames[k]][w] = hex.toUpperCase();
+        });
+      });
+      return JSON.stringify({ colors, spacing }, null, 2);
+    }
+
+    /* ==================================================
+       COPY / DOWNLOAD
+    ================================================== */
+    function copyConfig() {
+      if (!window._configRaw) return;
+      navigator.clipboard.writeText(window._configRaw).then(() => {
+        const t = document.getElementById('copy-toast');
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2200);
+      });
+    }
+
+    function downloadJSON() {
+      if (!window._themeJSON) return;
+      const blob = new Blob([window._themeJSON], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'theme.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ==================================================
+       FAQ TOGGLE
+    ================================================== */
+    function toggleFaq(el) {
+      const ans = el.nextElementSibling;
+      const isOpen = ans.classList.contains('open');
+      document.querySelectorAll('.faq-a.open').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.faq-q.open').forEach(q => q.classList.remove('open'));
+      if (!isOpen) {
+        ans.classList.add('open');
+        el.classList.add('open');
+      }
+    }
+
+    /* ==================================================
+       INIT
+    ================================================== */
+    rebuild();
+  </script>
+
+</body>
+</html>

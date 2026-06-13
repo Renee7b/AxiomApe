@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cubic-Bezier Transition Curve Animator: Visually Build Custom CSS Timing Functions | AxiomApe</title>
+  <meta name="description" content="Free browser-based cubic-bezier curve animator. Drag control handles on an interactive SVG graph, watch your easing curve animate live, compare against reference curves, and copy the generated CSS transition property. 100% client-side." />
+  <meta name="keywords" content="cubic bezier animator, css timing function generator, css easing curve tool, cubic-bezier generator, css transition timing, easing function visualizer, css animation curve, bezier control points, css ease-in-out generator, transition timing function, css keyframe easing, frontend motion design tool, css animation tool, easing curve editor" />
+  <link rel="canonical" href="https://axiomape.com/cubic-bezier-animator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Cubic-Bezier Transition Curve Animator",
+        "description": "Free browser-based cubic-bezier curve animator. Drag control handles on an interactive SVG graph, watch your easing curve animate live, compare against reference curves, and copy the generated CSS transition property. 100% client-side.",
+        "url": "https://axiomape.com/cubic-bezier-animator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do the X and Y coordinates of a cubic-bezier map to time and animation progress?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In CSS cubic-bezier timing functions, the horizontal axis (X) represents time, going from 0 (animation start) to 1 (animation end). The vertical axis (Y) represents the animation progress or output value, also from 0 to 1 in the standard range. The X values of the control points must stay between 0 and 1 because time cannot go backward in CSS. The Y values, however, can exceed this range to produce overshoot and bounce effects - a Y above 1 means the animated property will temporarily go past its target value before settling."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does my animation go backward at the beginning or end?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This happens when a control point's Y value drops below 0. A negative Y value at the start creates an anticipation effect, where the element briefly moves in the opposite direction before shooting forward. This is a common technique in motion design borrowed from traditional animation principles. You can see it clearly on the SVG graph when the curve dips into the shaded zone below the Y=0 baseline. If you do not want this behavior, keep both P1 Y and P2 Y at or above 0."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between ease-out and ease-in-out curves?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An ease-out curve starts fast and decelerates toward the end. This feels natural for elements entering the screen, like a card sliding in. Mathematically, ease-out is cubic-bezier(0, 0, 0.58, 1). An ease-in-out curve starts slow, accelerates through the middle, then slows again at the end. It is the most perceptually smooth option for elements moving from one point to another within the same view. Mathematically, ease-in-out is cubic-bezier(0.42, 0, 0.58, 1). Use ease-out for entrances, ease-in for exits, and ease-in-out for repositioning."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use cubic-bezier curves inside CSS @keyframes animations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. You can use a cubic-bezier value in the animation-timing-function property on either the element itself or inside individual @keyframes steps. When set on the element, it applies the same curve to the entire animation. When set inside a keyframe step (for example, at 0%), it controls the timing only for that specific segment between that step and the next one. This lets you chain different easing curves across different phases of a complex multi-step animation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why must the X values stay between 0 and 1 but Y values can go outside that range?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CSS enforces this because the timing function must be a valid mathematical function: for every point in time (X), there can only be one output value. If X could go backward, a single moment in time could map to two different progress values, which is undefined behavior. The Y axis has no such restriction because it represents the output property value, and it is perfectly valid for an element to temporarily overshoot its target before snapping back. Browsers clamp X values to 0-1 automatically but honor any Y value, including negative ones."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is interpolation in the context of CSS transitions?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Interpolation is how the browser calculates all the intermediate values between an element's start state and its end state during a transition. For example, if you transition a box from left: 0px to left: 300px, the browser interpolates all the pixel positions in between on every animation frame. The cubic-bezier curve determines the rate of interpolation over time: a steep curve means rapid change, a flat section means the element appears to pause. Without interpolation, there would be no smooth transition - just an instant jump."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d2b;
+      --surface2:    #222535;
+      --border:      #2d3148;
+      --border2:     #3a3f5c;
+      --pink:        #EC4899;
+      --indigo:      #6366F1;
+      --pink-dim:    rgba(236,72,153,0.15);
+      --indigo-dim:  rgba(99,102,241,0.15);
+      --pink-glow:   0 0 12px rgba(236,72,153,0.6);
+      --indigo-glow: 0 0 12px rgba(99,102,241,0.6);
+      --text:        #e2e8f0;
+      --muted:       #8892a4;
+      --code-bg:     #0d0f18;
+      --green:       #10b981;
+      --radius:      12px;
+      --radius-sm:   8px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--indigo); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .top-nav { display: none; }
+
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--pink), var(--indigo));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* ---- CARD ---- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.78rem;
+    }
+
+    /* ---- MAIN TOOL LAYOUT ---- */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 760px) {
+      .tool-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ---- INPUT PANELS ---- */
+    .panel-section {
+      margin-bottom: 16px;
+    }
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .input-row label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      min-width: 52px;
+    }
+    .input-row input[type="number"] {
+      width: 74px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 6px 8px;
+      font-size: 0.88rem;
+      text-align: center;
+      -moz-appearance: textfield;
+    }
+    .input-row input[type="number"]::-webkit-inner-spin-button,
+    .input-row input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .input-row input[type="number"]:focus {
+      outline: none;
+      border-color: var(--pink);
+      box-shadow: 0 0 0 2px rgba(236,72,153,0.2);
+    }
+    .input-row input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border2);
+      cursor: pointer;
+    }
+    .input-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--pink);
+      box-shadow: var(--pink-glow);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .input-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+    .input-row input[type="range"]:focus { outline: none; }
+
+    /* coord color distinction */
+    .coord-p1 input[type="range"]::-webkit-slider-thumb { background: var(--pink); box-shadow: var(--pink-glow); }
+    .coord-p2 input[type="range"]::-webkit-slider-thumb { background: var(--indigo); box-shadow: var(--indigo-glow); }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      flex: 1;
+      cursor: pointer;
+    }
+    select:focus { outline: none; border-color: var(--indigo); }
+
+    .duration-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .duration-row label { font-size: 0.82rem; color: var(--muted); min-width: 140px; }
+    .duration-val {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--pink);
+      min-width: 30px;
+    }
+    .duration-row input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border2);
+      cursor: pointer;
+    }
+    .duration-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--indigo);
+      box-shadow: var(--indigo-glow);
+      cursor: pointer;
+    }
+
+    .select-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .select-row label { font-size: 0.82rem; color: var(--muted); min-width: 140px; }
+
+    /* ---- TRIGGER BUTTON ---- */
+    .trigger-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--pink), var(--indigo));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 9px 20px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .trigger-btn:hover { opacity: 0.9; }
+    .trigger-btn:active { transform: scale(0.97); }
+    .trigger-btn .dot-indicator {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      display: inline-block;
+    }
+    .trigger-btn.looping .dot-indicator {
+      animation: pulse-dot 1s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ---- OUTPUT AREA: 3-pane ---- */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 760px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ---- SVG CANVAS ---- */
+    .svg-wrap {
+      position: relative;
+    }
+    #bezier-svg {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      cursor: crosshair;
+      display: block;
+      touch-action: none;
+    }
+
+    /* ---- ANIMATION STAGE ---- */
+    .stage-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .track {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .track-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .track-label.custom { color: var(--pink); }
+    .track-label.ref { color: var(--indigo); }
+
+    .track-rail {
+      position: relative;
+      height: 36px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .track-rail::before, .track-rail::after {
+      content: '';
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border2);
+      z-index: 0;
+    }
+    .track-rail::before { left: 4px; }
+    .track-rail::after { right: 4px; }
+
+    .block {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      left: 0%;
+      z-index: 2;
+    }
+    .block-custom {
+      background: linear-gradient(135deg, var(--pink), #f472b6);
+      box-shadow: var(--pink-glow);
+    }
+    .block-ref {
+      background: linear-gradient(135deg, var(--indigo), #818cf8);
+      box-shadow: var(--indigo-glow);
+    }
+
+    /* ---- PROPERTY-SPECIFIC ANIMATION ---- */
+    /* Position: translateX on the block via JS inline style */
+    /* Scale: transform scale */
+    /* Rotation: transform rotate */
+
+    /* ---- CSS OUTPUT ---- */
+    .css-output-wrap {
+      grid-column: 1 / -1;
+    }
+    .code-block-wrap {
+      position: relative;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: 0.88rem;
+      line-height: 1.7;
+    }
+    code {
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      color: #e2e8f0;
+    }
+    .kw { color: #c084fc; }
+    .prop { color: #67e8f9; }
+    .val { color: #86efac; }
+    .num { color: #fcd34d; }
+    .fn  { color: var(--pink); }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .copy-btn:hover { background: var(--border2); border-color: var(--pink); color: var(--pink); }
+    .copy-btn.copied { background: rgba(16,185,129,0.2); border-color: var(--green); color: var(--green); }
+
+    /* ---- GLOSSARY ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--pink);
+      margin-bottom: 4px;
+    }
+    .glossary-def { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+    /* ---- EDU SECTION ---- */
+    .edu-section h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--indigo);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.75;
+      margin-bottom: 10px;
+    }
+
+    /* ---- FAQ ---- */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 13px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface2);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--border); }
+    .faq-q .arrow {
+      font-size: 0.75rem;
+      color: var(--pink);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .faq-q.open .arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 12px 16px 14px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .faq-a.open { display: block; }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Cubic-Bezier Transition Curve Animator</h1>
+    <p>Drag the control point handles, watch your easing curve update live, and copy the generated CSS timing function instantly.</p>
+  </header>
+
+  <!-- TOOL CARD: Controls -->
+  <div class="card">
+    <div class="tool-grid">
+
+      <!-- Curve Coordinates Panel -->
+      <div>
+        <div class="panel-label">Curve Coordinates</div>
+
+        <div class="panel-section">
+          <div class="input-row coord-p1">
+            <label>P1 X</label>
+            <input type="number" id="p1x-num" value="0.25" min="0" max="1" step="0.01" />
+            <input type="range" id="p1x-range" value="0.25" min="0" max="1" step="0.01" />
+          </div>
+          <div class="input-row coord-p1">
+            <label>P1 Y</label>
+            <input type="number" id="p1y-num" value="0.10" min="-1" max="2" step="0.01" />
+            <input type="range" id="p1y-range" value="0.10" min="-1" max="2" step="0.01" />
+          </div>
+          <div class="input-row coord-p2">
+            <label>P2 X</label>
+            <input type="number" id="p2x-num" value="0.25" min="0" max="1" step="0.01" />
+            <input type="range" id="p2x-range" value="0.25" min="0" max="1" step="0.01" />
+          </div>
+          <div class="input-row coord-p2">
+            <label>P2 Y</label>
+            <input type="number" id="p2y-num" value="1.00" min="-1" max="2" step="0.01" />
+            <input type="range" id="p2y-range" value="1.00" min="-1" max="2" step="0.01" />
+          </div>
+        </div>
+
+        <div class="panel-label" style="margin-top:8px;">Quick Presets</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">
+          <button class="preset-btn" data-vals="0.25,0.1,0.25,1">ease</button>
+          <button class="preset-btn" data-vals="0,0,1,1">linear</button>
+          <button class="preset-btn" data-vals="0.42,0,1,1">ease-in</button>
+          <button class="preset-btn" data-vals="0,0,0.58,1">ease-out</button>
+          <button class="preset-btn" data-vals="0.42,0,0.58,1">ease-in-out</button>
+          <button class="preset-btn" data-vals="0.34,1.56,0.64,1">spring</button>
+          <button class="preset-btn" data-vals="0.68,-0.55,0.27,1.55">bounce</button>
+          <button class="preset-btn" data-vals="0.87,-0.41,0.19,1.44">overshoot</button>
+        </div>
+      </div>
+
+      <!-- Animation Testing Panel -->
+      <div>
+        <div class="panel-label">Animation Testing Settings</div>
+
+        <div class="duration-row">
+          <label>Transition Duration (s)</label>
+          <input type="range" id="duration-range" value="1.0" min="0.1" max="5.0" step="0.1" />
+          <span class="duration-val" id="duration-val">1.0s</span>
+        </div>
+
+        <div class="select-row">
+          <label>Test Property</label>
+          <select id="test-property">
+            <option value="position" selected>Position</option>
+            <option value="scale">Scale</option>
+            <option value="rotation">Rotation</option>
+          </select>
+        </div>
+
+        <div class="select-row">
+          <label>Reference Curve</label>
+          <select id="ref-curve">
+            <option value="linear" selected>linear</option>
+            <option value="ease">ease</option>
+            <option value="ease-in">ease-in</option>
+            <option value="ease-out">ease-out</option>
+            <option value="ease-in-out">ease-in-out</option>
+          </select>
+        </div>
+
+        <button class="trigger-btn" id="trigger-btn" onclick="triggerAnim()">
+          <span class="dot-indicator"></span>
+          <span id="trigger-label">Trigger Animation</span>
+        </button>
+        <div style="margin-top:8px;">
+          <label style="font-size:0.8rem;color:var(--muted);cursor:pointer;">
+            <input type="checkbox" id="auto-loop" style="margin-right:5px;" />
+            Auto-loop
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT: SVG + Stage + CSS -->
+  <div class="output-grid">
+
+    <!-- SVG Graph -->
+    <div class="card svg-wrap">
+      <div class="card-title">SVG Curve Graph</div>
+      <svg id="bezier-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        <!-- defs -->
+        <defs>
+          <pattern id="grid-sm" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+          </pattern>
+          <pattern id="grid-lg" width="150" height="150" patternUnits="userSpaceOnUse" x="30" y="30">
+            <path d="M 150 0 L 0 0 0 150" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          </pattern>
+          <pattern id="overshoot-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(236,72,153,0.15)" stroke-width="3" stroke-dasharray="2,4"/>
+          </pattern>
+        </defs>
+
+        <!-- background grid -->
+        <rect x="30" y="30" width="240" height="240" fill="url(#grid-sm)"/>
+        <rect x="30" y="30" width="240" height="240" fill="url(#grid-lg)"/>
+
+        <!-- overshoot danger zones (shown when Y coords out of [0,1]) -->
+        <rect id="os-top" x="30" y="30" width="240" height="0" fill="url(#overshoot-hatch)" opacity="0"/>
+        <rect id="os-bot" x="30" y="270" width="240" height="0" fill="url(#overshoot-hatch)" opacity="0" transform="scale(1,-1) translate(0,-300)"/>
+
+        <!-- axis boundary lines -->
+        <line x1="30" y1="30" x2="270" y2="30" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="30" y1="270" x2="270" y2="270" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="4,3"/>
+        <line x1="30" y1="30" x2="30" y2="270" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="270" y1="30" x2="270" y2="270" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+
+        <!-- axis labels -->
+        <text x="150" y="295" fill="rgba(255,255,255,0.3)" font-size="9" text-anchor="middle" font-family="system-ui">Time (X)</text>
+        <text x="10" y="155" fill="rgba(255,255,255,0.3)" font-size="9" text-anchor="middle" font-family="system-ui" transform="rotate(-90,10,155)">Progress (Y)</text>
+        <text x="27" y="272" fill="rgba(255,255,255,0.25)" font-size="8" text-anchor="end" font-family="system-ui">0</text>
+        <text x="272" y="272" fill="rgba(255,255,255,0.25)" font-size="8" font-family="system-ui">1</text>
+        <text x="27" y="33" fill="rgba(255,255,255,0.25)" font-size="8" text-anchor="end" font-family="system-ui">1</text>
+
+        <!-- handle lines -->
+        <line id="handle-line-1" x1="30" y1="270" x2="105" y2="246" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+        <line id="handle-line-2" x1="270" y1="30" x2="105" y2="30" stroke="#6366F1" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+
+        <!-- bezier curve -->
+        <path id="bezier-path" d="" fill="none" stroke="url(#curve-grad)" stroke-width="2.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="curve-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#EC4899"/>
+            <stop offset="100%" stop-color="#6366F1"/>
+          </linearGradient>
+        </defs>
+
+        <!-- origin and destination dots -->
+        <circle cx="30" cy="270" r="4" fill="#EC4899"/>
+        <circle cx="270" cy="30" r="4" fill="#6366F1"/>
+
+        <!-- control point handles (draggable) -->
+        <circle id="handle-p1" cx="105" cy="246" r="7" fill="#EC4899" stroke="#fff" stroke-width="1.5" style="cursor:grab;filter:drop-shadow(0 0 6px #EC4899)"/>
+        <circle id="handle-p2" cx="105" cy="30" r="7" fill="#6366F1" stroke="#fff" stroke-width="1.5" style="cursor:grab;filter:drop-shadow(0 0 6px #6366F1)"/>
+
+        <!-- handle labels -->
+        <text id="lbl-p1" x="112" y="244" fill="#EC4899" font-size="8" font-family="system-ui" font-weight="700">P1</text>
+        <text id="lbl-p2" x="112" y="28" fill="#6366F1" font-size="8" font-family="system-ui" font-weight="700">P2</text>
+      </svg>
+    </div>
+
+    <!-- Animation Stage -->
+    <div class="card">
+      <div class="card-title">Live Animation Stage</div>
+      <div class="stage-wrap">
+        <div class="track">
+          <div class="track-label custom">Custom cubic-bezier</div>
+          <div class="track-rail" id="rail-custom">
+            <div class="block block-custom" id="block-custom"></div>
+          </div>
+        </div>
+        <div class="track">
+          <div class="track-label ref" id="ref-track-label">Reference: linear</div>
+          <div class="track-rail" id="rail-ref">
+            <div class="block block-ref" id="block-ref"></div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;line-height:1.5;">
+          Pink = your custom curve. Indigo = reference curve.<br/>
+          Click "Trigger Animation" or enable Auto-loop to compare.
+        </div>
+      </div>
+    </div>
+
+    <!-- CSS Output (full width) -->
+    <div class="card css-output-wrap">
+      <div class="card-title">Generated CSS Output</div>
+      <div class="code-block-wrap">
+        <pre><code id="css-output">/* Loading... */</code></pre>
+        <button class="copy-btn" id="copy-btn" onclick="copyCSS()">Copy CSS</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AD PLACEMENT 1 -->
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- GLOSSARY -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Cubic-Bezier</div>
+        <div class="glossary-def">A mathematical curve defined by four points: two fixed anchors at (0,0) and (1,1), and two movable control points P1 and P2 that shape how the curve bends between them.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Transition Timing Function</div>
+        <div class="glossary-def">The CSS property that defines the speed curve of a transition, controlling how fast or slow the animated property changes at each moment in time.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Easing</div>
+        <div class="glossary-def">The technique of varying an animation's speed over its duration instead of keeping it constant. Easing makes motion feel natural and intentional rather than robotic.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Keyframe</div>
+        <div class="glossary-def">A snapshot of an element's state at a specific point in an animation. In CSS, @keyframes rules define these snapshots, and the browser interpolates everything in between.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Overshoot</div>
+        <div class="glossary-def">When an animated element temporarily goes past its target value before settling back. Achieved by setting P1 Y above 1 or P2 Y above 1. Creates a spring or bounce feel.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Interpolation</div>
+        <div class="glossary-def">The process of calculating all in-between values during a transition. The browser interpolates position, color, opacity and other properties frame-by-frame based on the timing curve.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">CSS Transition</div>
+        <div class="glossary-def">A CSS mechanism for smoothly animating a property from one value to another when it changes, controlled by transition-property, transition-duration, and transition-timing-function.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Control Points (P1, P2)</div>
+        <div class="glossary-def">The two movable handles that define the shape of a cubic-bezier curve. P1 influences the start of the curve; P2 influences the end. Their positions determine easing, bounce, and overshoot.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATIONAL SECTION -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to CSS Cubic-Bezier Timing Functions</h2>
+    <p class="section-intro">
+      Every CSS transition you write has a timing function controlling its speed rhythm. By default this is "ease" - but that preset was designed for general use, not your specific animation. Cubic-bezier curves let you define exactly how your element accelerates, decelerates, or even bounces past its destination. This guide explains how the math works, how to read the graph, and when to reach for each technique.
+    </p>
+
+    <h3>How to Use This Tool</h3>
+    <p>Start by dragging the pink (P1) and indigo (P2) handles on the SVG graph. The curve updates in real time as you drag. Alternatively, type precise values into the number inputs or use the step sliders beside each input. Click "Trigger Animation" to fire a single animation cycle across both tracks so you can compare your custom curve against the selected reference. Enable "Auto-loop" to keep both tracks running continuously for a side-by-side feel evaluation. When satisfied, click "Copy CSS" to grab the generated transition property and paste it directly into your stylesheet.</p>
+
+    <h3>Reading the Coordinate System</h3>
+    <p>The SVG graph maps time on the horizontal axis (left = 0, right = 1) and animation progress on the vertical axis (bottom = 0, top = 1). A perfectly linear curve would be a straight diagonal. A curve that bows upward near the left means the animation starts fast; bowing upward near the right means it accelerates toward the end. When a control point's Y value drops below 0 or exceeds 1, the graph shows a faint hatched zone - this is the "overshoot" region, where the element will temporarily move beyond its start or end state before settling.</p>
+
+    <h3>Why X Values Must Stay Between 0 and 1</h3>
+    <p>CSS enforces that P1 X and P2 X remain in the range [0, 1] because the timing function must pass the vertical line test: for every moment in time, there can be only one output value. If X could exceed 1 or go negative, a single timestamp could correspond to two different progress values, which is undefined. The Y axis has no such restriction. Browsers intentionally allow any Y value because the output is a property value, and it makes physical sense for a spring to temporarily overshoot before snapping back.</p>
+
+    <h3>Choosing the Right Curve for the Job</h3>
+    <p>Ease-out (starts fast, ends slow) is the workhorse for most UI interactions: menus opening, cards appearing, modals sliding in. It feels natural because objects in real life decelerate before stopping. Ease-in (starts slow, ends fast) works for elements leaving the screen - an exit that speeds up feels intentional. Ease-in-out is ideal for elements repositioning within the viewport; the symmetric acceleration and deceleration makes the eye comfortable. Spring curves (with overshoot) add personality and delight to product UIs but should be used sparingly - reserve them for single focal elements, not repeated list items.</p>
+
+    <h3>Using cubic-bezier in @keyframes</h3>
+    <p>You are not limited to element-level transitions. Inside a @keyframes block, each percentage step can have its own animation-timing-function declaration. For example, setting animation-timing-function: cubic-bezier(0.34,1.56,0.64,1) at the 0% step gives only that phase a spring feel, while later steps can be linear or ease-out. This lets you build complex, choreographed animations with different movement qualities in different phases - a technique used heavily in micro-interaction design.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How do the X and Y coordinates map to time and animation progress?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        In CSS cubic-bezier timing functions, the horizontal axis (X) represents time, from 0 at the start to 1 at the end. The vertical axis (Y) represents the animation's output progress, also from 0 to 1 in the normal range. P1 shapes the early part of the curve and P2 shapes the late part. The steepness of the curve at any point tells you how fast the animation is moving at that moment: steep sections are fast, flat sections are slow.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Why does my animation go backward at the beginning or end?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        This is an intentional anticipation or overshoot effect caused by a Y value dropping below 0 or exceeding 1. A negative P1 Y creates a brief reverse motion at the start (anticipation), while a P2 Y above 1 causes the element to overshoot its target before snapping back. Both are standard motion design techniques. The hatched zones on the graph highlight exactly when and how much the curve enters these regions. If you do not want this behavior, keep both Y values inside the [0, 1] range.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between ease-out and ease-in-out curves?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        An ease-out curve starts fast and decelerates toward the end, expressed as cubic-bezier(0, 0, 0.58, 1). It is ideal for elements entering the screen because objects naturally decelerate when they stop. An ease-in-out curve starts slow, peaks in the middle, and decelerates again at the end, expressed as cubic-bezier(0.42, 0, 0.58, 1). It is the smoothest-feeling option for elements moving between two points in the same view. Use ease-out for entrances, ease-in for exits, and ease-in-out for repositioning.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Can I use cubic-bezier curves for CSS @keyframes animations?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Yes. You can apply a cubic-bezier value through the animation-timing-function property, either on the element itself (applying the curve across the full animation) or inside individual @keyframes percentage steps (applying it only for that segment). Placing different timing functions at different keyframe steps lets you chain distinct easing behaviors - for example, a spring overshoot during the first half and a gentle ease-out for the settle phase.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Why must X values stay between 0 and 1 but Y values can go outside that range?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        X represents time, and for a function to be valid, each point in time must map to exactly one output. If X could go below 0 or above 1, a single time value could correspond to two different progress states, which is mathematically undefined. Y represents the animated property's output value, and properties are allowed to temporarily overshoot - a spring can stretch past its endpoint before snapping back. Browsers clamp P1 X and P2 X to [0, 1] automatically but honor any Y value you provide.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is interpolation in the context of CSS transitions?
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Interpolation is how the browser calculates every intermediate frame between an element's start state and its end state. For a box moving from left: 0 to left: 300px, the browser computes every pixel position in between on each animation frame, following the rate set by the timing function. The cubic-bezier curve acts as the interpolation guide: a steep section means rapid change per frame, a flat section means slow or paused change. Without interpolation there would be no smooth animation, only an instant jump.
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- AD PLACEMENT 2 -->
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<style>
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .preset-btn:hover {
+    background: var(--border2);
+    border-color: var(--pink);
+    color: var(--pink);
+  }
+</style>
+
+<script>
+  // =============================================
+  // STATE
+  // =============================================
+  const SVG_PAD = 30;
+  const SVG_SIZE = 300;
+  const PLOT = SVG_SIZE - SVG_PAD * 2; // 240
+
+  let state = {
+    p1x: 0.25, p1y: 0.10,
+    p2x: 0.25, p2y: 1.00,
+    duration: 1.0,
+    property: 'position',
+    refCurve: 'linear',
+    looping: false
+  };
+
+  let loopTimer = null;
+  let animating = false;
+
+  // =============================================
+  // COORDINATE HELPERS
+  // =============================================
+  function toSVG(normX, normY) {
+    return {
+      x: SVG_PAD + normX * PLOT,
+      y: SVG_PAD + (1 - normY) * PLOT
+    };
+  }
+
+  function fromSVG(svgX, svgY) {
+    return {
+      nx: (svgX - SVG_PAD) / PLOT,
+      ny: 1 - (svgY - SVG_PAD) / PLOT
+    };
+  }
+
+  // =============================================
+  // SYNC INPUTS
+  // =============================================
+  function syncInputPair(numId, rangeId, val) {
+    document.getElementById(numId).value = val.toFixed(2);
+    document.getElementById(rangeId).value = val;
+  }
+
+  function readAll() {
+    state.p1x = Math.max(0, Math.min(1, parseFloat(document.getElementById('p1x-num').value) || 0));
+    state.p1y = Math.max(-1, Math.min(2, parseFloat(document.getElementById('p1y-num').value) || 0));
+    state.p2x = Math.max(0, Math.min(1, parseFloat(document.getElementById('p2x-num').value) || 0));
+    state.p2y = Math.max(-1, Math.min(2, parseFloat(document.getElementById('p2y-num').value) || 0));
+  }
+
+  function wireInput(numId, rangeId, stateKey, clampMin, clampMax) {
+    const numEl = document.getElementById(numId);
+    const rangeEl = document.getElementById(rangeId);
+    function update(val) {
+      val = Math.max(clampMin, Math.min(clampMax, val));
+      state[stateKey] = parseFloat(val.toFixed(2));
+      numEl.value = state[stateKey].toFixed(2);
+      rangeEl.value = state[stateKey];
+      refresh();
+    }
+    numEl.addEventListener('input', () => update(parseFloat(numEl.value)));
+    numEl.addEventListener('change', () => update(parseFloat(numEl.value)));
+    rangeEl.addEventListener('input', () => update(parseFloat(rangeEl.value)));
+  }
+
+  // =============================================
+  // BEZIER PATH GENERATION
+  // =============================================
+  function buildBezierPath(p1x, p1y, p2x, p2y) {
+    const o = toSVG(0, 0);
+    const d = toSVG(1, 1);
+    const c1 = toSVG(p1x, p1y);
+    const c2 = toSVG(p2x, p2y);
+    return `M ${o.x} ${o.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${d.x} ${d.y}`;
+  }
+
+  // =============================================
+  // SVG REFRESH
+  // =============================================
+  function refresh() {
+    const { p1x, p1y, p2x, p2y } = state;
+
+    // Curve path
+    document.getElementById('bezier-path').setAttribute('d', buildBezierPath(p1x, p1y, p2x, p2y));
+
+    // Handle positions
+    const h1 = toSVG(p1x, p1y);
+    const h2 = toSVG(p2x, p2y);
+    const origin = toSVG(0, 0);
+    const dest = toSVG(1, 1);
+
+    const hp1 = document.getElementById('handle-p1');
+    const hp2 = document.getElementById('handle-p2');
+    hp1.setAttribute('cx', h1.x);
+    hp1.setAttribute('cy', h1.y);
+    hp2.setAttribute('cx', h2.x);
+    hp2.setAttribute('cy', h2.y);
+
+    document.getElementById('handle-line-1').setAttribute('x1', origin.x);
+    document.getElementById('handle-line-1').setAttribute('y1', origin.y);
+    document.getElementById('handle-line-1').setAttribute('x2', h1.x);
+    document.getElementById('handle-line-1').setAttribute('y2', h1.y);
+
+    document.getElementById('handle-line-2').setAttribute('x1', dest.x);
+    document.getElementById('handle-line-2').setAttribute('y1', dest.y);
+    document.getElementById('handle-line-2').setAttribute('x2', h2.x);
+    document.getElementById('handle-line-2').setAttribute('y2', h2.y);
+
+    // Labels
+    document.getElementById('lbl-p1').setAttribute('x', h1.x + 9);
+    document.getElementById('lbl-p1').setAttribute('y', h1.y + 3);
+    document.getElementById('lbl-p2').setAttribute('x', h2.x + 9);
+    document.getElementById('lbl-p2').setAttribute('y', h2.y + 3);
+
+    // Overshoot zones
+    const topOSZone = Math.max(0, Math.min(p1y, p2y, 2) > 1 ? PLOT * (Math.max(p1y, p2y) - 1) / 3 : 0);
+    const overshoots = [p1y, p2y].some(v => v > 1);
+    const anticipates = [p1y, p2y].some(v => v < 0);
+
+    const osTop = document.getElementById('os-top');
+    const osBot = document.getElementById('os-bot');
+
+    if (overshoots) {
+      const maxOver = Math.max(p1y > 1 ? p1y : 1, p2y > 1 ? p2y : 1);
+      const height = Math.min(PLOT * 0.5, PLOT * (maxOver - 1) / (2 - 0));
+      osTop.setAttribute('height', height.toFixed(1));
+      osTop.setAttribute('opacity', '1');
+    } else {
+      osTop.setAttribute('height', '0');
+      osTop.setAttribute('opacity', '0');
+    }
+
+    if (anticipates) {
+      const minUnder = Math.min(p1y < 0 ? p1y : 0, p2y < 0 ? p2y : 0);
+      const height = Math.min(PLOT * 0.5, PLOT * Math.abs(minUnder));
+      osBot.setAttribute('height', height.toFixed(1));
+      osBot.setAttribute('opacity', '1');
+    } else {
+      osBot.setAttribute('height', '0');
+      osBot.setAttribute('opacity', '0');
+    }
+
+    // CSS Output
+    updateCSSOutput();
+  }
+
+  // =============================================
+  // CSS CODE OUTPUT
+  // =============================================
+  function fmtNum(n) {
+    return parseFloat(n.toFixed(2));
+  }
+
+  function updateCSSOutput() {
+    const { p1x, p1y, p2x, p2y, duration } = state;
+    const dur = parseFloat(duration).toFixed(1);
+    const n = fmtNum;
+
+    const raw = `transition: all ${dur}s cubic-bezier(${n(p1x)}, ${n(p1y)}, ${n(p2x)}, ${n(p2y)});\n\n/* Also works as animation-timing-function: */\nanimation-timing-function: cubic-bezier(${n(p1x)}, ${n(p1y)}, ${n(p2x)}, ${n(p2y)});\n\n/* Named shorthand equivalent (if applicable): */\n/* ${getNamedEquivalent(p1x, p1y, p2x, p2y)} */`;
+
+    const out = document.getElementById('css-output');
+    out.innerHTML = hlCSS(raw);
+  }
+
+  function getNamedEquivalent(p1x, p1y, p2x, p2y) {
+    const r = (v) => parseFloat(v.toFixed(2));
+    if (r(p1x)==0 && r(p1y)==0 && r(p2x)==1 && r(p2y)==1) return 'linear';
+    if (r(p1x)==0.25 && r(p1y)==0.1 && r(p2x)==0.25 && r(p2y)==1) return 'ease';
+    if (r(p1x)==0.42 && r(p1y)==0 && r(p2x)==1 && r(p2y)==1) return 'ease-in';
+    if (r(p1x)==0 && r(p1y)==0 && r(p2x)==0.58 && r(p2y)==1) return 'ease-out';
+    if (r(p1x)==0.42 && r(p1y)==0 && r(p2x)==0.58 && r(p2y)==1) return 'ease-in-out';
+    return 'no direct named equivalent';
+  }
+
+  function hlCSS(raw) {
+    // Very lightweight syntax coloring
+    return raw
+      .replace(/(transition|animation-timing-function)(:)/g, '<span class="prop">$1</span>$2')
+      .replace(/(cubic-bezier)/g, '<span class="fn">$1</span>')
+      .replace(/\b(all|linear|ease)\b/g, '<span class="val">$1</span>')
+      .replace(/(-?[\d.]+s?\b)/g, '<span class="num">$1</span>')
+      .replace(/(\/\*.*?\*\/)/gs, '<span style="color:#6b7280">$1</span>');
+  }
+
+  // =============================================
+  // ANIMATION TRIGGER
+  // =============================================
+  function getTimingFn(curve) {
+    const m = {
+      'linear': 'linear',
+      'ease': 'ease',
+      'ease-in': 'ease-in',
+      'ease-out': 'ease-out',
+      'ease-in-out': 'ease-in-out'
+    };
+    return m[curve] || 'linear';
+  }
+
+  function getTransformStart(property) {
+    if (property === 'scale') return 'scale(0.5)';
+    if (property === 'rotation') return 'rotate(0deg)';
+    return 'translateX(0%)';
+  }
+
+  function getTransformEnd(property) {
+    if (property === 'scale') return 'scale(1.5)';
+    if (property === 'rotation') return 'rotate(360deg)';
+    return 'translateX(calc(100% - 0px))';
+  }
+
+  function runAnimation() {
+    if (animating) return;
+    animating = true;
+
+    const { p1x, p1y, p2x, p2y, duration, property, refCurve } = state;
+    const dur = parseFloat(duration);
+    const customFn = `cubic-bezier(${fmtNum(p1x)},${fmtNum(p1y)},${fmtNum(p2x)},${fmtNum(p2y)})`;
+    const refFn = getTimingFn(refCurve);
+
+    const bCustom = document.getElementById('block-custom');
+    const bRef = document.getElementById('block-ref');
+    const railW = document.getElementById('rail-custom').offsetWidth;
+    const blockW = bCustom.offsetWidth;
+    const travel = railW - blockW - 8;
+
+    // Reset to start
+    bCustom.style.transition = 'none';
+    bRef.style.transition = 'none';
+
+    if (property === 'position') {
+      bCustom.style.transform = '';
+      bRef.style.transform = '';
+      bCustom.style.left = '4px';
+      bRef.style.left = '4px';
+    } else if (property === 'scale') {
+      bCustom.style.left = '50%';
+      bRef.style.left = '50%';
+      bCustom.style.transform = 'translateX(-50%) scale(0.5)';
+      bRef.style.transform = 'translateX(-50%) scale(0.5)';
+    } else {
+      bCustom.style.left = '50%';
+      bRef.style.left = '50%';
+      bCustom.style.transform = 'translateX(-50%) rotate(0deg)';
+      bRef.style.transform = 'translateX(-50%) rotate(0deg)';
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bCustom.style.transition = `all ${dur}s ${customFn}`;
+        bRef.style.transition = `all ${dur}s ${refFn}`;
+
+        if (property === 'position') {
+          bCustom.style.left = (4 + travel) + 'px';
+          bRef.style.left = (4 + travel) + 'px';
+        } else if (property === 'scale') {
+          bCustom.style.transform = 'translateX(-50%) scale(1.5)';
+          bRef.style.transform = 'translateX(-50%) scale(1.5)';
+        } else {
+          bCustom.style.transform = 'translateX(-50%) rotate(360deg)';
+          bRef.style.transform = 'translateX(-50%) rotate(360deg)';
+        }
+
+        setTimeout(() => { animating = false; }, (dur + 0.15) * 1000);
+      });
+    });
+  }
+
+  function triggerAnim() {
+    const checkbox = document.getElementById('auto-loop');
+    if (state.looping) {
+      // Stop looping
+      state.looping = false;
+      clearInterval(loopTimer);
+      loopTimer = null;
+      document.getElementById('trigger-btn').classList.remove('looping');
+      document.getElementById('trigger-label').textContent = 'Trigger Animation';
+    } else {
+      runAnimation();
+    }
+  }
+
+  document.getElementById('auto-loop').addEventListener('change', function() {
+    const dur = parseFloat(state.duration);
+    if (this.checked) {
+      state.looping = true;
+      document.getElementById('trigger-btn').classList.add('looping');
+      document.getElementById('trigger-label').textContent = 'Stop Looping';
+      runAnimation();
+      loopTimer = setInterval(() => { runAnimation(); }, (dur + 0.4) * 1000);
+    } else {
+      state.looping = false;
+      clearInterval(loopTimer);
+      loopTimer = null;
+      document.getElementById('trigger-btn').classList.remove('looping');
+      document.getElementById('trigger-label').textContent = 'Trigger Animation';
+    }
+  });
+
+  // =============================================
+  // COPY CSS
+  // =============================================
+  function copyCSS() {
+    const { p1x, p1y, p2x, p2y, duration } = state;
+    const dur = parseFloat(duration).toFixed(1);
+    const n = fmtNum;
+    const text = `transition: all ${dur}s cubic-bezier(${n(p1x)}, ${n(p1y)}, ${n(p2x)}, ${n(p2y)});`;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy CSS'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  // =============================================
+  // DRAG HANDLES ON SVG
+  // =============================================
+  (function() {
+    const svg = document.getElementById('bezier-svg');
+    let dragging = null;
+
+    function getSVGCoords(e) {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = SVG_SIZE / rect.width;
+      const scaleY = SVG_SIZE / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function startDrag(e, handle) {
+      e.preventDefault();
+      dragging = handle;
+      handle.style.filter = handle.id === 'handle-p1'
+        ? 'drop-shadow(0 0 10px #EC4899)'
+        : 'drop-shadow(0 0 10px #6366F1)';
+    }
+
+    function onMove(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      const { x, y } = getSVGCoords(e);
+      const norm = fromSVG(x, y);
+
+      if (dragging.id === 'handle-p1') {
+        state.p1x = parseFloat(clamp(norm.nx, 0, 1).toFixed(2));
+        state.p1y = parseFloat(clamp(norm.ny, -1, 2).toFixed(2));
+        syncInputPair('p1x-num', 'p1x-range', state.p1x);
+        syncInputPair('p1y-num', 'p1y-range', state.p1y);
+      } else {
+        state.p2x = parseFloat(clamp(norm.nx, 0, 1).toFixed(2));
+        state.p2y = parseFloat(clamp(norm.ny, -1, 2).toFixed(2));
+        syncInputPair('p2x-num', 'p2x-range', state.p2x);
+        syncInputPair('p2y-num', 'p2y-range', state.p2y);
+      }
+      refresh();
+    }
+
+    function stopDrag() {
+      if (dragging) {
+        dragging.style.filter = dragging.id === 'handle-p1'
+          ? 'drop-shadow(0 0 6px #EC4899)'
+          : 'drop-shadow(0 0 6px #6366F1)';
+        dragging = null;
+      }
+    }
+
+    document.getElementById('handle-p1').addEventListener('mousedown', (e) => startDrag(e, document.getElementById('handle-p1')));
+    document.getElementById('handle-p2').addEventListener('mousedown', (e) => startDrag(e, document.getElementById('handle-p2')));
+    document.getElementById('handle-p1').addEventListener('touchstart', (e) => startDrag(e, document.getElementById('handle-p1')), { passive: false });
+    document.getElementById('handle-p2').addEventListener('touchstart', (e) => startDrag(e, document.getElementById('handle-p2')), { passive: false });
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchend', stopDrag);
+  })();
+
+  // =============================================
+  // PRESET BUTTONS
+  // =============================================
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [p1x, p1y, p2x, p2y] = btn.dataset.vals.split(',').map(Number);
+      state.p1x = p1x; state.p1y = p1y;
+      state.p2x = p2x; state.p2y = p2y;
+      syncInputPair('p1x-num', 'p1x-range', state.p1x);
+      syncInputPair('p1y-num', 'p1y-range', state.p1y);
+      syncInputPair('p2x-num', 'p2x-range', state.p2x);
+      syncInputPair('p2y-num', 'p2y-range', state.p2y);
+      refresh();
+    });
+  });
+
+  // =============================================
+  // WIRE ALL INPUTS
+  // =============================================
+  wireInput('p1x-num', 'p1x-range', 'p1x', 0, 1);
+  wireInput('p1y-num', 'p1y-range', 'p1y', -1, 2);
+  wireInput('p2x-num', 'p2x-range', 'p2x', 0, 1);
+  wireInput('p2y-num', 'p2y-range', 'p2y', -1, 2);
+
+  document.getElementById('duration-range').addEventListener('input', function() {
+    state.duration = parseFloat(this.value);
+    document.getElementById('duration-val').textContent = state.duration.toFixed(1) + 's';
+    updateCSSOutput();
+    // Restart loop with new duration if active
+    if (state.looping) {
+      clearInterval(loopTimer);
+      loopTimer = setInterval(() => { runAnimation(); }, (state.duration + 0.4) * 1000);
+    }
+  });
+
+  document.getElementById('test-property').addEventListener('change', function() {
+    state.property = this.value;
+  });
+
+  document.getElementById('ref-curve').addEventListener('change', function() {
+    state.refCurve = this.value;
+    document.getElementById('ref-track-label').textContent = 'Reference: ' + this.value;
+  });
+
+  // =============================================
+  // FAQ TOGGLE
+  // =============================================
+  function toggleFaq(el) {
+    const answer = el.nextElementSibling;
+    const isOpen = el.classList.contains('open');
+    document.querySelectorAll('.faq-q.open').forEach(q => {
+      q.classList.remove('open');
+      q.nextElementSibling.classList.remove('open');
+    });
+    if (!isOpen) {
+      el.classList.add('open');
+      answer.classList.add('open');
+    }
+  }
+
+  // =============================================
+  // INIT
+  // =============================================
+  refresh();
+</script>
+</body>
+</html>

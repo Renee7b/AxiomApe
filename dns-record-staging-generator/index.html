@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DNS Record Staging Generator: Build A, AAAA, CNAME, MX, and TXT Strings Instantly | AxiomApe</title>
+  <meta name="description" content="Generate accurate DNS record strings for A, AAAA, CNAME, MX, and TXT configurations. Real-time validation, BIND zone file format, and cloud provider table output - all client-side, nothing sent to a server." />
+  <meta name="keywords" content="dns record generator, BIND zone file, A record generator, CNAME generator, MX record builder, TXT record generator, SPF record, DKIM record, DMARC record, DNS staging, dns configuration tool, dns string builder, dns record format" />
+  <link rel="canonical" href="https://axiomape.com/dns-record-staging-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "DNS Record Staging Generator",
+        "description": "Generate accurate DNS record strings for A, AAAA, CNAME, MX, and TXT configurations. Real-time validation, BIND zone file format, and cloud provider table output - all client-side, nothing sent to a server.",
+        "url": "https://axiomape.com/dns-record-staging-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is TTL and what number should I use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "TTL (Time to Live) is the number of seconds that DNS resolvers and browsers are allowed to cache a record before re-checking it with your nameserver. A value of 3600 (1 hour) is the most common default and a safe choice for stable records. Use a lower value like 300 (5 minutes) before a planned migration so changes propagate faster, then raise it back after the switch is confirmed. Very high values like 86400 (24 hours) reduce DNS query volume but mean changes take a full day to reach all users."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between an A record and a CNAME?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An A record maps a hostname directly to an IPv4 address (e.g. example.com -> 93.184.216.34). A CNAME (Canonical Name) maps a hostname to another hostname, letting the resolver follow the chain to find the IP (e.g. www.example.com -> example.com). CNAMEs are useful when an IP may change (such as with load balancers or CDNs) because you only need to update the target A record. However, you cannot place a CNAME at the root/apex of a domain (@ record) on standard DNS - only A or AAAA records are allowed there. Some providers like Cloudflare offer a CNAME flattening feature that works around this at the edge."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I have multiple MX records for one domain?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Multiple MX records are not just allowed - they are recommended for redundancy. Each MX record carries a priority number (lower number = higher priority). Mail servers try the lowest-priority (most preferred) mail host first. If it is unreachable, they try the next-lowest priority record, and so on. A typical setup has a primary server at priority 10 and a backup at priority 20. If two records share the same priority number, traffic is split roughly evenly between them."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does my TXT record need quotation marks?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In BIND zone file syntax, TXT record values must be wrapped in double quotation marks so the DNS parser treats the content as a single string rather than separate tokens. Without quotes, spaces or special characters in the value cause a parse error. Most cloud DNS dashboards (Cloudflare, Route53, Vercel) handle the quoting automatically behind the scenes, so you paste the raw value without quotes into their UI. When writing a raw zone file for BIND or editing a server config directly, you must include the quotes yourself - which is why this tool automatically wraps TXT values in double quotes in the BIND output pane."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is BIND format and when do I need it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "BIND (Berkeley Internet Name Domain) is the most widely deployed DNS server software, and its zone file format has become the de-facto standard for raw DNS record syntax. The format is: [Name] [TTL] IN [Type] [Value]. You need it when managing a VPS or dedicated server running BIND or PowerDNS, when your hosting control panel (cPanel, Plesk) exposes a raw zone editor, or when importing/exporting zone files between systems. Cloud dashboards like Cloudflare or Route53 use their own UI but accept the same underlying data - just without the 'IN' class keyword and without the BIND-style quoting on TXT records."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-page:       #0f1117;
+      --bg-card:       #1a1f2e;
+      --bg-card-inner: #141824;
+      --bg-input:      #0d1117;
+      --bg-terminal:   #0d1117;
+      --accent:        #3B82F6;
+      --accent-glow:   rgba(59,130,246,0.25);
+      --accent-dark:   #2563EB;
+      --success:       #10B981;
+      --success-glow:  rgba(16,185,129,0.25);
+      --danger:        #EF4444;
+      --danger-glow:   rgba(239,68,68,0.25);
+      --text-primary:  #e2e8f0;
+      --text-secondary:#94a3b8;
+      --text-muted:    #64748b;
+      --border:        #2d3748;
+      --border-bright: #374151;
+      --shadow:        0 4px 24px rgba(0,0,0,0.4);
+      --radius:        12px;
+      --radius-sm:     8px;
+      --mono:          'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.65;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #60a5fa; }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0f172a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse 800px 300px at 50% 0%, rgba(59,130,246,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      color: #f0f6ff;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    .header-badges {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .header-badge {
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: #93c5fd;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* =========================================================
+       MAIN WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* =========================================================
+       CARDS
+    ========================================================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    /* =========================================================
+       TOOL CARD - INPUT ZONE
+    ========================================================= */
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .record-type-selector {
+      margin-bottom: 28px;
+    }
+    .record-type-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+    .type-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .type-tab {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+    .type-tab:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(59,130,246,0.06);
+    }
+    .type-tab.active {
+      background: rgba(59,130,246,0.15);
+      border-color: var(--accent);
+      color: #93c5fd;
+      box-shadow: 0 0 0 1px var(--accent), 0 0 12px var(--accent-glow);
+    }
+
+    /* =========================================================
+       INPUT GRID
+    ========================================================= */
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .field-grid.single { grid-template-columns: 1fr; }
+    @media (max-width: 580px) { .field-grid { grid-template-columns: 1fr; } }
+
+    .field-group { display: flex; flex-direction: column; }
+    .field-group.span2 { grid-column: 1 / -1; }
+
+    label.field-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      background: var(--bg-input);
+      border: 1.5px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    textarea { resize: vertical; min-height: 90px; font-family: var(--mono); font-size: 0.88rem; }
+
+    /* Validation states */
+    .field-valid input,
+    .field-valid textarea {
+      border-color: var(--success) !important;
+      box-shadow: 0 0 0 3px var(--success-glow) !important;
+    }
+    .field-invalid input,
+    .field-invalid textarea {
+      border-color: var(--danger) !important;
+      box-shadow: 0 0 0 3px var(--danger-glow) !important;
+    }
+    .validation-msg {
+      font-size: 0.72rem;
+      margin-top: 5px;
+      font-weight: 600;
+    }
+    .field-valid .validation-msg { color: var(--success); }
+    .field-invalid .validation-msg { color: var(--danger); }
+
+    /* =========================================================
+       DIVIDER
+    ========================================================= */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+    .output-heading {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .output-heading .pulse {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* =========================================================
+       DUAL OUTPUT PANES
+    ========================================================= */
+    .output-panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) { .output-panes { grid-template-columns: 1fr; } }
+
+    .pane {
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .pane-header {
+      background: var(--bg-card-inner);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .pane-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pane-badge {
+      font-size: 0.65rem;
+      background: rgba(59,130,246,0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Cloud Provider Pane */
+    .cloud-pane-body {
+      background: var(--bg-card-inner);
+      padding: 16px;
+    }
+    .dns-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .dns-table th {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 6px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .dns-table td {
+      padding: 10px 10px;
+      font-size: 0.88rem;
+      font-family: var(--mono);
+      color: var(--text-primary);
+      border-bottom: 1px solid rgba(45,55,72,0.6);
+      word-break: break-all;
+    }
+    .dns-table tr:last-child td { border-bottom: none; }
+    .dns-table .cell-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .dns-table .cell-value {
+      color: #93c5fd;
+    }
+    .dns-table .cell-value.type-val { color: #fbbf24; }
+    .dns-table .cell-value.ttl-val  { color: #a78bfa; }
+    .dns-table .cell-value.name-val { color: #34d399; }
+
+    /* BIND Pane */
+    .bind-pane-body {
+      background: #070b12;
+      padding: 16px;
+      position: relative;
+    }
+    .bind-code {
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.7;
+      min-height: 80px;
+    }
+    .bind-code .tok-name  { color: #34d399; }
+    .bind-code .tok-ttl   { color: #a78bfa; }
+    .bind-code .tok-class { color: #64748b; }
+    .bind-code .tok-type  { color: #fbbf24; }
+    .bind-code .tok-val   { color: #93c5fd; }
+    .bind-code .tok-prio  { color: #fb7185; }
+    .bind-code .tok-str   { color: #86efac; }
+
+    .copy-btn {
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.35);
+      color: #93c5fd;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: -apple-system, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover {
+      background: rgba(59,130,246,0.22);
+      border-color: var(--accent);
+    }
+    .copy-btn.copied {
+      background: rgba(16,185,129,0.15);
+      border-color: var(--success);
+      color: #6ee7b7;
+    }
+
+    /* Empty state */
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    /* =========================================================
+       AD PLACEMENTS
+    ========================================================= */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    /* =========================================================
+       GLOSSARY
+    ========================================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-card-inner);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 5px;
+      font-family: var(--mono);
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* =========================================================
+       EDUCATIONAL SECTION
+    ========================================================= */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      font-size: 0.97rem;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #93c5fd;
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      color: var(--text-secondary);
+      font-size: 0.93rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--bg-card-inner);
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: 0.93rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-primary);
+      gap: 12px;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: rgba(59,130,246,0.07); }
+    .faq-icon {
+      font-size: 1.1rem;
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .faq-a.open { display: block; }
+    .faq-icon.open { transform: rotate(45deg); }
+
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+    @media (max-width: 640px) {
+      .tool-card { padding: 20px; }
+      .type-tab { padding: 8px 14px; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>DNS Record <span>Staging Generator</span></h1>
+    <p>Build accurate A, AAAA, CNAME, MX, and TXT record strings with real-time validation. Output ready for cloud dashboards and raw BIND zone files.</p>
+    <div class="header-badges">
+      <span class="header-badge">100% Client-Side</span>
+      <span class="header-badge">BIND Format</span>
+      <span class="header-badge">Cloud Ready</span>
+      <span class="header-badge">Real-Time Validation</span>
+    </div>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         TOOL CARD
+    ============================================================ -->
+    <div class="tool-card">
+
+      <!-- Record Type Tabs -->
+      <div class="record-type-selector">
+        <span class="record-type-label">Record Type</span>
+        <div class="type-tabs" id="typeTabs">
+          <button class="type-tab active" data-type="A"     onclick="selectType('A')">A</button>
+          <button class="type-tab"        data-type="AAAA"  onclick="selectType('AAAA')">AAAA</button>
+          <button class="type-tab"        data-type="CNAME" onclick="selectType('CNAME')">CNAME</button>
+          <button class="type-tab"        data-type="MX"    onclick="selectType('MX')">MX</button>
+          <button class="type-tab"        data-type="TXT"   onclick="selectType('TXT')">TXT</button>
+        </div>
+      </div>
+
+      <!-- Common Fields -->
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="field-label" for="fHostname">Hostname / Name</label>
+          <input type="text" id="fHostname" value="@" oninput="render()" placeholder="@ or subdomain" />
+          <span class="field-hint">Use @ for root domain, or enter a subdomain like www or mail.</span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="fTTL">TTL (Seconds)</label>
+          <input type="number" id="fTTL" value="3600" min="60" max="86400" oninput="render()" />
+          <span class="field-hint">3600 = 1 hour. Use 300 before a migration.</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Fields -->
+      <div id="dynFields"></div>
+
+      <hr class="section-divider" />
+
+      <!-- Output -->
+      <div class="output-heading">
+        <span class="pulse"></span>
+        Live Output
+      </div>
+
+      <div class="output-panes">
+
+        <!-- Pane 1: Cloud Provider -->
+        <div class="pane">
+          <div class="pane-header">
+            <span class="pane-title">&#9729;&#65039; Cloud Provider Format</span>
+            <span class="pane-badge">Cloudflare / AWS / Vercel</span>
+          </div>
+          <div class="cloud-pane-body">
+            <table class="dns-table" id="cloudTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>TTL</th>
+                </tr>
+              </thead>
+              <tbody id="cloudBody">
+                <tr><td colspan="4" class="empty-state">Fill in the fields above to generate a record.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pane 2: BIND Zone -->
+        <div class="pane">
+          <div class="pane-header">
+            <span class="pane-title">&#128196; Raw BIND Zone Format</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyBind()">Copy Record</button>
+          </div>
+          <div class="bind-pane-body">
+            <div class="bind-code" id="bindOutput"><span class="empty-state">Fill in the fields above...</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">DNS</div>
+          <div class="glossary-def">Domain Name System. The internet's phone book - it translates human-readable domain names like example.com into IP addresses that computers use to route traffic.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">TTL</div>
+          <div class="glossary-def">Time to Live. The number of seconds DNS resolvers and browsers are allowed to cache a record before asking for a fresh copy from your nameserver.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">A Record</div>
+          <div class="glossary-def">Maps a hostname to an IPv4 address (e.g. 93.184.216.34). The most fundamental DNS record type, used to point a domain directly to a web server or CDN edge node.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">AAAA Record</div>
+          <div class="glossary-def">The IPv6 equivalent of an A record. Maps a hostname to a 128-bit IPv6 address (e.g. 2001:db8::1). Required as the internet transitions from IPv4.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">CNAME</div>
+          <div class="glossary-def">Canonical Name record. Creates an alias that points one hostname to another hostname. Commonly used for www subdomains and CDN integrations.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">MX Record</div>
+          <div class="glossary-def">Mail Exchanger record. Tells the internet which mail servers accept email for your domain. Carries a priority value - lower numbers are tried first.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">TXT Record</div>
+          <div class="glossary-def">A free-text record that holds arbitrary string data. Used for SPF email authentication, DKIM keys, DMARC policies, and domain verification codes from services like Google or GitHub.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">SPF</div>
+          <div class="glossary-def">Sender Policy Framework. A TXT record that lists which mail servers are authorized to send email on behalf of your domain, helping reduce spam and spoofing.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">BIND Format</div>
+          <div class="glossary-def">The standard syntax used by BIND (Berkeley Internet Name Domain) DNS server software for zone files. The format is: [Name] [TTL] IN [Type] [Value]. Used in raw server configs and zone file imports.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to DNS Records</h2>
+      <p class="section-intro">
+        Every time someone visits your website, sends you an email, or calls an API on your domain, DNS records are the mechanism that makes it work. Getting them right matters: a malformed A record keeps your site offline, a broken MX record loses incoming mail, and an invalid SPF TXT record lands your emails in spam. This tool lets you build and validate record strings before deploying them so you ship correct configuration the first time.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Select a record type using the tabs at the top. The input fields will change to match the requirements of that record. Fill in the Hostname (use @ for the root of your domain, or a subdomain like www or mail), the TTL, and any type-specific values. As you type, the two output panes update instantly: the left pane shows a table formatted for cloud dashboards, and the right pane shows the raw BIND zone file string ready for a server config. For A and AAAA records, the IP address field turns green when the format is valid and red when it contains an error, so you can catch typos before they go live.</p>
+
+      <h3>Which Record Type Do You Need?</h3>
+      <p>Use an A record to point your domain or subdomain at a specific IPv4 address (your server, load balancer, or CDN edge IP). Use AAAA for the same thing with IPv6 addresses. Use a CNAME when you want one hostname to follow another - for example, pointing www.example.com at example.com so they always resolve to the same place. Use MX records to configure email delivery for your domain, always pointing at a mail server hostname (not an IP). Use TXT records for SPF, DKIM, DMARC, or any third-party verification code that needs to live in DNS.</p>
+
+      <h3>Cloud Dashboard vs. BIND Zone File</h3>
+      <p>Cloud DNS providers (Cloudflare, AWS Route53, Vercel, Netlify, GoDaddy) all use web dashboards with separate input fields for Name, Type, Value, and TTL. They handle quoting and syntax internally. The Cloud Provider pane on this tool matches that format. When managing a VPS with BIND, PowerDNS, or a cPanel zone editor, you work with raw zone file syntax: the entire record on one line, with the "IN" class keyword, proper quoting on TXT values, and a trailing dot on fully qualified hostnames. The BIND Zone pane gives you that string directly.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is TTL and what number should I use?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          TTL (Time to Live) is the number of seconds that DNS resolvers and browsers are allowed to cache a record before re-checking it with your nameserver. A value of 3600 (1 hour) is the most common default and a safe choice for stable records. Use a lower value like 300 (5 minutes) before a planned migration so changes propagate faster, then raise it back after the switch is confirmed. Very high values like 86400 (24 hours) reduce DNS query volume but mean changes take a full day to reach all users.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between an A record and a CNAME?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          An A record maps a hostname directly to an IPv4 address (e.g. example.com to 93.184.216.34). A CNAME maps a hostname to another hostname, letting the resolver follow the chain to find the IP (e.g. www.example.com to example.com). CNAMEs are useful when an IP may change (such as with load balancers or CDNs) because you only need to update the target A record. However, you cannot place a CNAME at the root or apex of a domain (@ record) on standard DNS - only A or AAAA records are allowed there. Some providers like Cloudflare offer CNAME flattening as a workaround.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Can I have multiple MX records for one domain?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          Yes. Multiple MX records are not just allowed - they are recommended for redundancy. Each MX record carries a priority number (lower number = higher priority). Mail servers try the lowest-priority (most preferred) mail host first. If it is unreachable, they try the next-lowest priority record. A typical setup has a primary server at priority 10 and a backup at priority 20. If two records share the same priority number, traffic is split roughly evenly between them.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why does my TXT record need quotation marks?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          In BIND zone file syntax, TXT record values must be wrapped in double quotation marks so the DNS parser treats the content as a single string rather than separate tokens. Without quotes, spaces or special characters in the value cause a parse error. Most cloud DNS dashboards handle the quoting automatically, so you paste the raw value without quotes into their UI. When writing a raw zone file for BIND directly, you must include the quotes yourself - which is why this tool automatically wraps TXT values in double quotes in the BIND output pane.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is BIND format and when do I need it?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          BIND (Berkeley Internet Name Domain) is the most widely deployed DNS server software, and its zone file format is the de-facto standard for raw DNS record syntax. The format is: [Name] [TTL] IN [Type] [Value]. You need it when managing a VPS or dedicated server running BIND or PowerDNS, when your hosting control panel (cPanel, Plesk) exposes a raw zone editor, or when importing or exporting zone files between systems. Cloud dashboards like Cloudflare or Route53 use their own UI but accept the same underlying data.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let currentType = 'A';
+
+    const DYNAMIC_FIELDS = {
+      A: `
+        <div class="field-grid single">
+          <div class="field-group" id="ipv4Group">
+            <label class="field-label" for="fIPv4">IPv4 Address</label>
+            <input type="text" id="fIPv4" placeholder="e.g. 93.184.216.34" oninput="render()" autocomplete="off" spellcheck="false" />
+            <span class="validation-msg" id="ipv4Msg"></span>
+          </div>
+        </div>`,
+      AAAA: `
+        <div class="field-grid single">
+          <div class="field-group" id="ipv6Group">
+            <label class="field-label" for="fIPv6">IPv6 Address</label>
+            <input type="text" id="fIPv6" placeholder="e.g. 2001:db8::1" oninput="render()" autocomplete="off" spellcheck="false" />
+            <span class="validation-msg" id="ipv6Msg"></span>
+          </div>
+        </div>`,
+      CNAME: `
+        <div class="field-grid single">
+          <div class="field-group">
+            <label class="field-label" for="fCNAME">Target / Alias Domain</label>
+            <input type="text" id="fCNAME" placeholder="e.g. example.com" oninput="render()" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>`,
+      MX: `
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="field-label" for="fMailServer">Mail Server</label>
+            <input type="text" id="fMailServer" placeholder="e.g. mail.example.com" oninput="render()" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="fPriority">Priority</label>
+            <input type="number" id="fPriority" value="10" min="0" max="65535" oninput="render()" />
+          </div>
+        </div>`,
+      TXT: `
+        <div class="field-grid single">
+          <div class="field-group">
+            <label class="field-label" for="fTXT">Text Value</label>
+            <textarea id="fTXT" placeholder='e.g. v=spf1 include:_spf.google.com ~all' oninput="render()" spellcheck="false"></textarea>
+            <span class="field-hint">Used for SPF, DKIM, DMARC, or site verification. Quotes are added automatically in BIND output.</span>
+          </div>
+        </div>`
+    };
+
+    /* ============================================================
+       VALIDATION
+    ============================================================ */
+    const IPv4_RE = /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)$/;
+    const IPv6_RE = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+
+    function validateIPv4(val) {
+      if (!val) return null;
+      return IPv4_RE.test(val.trim());
+    }
+    function validateIPv6(val) {
+      if (!val) return null;
+      return IPv6_RE.test(val.trim());
+    }
+
+    /* ============================================================
+       SELECT RECORD TYPE
+    ============================================================ */
+    function selectType(type) {
+      currentType = type;
+      document.querySelectorAll('.type-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.type === type);
+      });
+      document.getElementById('dynFields').innerHTML = DYNAMIC_FIELDS[type] || '';
+      render();
+    }
+
+    /* ============================================================
+       RENDER
+    ============================================================ */
+    function render() {
+      const hostname = (document.getElementById('fHostname').value || '@').trim();
+      const ttl      = (document.getElementById('fTTL').value || '3600').trim();
+      let value = '';
+      let extraCol = null; // {label, val} for prio
+      let valid = true;
+
+      switch (currentType) {
+        case 'A': {
+          const el = document.getElementById('fIPv4');
+          if (el) {
+            value = el.value.trim();
+            const ok = validateIPv4(value);
+            const grp = document.getElementById('ipv4Group');
+            const msg = document.getElementById('ipv4Msg');
+            if (value === '') {
+              grp.className = 'field-group';
+              msg.textContent = '';
+              valid = false;
+            } else if (ok) {
+              grp.className = 'field-group field-valid';
+              msg.textContent = 'Valid IPv4 address';
+            } else {
+              grp.className = 'field-group field-invalid';
+              msg.textContent = 'Invalid IPv4 - check each octet (0-255) and format.';
+              valid = false;
+            }
+          }
+          break;
+        }
+        case 'AAAA': {
+          const el = document.getElementById('fIPv6');
+          if (el) {
+            value = el.value.trim();
+            const ok = validateIPv6(value);
+            const grp = document.getElementById('ipv6Group');
+            const msg = document.getElementById('ipv6Msg');
+            if (value === '') {
+              grp.className = 'field-group';
+              msg.textContent = '';
+              valid = false;
+            } else if (ok) {
+              grp.className = 'field-group field-valid';
+              msg.textContent = 'Valid IPv6 address';
+            } else {
+              grp.className = 'field-group field-invalid';
+              msg.textContent = 'Invalid IPv6 - check hex groups and colon formatting.';
+              valid = false;
+            }
+          }
+          break;
+        }
+        case 'CNAME': {
+          const el = document.getElementById('fCNAME');
+          if (el) { value = el.value.trim(); if (!value) valid = false; }
+          break;
+        }
+        case 'MX': {
+          const ms = document.getElementById('fMailServer');
+          const pr = document.getElementById('fPriority');
+          if (ms && pr) {
+            const mailServer = ms.value.trim();
+            const prio       = pr.value.trim() || '10';
+            value = mailServer;
+            extraCol = { label: 'Priority', val: prio };
+            if (!mailServer) valid = false;
+          }
+          break;
+        }
+        case 'TXT': {
+          const el = document.getElementById('fTXT');
+          if (el) {
+            value = el.value;
+            if (!value.trim()) valid = false;
+          }
+          break;
+        }
+      }
+
+      renderCloud(hostname, ttl, value, extraCol, valid);
+      renderBind(hostname, ttl, value, extraCol, valid);
+    }
+
+    /* ============================================================
+       CLOUD PROVIDER TABLE
+    ============================================================ */
+    function renderCloud(hostname, ttl, value, extraCol, valid) {
+      const tbody = document.getElementById('cloudBody');
+      if (!valid || !value) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Fill in all fields to see the cloud provider output.</td></tr>';
+        return;
+      }
+
+      let displayValue = value;
+      if (currentType === 'TXT') {
+        // strip outer quotes if user already added them
+        displayValue = value.replace(/^["']|["']$/g, '');
+      }
+
+      if (currentType === 'MX' && extraCol) {
+        tbody.innerHTML = `
+          <tr>
+            <td><span class="cell-label">Name</span><span class="cell-value name-val">${esc(hostname)}</span></td>
+            <td><span class="cell-label">Type</span><span class="cell-value type-val">${esc(currentType)}</span></td>
+            <td><span class="cell-label">Mail Server</span><span class="cell-value">${esc(displayValue)}</span></td>
+            <td><span class="cell-label">TTL</span><span class="cell-value ttl-val">${esc(ttl)}</span></td>
+          </tr>
+          <tr>
+            <td colspan="2"></td>
+            <td><span class="cell-label">Priority</span><span class="cell-value" style="color:#fb7185">${esc(extraCol.val)}</span></td>
+            <td></td>
+          </tr>`;
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td><span class="cell-label">Name</span><span class="cell-value name-val">${esc(hostname)}</span></td>
+            <td><span class="cell-label">Type</span><span class="cell-value type-val">${esc(currentType)}</span></td>
+            <td><span class="cell-label">Value</span><span class="cell-value">${esc(displayValue)}</span></td>
+            <td><span class="cell-label">TTL</span><span class="cell-value ttl-val">${esc(ttl)}</span></td>
+          </tr>`;
+      }
+    }
+
+    /* ============================================================
+       BIND ZONE OUTPUT
+    ============================================================ */
+    function renderBind(hostname, ttl, value, extraCol, valid) {
+      const el = document.getElementById('bindOutput');
+      if (!valid || !value) {
+        el.innerHTML = '<span class="empty-state">Fill in all fields to see the BIND zone string...</span>';
+        return;
+      }
+
+      let line = '';
+      if (currentType === 'MX') {
+        const prio = extraCol ? extraCol.val : '10';
+        line = `<span class="tok-name">${esc(hostname)}</span> <span class="tok-ttl">${esc(ttl)}</span> <span class="tok-class">IN</span> <span class="tok-type">MX</span> <span class="tok-prio">${esc(prio)}</span> <span class="tok-val">${esc(value)}</span>`;
+      } else if (currentType === 'TXT') {
+        let txtVal = value;
+        // Strip existing outer quotes then re-wrap
+        txtVal = txtVal.replace(/^["']|["']$/g, '');
+        line = `<span class="tok-name">${esc(hostname)}</span> <span class="tok-ttl">${esc(ttl)}</span> <span class="tok-class">IN</span> <span class="tok-type">TXT</span> <span class="tok-str">"${esc(txtVal)}"</span>`;
+      } else {
+        line = `<span class="tok-name">${esc(hostname)}</span> <span class="tok-ttl">${esc(ttl)}</span> <span class="tok-class">IN</span> <span class="tok-type">${esc(currentType)}</span> <span class="tok-val">${esc(value)}</span>`;
+      }
+      el.innerHTML = line;
+    }
+
+    /* ============================================================
+       COPY BIND
+    ============================================================ */
+    function copyBind() {
+      const el = document.getElementById('bindOutput');
+      const text = el.innerText;
+      if (!text || text.includes('Fill in')) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Record';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    /* ============================================================
+       FAQ TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      const answer = el.nextElementSibling;
+      const icon   = el.querySelector('.faq-icon');
+      answer.classList.toggle('open');
+      icon.classList.toggle('open');
+    }
+
+    /* ============================================================
+       UTILS
+    ============================================================ */
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    document.getElementById('dynFields').innerHTML = DYNAMIC_FIELDS['A'];
+    render();
+  </script>
+
+</body>
+</html>

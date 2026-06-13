@@ -440,3 +440,64 @@ None. Rollout complete: all tools have been updated to the site-wide template.
 
 ## Batch 81 (new tools, built directly to template) - DONE
 - [x] 401k-maxout-optimizer
+
+## Batch 82 (new tools, built directly to template) - DONE
+- [x] hsa-growth-forecaster
+
+
+## Batch 82 (new tools, built directly to template) - DONE
+- [x] roth-ira-traditional-ira-comparator
+
+## Batch 83 (new tools, built directly to template) - DONE
+- [x] hyper-inflation-purchasing-power-visualizer
+
+## Batch 84 (new tools, built directly to template) - DONE
+- [x] coffee-micro-expense-habit-compounder
+
+## Batch 85 (new tools, built directly to template) - DONE
+- [x] college-savings-529-plan-estimator
+
+## Batch 83 (new tools, built directly to template) - DONE
+- [x] sequence-of-returns-risk-simulator
+
+## Batch 85 (new tools, built directly to template) - DONE
+- [x] css-grid-flexbox-layout-builder
+
+## Batch 86 (new tools, built directly to template) - DONE
+- [x] svg-optimizer
+
+## Batch 86 (new tools, built directly to template) - DONE
+- [x] web-safe-typography-style-sheet-generator
+
+## Batch 86 (new tools, built directly to template) - DONE
+- [x] tailwind-css-configurator
+
+## Batch 86 (new tools, built directly to template) - DONE
+- [x] base64-image-data-uri-injector
+
+## Batch 87 (full spec rebuild, JWT.io palette + 3-pane UI + Claims card) - DONE
+- [x] jwt-decoder
+
+## Batch 87 (new tools, built directly to template) - DONE
+- [x] cubic-bezier-animator
+
+## Batch 88 (new tools, built directly to template) - DONE
+- [x] html-entity-encoder-decoder
+
+## Batch 88 (new tools, built directly to template) - DONE
+- [x] security-headers-policy-generator
+
+## Batch 88 (new tools, built directly to template) - DONE
+- [x] cron-job-expression-translator
+
+## Batch 89 (new tools, built directly to template) - DONE
+- [x] regex-visual-explainer
+
+## Batch 89 (new tools, built directly to template) - DONE
+- [x] cidr-subnet-calculator
+
+## Batch 89 (new tools, built directly to template) - DONE
+- [x] dns-record-staging-generator
+
+## Batch 89 (new tools, built directly to template) - DONE
+- [x] htaccess-redirect-url-mapping

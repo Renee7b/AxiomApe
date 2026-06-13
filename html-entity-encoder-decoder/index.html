@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML Entity Encoder / Decoder: Transform Raw Characters into Safe Code | AxiomApe</title>
+  <meta name="description" content="Free online HTML entity encoder and decoder. Convert raw characters to safe HTML entities or decode entities back to plain text. Supports standard, extended, and numeric (hex/decimal) modes. 100% client-side." />
+  <meta name="keywords" content="html entity encoder, html entity decoder, html escape, html unescape, xss prevention, character encoding, html special characters, reserved characters, html entities online, encode html, decode html entities, ampersand encoding, developer tool" />
+  <link rel="canonical" href="https://axiomape.com/html-entity-encoder-decoder/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "HTML Entity Encoder / Decoder",
+        "description": "Free online HTML entity encoder and decoder. Convert raw characters to safe HTML entities or decode entities back to plain text. Supports standard, extended, and numeric (hex/decimal) modes. 100% client-side.",
+        "url": "https://axiomape.com/html-entity-encoder-decoder/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is HTML entity encoding critical for preventing XSS attacks?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Cross-Site Scripting (XSS) attacks occur when an attacker injects malicious scripts into a web page that other users then view. When raw user input is inserted into HTML without encoding, a browser cannot tell the difference between your intended markup and the injected script. HTML entity encoding neutralizes the attack by converting characters like < into &lt; and > into &gt;, so the browser renders them as visible text instead of parsing them as executable HTML or JavaScript tags. For example, a payload like <script>alert('xss')</script> becomes &lt;script&gt;alert('xss')&lt;/script&gt; and is displayed harmlessly as literal text."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if I do not encode user input before displaying it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "If you render unencoded user input directly in HTML, any HTML tags or script blocks in that input are interpreted and executed by the browser as if you wrote them yourself. At minimum this breaks your page layout. At worst it allows an attacker to inject scripts that steal session cookies, redirect users to phishing sites, log keystrokes, or take over accounts. This class of vulnerability is called reflected or stored XSS and is consistently ranked in the OWASP Top 10 most critical web security risks."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a named entity and a numeric entity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A named entity uses a predefined human-readable name prefixed with & and suffixed with a semicolon, such as &amp; for &, &lt; for <, or &copy; for the copyright symbol. Named entities exist only for characters that the HTML specification has assigned a name to. A numeric entity references a character by its Unicode code point number, using either decimal format (&amp;#65; for the letter A) or hexadecimal format (&amp;#x41; for the same letter A). Numeric entities work for any Unicode character, even those without a named entity equivalent, making them more universal."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Should I encode data before saving it to a database or before rendering it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The general best practice is to store raw, un-encoded data in your database and encode it at the point of output, specifically when inserting it into an HTML context. Storing encoded data creates problems: double-encoding bugs appear when the data passes through multiple encoding layers, search queries break because the stored text does not match the searched text, and non-HTML outputs (JSON, CSV, email) receive unnecessary HTML escaping. Instead, sanitize input on the way in to remove outright dangerous content, store raw data, and apply context-appropriate escaping (HTML encoding, URL encoding, JSON encoding) at the moment you output the data into a specific document format."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it safe to paste sensitive code snippets into this tool?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. This tool is 100% client-side. All encoding and decoding happens locally in your browser using JavaScript. Your input is never sent to any server, never logged, and never stored anywhere. You can confirm this by opening your browser's network tab while using the tool and observing that zero outbound requests are made. The tool works entirely offline once the page has loaded."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0d14;
+      --surface:   #111320;
+      --surface2:  #181b2e;
+      --border:    #252840;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --sans:      'Segoe UI', system-ui, sans-serif;
+      --mono:      'Fira Code', 'Consolas', 'Courier New', monospace;
+      --radius:    10px;
+      --blue:      #3B82F6;
+      --green:     #10B981;
+      --amber:     #F59E0B;
+      --blue-dim:  rgba(59,130,246,0.12);
+      --green-dim: rgba(16,185,129,0.10);
+      --amber-dim: rgba(245,158,11,0.10);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    main#main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ---- TOOL CARD ---- */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    /* ---- PRIVACY BADGE ---- */
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(16,185,129,0.10);
+      border: 1px solid rgba(16,185,129,0.30);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: var(--green);
+      font-weight: 600;
+      margin-bottom: 22px;
+      letter-spacing: 0.01em;
+    }
+    .privacy-badge svg {
+      flex-shrink: 0;
+    }
+
+    /* ---- CONTROLS BAR ---- */
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-group label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .mode-toggle button {
+      padding: 8px 18px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .mode-toggle button.active-encode {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+    .mode-toggle button.active-decode {
+      background: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    /* Strictness select */
+    .strictness-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 32px 8px 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      min-width: 240px;
+    }
+    .strictness-select:focus { outline: 1px solid var(--blue); }
+
+    /* ---- DUAL PANE ---- */
+    .dual-pane {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 680px) {
+      .dual-pane { grid-template-columns: 1fr; }
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pane-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .clear-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      line-height: 1.65;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus { outline: none; border-color: var(--blue); }
+
+    /* Output pane wrapper for floating copy button */
+    .output-wrapper {
+      position: relative;
+    }
+    .output-ta {
+      padding-bottom: 48px; /* room for copy button */
+    }
+
+    /* Encode mode: green glow on output */
+    .output-ta.mode-encode {
+      border-color: rgba(16,185,129,0.50);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.10);
+    }
+    /* Decode mode: amber border on output */
+    .output-ta.mode-decode {
+      border-color: rgba(245,158,11,0.55);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.08);
+    }
+
+    .copy-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--blue);
+      border: none;
+      border-radius: 7px;
+      padding: 7px 16px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 0.80rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .copy-btn:hover { background: #2563eb; }
+    .copy-btn.copied { background: var(--green); }
+
+    /* ---- METRICS STRIP ---- */
+    .metrics-strip {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .metric-pill {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      flex: 1;
+      min-width: 140px;
+    }
+    .metric-label {
+      font-size: 0.69rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .metric-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--blue);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-value.green { color: var(--green); }
+    .metric-value.amber { color: var(--amber); }
+
+    /* Mode badge below output pane label */
+    .mode-badge {
+      font-size: 0.70rem;
+      font-weight: 700;
+      border-radius: 5px;
+      padding: 2px 8px;
+    }
+    .mode-badge.encode { background: var(--green-dim); color: var(--green); }
+    .mode-badge.decode { background: var(--amber-dim); color: var(--amber); }
+    .mode-badge.warn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ---- AD PLACEMENTS ---- */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 28px 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 8px 0;
+    }
+
+    /* ---- CARDS ---- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--blue);
+      margin-bottom: 18px;
+      letter-spacing: 0.01em;
+    }
+
+    /* ---- GLOSSARY ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ---- EDU SECTION ---- */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.93rem;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--green);
+    }
+
+    /* ---- FAQ ---- */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      background: var(--surface2);
+      border: none;
+      padding: 14px 18px;
+      text-align: left;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.90rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--border); }
+    .faq-q .arrow {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-q.open .arrow { transform: rotate(180deg); color: var(--blue); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      color: var(--muted);
+      font-size: 0.87rem;
+      line-height: 1.7;
+      background: var(--surface);
+    }
+    .faq-a.open { display: block; }
+
+    /* Scrollbar */
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-track { background: transparent; }
+    textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<main id="main" class="page-wrapper">
+
+  <header>
+    <h1>HTML Entity Encoder / Decoder</h1>
+    <p>Transform raw characters into safe HTML entities - or decode them back. Real-time, 100% in your browser, zero data sent anywhere.</p>
+  </header>
+
+  <!-- ===== TOOL CARD ===== -->
+  <div class="tool-card">
+
+    <!-- Privacy Badge -->
+    <div class="privacy-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      100% Local / Zero Server Logging - Your code never leaves this browser tab
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <div class="control-group">
+        <label>Mode</label>
+        <div class="mode-toggle">
+          <button id="btn-encode" class="active-encode" onclick="setMode('encode')">Encode (Raw to Entities)</button>
+          <button id="btn-decode" onclick="setMode('decode')">Decode (Entities to Raw)</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>Encoding Strictness</label>
+        <select class="strictness-select" id="strictness" onchange="runConversion()">
+          <option value="standard">Standard / Safe (&lt; &gt; &amp; &quot; &#39;)</option>
+          <option value="extended">Extended (All Named Entities)</option>
+          <option value="numeric">Hexadecimal / Decimal (Numeric)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dual Pane -->
+    <div class="dual-pane">
+
+      <!-- Input Pane -->
+      <div class="pane">
+        <div class="pane-header">
+          <span class="pane-label">Input / Raw Text</span>
+          <button class="clear-btn" onclick="clearAll()">Clear All</button>
+        </div>
+        <textarea
+          id="input-ta"
+          placeholder="Paste your raw text or HTML here..."
+          oninput="runConversion()"
+          spellcheck="false"
+          autocomplete="off"
+        ></textarea>
+      </div>
+
+      <!-- Output Pane -->
+      <div class="pane">
+        <div class="pane-header">
+          <span class="pane-label">Output / Encoded</span>
+          <span id="mode-badge" class="mode-badge encode">Safe Output</span>
+        </div>
+        <div class="output-wrapper">
+          <textarea
+            id="output-ta"
+            class="output-ta mode-encode"
+            readonly
+            spellcheck="false"
+          ></textarea>
+          <button class="copy-btn" id="copy-btn" onclick="copyOutput()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Metrics Strip -->
+    <div class="metrics-strip">
+      <div class="metric-pill">
+        <span class="metric-label">Input Characters</span>
+        <span class="metric-value" id="metric-in">0</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Output Characters</span>
+        <span class="metric-value green" id="metric-out">0</span>
+      </div>
+      <div class="metric-pill">
+        <span class="metric-label">Entities Converted</span>
+        <span class="metric-value amber" id="metric-conv">0</span>
+      </div>
+    </div>
+
+  </div><!-- /.tool-card -->
+
+  <!-- AD PLACEMENT 1 -->
+<!-- ============================================================
+     AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+     Google AdSense 728x90 - shown on screens larger than 768px
+============================================================ -->
+<div class="axiom-ad-leaderboard" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+  <!-- ===== GLOSSARY ===== -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">HTML Entity</div>
+        <div class="glossary-def">A special sequence beginning with &amp; and ending with ; that represents a character in HTML. For example, &amp;amp; renders as an ampersand (&amp;) and &amp;lt; renders as a less-than sign (&lt;).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Character Encoding</div>
+        <div class="glossary-def">The process of representing characters as binary data or safe text sequences. HTML encoding converts characters with special meaning in HTML into entity strings that browsers display as text instead of interpreting as markup.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">XSS (Cross-Site Scripting)</div>
+        <div class="glossary-def">A security vulnerability where an attacker injects malicious JavaScript into a web page viewed by other users. Proper HTML entity encoding is one of the primary defenses against this attack.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Reserved Characters</div>
+        <div class="glossary-def">Characters that have special meaning in HTML syntax and must be escaped when used as literal text: &lt; (less-than), &gt; (greater-than), &amp; (ampersand), &quot; (double quote), and &apos; (apostrophe).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Unicode</div>
+        <div class="glossary-def">A universal standard that assigns a unique numeric code point to every character in every writing system. HTML numeric entities reference these code points directly using decimal (&amp;#65;) or hexadecimal (&amp;#x41;) notation.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Hexadecimal Reference</div>
+        <div class="glossary-def">A numeric HTML entity using base-16 notation. For example, &amp;#x3C; is the hex reference for &lt;. The prefix x distinguishes hex entities from decimal entities like &amp;#60;, which encodes the same character.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Named Entity</div>
+        <div class="glossary-def">An HTML entity identified by a readable name instead of a number. Examples include &amp;copy; for the copyright symbol, &amp;euro; for the euro sign, and &amp;nbsp; for a non-breaking space. Named entities only exist for characters defined by the HTML spec.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Output Context</div>
+        <div class="glossary-def">The document format into which data is inserted - HTML body, HTML attribute, JavaScript string, CSS, or URL. The correct escaping strategy depends entirely on the output context, not just the input data.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EDUCATIONAL SECTION ===== -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to HTML Entity Encoding</h2>
+    <p class="section-intro">If you are building web applications or generating HTML dynamically, understanding entity encoding is not optional - it is a core security and correctness requirement. This guide explains what entities are, why they matter, and how to apply them correctly.</p>
+
+    <h3>How to use this tool</h3>
+    <p>Paste any raw text, HTML snippet, or code fragment into the left pane. The right pane instantly shows the converted output. Use the Mode toggle to switch between encoding raw text into safe entities and decoding entities back to raw characters. The Encoding Strictness dropdown controls how aggressively characters are converted:</p>
+    <p><strong style="color:var(--text)">Standard / Safe</strong> - escapes only the five reserved HTML characters: <code>&lt;</code> <code>&gt;</code> <code>&amp;</code> <code>&quot;</code> <code>'</code>. This is the correct setting for most XSS prevention tasks when inserting untrusted strings into HTML body or attribute contexts.</p>
+    <p><strong style="color:var(--text)">Extended (Named Entities)</strong> - additionally encodes a wide dictionary of characters that have named entity equivalents, such as <code>©</code> to <code>&amp;copy;</code>, <code>€</code> to <code>&amp;euro;</code>, and curly quotes. Useful when targeting older systems or email HTML renderers that do not handle Unicode well.</p>
+    <p><strong style="color:var(--text)">Hexadecimal / Decimal (Numeric)</strong> - converts every character to its numeric Unicode reference. Hex mode prefixes the code point with <code>x</code> (e.g. <code>&amp;#x3C;</code>). This is the most universal form and works for any character regardless of whether it has a named entity.</p>
+
+    <h3>Why entity encoding is a security requirement</h3>
+    <p>Every modern web application receives input from untrusted sources: form fields, URL parameters, API responses, database records created by users. When that data is rendered inside an HTML document without transformation, the browser parses it as markup. An attacker who can control even a small piece of displayed text can inject <code>&lt;script&gt;</code> tags, <code>onerror</code> attributes on images, or <code>javascript:</code> protocol URIs in anchor tags, all of which execute arbitrary JavaScript.</p>
+    <p>Entity encoding removes the attack surface: <code>&lt;script&gt;</code> becomes <code>&amp;lt;script&amp;gt;</code>, which the browser renders as the visible string <code>&lt;script&gt;</code> without ever parsing it as a tag. This is why every modern web security framework (React's JSX, Django's template engine, Rails' ERB) applies HTML escaping by default on any value interpolated into the template output.</p>
+
+    <h3>Named vs. numeric entities: when to use which</h3>
+    <p>Named entities like <code>&amp;amp;</code> and <code>&amp;lt;</code> are readable and concise. They are the preferred form for the five reserved characters. For everything else, numeric entities are more portable because they depend only on the Unicode standard, not on an HTML entity dictionary. When writing HTML emails or targeting very old browsers, numeric entities are the safer choice. For modern web output, Standard encoding covering the five reserved characters is almost always sufficient.</p>
+
+    <h3>The output context rule</h3>
+    <p>The most common encoding mistake is applying the right encoding in the wrong place. HTML entity encoding is correct only when inserting data into an HTML text node or HTML attribute value. Inside a <code>&lt;script&gt;</code> block, you need JavaScript string escaping (backslash sequences), not HTML entities. Inside a URL parameter, you need percent-encoding. Inside a CSS <code>content</code> property, you need a different escape syntax. Mixing these up - for instance, percent-encoding a value placed in an HTML attribute - both breaks functionality and can introduce new vulnerabilities.</p>
+
+    <!-- FAQ -->
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Why is HTML entity encoding critical for preventing XSS attacks?
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        XSS attacks occur when malicious scripts are injected into a page and executed by another user's browser. When raw user input is inserted into HTML without encoding, the browser cannot distinguish your intended markup from the injected code. Entity encoding converts dangerous characters: <code>&lt;</code> becomes <code>&amp;lt;</code>, <code>&gt;</code> becomes <code>&amp;gt;</code>, turning executable tags into inert visible text. A payload like <code>&lt;script&gt;alert('xss')&lt;/script&gt;</code> becomes <code>&amp;lt;script&amp;gt;alert('xss')&amp;lt;/script&amp;gt;</code> and is displayed harmlessly on screen without ever running.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What happens if I do not encode user input before displaying it?
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        At minimum, unencoded input breaks your page layout whenever a user enters characters like <code>&lt;</code> or <code>&amp;</code>. At worst, it enables stored or reflected XSS: an attacker plants a script in your database (stored) or crafts a URL that delivers the payload (reflected), and every visitor who loads the page executes the injected code. Consequences range from session hijacking and credential theft to full account takeover. XSS is consistently ranked in the OWASP Top 10 most critical web application security risks for this reason.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between a named entity and a numeric entity?
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        A named entity uses a human-readable keyword defined by the HTML specification, such as <code>&amp;amp;</code> for &amp;, <code>&amp;lt;</code> for &lt;, or <code>&amp;copy;</code> for the copyright symbol. Named entities exist only for the characters the spec explicitly lists. A numeric entity references any character by its Unicode code point: decimal format uses <code>&amp;#65;</code> for the letter A, hexadecimal format uses <code>&amp;#x41;</code> for the same character. Numeric entities cover the entire Unicode range of over 140,000 characters, making them far more universal than named entities.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Should I encode data before saving it to a database or before rendering it?
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        Encode at the point of output, not before storing. Store raw, un-encoded data in your database. Encoding on the way in creates double-encoding bugs when values pass through multiple layers, breaks search queries because the stored string no longer matches what users type, and forces non-HTML outputs (JSON, CSV, email) to unnecessarily strip HTML entities. Instead: sanitize inputs to strip outright dangerous content, store the sanitized raw value, and apply context-appropriate escaping (HTML encoding for HTML output, URL encoding for URLs, JSON escaping for JSON) precisely at the moment you render the data.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Is it safe to paste sensitive code snippets into this tool?
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        Yes. All encoding and decoding is performed entirely within your browser using JavaScript. Nothing is sent to any server, logged, or stored. Open your browser's network tab while using the tool and you will see zero outbound requests. The tool functions fully offline once the page has loaded. That said, treat live production tokens and credentials as sensitive - revoke them after testing rather than sharing them anywhere.
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- AD PLACEMENT 2 -->
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ============================================================
+     STATE
+  ============================================================ */
+  let currentMode = 'encode';
+
+  /* ============================================================
+     NAMED ENTITY DICTIONARIES
+  ============================================================ */
+
+  // Standard: only the 5 reserved HTML characters
+  const STANDARD_MAP = {
+    '&':  '&amp;',
+    '<':  '&lt;',
+    '>':  '&gt;',
+    '"':  '&quot;',
+    "'":  '&#39;'
+  };
+
+  // Extended: named entities beyond the 5 reserved chars
+  const EXTENDED_MAP = {
+    '&':  '&amp;',
+    '<':  '&lt;',
+    '>':  '&gt;',
+    '"':  '&quot;',
+    "'":  '&#39;',
+    ' ': '&nbsp;',
+    '¡': '&iexcl;',
+    '¢': '&cent;',
+    '£': '&pound;',
+    '¤': '&curren;',
+    '¥': '&yen;',
+    '¦': '&brvbar;',
+    '§': '&sect;',
+    '¨': '&uml;',
+    '©': '&copy;',
+    'ª': '&ordf;',
+    '«': '&laquo;',
+    '¬': '&not;',
+    '­': '&shy;',
+    '®': '&reg;',
+    '¯': '&macr;',
+    '°': '&deg;',
+    '±': '&plusmn;',
+    '²': '&sup2;',
+    '³': '&sup3;',
+    '´': '&acute;',
+    'µ': '&micro;',
+    '¶': '&para;',
+    '·': '&middot;',
+    '¸': '&cedil;',
+    '¹': '&sup1;',
+    'º': '&ordm;',
+    '»': '&raquo;',
+    '¼': '&frac14;',
+    '½': '&frac12;',
+    '¾': '&frac34;',
+    '¿': '&iquest;',
+    'À': '&Agrave;',
+    'Á': '&Aacute;',
+    'Â': '&Acirc;',
+    'Ã': '&Atilde;',
+    'Ä': '&Auml;',
+    'Å': '&Aring;',
+    'Æ': '&AElig;',
+    'Ç': '&Ccedil;',
+    'È': '&Egrave;',
+    'É': '&Eacute;',
+    'Ê': '&Ecirc;',
+    'Ë': '&Euml;',
+    'Ì': '&Igrave;',
+    'Í': '&Iacute;',
+    'Î': '&Icirc;',
+    'Ï': '&Iuml;',
+    'Ð': '&ETH;',
+    'Ñ': '&Ntilde;',
+    'Ò': '&Ograve;',
+    'Ó': '&Oacute;',
+    'Ô': '&Ocirc;',
+    'Õ': '&Otilde;',
+    'Ö': '&Ouml;',
+    '×': '&times;',
+    'Ø': '&Oslash;',
+    'Ù': '&Ugrave;',
+    'Ú': '&Uacute;',
+    'Û': '&Ucirc;',
+    'Ü': '&Uuml;',
+    'Ý': '&Yacute;',
+    'Þ': '&THORN;',
+    'ß': '&szlig;',
+    'à': '&agrave;',
+    'á': '&aacute;',
+    'â': '&acirc;',
+    'ã': '&atilde;',
+    'ä': '&auml;',
+    'å': '&aring;',
+    'æ': '&aelig;',
+    'ç': '&ccedil;',
+    'è': '&egrave;',
+    'é': '&eacute;',
+    'ê': '&ecirc;',
+    'ë': '&euml;',
+    'ì': '&igrave;',
+    'í': '&iacute;',
+    'î': '&icirc;',
+    'ï': '&iuml;',
+    'ð': '&eth;',
+    'ñ': '&ntilde;',
+    'ò': '&ograve;',
+    'ó': '&oacute;',
+    'ô': '&ocirc;',
+    'õ': '&otilde;',
+    'ö': '&ouml;',
+    '÷': '&divide;',
+    'ø': '&oslash;',
+    'ù': '&ugrave;',
+    'ú': '&uacute;',
+    'û': '&ucirc;',
+    'ü': '&uuml;',
+    'ý': '&yacute;',
+    'þ': '&thorn;',
+    'ÿ': '&yuml;',
+    '€': '&euro;',
+    '™': '&trade;',
+    '‘': '&lsquo;',
+    '’': '&rsquo;',
+    '“': '&ldquo;',
+    '”': '&rdquo;',
+    '\u2013': '&ndash;',
+    '\u2014': '&mdash;',
+    '…': '&hellip;',
+    '♥': '&hearts;',
+    '♠': '&spades;',
+    '♦': '&diams;',
+    '♣': '&clubs;'
+  };
+
+  // Build reverse decode map (entity string -> char) from extended map
+  const DECODE_MAP = {};
+  for (const [ch, ent] of Object.entries(EXTENDED_MAP)) {
+    DECODE_MAP[ent] = ch;
+  }
+  // Also add &#39; -> ' if not present
+  DECODE_MAP['&#39;'] = "'";
+
+  /* ============================================================
+     ENCODING FUNCTIONS
+  ============================================================ */
+
+  function encodeStandard(str) {
+    let count = 0;
+    const result = str.replace(/[&<>"']/g, ch => {
+      count++;
+      return STANDARD_MAP[ch];
+    });
+    return { result, count };
+  }
+
+  function encodeExtended(str) {
+    let count = 0;
+    // Build regex from extended map keys
+    const chars = Object.keys(EXTENDED_MAP);
+    // Escape special regex chars
+    const escaped = chars.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const re = new RegExp('[' + escaped.join('') + ']', 'g');
+    const result = str.replace(re, ch => {
+      if (EXTENDED_MAP[ch]) { count++; return EXTENDED_MAP[ch]; }
+      return ch;
+    });
+    return { result, count };
+  }
+
+  function encodeNumericHex(str) {
+    let count = 0;
+    const result = str.replace(/./gsu, ch => {
+      const cp = ch.codePointAt(0);
+      // Only encode non-ASCII or reserved HTML characters
+      if (cp > 127 || cp === 38 || cp === 60 || cp === 62 || cp === 34 || cp === 39) {
+        count++;
+        return '&#x' + cp.toString(16).toUpperCase() + ';';
+      }
+      return ch;
+    });
+    return { result, count };
+  }
+
+  function encodeNumericDecimal(str) {
+    let count = 0;
+    const result = str.replace(/./gsu, ch => {
+      const cp = ch.codePointAt(0);
+      if (cp > 127 || cp === 38 || cp === 60 || cp === 62 || cp === 34 || cp === 39) {
+        count++;
+        return '&#' + cp + ';';
+      }
+      return ch;
+    });
+    return { result, count };
+  }
+
+  /* ============================================================
+     DECODING FUNCTIONS
+  ============================================================ */
+
+  function decodeEntities(str) {
+    let count = 0;
+    // Decode named entities via DOM
+    const result = str
+      // Named entities (e.g. &amp; &lt; &copy;)
+      .replace(/&[a-zA-Z]+;/g, match => {
+        if (DECODE_MAP[match] !== undefined) { count++; return DECODE_MAP[match]; }
+        // Fallback: use DOM textarea decode trick for unknown named entities
+        try {
+          const txt = document.createElement('textarea');
+          txt.innerHTML = match;
+          const decoded = txt.value;
+          if (decoded !== match) { count++; return decoded; }
+        } catch(e) {}
+        return match;
+      })
+      // Hex numeric entities (e.g. &#x3C; &#X3C;)
+      .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, hex) => {
+        count++;
+        return String.fromCodePoint(parseInt(hex, 16));
+      })
+      // Decimal numeric entities (e.g. &#60;)
+      .replace(/&#([0-9]+);/g, (_, dec) => {
+        count++;
+        return String.fromCodePoint(parseInt(dec, 10));
+      });
+    return { result, count };
+  }
+
+  /* ============================================================
+     MAIN CONVERSION RUNNER
+  ============================================================ */
+
+  function runConversion() {
+    const input = document.getElementById('input-ta').value;
+    const strictness = document.getElementById('strictness').value;
+    let result = '';
+    let count = 0;
+
+    if (currentMode === 'encode') {
+      if (strictness === 'standard') {
+        ({ result, count } = encodeStandard(input));
+      } else if (strictness === 'extended') {
+        ({ result, count } = encodeExtended(input));
+      } else {
+        // Numeric: use hex
+        ({ result, count } = encodeNumericHex(input));
+      }
+    } else {
+      ({ result, count } = decodeEntities(input));
+    }
+
+    document.getElementById('output-ta').value = result;
+    document.getElementById('metric-in').textContent  = [...input].length.toLocaleString();
+    document.getElementById('metric-out').textContent = [...result].length.toLocaleString();
+    document.getElementById('metric-conv').textContent = count.toLocaleString();
+  }
+
+  /* ============================================================
+     MODE SWITCHING
+  ============================================================ */
+
+  function setMode(mode) {
+    currentMode = mode;
+    const outputTa = document.getElementById('output-ta');
+    const badge    = document.getElementById('mode-badge');
+    const strictSel = document.getElementById('strictness');
+
+    if (mode === 'encode') {
+      document.getElementById('btn-encode').className = 'active-encode';
+      document.getElementById('btn-decode').className = '';
+      outputTa.className = 'output-ta mode-encode';
+      badge.textContent = 'Safe Output';
+      badge.className = 'mode-badge encode';
+      // Restore strictness options for encode
+      strictSel.innerHTML = `
+        <option value="standard">Standard / Safe (&lt; &gt; &amp; &quot; &#39;)</option>
+        <option value="extended">Extended (All Named Entities)</option>
+        <option value="numeric">Hexadecimal / Decimal (Numeric)</option>
+      `;
+    } else {
+      document.getElementById('btn-decode').className = 'active-decode';
+      document.getElementById('btn-encode').className = '';
+      outputTa.className = 'output-ta mode-decode';
+      badge.innerHTML = '&#9888; Raw / Executable Output';
+      badge.className = 'mode-badge decode warn';
+      // Decode mode: strictness selector grayed out (single option)
+      strictSel.innerHTML = `<option value="standard">Universal Decode (Named + Hex + Decimal)</option>`;
+    }
+
+    runConversion();
+  }
+
+  /* ============================================================
+     UTILITIES
+  ============================================================ */
+
+  function clearAll() {
+    document.getElementById('input-ta').value = '';
+    document.getElementById('output-ta').value = '';
+    document.getElementById('metric-in').textContent  = '0';
+    document.getElementById('metric-out').textContent = '0';
+    document.getElementById('metric-conv').textContent = '0';
+  }
+
+  function copyOutput() {
+    const text = document.getElementById('output-ta').value;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy';
+        btn.classList.remove('copied');
+      }, 1800);
+    });
+  }
+
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const isOpen = btn.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-q').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+    if (!isOpen) {
+      btn.classList.add('open');
+      answer.classList.add('open');
+    }
+  }
+</script>
+
+</body>
+</html>

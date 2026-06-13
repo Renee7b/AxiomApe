@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Htaccess Redirect URL Mapping Tool: Write Robust Apache Rules for Canonical Forms and Folder Maps | AxiomApe</title>
+  <meta name="description" content="Free .htaccess redirect generator. Build robust Apache mod_rewrite rules for HTTPS enforcement, WWW canonicalization, trailing slash handling, and custom 301/302 URL redirect maps. 100% client-side." />
+  <meta name="keywords" content="htaccess redirect generator, apache mod_rewrite rules, 301 redirect generator, htaccess url mapping, canonical redirect htaccess, force https htaccess, www non-www redirect, trailing slash redirect, apache rewrite rules, redirect chain checker, technical seo redirect tool, htaccess generator" />
+  <link rel="canonical" href="https://axiomape.com/htaccess-redirect-url-mapping/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Htaccess Redirect URL Mapping Tool",
+        "description": "Free .htaccess redirect generator. Build robust Apache mod_rewrite rules for HTTPS enforcement, WWW canonicalization, trailing slash handling, and custom 301/302 URL redirect maps. 100% client-side.",
+        "url": "https://axiomape.com/htaccess-redirect-url-mapping/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is a 301 redirect better for SEO than a 302?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A 301 redirect signals to search engines that a page has permanently moved, so they transfer the original page's link equity (PageRank) to the new URL and update their index. A 302 tells crawlers the move is temporary, so they keep both URLs in the index and do not pass link equity. Using a 302 when you mean a permanent move can split your ranking signals across two URLs and dilute your SEO value."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a redirect chain and why is it bad?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A redirect chain occurs when URL A redirects to URL B, which then redirects to URL C. Each hop adds latency for real users and causes search engine crawlers to spend extra crawl budget following the chain. Some crawlers will also stop following after a certain number of hops, meaning the final destination may never be indexed. Fix chains by pointing the original URL directly to the final destination."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to force HTTPS in my .htaccess file?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "If your server or CDN (like Cloudflare) does not already handle HTTPS enforcement at the edge, yes - adding a mod_rewrite rule to redirect all HTTP traffic to HTTPS is the right approach. However, if your hosting platform handles it automatically (as Cloudflare Pages and many managed hosts do), adding a duplicate .htaccess rule is harmless but unnecessary. When in doubt, include it: the rule is cheap and the security benefit is real."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between RedirectMatch and RewriteRule?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "RedirectMatch is a simpler directive from mod_alias that matches a regex against the request path and issues a redirect. It runs before mod_rewrite and has no conditions. RewriteRule (from mod_rewrite) is more powerful: it can match the full URL, use RewriteCond conditions to check headers, server variables, or query strings, and can rewrite internally (not just redirect). For basic path redirects, either works. For conditional logic like HTTPS or WWW enforcement, RewriteRule with RewriteCond is required."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface2:    #273549;
+      --border:      #334155;
+      --border-hi:   #475569;
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --orange:      #F97316;
+      --orange-dim:  rgba(249,115,22,0.15);
+      --orange-glow: rgba(249,115,22,0.35);
+      --green:       #10B981;
+      --green-dim:   rgba(16,185,129,0.12);
+      --green-glow:  rgba(16,185,129,0.35);
+      --amber:       #F59E0B;
+      --amber-dim:   rgba(245,158,11,0.18);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.15);
+      --blue:        #3b82f6;
+      --radius:      10px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =====================================================
+       PAGE HEADER
+    ===================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f2318 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(249,115,22,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 50%, rgba(16,185,129,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.3;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      color: #f1f5f9;
+    }
+    .page-header h1 span { color: var(--orange); }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* =====================================================
+       LAYOUT
+    ===================================================== */
+    .page-wrapper {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* =====================================================
+       CARDS
+    ===================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--orange);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+    .card-title .icon { font-size: 1rem; }
+
+    /* =====================================================
+       TWO-COLUMN INPUT LAYOUT
+    ===================================================== */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 700px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    /* =====================================================
+       FORM CONTROLS
+    ===================================================== */
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 9px 12px;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      outline: none;
+    }
+    input[type="text"]:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px var(--orange-dim);
+    }
+    select option { background: var(--surface2); }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+    }
+    .toggle-label-group { flex: 1; }
+    .toggle-label-group .label-main {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .toggle-label-group .label-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 46px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--green); }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); }
+
+    .field-group { margin-bottom: 16px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    /* =====================================================
+       CUSTOM ROUTE ROWS
+    ===================================================== */
+    #routes-container { display: flex; flex-direction: column; gap: 10px; }
+
+    .route-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 140px 36px;
+      gap: 8px;
+      align-items: end;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      transition: border-color 0.2s;
+    }
+    .route-row.warn-row { border-color: var(--amber); box-shadow: 0 0 0 2px var(--amber-dim); }
+    @media (max-width: 640px) {
+      .route-row { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; }
+      .route-row .route-delete { grid-column: 2; grid-row: 2; justify-self: end; }
+    }
+
+    .route-row input, .route-row select {
+      background: var(--surface);
+      font-family: 'Courier New', monospace;
+      font-size: 0.88rem;
+    }
+    .route-row input.slash-warn { border-color: var(--amber) !important; box-shadow: 0 0 0 2px var(--amber-dim) !important; }
+
+    .route-delete {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      height: 36px; width: 36px;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.18s, color 0.18s;
+      flex-shrink: 0;
+    }
+    .route-delete:hover { border-color: var(--red); color: var(--red); }
+
+    .add-route-btn {
+      margin-top: 12px;
+      background: transparent;
+      border: 1px dashed var(--orange);
+      border-radius: 8px;
+      color: var(--orange);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      width: 100%;
+      transition: background 0.18s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .add-route-btn:hover { background: var(--orange-dim); }
+
+    /* =====================================================
+       OUTPUT PANES
+    ===================================================== */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 720px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Pane 1 - code */
+    .code-pane {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+    .code-pane-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .code-pane-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .code-pane-title::before {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green-glow);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .copy-btn {
+      background: var(--green);
+      border: none;
+      border-radius: 6px;
+      color: #0d1117;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 6px 14px;
+      transition: background 0.18s, box-shadow 0.18s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: #0ea271; box-shadow: 0 0 10px var(--green-glow); }
+    .copy-btn.copied { background: var(--muted); }
+
+    pre#htaccess-output {
+      margin: 0;
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.83rem;
+      line-height: 1.7;
+      color: #d1fae5;
+      min-height: 200px;
+      white-space: pre;
+    }
+
+    /* Syntax color classes */
+    .ht-comment { color: #64748b; }
+    .ht-directive { color: #F97316; font-weight: 600; }
+    .ht-cond { color: #a78bfa; }
+    .ht-tag { color: #60a5fa; }
+    .ht-value { color: #10B981; }
+    .ht-flag { color: #F59E0B; }
+    .ht-string { color: #f9a8d4; }
+
+    /* Pane 2 - analysis */
+    .analysis-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--orange);
+      line-height: 1.1;
+    }
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .badge-https {
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+      animation: glow-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--green-glow); }
+      50% { box-shadow: 0 0 20px var(--green-glow); }
+    }
+    .badge-https.off {
+      background: var(--surface2);
+      border-color: var(--border);
+      color: var(--muted);
+      box-shadow: none;
+      animation: none;
+    }
+    .badge-https .badge-icon { font-size: 1.3rem; }
+
+    .chain-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .chain-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .chain-ok { color: var(--green); font-size: 0.88rem; font-weight: 600; }
+    .chain-warn { color: var(--amber); font-size: 0.85rem; font-weight: 600; }
+    #chain-list { margin-top: 6px; list-style: none; }
+    #chain-list li {
+      font-size: 0.78rem;
+      font-family: 'Courier New', monospace;
+      color: var(--amber);
+      background: var(--amber-dim);
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-top: 4px;
+    }
+
+    /* =====================================================
+       AD PLACEMENTS (classes from site-chrome.js)
+    ===================================================== */
+    .axiom-ad-leaderboard, .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 12px;
+    }
+
+    /* =====================================================
+       GLOSSARY
+    ===================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--orange);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      font-family: 'Courier New', monospace;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* =====================================================
+       EDUCATIONAL SECTION
+    ===================================================== */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--orange);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* FAQ Accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--surface2);
+      padding: 14px 18px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.18s;
+      user-select: none;
+    }
+    .faq-q:hover { background: var(--border); }
+    .faq-q .faq-arrow {
+      font-size: 0.8rem;
+      color: var(--orange);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-q.open .faq-arrow { transform: rotate(90deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .faq-a.open { display: block; }
+
+    /* =====================================================
+       MISC UTILITIES
+    ===================================================== */
+    .separator { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .hidden { display: none !important; }
+    .row-num {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects the header, footer, privacy badge, and disclaimer -->
+
+  <header class="page-header">
+    <h1><span>.htaccess</span> Redirect URL Mapping Tool</h1>
+    <p>Build robust Apache mod_rewrite rules for HTTPS, WWW canonicalization, trailing slash handling, and custom 301/302 redirect maps. Real-time output, 100% client-side.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         INPUT PANELS
+    ============================================================ -->
+    <div class="input-grid">
+
+      <!-- Panel 1: Global Canonical Rules -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#9881;</span> Global Canonical Rules</div>
+
+        <!-- Force HTTPS toggle -->
+        <div class="field-group">
+          <div class="toggle-row">
+            <div class="toggle-label-group">
+              <div class="label-main">Force HTTPS Security</div>
+              <div class="label-sub">Redirect all HTTP traffic to HTTPS via 301</div>
+            </div>
+            <label class="toggle-switch" aria-label="Force HTTPS">
+              <input type="checkbox" id="toggle-https" checked onchange="generate()">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <hr class="separator" />
+
+        <!-- Domain prefix handling -->
+        <div class="field-group">
+          <label for="sel-www">Domain Prefix Handling</label>
+          <select id="sel-www" onchange="handleWwwChange()">
+            <option value="none">Do Nothing</option>
+            <option value="non-www" selected>Force Non-WWW</option>
+            <option value="www">Force WWW</option>
+          </select>
+        </div>
+
+        <!-- Base domain (conditional) -->
+        <div class="field-group" id="domain-field-group">
+          <label for="inp-domain">Base Domain Name</label>
+          <input type="text" id="inp-domain" placeholder="example.com" oninput="generate()" />
+        </div>
+
+        <hr class="separator" />
+
+        <!-- Trailing slash handling -->
+        <div class="field-group">
+          <label for="sel-slash">Trailing Slash Handling</label>
+          <select id="sel-slash" onchange="generate()">
+            <option value="none">Do Nothing</option>
+            <option value="add">Force Trailing Slash</option>
+            <option value="remove">Remove Trailing Slash</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Panel 2: Custom Route Mapping -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#8644;</span> Custom Route Mapping</div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 140px 36px; gap: 8px; margin-bottom: 6px; padding: 0 12px;">
+          <label style="margin:0">Old Path</label>
+          <label style="margin:0">New Path</label>
+          <label style="margin:0">Type</label>
+          <span></span>
+        </div>
+
+        <div id="routes-container"></div>
+
+        <button class="add-route-btn" onclick="addRoute()">
+          <span>+</span> Add Another Route
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         OUTPUT PANES
+    ============================================================ -->
+    <div class="output-grid">
+
+      <!-- Pane 1: Live .htaccess Code -->
+      <div class="code-pane">
+        <div class="code-pane-header">
+          <div class="code-pane-title">Live .htaccess Rules</div>
+          <button class="copy-btn" id="copy-btn" onclick="copyCode()">Copy Rules</button>
+        </div>
+        <pre id="htaccess-output"></pre>
+      </div>
+
+      <!-- Pane 2: SEO & Architecture Analysis -->
+      <div class="analysis-pane">
+
+        <div class="metric-card">
+          <div class="metric-label">Total Custom Routes</div>
+          <div class="metric-value" id="metric-routes">0</div>
+          <div class="metric-sub">redirect rules defined</div>
+        </div>
+
+        <div id="badge-https" class="badge-https off">
+          <span class="badge-icon">&#128274;</span>
+          <span id="badge-https-text">HTTPS Not Enforced</span>
+        </div>
+
+        <div class="chain-card">
+          <div class="chain-label">Redirect Chain Risk</div>
+          <div id="chain-status" class="chain-ok">No chains detected</div>
+          <ul id="chain-list"></ul>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Total Directives</div>
+          <div class="metric-value" id="metric-lines">0</div>
+          <div class="metric-sub">lines of Apache config</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#128218;</span> Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">.htaccess</div>
+          <div class="glossary-def">A hidden Apache server configuration file placed in a directory. It overrides server-level settings for that directory and its subdirectories without restarting the server.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Apache Web Server</div>
+          <div class="glossary-def">The world's most widely deployed web server software. Apache processes HTTP requests, serves files, and executes directives defined in .htaccess and httpd.conf files.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">301 Permanent Redirect</div>
+          <div class="glossary-def">An HTTP status code signaling that a resource has permanently moved to a new URL. Search engines transfer link equity to the new URL and update their index accordingly.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">302 Temporary Redirect</div>
+          <div class="glossary-def">An HTTP status code indicating a resource has temporarily moved. Search engines keep the original URL indexed and do not pass link equity, making 302 wrong for permanent moves.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Canonicalization</div>
+          <div class="glossary-def">The process of choosing one preferred URL version when multiple variants exist (HTTP vs HTTPS, www vs non-www). Canonicalization prevents duplicate content penalties in search engines.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">mod_rewrite</div>
+          <div class="glossary-def">An Apache module that provides a rule-based URL rewriting engine using regular expressions. It powers the RewriteRule and RewriteCond directives and must be enabled on the server.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Regular Expressions (Regex)</div>
+          <div class="glossary-def">A pattern-matching syntax used in RewriteRule and RedirectMatch to identify URL patterns. Characters like ^ (start), $ (end), and .* (any characters) form the building blocks.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Redirect Chain</div>
+          <div class="glossary-def">A sequence of redirects where URL A points to URL B, which then points to URL C. Chains waste crawl budget, slow page loads, and dilute SEO signals passed through each hop.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Apache .htaccess Redirects</h2>
+
+      <p class="section-intro">Managing URL redirects is one of the most consequential tasks in technical SEO and server administration. A single misconfigured rule can create redirect loops, break crawling, or silently bleed link equity. This guide covers every pattern generated by this tool so you can deploy with confidence.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Set your global rules in the left panel first: toggle HTTPS enforcement on or off, choose your WWW preference, and set your trailing slash behavior. Enter your base domain if you are enforcing a WWW or non-WWW canonical. Then use the Custom Route Mapping panel to add individual path redirects. The .htaccess output updates in real time as you type - no submit button needed. When finished, click "Copy Rules" and paste the content into your .htaccess file at your site root.</p>
+
+      <h3>Understanding the Output: Global vs. Route-Level Rules</h3>
+      <p>The generated file uses RewriteRule directives with RewriteCond conditions for global canonicalization, because these require server variable checks (like %{HTTPS} or %{HTTP_HOST}) that only mod_rewrite can access. For individual path routes, the tool uses RewriteRule with the R= flag, which is clean and explicit. The [L] flag on every rule means "last" - Apache stops processing further rules if this one matches, preventing unintended rule stacking.</p>
+
+      <h3>Slash Warning System</h3>
+      <p>If you omit the leading slash on an Old Path or New Path input, the tool outlines the field in amber and auto-prepends the slash in the generated output. Apache path matching requires an absolute path beginning with /. Omitting it is the most common cause of 500 Internal Server Errors in hand-written .htaccess files.</p>
+
+      <h3>Deploying Safely</h3>
+      <p>Always test your .htaccess rules on a staging server before pushing to production. After deploying, use a redirect checker tool to walk each URL and confirm it resolves in a single hop to the expected destination. Keep a backup of your previous .htaccess file. If Apache returns a 500 error after updating, the most common cause is a syntax error in the file - check your server's error log at /var/log/apache2/error.log or its equivalent.</p>
+
+      <!-- FAQ -->
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why is a 301 redirect better for SEO than a 302?
+          <span class="faq-arrow">&#9658;</span>
+        </div>
+        <div class="faq-a">
+          A 301 redirect signals to search engines that a page has permanently moved, so they transfer the original page's link equity (PageRank) to the new URL and update their index. A 302 tells crawlers the move is temporary, so they keep both URLs in the index and do not pass link equity. Using a 302 when you mean a permanent move can split your ranking signals across two URLs and dilute your SEO value.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is a redirect chain and why is it bad?
+          <span class="faq-arrow">&#9658;</span>
+        </div>
+        <div class="faq-a">
+          A redirect chain occurs when URL A redirects to URL B, which then redirects to URL C. Each hop adds latency for real users and causes search engine crawlers to spend extra crawl budget following the chain. Some crawlers will also stop following after a certain number of hops, meaning the final destination may never be indexed. Fix chains by pointing the original URL directly to the final destination. This tool flags chains in the analysis pane whenever a New Path you define matches another row's Old Path.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Do I need to force HTTPS in my .htaccess file?
+          <span class="faq-arrow">&#9658;</span>
+        </div>
+        <div class="faq-a">
+          If your server or CDN (like Cloudflare) does not already handle HTTPS enforcement at the edge, yes - adding a mod_rewrite rule to redirect all HTTP traffic to HTTPS is the right approach. However, if your hosting platform handles it automatically (as Cloudflare Pages and many managed hosts do), adding a duplicate .htaccess rule is harmless but unnecessary. When in doubt, include it: the rule is cheap and the security benefit is real.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between RedirectMatch and RewriteRule?
+          <span class="faq-arrow">&#9658;</span>
+        </div>
+        <div class="faq-a">
+          RedirectMatch is a simpler directive from mod_alias that matches a regex against the request path and issues a redirect. It runs before mod_rewrite and has no conditions. RewriteRule (from mod_rewrite) is more powerful: it can match the full URL, use RewriteCond conditions to check headers, server variables, or query strings, and can rewrite internally (not just redirect). For basic path redirects, either works. For conditional logic like HTTPS or WWW enforcement, RewriteRule with RewriteCond is required.
+        </div>
+      </div>
+
+    </div><!-- /.edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let routeCount = 0;
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    function init() {
+      addRoute();
+      addRoute();
+      generate();
+    }
+
+    // ============================================================
+    // WWW DROPDOWN - show/hide domain field
+    // ============================================================
+    function handleWwwChange() {
+      const sel = document.getElementById('sel-www').value;
+      const grp = document.getElementById('domain-field-group');
+      if (sel === 'none') {
+        grp.classList.add('hidden');
+      } else {
+        grp.classList.remove('hidden');
+      }
+      generate();
+    }
+
+    // ============================================================
+    // ADD / DELETE ROUTE ROWS
+    // ============================================================
+    function addRoute() {
+      routeCount++;
+      const id = routeCount;
+      const container = document.getElementById('routes-container');
+      const row = document.createElement('div');
+      row.className = 'route-row';
+      row.id = 'route-' + id;
+      row.innerHTML =
+        '<input type="text" id="old-' + id + '" placeholder="/old-path.html" oninput="validateSlash(this); generate()" />' +
+        '<input type="text" id="new-' + id + '" placeholder="/new-path/" oninput="validateSlash(this); generate()" />' +
+        '<select id="type-' + id + '" onchange="generate()">' +
+          '<option value="301">301 Permanent</option>' +
+          '<option value="302">302 Temporary</option>' +
+        '</select>' +
+        '<button class="route-delete" onclick="deleteRoute(' + id + ')" title="Remove this route">&#x2715;</button>';
+      container.appendChild(row);
+    }
+
+    function deleteRoute(id) {
+      const row = document.getElementById('route-' + id);
+      if (row) row.remove();
+      generate();
+    }
+
+    // ============================================================
+    // SLASH VALIDATION - warn if leading slash missing
+    // ============================================================
+    function validateSlash(input) {
+      const val = input.value;
+      if (val.length > 0 && !val.startsWith('/') && !val.startsWith('http')) {
+        input.classList.add('slash-warn');
+      } else {
+        input.classList.remove('slash-warn');
+      }
+    }
+
+    function ensureSlash(path) {
+      if (!path) return path;
+      if (path.startsWith('http')) return path;
+      if (!path.startsWith('/')) return '/' + path;
+      return path;
+    }
+
+    function escapeDots(path) {
+      // Escape dots in file extensions for regex use
+      return path.replace(/\./g, '\\.');
+    }
+
+    // ============================================================
+    // CODE GENERATION ENGINE
+    // ============================================================
+    function generate() {
+      const httpsOn = document.getElementById('toggle-https').checked;
+      const wwwMode = document.getElementById('sel-www').value;
+      const domain  = document.getElementById('inp-domain').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      const slashMode = document.getElementById('sel-slash').value;
+
+      // Collect valid routes
+      const routes = [];
+      document.querySelectorAll('.route-row').forEach(row => {
+        const id = row.id.replace('route-', '');
+        const oldInp = document.getElementById('old-' + id);
+        const newInp = document.getElementById('new-' + id);
+        const typeEl = document.getElementById('type-' + id);
+        if (!oldInp || !newInp || !typeEl) return;
+        const oldPath = ensureSlash(oldInp.value.trim());
+        const newPath = ensureSlash(newInp.value.trim());
+        if (oldPath && newPath && oldPath.length > 1) {
+          routes.push({ old: oldPath, new: newPath, type: typeEl.value });
+        }
+      });
+
+      // Build raw lines (for line count)
+      const rawLines = [];
+
+      rawLines.push('<IfModule mod_rewrite.c>');
+      rawLines.push('  RewriteEngine On');
+
+      if (httpsOn) {
+        rawLines.push('');
+        rawLines.push('  # Force HTTPS');
+        rawLines.push('  RewriteCond %{HTTPS} off');
+        rawLines.push('  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]');
+      }
+
+      if (wwwMode === 'non-www') {
+        rawLines.push('');
+        rawLines.push('  # Force Non-WWW');
+        if (domain) {
+          rawLines.push('  RewriteCond %{HTTP_HOST} ^www\\.(' + escapeRegexDomain(domain) + ')$ [NC]');
+          rawLines.push('  RewriteRule ^(.*)$ https://' + domain + '/$1 [L,R=301]');
+        } else {
+          rawLines.push('  RewriteCond %{HTTP_HOST} ^www\\.([a-z0-9-]+)\\.([a-z]{2,})$ [NC]');
+          rawLines.push('  RewriteRule ^(.*)$ https://%1.%2/$1 [L,R=301]');
+        }
+      } else if (wwwMode === 'www') {
+        rawLines.push('');
+        rawLines.push('  # Force WWW');
+        if (domain) {
+          const bareHost = domain.replace(/^www\./, '');
+          rawLines.push('  RewriteCond %{HTTP_HOST} ^' + escapeRegexDomain(bareHost) + '$ [NC]');
+          rawLines.push('  RewriteRule ^(.*)$ https://www.' + bareHost + '/$1 [L,R=301]');
+        } else {
+          rawLines.push('  RewriteCond %{HTTP_HOST} !^www\\. [NC]');
+          rawLines.push('  RewriteRule ^(.*)$ https://www.%{HTTP_HOST}/$1 [L,R=301]');
+        }
+      }
+
+      if (slashMode === 'add') {
+        rawLines.push('');
+        rawLines.push('  # Force Trailing Slash');
+        rawLines.push('  RewriteCond %{REQUEST_FILENAME} !-f');
+        rawLines.push('  RewriteRule ^(.*[^/])$ /$1/ [L,R=301]');
+      } else if (slashMode === 'remove') {
+        rawLines.push('');
+        rawLines.push('  # Remove Trailing Slash');
+        rawLines.push('  RewriteCond %{REQUEST_FILENAME} !-d');
+        rawLines.push('  RewriteRule ^(.*)/$ /$1 [L,R=301]');
+      }
+
+      if (routes.length > 0) {
+        rawLines.push('');
+        rawLines.push('  # Custom Route Redirects');
+        routes.forEach(r => {
+          // Strip leading slash for RewriteRule pattern (it matches path without leading /)
+          const oldStripped = r.old.replace(/^\//, '');
+          // Escape dots
+          const oldEscaped = oldStripped.replace(/\./g, '\\.');
+          rawLines.push('  RewriteRule ^' + oldEscaped + '/?$ ' + r.new + ' [R=' + r.type + ',L]');
+        });
+      }
+
+      rawLines.push('');
+      rawLines.push('</IfModule>');
+
+      // Render with syntax highlighting
+      const htmlLines = rawLines.map(line => highlightLine(line));
+      document.getElementById('htaccess-output').innerHTML = htmlLines.join('\n');
+
+      // Count non-empty directive lines (not comments, not blank, not open/close tags)
+      const directiveLines = rawLines.filter(l => {
+        const t = l.trim();
+        return t.length > 0 && !t.startsWith('#') && !t.startsWith('<');
+      }).length;
+      document.getElementById('metric-lines').textContent = rawLines.filter(l => l.trim().length > 0).length;
+
+      // Update metrics
+      document.getElementById('metric-routes').textContent = routes.length;
+
+      // HTTPS badge
+      const badge = document.getElementById('badge-https');
+      const badgeText = document.getElementById('badge-https-text');
+      if (httpsOn) {
+        badge.classList.remove('off');
+        badgeText.textContent = 'HTTPS Enforced';
+      } else {
+        badge.classList.add('off');
+        badgeText.textContent = 'HTTPS Not Enforced';
+      }
+
+      // Redirect chain detection
+      detectChains(routes);
+    }
+
+    function escapeRegexDomain(domain) {
+      return domain.replace(/\./g, '\\.').replace(/-/g, '-');
+    }
+
+    // ============================================================
+    // CHAIN DETECTION
+    // ============================================================
+    function detectChains(routes) {
+      const oldPaths = new Set(routes.map(r => r.old));
+      const chains = [];
+      routes.forEach(r => {
+        if (oldPaths.has(r.new)) {
+          chains.push(r.old + ' -> ' + r.new + ' -> ...');
+        }
+      });
+
+      const statusEl = document.getElementById('chain-status');
+      const listEl   = document.getElementById('chain-list');
+      listEl.innerHTML = '';
+
+      if (chains.length === 0) {
+        statusEl.textContent = 'No chains detected';
+        statusEl.className   = 'chain-ok';
+      } else {
+        statusEl.textContent = chains.length + ' chain' + (chains.length > 1 ? 's' : '') + ' detected';
+        statusEl.className   = 'chain-warn';
+        chains.forEach(c => {
+          const li = document.createElement('li');
+          li.textContent = c;
+          listEl.appendChild(li);
+        });
+      }
+    }
+
+    // ============================================================
+    // SYNTAX HIGHLIGHTING
+    // ============================================================
+    function esc(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLine(line) {
+      const raw = esc(line);
+      const trimmed = line.trim();
+
+      if (trimmed === '') return '';
+
+      // Opening/closing IfModule tags
+      if (trimmed.startsWith('<IfModule') || trimmed === '</IfModule>') {
+        return raw.replace(
+          /(&lt;\/?)IfModule([^&]*)(&gt;)/,
+          '<span class="ht-tag">$1IfModule$2$3</span>'
+        );
+      }
+
+      // Comments
+      if (trimmed.startsWith('#')) {
+        return '<span class="ht-comment">' + raw + '</span>';
+      }
+
+      // RewriteEngine
+      if (trimmed.startsWith('RewriteEngine')) {
+        return raw.replace('RewriteEngine', '<span class="ht-directive">RewriteEngine</span>');
+      }
+
+      // RewriteCond
+      if (trimmed.startsWith('RewriteCond')) {
+        return raw
+          .replace('RewriteCond', '<span class="ht-cond">RewriteCond</span>')
+          .replace(/(\[.*?\])/, '<span class="ht-flag">$1</span>');
+      }
+
+      // RewriteRule
+      if (trimmed.startsWith('RewriteRule')) {
+        return raw
+          .replace('RewriteRule', '<span class="ht-directive">RewriteRule</span>')
+          .replace(/(\[.*?\])$/, '<span class="ht-flag">$1</span>');
+      }
+
+      return raw;
+    }
+
+    // ============================================================
+    // COPY
+    // ============================================================
+    function copyCode() {
+      const pre = document.getElementById('htaccess-output');
+      const text = pre.innerText || pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Rules';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // ============================================================
+    // FAQ TOGGLE
+    // ============================================================
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+      const answer = el.nextElementSibling;
+      if (answer) answer.classList.toggle('open');
+    }
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    init();
+  </script>
+
+</body>
+</html>

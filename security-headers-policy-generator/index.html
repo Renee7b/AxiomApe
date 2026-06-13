@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Headers Policy Generator: Build Content-Security-Policy Rules | AxiomApe</title>
+  <meta name="description" content="Free Content-Security-Policy generator. Configure CSP directives visually, get instant security analysis, and copy deployment-ready code for HTML meta tags, Nginx, and Apache. 100% client-side." />
+  <meta name="keywords" content="content security policy generator, CSP generator, CSP builder, security headers tool, HTTP security headers, XSS protection, script-src generator, nginx CSP header, apache CSP header, web security policy, CSP meta tag, unsafe-inline checker, mixed content policy, report-only CSP, DevSecOps tool" />
+  <link rel="canonical" href="https://axiomape.com/security-headers-policy-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Security Headers Policy Generator",
+        "description": "Free Content-Security-Policy generator. Configure CSP directives visually, get instant security analysis, and copy deployment-ready code for HTML meta tags, Nginx, and Apache. 100% client-side.",
+        "url": "https://axiomape.com/security-headers-policy-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is CSP considered the ultimate defense against XSS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A Content-Security-Policy header tells the browser which sources of scripts, styles, and media are trusted. Even if an attacker injects a malicious script into your page, the browser refuses to execute it if it does not originate from an approved source. No other single HTTP header has the same capacity to neutralize cross-site scripting at the browser level."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if I block a required script with my CSP?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The browser will silently block the script and log a violation to the browser console. The affected feature simply stops working. This is why testing in Report-Only mode first is strongly recommended: the policy is evaluated and violations are logged, but nothing is actually blocked, so you can identify gaps without breaking your site."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I safely test a new CSP without breaking my production website?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Toggle the Policy Mode to Report-Only using this tool. The generated header changes to Content-Security-Policy-Report-Only. Deploy it alongside your existing policy. The browser reports all violations without enforcing blocks. Once your violation log shows zero unexpected issues, switch the header to the enforcing version."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why are inline scripts considered so dangerous?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Inline scripts (written directly inside HTML with script tags or event handlers like onclick) cannot be distinguished from injected attacker scripts by the browser. Allowing 'unsafe-inline' in script-src means any injected code - whether from a comment field, a stored XSS payload, or a third-party widget - will execute with full page privileges. The recommended alternative is to load all scripts from external files on whitelisted origins, or use a per-request nonce."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between Content-Security-Policy and Content-Security-Policy-Report-Only?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Both headers use identical directive syntax. The enforcing header (Content-Security-Policy) blocks any resource that violates the policy. The Report-Only header logs violations to the browser console and to a Report-URI endpoint if configured, but does not block anything. Report-Only is the standard way to audit a new policy before enforcement."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark DevSecOps palette */
+      --bg:           #0d1117;
+      --surface:      #161b22;
+      --surface2:     #1c2333;
+      --surface3:     #21262d;
+      --border:       #30363d;
+      --border2:      #444c56;
+      --text:         #e6edf3;
+      --muted:        #8b949e;
+      --green:        #10B981;
+      --green-dim:    rgba(16,185,129,0.12);
+      --green-glow:   rgba(16,185,129,0.25);
+      --blue:         #3B82F6;
+      --blue-dim:     rgba(59,130,246,0.12);
+      --blue-glow:    rgba(59,130,246,0.25);
+      --red:          #EF4444;
+      --red-dim:      rgba(239,68,68,0.12);
+      --red-glow:     rgba(239,68,68,0.3);
+      --yellow:       #F59E0B;
+      --yellow-dim:   rgba(245,158,11,0.12);
+      --radius:       10px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #60a5fa; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a2535 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.3;
+      max-width: 760px;
+      margin: 0 auto 14px;
+      color: #fff;
+    }
+    .page-header h1 span { color: var(--green); }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 28px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 20px 16px; }
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title .icon-badge {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .icon-badge.green { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+    .icon-badge.blue  { background: var(--blue-dim);  border: 1px solid var(--blue);  color: var(--blue); }
+    .icon-badge.red   { background: var(--red-dim);   border: 1px solid var(--red);   color: var(--red); }
+
+    /* ===================================================
+       DIRECTIVE BUILDER TABLE
+    =================================================== */
+    .directive-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .directive-table th {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 0 10px 10px;
+      text-align: left;
+    }
+    .directive-table th:first-child { padding-left: 0; }
+    .directive-table td {
+      padding: 8px 10px;
+      vertical-align: middle;
+      border-top: 1px solid var(--border);
+    }
+    .directive-table td:first-child { padding-left: 0; }
+    .directive-table tr:first-child td { border-top: none; }
+
+    .dir-label {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82rem;
+      color: var(--green);
+      white-space: nowrap;
+      font-weight: 600;
+      min-width: 130px;
+    }
+
+    /* Keyword checkboxes */
+    .kw-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .kw-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .kw-label input[type="checkbox"] { display: none; }
+    .kw-label:hover { border-color: var(--blue); color: #fff; }
+    .kw-label.checked {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+      color: #fff;
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+    /* Danger state for unsafe-inline / unsafe-eval */
+    .kw-label.danger-active {
+      border-color: var(--red) !important;
+      background: var(--red-dim) !important;
+      color: var(--red) !important;
+      box-shadow: 0 0 0 2px var(--red-glow) !important;
+      animation: pulse-danger 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse-danger {
+      0%, 100% { box-shadow: 0 0 0 2px var(--red-glow); }
+      50% { box-shadow: 0 0 0 5px transparent; }
+    }
+
+    /* Domain input */
+    .domain-input {
+      width: 100%;
+      min-width: 180px;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .domain-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+    .domain-input::placeholder { color: #4a5568; font-size: 0.7rem; }
+
+    @media (max-width: 700px) {
+      .directive-table, .directive-table tbody, .directive-table tr, .directive-table td {
+        display: block;
+        width: 100%;
+      }
+      .directive-table th { display: none; }
+      .directive-table td { padding: 6px 0; border-top: none; }
+      .directive-table tr { border-top: 1px solid var(--border); padding: 10px 0; }
+      .directive-table tr:first-child { border-top: none; }
+      .dir-label { margin-bottom: 6px; display: block; }
+    }
+
+    /* ===================================================
+       GLOBAL SETTINGS PANEL
+    =================================================== */
+    .global-settings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 28px;
+      margin-top: 4px;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle-row label {
+      font-size: 0.875rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .toggle-row small {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-switch .slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .toggle-switch .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 2px; top: 2px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .slider { background: var(--green-dim); border-color: var(--green); }
+    .toggle-switch input:checked + .slider::before { transform: translateX(18px); background: var(--green); }
+
+    /* Mode toggle (Enforce / Report-Only) */
+    .mode-group {
+      display: flex;
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid var(--border2);
+      background: var(--surface3);
+    }
+    .mode-btn {
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--blue);
+      color: #fff;
+    }
+    .mode-btn.active.report { background: var(--yellow); color: #1a1a1a; }
+
+    /* ===================================================
+       OUTPUT SECTION
+    =================================================== */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 760px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Security Analysis Pane */
+    .strength-hero {
+      text-align: center;
+      padding: 20px 0 16px;
+    }
+    .strength-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .strength-value {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      transition: color 0.3s;
+    }
+    .strength-value.strong  { color: var(--green); }
+    .strength-value.moderate { color: var(--yellow); }
+    .strength-value.weak    { color: var(--red); }
+
+    .strength-bar-wrap {
+      height: 6px;
+      background: var(--surface3);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 8px 16px 0;
+    }
+    .strength-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s, background 0.3s;
+    }
+
+    .warnings-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .warning-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .warning-banner.high  { background: var(--red-dim);    border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+    .warning-banner.medium { background: var(--yellow-dim); border: 1px solid rgba(245,158,11,0.4); color: #fcd34d; }
+    .warning-banner.info  { background: var(--blue-dim);   border: 1px solid rgba(59,130,246,0.35); color: #93c5fd; }
+    .warning-banner.ok    { background: var(--green-dim);  border: 1px solid rgba(16,185,129,0.35); color: #6ee7b7; }
+    .warning-banner .w-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .warning-banner strong { display: block; font-weight: 700; margin-bottom: 2px; }
+    .warning-banner p { margin: 0; }
+
+    .no-warnings {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 20px 0;
+    }
+
+    /* Deployment code pane */
+    .deploy-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+      gap: 0;
+    }
+    .deploy-tab {
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .deploy-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+    .deploy-panel { display: none; }
+    .deploy-panel.active { display: block; }
+
+    .code-block-wrap {
+      position: relative;
+    }
+    pre.code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 14px 40px 14px 14px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.77rem;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.7;
+      min-height: 56px;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .copy-btn:hover { background: var(--blue-dim); color: #fff; border-color: var(--blue); }
+    .copy-btn.copied { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+
+    .mode-note {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .mode-note strong { color: var(--yellow); }
+
+    /* ===================================================
+       CSP STRING PREVIEW
+    =================================================== */
+    .csp-preview-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--green);
+      border-radius: 0 7px 7px 0;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .csp-preview-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .csp-preview-string {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      color: #86efac;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.7;
+    }
+    .csp-preview-empty {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      color: #4a5568;
+      font-style: italic;
+    }
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 92px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) {
+      .axiom-ad-leaderboard { display: none; }
+    }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ===================================================
+       EDUCATIONAL / FAQ
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .edu-section code {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82em;
+      color: var(--green);
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: var(--surface2);
+      border: none;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--surface3); }
+    .faq-question .chevron {
+      flex-shrink: 0;
+      color: var(--muted);
+      transition: transform 0.25s;
+      font-size: 0.75rem;
+    }
+    .faq-question[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 12px 16px 14px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+      background: var(--surface);
+    }
+    .faq-answer.open { display: block; }
+
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects sticky header, privacy badge, disclaimer, and footer -->
+
+  <header class="page-header">
+    <h1>Security Headers <span>Policy Generator</span></h1>
+    <p>Configure Content-Security-Policy directives visually. Get instant security analysis and deployment-ready code for HTML, Nginx, and Apache.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ================================================
+         DIRECTIVE CONFIGURATION BUILDER
+    ================================================ -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon-badge green">&#9881;</span>
+        Directive Configuration Builder
+      </div>
+
+      <table class="directive-table" id="directive-table">
+        <thead>
+          <tr>
+            <th style="min-width:130px">Directive</th>
+            <th>'self'</th>
+            <th>'none'</th>
+            <th>'unsafe-inline'</th>
+            <th>'unsafe-eval'</th>
+            <th style="min-width:260px">Whitelisted Domains</th>
+          </tr>
+        </thead>
+        <tbody id="directive-tbody">
+          <!-- rows injected by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ================================================
+         GLOBAL POLICY SETTINGS
+    ================================================ -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon-badge blue">&#128737;</span>
+        Global Policy Settings
+      </div>
+      <div class="global-settings">
+
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="upgrade-insecure" onchange="recompile()">
+            <span class="slider"></span>
+          </label>
+          <div>
+            <label for="upgrade-insecure" style="font-weight:600;cursor:pointer">Upgrade Insecure Requests</label>
+            <small style="display:block">Force HTTP assets to load over HTTPS</small>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="block-mixed" onchange="recompile()">
+            <span class="slider"></span>
+          </label>
+          <div>
+            <label for="block-mixed" style="font-weight:600;cursor:pointer">Block All Mixed Content</label>
+            <small style="display:block">Prevent HTTP resources on HTTPS pages</small>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div style="font-size:0.875rem;font-weight:600;margin-bottom:6px">Policy Mode</div>
+            <div class="mode-group">
+              <button class="mode-btn active" id="mode-enforce" onclick="setMode('enforce')">Enforce</button>
+              <button class="mode-btn report" id="mode-report" onclick="setMode('report')" style="opacity:0.55">Report-Only</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================================================
+         CSP STRING PREVIEW
+    ================================================ -->
+    <div class="csp-preview-wrap">
+      <div class="csp-preview-label">Live CSP String</div>
+      <div id="csp-preview-output" class="csp-preview-string"></div>
+    </div>
+
+    <!-- ================================================
+         OUTPUT: SECURITY ANALYSIS + DEPLOYMENT CODE
+    ================================================ -->
+    <div class="output-grid">
+
+      <!-- Pane 1: Security Analysis -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">
+          <span class="icon-badge red">&#9888;</span>
+          Security Analysis
+        </div>
+        <div class="strength-hero">
+          <div class="strength-label">Policy Strength</div>
+          <div class="strength-value strong" id="strength-value">Unconfigured</div>
+          <div class="strength-bar-wrap">
+            <div class="strength-bar" id="strength-bar" style="width:0%;background:var(--muted)"></div>
+          </div>
+        </div>
+        <div class="warnings-list" id="warnings-list">
+          <div class="no-warnings">Configure directives above to see your analysis.</div>
+        </div>
+      </div>
+
+      <!-- Pane 2: Deployment Code -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">
+          <span class="icon-badge blue">&#128196;</span>
+          Deployment Code
+        </div>
+
+        <div class="deploy-tabs">
+          <button class="deploy-tab active" onclick="switchTab('html', this)">HTML Meta Tag</button>
+          <button class="deploy-tab" onclick="switchTab('nginx', this)">Nginx</button>
+          <button class="deploy-tab" onclick="switchTab('apache', this)">Apache</button>
+        </div>
+
+        <!-- HTML Meta Tab -->
+        <div class="deploy-panel active" id="panel-html">
+          <div class="code-block-wrap">
+            <pre class="code-block" id="code-html"></pre>
+            <button class="copy-btn" onclick="copyCode('code-html', this)">Copy</button>
+          </div>
+          <p class="mode-note">Note: The meta tag method does not support <code>Content-Security-Policy-Report-Only</code>. For Report-Only mode, use an HTTP header via Nginx or Apache.</p>
+        </div>
+
+        <!-- Nginx Tab -->
+        <div class="deploy-panel" id="panel-nginx">
+          <div class="code-block-wrap">
+            <pre class="code-block" id="code-nginx"></pre>
+            <button class="copy-btn" onclick="copyCode('code-nginx', this)">Copy</button>
+          </div>
+          <p class="mode-note" id="nginx-mode-note"></p>
+        </div>
+
+        <!-- Apache Tab -->
+        <div class="deploy-panel" id="panel-apache">
+          <div class="code-block-wrap">
+            <pre class="code-block" id="code-apache"></pre>
+            <button class="copy-btn" onclick="copyCode('code-apache', this)">Copy</button>
+          </div>
+          <p class="mode-note" id="apache-mode-note"></p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ================================================
+         GLOSSARY
+    ================================================ -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon-badge green">&#128218;</span>
+        Key Terms Explained
+      </div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Content-Security-Policy (CSP)</div>
+          <div class="glossary-def">An HTTP response header that instructs browsers which content sources are trusted. It is the primary browser-level defense against cross-site scripting and data injection attacks.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Cross-Site Scripting (XSS)</div>
+          <div class="glossary-def">An attack where malicious scripts are injected into a trusted web page and executed in the victim's browser, often stealing session cookies or redirecting users. CSP is the strongest countermeasure against XSS at the HTTP layer.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Nonce</div>
+          <div class="glossary-def">A one-time cryptographic token generated per HTTP response and embedded in both the CSP header and specific script or style tags. The browser only executes inline code carrying the matching nonce, eliminating the need for 'unsafe-inline'.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">unsafe-inline</div>
+          <div class="glossary-def">A CSP keyword that permits inline scripts and styles written directly inside HTML. Because attackers exploit inline execution, using 'unsafe-inline' in script-src substantially weakens XSS protection and should be avoided in production.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Mixed Content</div>
+          <div class="glossary-def">A condition where an HTTPS page loads resources (images, scripts, stylesheets) over plain HTTP. Mixed content can expose users to man-in-the-middle attacks and is blocked by modern browsers. The CSP directives block-all-mixed-content and upgrade-insecure-requests address this.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Report URI</div>
+          <div class="glossary-def">A CSP directive that specifies an endpoint URL where browsers send JSON violation reports whenever a resource is blocked. Combined with Report-Only mode it allows you to audit a new policy without disrupting users.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Data URI</div>
+          <div class="glossary-def">A URL scheme (data:) that encodes file content directly inside an HTML attribute or src value, such as data:image/png;base64,... . Allowing 'data:' in script-src is a security risk because attackers can use it to execute base64-encoded payloads.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">default-src</div>
+          <div class="glossary-def">The CSP fallback directive. Any fetch directive not explicitly set in the policy inherits its value from default-src. Setting it to 'self' or 'none' creates a secure baseline and limits blast radius if other directives are misconfigured.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================
+         EDUCATIONAL SECTION
+    ================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Content-Security-Policy</h2>
+
+      <p class="section-intro">A Content-Security-Policy header is one line of server configuration that can eliminate entire classes of web vulnerabilities. This guide explains how the policy compiles, what each directive controls, and how to roll out a new policy safely without breaking your site.</p>
+
+      <h3>How CSP Directives Work</h3>
+      <p>Every CSP consists of one or more directives separated by semicolons. A directive names a resource type and lists the sources the browser is allowed to load for that type. For example, <code>script-src 'self' https://cdn.example.com;</code> means: scripts may only come from the same origin or that specific CDN. Anything else is blocked silently.</p>
+      <p>The <code>default-src</code> directive acts as a catch-all fallback for any resource type that does not have its own explicit directive. Setting <code>default-src 'none';</code> is the most restrictive starting point: all resource types are blocked until you explicitly open them up.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Each row in the Directive Configuration Builder maps to one CSP directive. Check the keyword toggles that apply to your site's design, then type any external domains your pages legitimately load from. The policy string and deployment code update in real time as you make changes. Use the Security Analysis pane to catch dangerous configurations before deploying.</p>
+      <p>When you are ready to test in production, toggle Policy Mode to Report-Only. Deploy the generated <code>Content-Security-Policy-Report-Only</code> header using the Nginx or Apache output. Browse your site normally and check the browser console for violation messages. Once violations drop to zero, switch to the enforcing header.</p>
+
+      <h3>The 'unsafe-inline' Problem</h3>
+      <p>Many legacy sites rely on inline event handlers such as <code>onclick="..."</code> or <code>style="..."</code> attributes. Allowing these requires the 'unsafe-inline' keyword, which tells the browser to execute any inline code on the page, including code injected by an attacker. The recommended migration path is to move all inline JavaScript to external files and replace inline styles with CSS classes. If that is not immediately possible, a per-request nonce is the next best option: generate a cryptographically random value on the server, embed it in every trusted script tag as <code>nonce="abc123"</code>, and add <code>'nonce-abc123'</code> to your <code>script-src</code>. The nonce rotates every response so attackers cannot reuse it.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Why is CSP considered the ultimate defense against XSS?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          A Content-Security-Policy header tells the browser which sources of scripts, styles, and media are trusted. Even if an attacker injects a malicious script into your page, the browser refuses to execute it if it does not originate from an approved source. No other single HTTP header has the same capacity to neutralize cross-site scripting at the browser level.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What happens if I block a required script with my CSP?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          The browser will silently block the script and log a violation to the browser console. The affected feature simply stops working. This is why testing in Report-Only mode first is strongly recommended: the policy is evaluated and violations are logged, but nothing is actually blocked, so you can identify gaps without breaking your site.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How do I safely test a new CSP without breaking my production website?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Toggle the Policy Mode to Report-Only using this tool. The generated header changes to Content-Security-Policy-Report-Only. Deploy it alongside your existing policy. The browser reports all violations without enforcing blocks. Once your violation log shows zero unexpected issues, switch the header to the enforcing version.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Why are inline scripts considered so dangerous?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Inline scripts (written directly inside HTML with script tags or event handlers like onclick) cannot be distinguished from injected attacker scripts by the browser. Allowing 'unsafe-inline' in script-src means any injected code, whether from a comment field, a stored XSS payload, or a third-party widget, will execute with full page privileges. The recommended alternative is to load all scripts from external files on whitelisted origins, or use a per-request nonce.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is the difference between Content-Security-Policy and Content-Security-Policy-Report-Only?
+          <span class="chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Both headers use identical directive syntax. The enforcing header (Content-Security-Policy) blocks any resource that violates the policy. The Report-Only header logs violations to the browser console and to a report-uri endpoint if configured, but does not block anything. Report-Only is the standard way to audit a new policy before enforcement.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ================================================
+       JAVASCRIPT
+  ================================================ -->
+  <script>
+    /* ===================================================
+       DIRECTIVES CONFIG
+    =================================================== */
+    var DIRECTIVES = [
+      { key: 'default-src',  label: 'default-src' },
+      { key: 'script-src',   label: 'script-src' },
+      { key: 'style-src',    label: 'style-src' },
+      { key: 'img-src',      label: 'img-src' },
+      { key: 'connect-src',  label: 'connect-src' }
+    ];
+
+    var KEYWORDS = [
+      { id: 'self',          value: "'self'",          unsafe: false },
+      { id: 'none',          value: "'none'",          unsafe: false },
+      { id: 'unsafe-inline', value: "'unsafe-inline'", unsafe: true  },
+      { id: 'unsafe-eval',   value: "'unsafe-eval'",   unsafe: true  }
+    ];
+
+    var policyMode = 'enforce';
+
+    /* ===================================================
+       BUILD DIRECTIVE TABLE ROWS
+    =================================================== */
+    function buildTable() {
+      var tbody = document.getElementById('directive-tbody');
+      tbody.innerHTML = '';
+      DIRECTIVES.forEach(function(dir) {
+        var tr = document.createElement('tr');
+
+        // Label cell
+        var tdLabel = document.createElement('td');
+        tdLabel.innerHTML = '<span class="dir-label">' + dir.label + '</span>';
+        tr.appendChild(tdLabel);
+
+        // Keyword checkbox cells
+        KEYWORDS.forEach(function(kw) {
+          var td = document.createElement('td');
+          var labelEl = document.createElement('label');
+          labelEl.className = 'kw-label';
+          labelEl.id = 'lbl-' + dir.key + '-' + kw.id;
+
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.id = 'cb-' + dir.key + '-' + kw.id;
+          cb.setAttribute('data-directive', dir.key);
+          cb.setAttribute('data-kw', kw.id);
+          cb.setAttribute('data-unsafe', kw.unsafe ? '1' : '0');
+          cb.onchange = function() { handleCheckbox(this); };
+
+          var span = document.createElement('span');
+          span.textContent = kw.value;
+
+          labelEl.appendChild(cb);
+          labelEl.appendChild(span);
+          td.appendChild(labelEl);
+          tr.appendChild(td);
+        });
+
+        // Domain input cell
+        var tdDomain = document.createElement('td');
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'domain-input';
+        input.id = 'domains-' + dir.key;
+        input.placeholder = 'https://api.example.com https://cdn.example.com';
+        input.setAttribute('data-directive', dir.key);
+        input.oninput = recompile;
+        tdDomain.appendChild(input);
+        tr.appendChild(tdDomain);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* ===================================================
+       CHECKBOX HANDLER (visual state + recompile)
+    =================================================== */
+    function handleCheckbox(cb) {
+      var lbl = document.getElementById('lbl-' + cb.dataset.directive + '-' + cb.dataset.kw);
+      var isUnsafe = cb.dataset.unsafe === '1';
+
+      if (cb.checked) {
+        lbl.classList.add('checked');
+        if (isUnsafe) { lbl.classList.add('danger-active'); }
+      } else {
+        lbl.classList.remove('checked', 'danger-active');
+      }
+      recompile();
+    }
+
+    /* ===================================================
+       MODE TOGGLE
+    =================================================== */
+    function setMode(mode) {
+      policyMode = mode;
+      var btnEnforce = document.getElementById('mode-enforce');
+      var btnReport  = document.getElementById('mode-report');
+      if (mode === 'enforce') {
+        btnEnforce.classList.add('active');
+        btnEnforce.style.opacity = '1';
+        btnReport.classList.remove('active');
+        btnReport.style.opacity = '0.55';
+      } else {
+        btnReport.classList.add('active');
+        btnReport.style.opacity = '1';
+        btnEnforce.classList.remove('active');
+        btnEnforce.style.opacity = '0.55';
+      }
+      recompile();
+    }
+
+    /* ===================================================
+       CORE COMPILATION ENGINE
+    =================================================== */
+    function recompile() {
+      var parts = [];
+
+      DIRECTIVES.forEach(function(dir) {
+        var tokens = [];
+        KEYWORDS.forEach(function(kw) {
+          var cb = document.getElementById('cb-' + dir.key + '-' + kw.id);
+          if (cb && cb.checked) { tokens.push(kw.value); }
+        });
+
+        var domainInput = document.getElementById('domains-' + dir.key);
+        if (domainInput) {
+          var raw = domainInput.value.trim();
+          if (raw) {
+            raw.split(/\s+/).forEach(function(d) {
+              d = d.trim();
+              if (d) { tokens.push(d); }
+            });
+          }
+        }
+
+        if (tokens.length > 0) {
+          parts.push(dir.key + ' ' + tokens.join(' '));
+        }
+      });
+
+      // Global flags
+      if (document.getElementById('upgrade-insecure').checked) {
+        parts.push('upgrade-insecure-requests');
+      }
+      if (document.getElementById('block-mixed').checked) {
+        parts.push('block-all-mixed-content');
+      }
+
+      var cspString = parts.join('; ');
+      if (cspString) { cspString += ';'; }
+
+      updatePreview(cspString);
+      runAnalyzer(cspString);
+      renderCode(cspString);
+    }
+
+    /* ===================================================
+       CSP PREVIEW
+    =================================================== */
+    function updatePreview(cspString) {
+      var el = document.getElementById('csp-preview-output');
+      if (!cspString) {
+        el.outerHTML = '<div id="csp-preview-output" class="csp-preview-empty">No directives configured yet.</div>';
+      } else {
+        el.outerHTML = '<div id="csp-preview-output" class="csp-preview-string">' + escapeHtml(cspString) + '</div>';
+      }
+    }
+
+    /* ===================================================
+       SECURITY ANALYZER
+    =================================================== */
+    function runAnalyzer(cspString) {
+      var warnings = [];
+      var score = 100;
+
+      if (!cspString) {
+        setStrength('Unconfigured', 0, 'var(--muted)');
+        renderWarnings([{
+          type: 'info',
+          icon: 'i',
+          title: 'No policy configured',
+          body: 'Configure at least one directive above to generate your policy and see the security analysis.'
+        }]);
+        return;
+      }
+
+      // Dangerous: script-src unsafe-inline
+      if (/script-src[^;]*'unsafe-inline'/.test(cspString)) {
+        warnings.push({
+          type: 'high',
+          icon: '!',
+          title: 'High Risk: unsafe-inline scripts',
+          body: "Allowing 'unsafe-inline' in script-src exposes your site to XSS attacks. Any injected inline code will execute. Use nonces or external script files instead."
+        });
+        score -= 40;
+      }
+
+      // Dangerous: script-src unsafe-eval
+      if (/script-src[^;]*'unsafe-eval'/.test(cspString)) {
+        warnings.push({
+          type: 'high',
+          icon: '!',
+          title: 'High Risk: unsafe-eval scripts',
+          body: "Allowing 'unsafe-eval' in script-src permits dynamic code evaluation via eval() and Function(). This widens the attack surface for XSS significantly."
+        });
+        score -= 30;
+      }
+
+      // Medium: default-src missing or wildcard
+      var hasDefaultSrc = /default-src\s/.test(cspString);
+      if (!hasDefaultSrc) {
+        warnings.push({
+          type: 'medium',
+          icon: '~',
+          title: 'Medium Risk: default-src not set',
+          body: "Without a default-src directive, unspecified resource types have no fallback restriction. Set default-src to 'self' or 'none' to establish a secure baseline."
+        });
+        score -= 25;
+      }
+
+      if (/default-src\s[^;]*\*/.test(cspString)) {
+        warnings.push({
+          type: 'medium',
+          icon: '~',
+          title: 'Medium Risk: wildcard default-src',
+          body: "Using a wildcard (*) in default-src allows resources from any origin. This negates most of the protection that CSP provides."
+        });
+        score -= 30;
+      }
+
+      // Medium: style-src unsafe-inline
+      if (/style-src[^;]*'unsafe-inline'/.test(cspString) && !/script-src[^;]*'unsafe-inline'/.test(cspString)) {
+        warnings.push({
+          type: 'medium',
+          icon: '~',
+          title: 'Medium Risk: unsafe-inline styles',
+          body: "Allowing 'unsafe-inline' in style-src can enable CSS-based data exfiltration attacks. Move styles to external files or use nonces."
+        });
+        score -= 15;
+      }
+
+      // Info: Report-Only reminder
+      if (policyMode === 'report') {
+        warnings.push({
+          type: 'info',
+          icon: 'i',
+          title: 'Report-Only mode active',
+          body: "This policy will not block anything. It only logs violations. Deploy the enforcing header once your violation log is clean."
+        });
+      }
+
+      score = Math.max(0, Math.min(100, score));
+
+      if (score >= 75) {
+        setStrength('Strong', score, 'var(--green)');
+      } else if (score >= 45) {
+        setStrength('Moderate', score, 'var(--yellow)');
+      } else {
+        setStrength('Weak', score, 'var(--red)');
+      }
+
+      if (warnings.length === 0) {
+        warnings.push({
+          type: 'ok',
+          icon: 'v',
+          title: 'No critical vulnerabilities detected',
+          body: 'Your current configuration does not contain any high or medium risk directives. Review the policy string above to confirm it matches your site requirements.'
+        });
+      }
+
+      renderWarnings(warnings);
+    }
+
+    function setStrength(label, pct, color) {
+      var sv = document.getElementById('strength-value');
+      sv.textContent = label;
+      sv.className = 'strength-value';
+      if (label === 'Strong')   { sv.classList.add('strong'); }
+      if (label === 'Moderate') { sv.classList.add('moderate'); }
+      if (label === 'Weak')     { sv.classList.add('weak'); }
+
+      var bar = document.getElementById('strength-bar');
+      bar.style.width = pct + '%';
+      bar.style.background = color;
+    }
+
+    function renderWarnings(list) {
+      var icons = { high: '&#9888;', medium: '&#9888;', info: 'ℹ', ok: '&#10003;' };
+      var html = list.map(function(w) {
+        return '<div class="warning-banner ' + w.type + '">' +
+          '<span class="w-icon">' + icons[w.type] + '</span>' +
+          '<div><strong>' + w.title + '</strong><p>' + w.body + '</p></div>' +
+          '</div>';
+      }).join('');
+      document.getElementById('warnings-list').innerHTML = html;
+    }
+
+    /* ===================================================
+       RENDER DEPLOYMENT CODE
+    =================================================== */
+    function renderCode(cspString) {
+      var headerName = policyMode === 'report'
+        ? 'Content-Security-Policy-Report-Only'
+        : 'Content-Security-Policy';
+
+      var cspDisplay = cspString || '(Configure directives above)';
+
+      // HTML Meta Tag (enforcing only)
+      var htmlMeta = policyMode === 'report'
+        ? '<!-- Content-Security-Policy-Report-Only is not\n     supported via HTML meta tag.\n     Use the Nginx or Apache header instead. -->'
+        : '<meta http-equiv="Content-Security-Policy"\n      content="' + escapeHtml(cspDisplay) + '">';
+      document.getElementById('code-html').textContent = policyMode === 'report'
+        ? '<!-- Content-Security-Policy-Report-Only is not\n     supported via HTML meta tag.\n     Use the Nginx or Apache header instead. -->'
+        : '<meta http-equiv="Content-Security-Policy"\n      content="' + cspDisplay + '">';
+
+      // Nginx
+      document.getElementById('code-nginx').textContent =
+        'add_header ' + headerName + ' "' + cspDisplay + '" always;';
+
+      // Apache
+      document.getElementById('code-apache').textContent =
+        'Header set ' + headerName + ' "' + cspDisplay + '"';
+
+      // Mode notes
+      var reportNote = policyMode === 'report'
+        ? '<strong>Report-Only active:</strong> The header name is <code>' + headerName + '</code>. Violations are logged, not blocked.'
+        : '';
+      document.getElementById('nginx-mode-note').innerHTML = reportNote;
+      document.getElementById('apache-mode-note').innerHTML = reportNote;
+    }
+
+    /* ===================================================
+       DEPLOY TABS
+    =================================================== */
+    function switchTab(id, btn) {
+      document.querySelectorAll('.deploy-panel').forEach(function(p) { p.classList.remove('active'); });
+      document.querySelectorAll('.deploy-tab').forEach(function(b) { b.classList.remove('active'); });
+      document.getElementById('panel-' + id).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    /* ===================================================
+       COPY TO CLIPBOARD
+    =================================================== */
+    function copyCode(elId, btn) {
+      var text = document.getElementById(elId).textContent;
+      if (!navigator.clipboard) {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } else {
+        navigator.clipboard.writeText(text);
+      }
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+    }
+
+    /* ===================================================
+       FAQ TOGGLE
+    =================================================== */
+    function toggleFaq(btn) {
+      var isOpen = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      var ans = btn.nextElementSibling;
+      if (isOpen) { ans.classList.remove('open'); } else { ans.classList.add('open'); }
+    }
+
+    /* ===================================================
+       UTIL
+    =================================================== */
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ===================================================
+       INIT
+    =================================================== */
+    buildTable();
+    recompile();
+  </script>
+
+</body>
+</html>

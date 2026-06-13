@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cron Job Expression Translator: Convert Crontab Entries to Plain English | AxiomApe</title>
+  <meta name="description" content="Paste any 5-part cron expression and instantly get a plain-English translation, a color-coded field breakdown, and the next 3 scheduled execution times. 100% client-side." />
+  <meta name="keywords" content="cron expression translator, crontab to english, cron to plain english, cron parser, cron expression explainer, cron syntax decoder, cron schedule reader, cron job translator, cron field breakdown, cron next run time, cron expression visualizer, devops cron tool, linux cron parser, crontab decoder" />
+  <link rel="canonical" href="https://axiomape.com/cron-job-expression-translator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Cron Job Expression Translator",
+        "description": "Paste any 5-part cron expression and instantly get a plain-English translation, a color-coded field breakdown, and the next 3 scheduled execution times. 100% client-side.",
+        "url": "https://axiomape.com/cron-job-expression-translator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does cron syntax support seconds?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard Unix crontab does not support a seconds field. The classic cron expression has exactly five fields: minute (0-59), hour (0-23), day of month (1-31), month (1-12), and day of week (0-7). The minimum granularity in native cron is one minute. Some extended schedulers - such as the Quartz scheduler for Java, Spring's @Scheduled annotation, AWS EventBridge, and certain cloud-native platforms - add a sixth field for seconds at the far left. If you need sub-minute precision in a Unix environment, a common workaround is to chain multiple cron entries offset by a set number of seconds using the sleep command, for example: * * * * * /path/to/script.sh and * * * * * sleep 30; /path/to/script.sh to approximate a 30-second interval."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if a server restarts during a scheduled cron time?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "If a server reboots exactly when a cron job was supposed to run, that execution is simply missed - cron does not queue up or replay skipped jobs after the system comes back online. The cron daemon only fires jobs at the moment they are due; if it was not running, nothing fires. To handle this case, many teams use the @reboot special string in crontab, which runs a job once immediately after every system reboot. For critical tasks that must never be skipped, a more robust solution is to use a distributed job scheduler (such as Airflow, Celery Beat, or a cloud-managed cron service) that stores job state in a database and can detect and replay missed runs."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I run a script on the last day of the month?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard cron does not have a built-in last-day-of-month operator. The most reliable workaround is to run your script every day and add a shell check at the top: if [ $(date -d tomorrow +%d) -eq 01 ]; then exit 0; fi. This checks whether tomorrow is the 1st of the next month - meaning today is the last day - and exits early if it is not. Your cron entry would be something like: 0 23 28-31 * * /path/to/check-and-run.sh. Some distributions ship Vixie cron or fcron which support the L operator (for example, L in the day-of-month field means last day), but this is not part of the POSIX standard and is not portable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between Day of Month and Day of Week?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Day of Month (field 3) specifies a numbered date in the calendar month, from 1 to 31. Day of Week (field 5) specifies a named weekday, where 0 and 7 both mean Sunday, 1 is Monday, through 6 for Saturday. The critical subtlety is how cron behaves when both fields are restricted: if you set a specific day of month AND a specific day of week, most cron implementations treat this as a union rather than an intersection. For example, 0 9 1 * 1 runs at 9am on every 1st of the month AND on every Monday - not only on Mondays that fall on the 1st. If you want the intersection (only Mondays that fall on the 1st), you need to use a shell conditional inside the script rather than relying on cron alone."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark terminal base */
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #1c2330;
+      --surface-3:   #21262d;
+      --border:      #30363d;
+      --border-light:#444c56;
+
+      /* Text */
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --muted-2:     #6e7681;
+
+      /* 5 cron token colors */
+      --c-min:   #06B6D4;
+      --c-hour:  #EC4899;
+      --c-dom:   #EAB308;
+      --c-mon:   #10B981;
+      --c-dow:   #F97316;
+
+      --c-min-dim:   rgba(6,182,212,0.12);
+      --c-hour-dim:  rgba(236,72,153,0.12);
+      --c-dom-dim:   rgba(234,179,8,0.12);
+      --c-mon-dim:   rgba(16,185,129,0.12);
+      --c-dow-dim:   rgba(249,115,22,0.12);
+
+      --radius: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--c-min); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===================================================
+       LAYOUT
+    =================================================== */
+    main.page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    header.page-header {
+      text-align: center;
+      padding: 36px 0 28px;
+    }
+    header.page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    header.page-header p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ===================================================
+       TERMINAL INPUT ZONE
+    =================================================== */
+    .terminal-zone {
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .terminal-zone::before {
+      content: "$ crontab -e";
+      display: block;
+      font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 0.72rem;
+      color: var(--muted-2);
+      margin-bottom: 10px;
+    }
+
+    #cron-input {
+      width: 100%;
+      font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      caret-color: var(--c-min);
+      letter-spacing: 0.04em;
+    }
+    #cron-input::placeholder { color: var(--muted-2); }
+
+    .snippets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .snippet-pill {
+      font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      background: var(--surface-3);
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .snippet-pill:hover {
+      border-color: var(--c-min);
+      color: var(--c-min);
+      background: var(--c-min-dim);
+    }
+
+    /* ===================================================
+       VALIDATION MESSAGE
+    =================================================== */
+    #validation-msg {
+      font-size: 0.82rem;
+      color: var(--muted-2);
+      margin-top: 10px;
+      min-height: 1.2em;
+      font-style: italic;
+    }
+
+    /* ===================================================
+       OUTPUT PANES
+    =================================================== */
+    .panes-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    /* Pane 1: Visual Dissection Board */
+    .dissection-board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    .token-block {
+      border-radius: 8px;
+      padding: 12px 8px 10px;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: opacity 0.2s;
+    }
+    .token-block.min  { background: var(--c-min-dim);  border-color: rgba(6,182,212,0.3);  }
+    .token-block.hour { background: var(--c-hour-dim); border-color: rgba(236,72,153,0.3); }
+    .token-block.dom  { background: var(--c-dom-dim);  border-color: rgba(234,179,8,0.3);  }
+    .token-block.mon  { background: var(--c-mon-dim);  border-color: rgba(16,185,129,0.3); }
+    .token-block.dow  { background: var(--c-dow-dim);  border-color: rgba(249,115,22,0.3); }
+
+    .token-block .token-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 6px;
+      opacity: 0.75;
+    }
+    .token-block.min  .token-label { color: var(--c-min);  }
+    .token-block.hour .token-label { color: var(--c-hour); }
+    .token-block.dom  .token-label { color: var(--c-dom);  }
+    .token-block.mon  .token-label { color: var(--c-mon);  }
+    .token-block.dow  .token-label { color: var(--c-dow);  }
+
+    .token-block .token-value {
+      font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: clamp(0.85rem, 2.5vw, 1.15rem);
+      font-weight: 700;
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+    .token-block.min  .token-value { color: var(--c-min);  }
+    .token-block.hour .token-value { color: var(--c-hour); }
+    .token-block.dom  .token-value { color: var(--c-dom);  }
+    .token-block.mon  .token-value { color: var(--c-mon);  }
+    .token-block.dow  .token-value { color: var(--c-dow);  }
+
+    .token-block .token-desc {
+      font-size: 0.68rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Pane 2: Human Translation */
+    .hero-translation {
+      font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .hero-translation .seg-min  { color: var(--c-min);  font-weight: 600; }
+    .hero-translation .seg-hour { color: var(--c-hour); font-weight: 600; }
+    .hero-translation .seg-dom  { color: var(--c-dom);  font-weight: 600; }
+    .hero-translation .seg-mon  { color: var(--c-mon);  font-weight: 600; }
+    .hero-translation .seg-dow  { color: var(--c-dow);  font-weight: 600; }
+
+    /* Pane 3: Upcoming Executions */
+    .runs-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .run-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .run-index {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--c-mon);
+      background: var(--c-mon-dim);
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .run-datetime {
+      font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .run-relative {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 8px 0 16px;
+      color: var(--muted-2);
+      font-size: 0.75rem;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted-2);
+      font-size: 0.75rem;
+    }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item { }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--c-min);
+      font-size: 0.88rem;
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ===================================================
+       EDU SECTION
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--c-mon);
+      margin: 18px 0 6px;
+    }
+    .section-intro,
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ul {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 12px;
+    }
+    .edu-section ul li {
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 4px 0 4px 18px;
+      position: relative;
+    }
+    .edu-section ul li::before {
+      content: ">";
+      position: absolute;
+      left: 0;
+      color: var(--c-mon);
+      font-family: monospace;
+      font-weight: 700;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 13px 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+    }
+    .faq-q:hover { color: var(--c-min); }
+    .faq-chevron {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+      padding-bottom: 14px;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ===================================================
+       RESPONSIVE
+    =================================================== */
+    @media (max-width: 540px) {
+      .dissection-board {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+      }
+      .token-block {
+        padding: 8px 4px;
+      }
+      .token-block .token-label { font-size: 0.55rem; }
+      .token-block .token-value { font-size: 0.75rem; }
+      .token-block .token-desc  { display: none; }
+      .run-relative { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Cron Job Expression Translator</h1>
+    <p>Paste any 5-part crontab string and instantly decode it into plain English, with a color-coded field breakdown and the next 3 scheduled run times.</p>
+  </header>
+
+  <!-- ===================================================
+       TERMINAL INPUT ZONE
+  =================================================== -->
+  <div class="terminal-zone">
+    <input
+      id="cron-input"
+      type="text"
+      spellcheck="false"
+      autocomplete="off"
+      value="*/15 0 1,15 * 1-5"
+      placeholder="* * * * *"
+      oninput="handleCron(this.value)"
+      onchange="handleCron(this.value)"
+      aria-label="Cron expression input"
+    />
+    <div class="snippets-row" aria-label="Quick snippets">
+      <button class="snippet-pill" onclick="injectSnippet('* * * * *')" title="Every Minute">Every Minute</button>
+      <button class="snippet-pill" onclick="injectSnippet('0 0 * * *')" title="Daily at Midnight">Daily at Midnight</button>
+      <button class="snippet-pill" onclick="injectSnippet('0 9 * * 1-5')" title="Weekdays 9am">Weekdays 9am</button>
+      <button class="snippet-pill" onclick="injectSnippet('0 0 1 * *')" title="Once a Month">Once a Month</button>
+      <button class="snippet-pill" onclick="injectSnippet('*/5 * * * *')" title="Every 5 Minutes">Every 5 Minutes</button>
+      <button class="snippet-pill" onclick="injectSnippet('0 */2 * * *')" title="Every 2 Hours">Every 2 Hours</button>
+      <button class="snippet-pill" onclick="injectSnippet('0 0 * * 0')" title="Weekly on Sunday">Weekly on Sunday</button>
+      <button class="snippet-pill" onclick="injectSnippet('30 6 1 1 *')" title="Jan 1st at 6:30am">Jan 1st at 6:30am</button>
+    </div>
+    <div id="validation-msg" aria-live="polite"></div>
+  </div>
+
+  <!-- ===================================================
+       OUTPUT PANES
+  =================================================== -->
+  <div id="output-section" class="panes-grid">
+
+    <!-- Pane 1: Visual Dissection Board -->
+    <div class="card">
+      <div class="card-title">Visual Dissection</div>
+      <div class="dissection-board" id="dissection-board">
+        <div class="token-block min">
+          <div class="token-label">Minute</div>
+          <div class="token-value" id="tb-min">-</div>
+          <div class="token-desc" id="td-min">-</div>
+        </div>
+        <div class="token-block hour">
+          <div class="token-label">Hour</div>
+          <div class="token-value" id="tb-hour">-</div>
+          <div class="token-desc" id="td-hour">-</div>
+        </div>
+        <div class="token-block dom">
+          <div class="token-label">Day / Month</div>
+          <div class="token-value" id="tb-dom">-</div>
+          <div class="token-desc" id="td-dom">-</div>
+        </div>
+        <div class="token-block mon">
+          <div class="token-label">Month</div>
+          <div class="token-value" id="tb-mon">-</div>
+          <div class="token-desc" id="td-mon">-</div>
+        </div>
+        <div class="token-block dow">
+          <div class="token-label">Day / Week</div>
+          <div class="token-value" id="tb-dow">-</div>
+          <div class="token-desc" id="td-dow">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pane 2: Human Translation -->
+    <div class="card">
+      <div class="card-title">Plain-English Translation</div>
+      <div class="hero-translation" id="hero-translation">
+        Awaiting a valid 5-part cron expression...
+      </div>
+    </div>
+
+    <!-- Pane 3: Upcoming Executions -->
+    <div class="card">
+      <div class="card-title">Next 3 Scheduled Runs (your local time)</div>
+      <ul class="runs-list" id="runs-list">
+        <li class="run-item"><span style="color:var(--muted-2);font-size:0.85rem">Awaiting valid expression...</span></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ===================================================
+       AD PLACEMENT 1: In-Content Leaderboard
+  =================================================== -->
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ===================================================
+       GLOSSARY
+  =================================================== -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Cron</div>
+        <div class="glossary-def">A time-based job scheduler built into Unix-like operating systems. The name comes from Chronos, the Greek personification of time. Cron runs in the background and fires scheduled commands at the times you specify.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Crontab</div>
+        <div class="glossary-def">Short for "cron table." A plain-text config file where each line defines one scheduled job using a 5-field expression followed by the command to run. Edit yours with <code style="color:var(--c-min)">crontab -e</code> and list it with <code style="color:var(--c-min)">crontab -l</code>.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Asterisk (*)</div>
+        <div class="glossary-def">The wildcard operator. An asterisk in any field means "every valid value for this field." For example, * in the Hour field means every hour from 0 through 23. It is the broadest possible selector for a field.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Step Value (/)</div>
+        <div class="glossary-def">The step (or increment) operator. Written as */N or start-end/N, it means "every Nth unit." So */15 in the Minute field fires at minutes 0, 15, 30, and 45. Combined with a range, 10-50/10 fires at 10, 20, 30, 40, and 50.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Range (-)</div>
+        <div class="glossary-def">The range operator connects two values with a hyphen to select everything between them, inclusive. For example, 1-5 in the Day-of-Week field means Monday through Friday, and 9-17 in the Hour field means every hour from 9am to 5pm.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">List (,)</div>
+        <div class="glossary-def">The list operator lets you specify multiple discrete values in one field, separated by commas. For example, 1,15 in the Day-of-Month field means the job runs on the 1st and 15th of each month. You can mix lists with ranges: 1,10-12.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">UTC Time vs Local Time</div>
+        <div class="glossary-def">By default, cron uses the system clock, which on most servers is set to UTC (Coordinated Universal Time). If your server is in UTC and you write 0 9 * * *, the job fires at 9am UTC - which may be a very different local hour for your users. Always check your server's timezone with <code style="color:var(--c-min)">timedatectl</code> before scheduling time-sensitive jobs.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Daemon</div>
+        <div class="glossary-def">A background process that runs continuously without direct user interaction. The cron daemon (called crond or cron depending on the distro) is the invisible engine that reads your crontab, watches the clock, and executes your jobs at the right moment. It starts automatically on boot.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       EDUCATIONAL SECTION
+  =================================================== -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Reading Cron Expressions</h2>
+
+    <p class="section-intro">Cron expressions look cryptic at first glance - five columns of numbers, asterisks, slashes, and commas with no labels. This guide demystifies each field, explains every operator, and shows you how to read even the most complex schedules at a glance.</p>
+
+    <h3>How to Use This Translator</h3>
+    <p>Paste your cron expression directly into the monospace input at the top. The tool listens for every keystroke and updates all three output panels instantly - no button to press. The Visual Dissection Board breaks your expression into its five color-coded fields so you can verify each one independently. The Plain-English Translation assembles the full human-readable sentence. The Next 3 Runs panel calculates the upcoming fire times in your browser's local timezone, so the times shown are what you would actually experience on a server with the same timezone setting.</p>
+
+    <h3>The 5-Field Structure</h3>
+    <p>Every standard crontab line reads left to right: <span style="color:var(--c-min)">minute</span> <span style="color:var(--c-hour)">hour</span> <span style="color:var(--c-dom)">day-of-month</span> <span style="color:var(--c-mon)">month</span> <span style="color:var(--c-dow)">day-of-week</span>. The ranges for each field are:</p>
+    <ul>
+      <li><span style="color:var(--c-min)">Minute:</span> 0 to 59</li>
+      <li><span style="color:var(--c-hour)">Hour:</span> 0 to 23 (midnight is 0, noon is 12)</li>
+      <li><span style="color:var(--c-dom)">Day of Month:</span> 1 to 31</li>
+      <li><span style="color:var(--c-mon)">Month:</span> 1 (January) to 12 (December)</li>
+      <li><span style="color:var(--c-dow)">Day of Week:</span> 0 to 7 (both 0 and 7 mean Sunday; 1 is Monday)</li>
+    </ul>
+
+    <h3>Operators at a Glance</h3>
+    <ul>
+      <li><strong>* (asterisk)</strong> - matches every valid value in the field</li>
+      <li><strong>- (range)</strong> - selects all values between two numbers, inclusive: 9-17 means 9, 10, 11... 17</li>
+      <li><strong>, (list)</strong> - selects specific discrete values: 1,15 means just the 1st and 15th</li>
+      <li><strong>/ (step)</strong> - selects every Nth value: */10 in minutes means 0, 10, 20, 30, 40, 50</li>
+    </ul>
+
+    <h3>Common Patterns You Will Encounter</h3>
+    <ul>
+      <li><code style="color:var(--c-min)">*/15 * * * *</code> - every 15 minutes, all day, every day</li>
+      <li><code style="color:var(--c-min)">0 0 * * *</code> - exactly once per day at midnight</li>
+      <li><code style="color:var(--c-min)">0 9-17 * * 1-5</code> - top of every hour from 9am to 5pm, Monday through Friday</li>
+      <li><code style="color:var(--c-min)">0 0 1,15 * *</code> - midnight on the 1st and 15th of every month</li>
+      <li><code style="color:var(--c-min)">30 23 * * 0</code> - 11:30pm every Sunday</li>
+      <li><code style="color:var(--c-min)">0 6 * 1-3 1-5</code> - 6am on weekdays in January, February, and March</li>
+    </ul>
+
+    <h3>A Note on Timezones</h3>
+    <p>This translator shows upcoming run times in your browser's local timezone. Production cron daemons typically run in the server's timezone, which on cloud VMs is almost always UTC. If your expression is meant for a UTC server and you are in a different timezone, mentally adjust the "Next 3 Runs" panel accordingly. The Visual Dissection and Plain-English panels are timezone-agnostic - they describe the schedule in abstract terms regardless of where the clock is anchored.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Does cron syntax support seconds?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">Standard Unix crontab does not support a seconds field. The classic cron expression has exactly five fields: minute (0-59), hour (0-23), day of month (1-31), month (1-12), and day of week (0-7). The minimum granularity in native cron is one minute. Some extended schedulers - such as the Quartz scheduler for Java, Spring's @Scheduled annotation, AWS EventBridge, and certain cloud-native platforms - add a sixth field for seconds at the far left. If you need sub-minute precision in a Unix environment, a common workaround is to chain multiple cron entries offset by a set number of seconds using the sleep command, for example: run the script once normally and again 30 seconds later with <code style="color:var(--c-min)">sleep 30; /path/to/script.sh</code> appended to a second cron line.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What happens if a server restarts during a scheduled cron time?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">If a server reboots exactly when a cron job was supposed to run, that execution is simply missed. Cron does not queue up or replay skipped jobs after the system comes back online. The cron daemon only fires jobs at the moment they are due - if it was not running, nothing fires. To handle this case, many teams use the <code style="color:var(--c-min)">@reboot</code> special string in crontab, which runs a job once immediately after every system reboot. For critical tasks that must never be skipped, a more robust solution is to use a distributed job scheduler such as Airflow, Celery Beat, or a cloud-managed cron service that stores job state in a database and can detect and replay missed runs.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How do I run a script on the last day of the month?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">Standard cron does not have a built-in last-day-of-month operator. The most reliable workaround is to run your script every day during the window and add a shell check at the top: <code style="color:var(--c-min)">if [ $(date -d tomorrow +%d) -eq 01 ]; then exit 0; fi</code>. This checks whether tomorrow is the 1st of the next month (meaning today is the last day) and exits early if it is not. Your cron entry would be something like <code style="color:var(--c-min)">0 23 28-31 * * /path/to/check-and-run.sh</code>. Some distributions ship Vixie cron or fcron which support an L operator in the day-of-month field, but this is not part of the POSIX standard and is not portable across systems.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between Day of Month and Day of Week?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">Day of Month (field 3) specifies a numbered date in the calendar month, from 1 to 31. Day of Week (field 5) specifies a named weekday, where 0 and 7 both mean Sunday, 1 is Monday, through 6 for Saturday. The critical subtlety is how cron behaves when both fields are restricted simultaneously: if you set a specific day of month AND a specific day of week, most cron implementations treat this as a union rather than an intersection. For example, <code style="color:var(--c-min)">0 9 1 * 1</code> runs at 9am on every 1st of the month AND on every Monday - not only on Mondays that fall on the 1st. If you want the intersection (only Mondays that are also the 1st), you need a shell conditional inside the script rather than relying on cron alone.</div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ===================================================
+     CONSTANTS
+  =================================================== */
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const FIELD_NAMES = ['Minute','Hour','Day of Month','Month','Day of Week'];
+
+  /* ===================================================
+     SNIPPET INJECTION
+  =================================================== */
+  function injectSnippet(val) {
+    const el = document.getElementById('cron-input');
+    el.value = val;
+    handleCron(val);
+    el.focus();
+  }
+
+  /* ===================================================
+     MAIN HANDLER
+  =================================================== */
+  function handleCron(raw) {
+    const trimmed = raw.trim();
+    const parts = trimmed.split(/\s+/);
+
+    if (parts.length !== 5 || parts.some(p => p === '')) {
+      setInvalid();
+      return;
+    }
+
+    // Validate each field
+    const ranges = [
+      [0, 59],   // minute
+      [0, 23],   // hour
+      [1, 31],   // dom
+      [1, 12],   // month
+      [0, 7]     // dow
+    ];
+
+    for (let i = 0; i < 5; i++) {
+      if (!validateField(parts[i], ranges[i][0], ranges[i][1])) {
+        setInvalid('Invalid value in ' + FIELD_NAMES[i] + ' field.');
+        return;
+      }
+    }
+
+    document.getElementById('validation-msg').textContent = '';
+    updateDissection(parts);
+    updateTranslation(parts);
+    updateRuns(parts);
+  }
+
+  /* ===================================================
+     VALIDATION
+  =================================================== */
+  function validateField(tok, min, max) {
+    if (tok === '*') return true;
+    // step on wildcard: */N
+    if (/^\*\/\d+$/.test(tok)) {
+      const n = parseInt(tok.split('/')[1], 10);
+      return n >= 1 && n <= (max - min + 1);
+    }
+    // pure number
+    if (/^\d+$/.test(tok)) {
+      const n = parseInt(tok, 10);
+      return n >= min && n <= max;
+    }
+    // range: a-b
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-').map(Number);
+      return a >= min && b <= max && a <= b;
+    }
+    // step on range: a-b/N
+    if (/^\d+-\d+\/\d+$/.test(tok)) {
+      const [range, step] = tok.split('/');
+      const [a, b] = range.split('-').map(Number);
+      return a >= min && b <= max && a <= b && parseInt(step, 10) >= 1;
+    }
+    // list: a,b,c (each element may itself be a range or step)
+    if (tok.includes(',')) {
+      return tok.split(',').every(t => validateField(t.trim(), min, max));
+    }
+    return false;
+  }
+
+  /* ===================================================
+     DISSECTION BOARD
+  =================================================== */
+  function updateDissection(parts) {
+    const ids  = ['min','hour','dom','mon','dow'];
+    const descs = [
+      describeMinute(parts[0]),
+      describeHour(parts[1]),
+      describeDom(parts[2]),
+      describeMonth(parts[3]),
+      describeDow(parts[4])
+    ];
+    for (let i = 0; i < 5; i++) {
+      document.getElementById('tb-' + ids[i]).textContent = parts[i];
+      document.getElementById('td-' + ids[i]).textContent = descs[i];
+    }
+  }
+
+  /* ===================================================
+     TOKEN DESCRIBERS (short, single-field)
+  =================================================== */
+  function describeMinute(tok) {
+    if (tok === '*') return 'Every minute';
+    if (/^\*\/\d+$/.test(tok)) return 'Every ' + tok.split('/')[1] + ' min';
+    if (/^\d+$/.test(tok)) return 'At minute ' + tok;
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-');
+      return 'Min ' + a + ' through ' + b;
+    }
+    if (/^\d+-\d+\/\d+$/.test(tok)) {
+      const [range, step] = tok.split('/');
+      const [a, b] = range.split('-');
+      return 'Every ' + step + ' min, ' + a + '-' + b;
+    }
+    if (tok.includes(',')) {
+      return 'At min ' + tok.split(',').join(', ');
+    }
+    return tok;
+  }
+
+  function describeHour(tok) {
+    if (tok === '*') return 'Every hour';
+    if (/^\*\/\d+$/.test(tok)) return 'Every ' + tok.split('/')[1] + ' hr(s)';
+    if (/^\d+$/.test(tok)) {
+      const h = parseInt(tok, 10);
+      return 'At ' + formatHour(h);
+    }
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-').map(Number);
+      return formatHour(a) + ' to ' + formatHour(b);
+    }
+    if (/^\d+-\d+\/\d+$/.test(tok)) {
+      const [range, step] = tok.split('/');
+      const [a, b] = range.split('-').map(Number);
+      return 'Every ' + step + ' hr from ' + formatHour(a) + ' to ' + formatHour(b);
+    }
+    if (tok.includes(',')) {
+      return tok.split(',').map(h => formatHour(parseInt(h, 10))).join(', ');
+    }
+    return tok;
+  }
+
+  function describeDom(tok) {
+    if (tok === '*') return 'Any day';
+    if (/^\d+$/.test(tok)) return 'On the ' + ordinal(tok) + '';
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-');
+      return ordinal(a) + ' through ' + ordinal(b);
+    }
+    if (tok.includes(',')) {
+      return tok.split(',').map(d => ordinal(d)).join(', ');
+    }
+    return tok;
+  }
+
+  function describeMonth(tok) {
+    if (tok === '*') return 'Every month';
+    if (/^\d+$/.test(tok)) return MONTHS[parseInt(tok, 10) - 1];
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-').map(Number);
+      return MONTHS[a - 1] + ' to ' + MONTHS[b - 1];
+    }
+    if (/^\*\/\d+$/.test(tok)) return 'Every ' + tok.split('/')[1] + ' month(s)';
+    if (tok.includes(',')) {
+      return tok.split(',').map(m => MONTHS[parseInt(m, 10) - 1]).join(', ');
+    }
+    return tok;
+  }
+
+  function describeDow(tok) {
+    // Normalize 7 -> 0 (both = Sunday)
+    const norm = tok.replace(/\b7\b/g, '0');
+    if (norm === '*') return 'Any weekday';
+    if (/^\d+$/.test(norm)) return DAYS[parseInt(norm, 10) % 7];
+    if (/^\d+-\d+$/.test(norm)) {
+      const [a, b] = norm.split('-').map(Number);
+      return DAYS[a % 7] + ' to ' + DAYS[b % 7];
+    }
+    if (/^\*\/\d+$/.test(norm)) return 'Every ' + norm.split('/')[1] + ' day(s)';
+    if (norm.includes(',')) {
+      return norm.split(',').map(d => DAYS[parseInt(d, 10) % 7]).join(', ');
+    }
+    return tok;
+  }
+
+  /* ===================================================
+     PLAIN-ENGLISH FULL TRANSLATION
+  =================================================== */
+  function updateTranslation(parts) {
+    const [min, hour, dom, mon, dow] = parts;
+
+    const minStr  = buildMinuteSentence(min);
+    const hourStr = buildHourSentence(hour);
+    const domStr  = buildDomSentence(dom);
+    const monStr  = buildMonSentence(mon);
+    const dowStr  = buildDowSentence(dow);
+
+    // Assemble sentence
+    let sentence = '';
+    sentence += span(minStr, 'min');
+
+    if (hour !== '*') {
+      sentence += ' ' + span(hourStr, 'hour');
+    } else {
+      sentence += ' past ' + span('every hour', 'hour');
+    }
+
+    const hasDom = dom !== '*';
+    const hasDow = dow !== '*' && dow !== '*/1';
+    if (hasDom && hasDow) {
+      sentence += ', on ' + span(domStr, 'dom') + ' and on ' + span(dowStr, 'dow');
+    } else if (hasDom) {
+      sentence += ', on ' + span(domStr, 'dom');
+    } else if (hasDow) {
+      sentence += ', on ' + span(dowStr, 'dow');
+    }
+
+    if (mon !== '*') {
+      sentence += ', only in ' + span(monStr, 'mon');
+    }
+
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1) + '.';
+
+    document.getElementById('hero-translation').innerHTML = sentence;
+  }
+
+  function span(text, cls) {
+    return '<span class="seg-' + cls + '">' + text + '</span>';
+  }
+
+  function buildMinuteSentence(tok) {
+    if (tok === '*') return 'every minute';
+    if (/^\*\/\d+$/.test(tok)) {
+      const n = tok.split('/')[1];
+      return 'every ' + n + ' minute' + (n === '1' ? '' : 's');
+    }
+    if (/^\d+$/.test(tok)) return 'at minute ' + tok;
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-');
+      return 'at every minute from ' + a + ' through ' + b;
+    }
+    if (/^\d+-\d+\/\d+$/.test(tok)) {
+      const [range, step] = tok.split('/');
+      const [a, b] = range.split('-');
+      return 'every ' + step + ' minutes from minute ' + a + ' through ' + b;
+    }
+    if (tok.includes(',')) {
+      const vals = tok.split(',');
+      return 'at minute' + (vals.length > 1 ? 's ' : ' ') + humanList(vals);
+    }
+    return 'at minute ' + tok;
+  }
+
+  function buildHourSentence(tok) {
+    if (tok === '*') return 'every hour';
+    if (/^\*\/\d+$/.test(tok)) {
+      const n = tok.split('/')[1];
+      return 'past every ' + ordinal(n) + ' hour';
+    }
+    if (/^\d+$/.test(tok)) {
+      return 'past hour ' + tok + ' (' + formatHour(parseInt(tok, 10)) + ')';
+    }
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-').map(Number);
+      return 'past every hour from ' + formatHour(a) + ' through ' + formatHour(b);
+    }
+    if (/^\d+-\d+\/\d+$/.test(tok)) {
+      const [range, step] = tok.split('/');
+      const [a, b] = range.split('-').map(Number);
+      return 'past every ' + step + 'nd/rd hour from ' + formatHour(a) + ' through ' + formatHour(b);
+    }
+    if (tok.includes(',')) {
+      const vals = tok.split(',').map(h => formatHour(parseInt(h, 10)));
+      return 'at ' + humanList(vals);
+    }
+    return tok;
+  }
+
+  function buildDomSentence(tok) {
+    if (tok === '*') return 'every day of the month';
+    if (/^\d+$/.test(tok)) return 'the ' + ordinal(tok) + ' of the month';
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-');
+      return 'day ' + a + ' through day ' + b + ' of the month';
+    }
+    if (tok.includes(',')) {
+      const vals = tok.split(',').map(d => ordinal(d));
+      return 'the ' + humanList(vals) + ' of the month';
+    }
+    return tok;
+  }
+
+  function buildMonSentence(tok) {
+    if (tok === '*') return 'every month';
+    if (/^\d+$/.test(tok)) return MONTHS[parseInt(tok, 10) - 1];
+    if (/^\d+-\d+$/.test(tok)) {
+      const [a, b] = tok.split('-').map(Number);
+      return MONTHS[a - 1] + ' through ' + MONTHS[b - 1];
+    }
+    if (/^\*\/\d+$/.test(tok)) {
+      const n = tok.split('/')[1];
+      return 'every ' + n + ' months';
+    }
+    if (tok.includes(',')) {
+      const vals = tok.split(',').map(m => MONTHS[parseInt(m, 10) - 1]);
+      return humanList(vals);
+    }
+    return tok;
+  }
+
+  function buildDowSentence(tok) {
+    const norm = tok.replace(/\b7\b/g, '0');
+    if (norm === '*') return 'every day of the week';
+    if (/^\d+$/.test(norm)) return DAYS[parseInt(norm, 10) % 7];
+    if (/^\d+-\d+$/.test(norm)) {
+      const [a, b] = norm.split('-').map(Number);
+      return DAYS[a % 7] + ' through ' + DAYS[b % 7];
+    }
+    if (/^\*\/\d+$/.test(norm)) {
+      const n = norm.split('/')[1];
+      return 'every ' + n + ' days of the week';
+    }
+    if (norm.includes(',')) {
+      const vals = norm.split(',').map(d => DAYS[parseInt(d, 10) % 7]);
+      return humanList(vals);
+    }
+    return tok;
+  }
+
+  /* ===================================================
+     NEXT 3 EXECUTION TIMES
+  =================================================== */
+  function updateRuns(parts) {
+    const [minTok, hourTok, domTok, monTok, dowTok] = parts;
+
+    try {
+      const runs = getNextRuns(minTok, hourTok, domTok, monTok, dowTok, 3);
+      const ul = document.getElementById('runs-list');
+      ul.innerHTML = '';
+
+      const now = new Date();
+      runs.forEach((dt, i) => {
+        const li = document.createElement('li');
+        li.className = 'run-item';
+        li.innerHTML =
+          '<span class="run-index">' + (i + 1) + '</span>' +
+          '<span class="run-datetime">' + formatDate(dt) + '</span>' +
+          '<span class="run-relative">' + relativeTime(now, dt) + '</span>';
+        ul.appendChild(li);
+      });
+    } catch (e) {
+      document.getElementById('runs-list').innerHTML =
+        '<li class="run-item"><span style="color:var(--muted-2);font-size:0.85rem">Could not compute next runs for this expression.</span></li>';
+    }
+  }
+
+  function getNextRuns(minTok, hourTok, domTok, monTok, dowTok, count) {
+    const validMins  = expandField(minTok,  0, 59);
+    const validHours = expandField(hourTok, 0, 23);
+    const validMons  = expandField(monTok,  1, 12);
+    const validDoms  = expandField(domTok,  1, 31);
+    const validDows  = expandField(dowTok,  0, 6, true);
+
+    const hasDomRestriction = domTok !== '*';
+    const hasDowRestriction = dowTok !== '*';
+
+    const results = [];
+    // Start from next minute
+    const start = new Date();
+    start.setSeconds(0, 0);
+    start.setMinutes(start.getMinutes() + 1);
+
+    let d = new Date(start);
+    const limit = new Date(start);
+    limit.setFullYear(limit.getFullYear() + 4); // safety ceiling
+
+    while (results.length < count && d < limit) {
+      const m  = d.getMonth() + 1;  // 1-12
+      const dy = d.getDate();        // 1-31
+      const dw = d.getDay();         // 0-6
+      const h  = d.getHours();
+      const mn = d.getMinutes();
+
+      if (!validMons.includes(m)) {
+        // Jump to 1st day of next valid month
+        const nextM = validMons.find(x => x > m) || validMons[0];
+        const yearJump = nextM <= m ? 1 : 0;
+        d = new Date(d.getFullYear() + yearJump, nextM - 1, 1, 0, 0, 0, 0);
+        continue;
+      }
+
+      // Dom / Dow union rule
+      const domMatch = validDoms.includes(dy);
+      const dowMatch = validDows.includes(dw);
+      const dayMatch = (hasDomRestriction && hasDowRestriction)
+        ? (domMatch || dowMatch)
+        : (hasDomRestriction ? domMatch : (hasDowRestriction ? dowMatch : true));
+
+      if (!dayMatch) {
+        d.setDate(d.getDate() + 1);
+        d.setHours(0, 0, 0, 0);
+        continue;
+      }
+
+      if (!validHours.includes(h)) {
+        const nextH = validHours.find(x => x > h);
+        if (nextH === undefined) {
+          d.setDate(d.getDate() + 1);
+          d.setHours(0, 0, 0, 0);
+        } else {
+          d.setHours(nextH, 0, 0, 0);
+        }
+        continue;
+      }
+
+      if (!validMins.includes(mn)) {
+        const nextMn = validMins.find(x => x > mn);
+        if (nextMn === undefined) {
+          // Advance to next valid hour
+          const nextH = validHours.find(x => x > h);
+          if (nextH === undefined) {
+            d.setDate(d.getDate() + 1);
+            d.setHours(0, 0, 0, 0);
+          } else {
+            d.setHours(nextH, validMins[0], 0, 0);
+          }
+        } else {
+          d.setMinutes(nextMn, 0, 0);
+        }
+        continue;
+      }
+
+      results.push(new Date(d));
+      d.setMinutes(d.getMinutes() + 1, 0, 0);
+    }
+
+    return results;
+  }
+
+  function expandField(tok, min, max, isDow) {
+    const normalized = isDow ? tok.replace(/\b7\b/g, '0') : tok;
+    const all = [];
+    for (let i = min; i <= max; i++) all.push(i);
+
+    if (normalized === '*') return all;
+
+    const result = new Set();
+
+    const parts = normalized.split(',');
+    for (const part of parts) {
+      if (/^\d+$/.test(part)) {
+        const n = parseInt(part, 10);
+        if (n >= min && n <= max) result.add(n === 7 ? 0 : n);
+      } else if (/^\*\/\d+$/.test(part)) {
+        const step = parseInt(part.split('/')[1], 10);
+        for (let i = min; i <= max; i += step) result.add(i);
+      } else if (/^\d+-\d+$/.test(part)) {
+        const [a, b] = part.split('-').map(Number);
+        for (let i = a; i <= b; i++) result.add(i);
+      } else if (/^\d+-\d+\/\d+$/.test(part)) {
+        const [range, step] = part.split('/');
+        const [a, b] = range.split('-').map(Number);
+        const s = parseInt(step, 10);
+        for (let i = a; i <= b; i += s) result.add(i);
+      }
+    }
+
+    return Array.from(result).sort((a, b) => a - b);
+  }
+
+  /* ===================================================
+     HELPERS
+  =================================================== */
+  function setInvalid(msg) {
+    document.getElementById('validation-msg').textContent =
+      msg || 'Awaiting a valid 5-part cron expression...';
+    document.getElementById('hero-translation').innerHTML =
+      'Awaiting a valid 5-part cron expression...';
+    document.getElementById('runs-list').innerHTML =
+      '<li class="run-item"><span style="color:var(--muted-2);font-size:0.85rem">Awaiting valid expression...</span></li>';
+    ['min','hour','dom','mon','dow'].forEach(id => {
+      document.getElementById('tb-' + id).textContent = '-';
+      document.getElementById('td-' + id).textContent = '-';
+    });
+  }
+
+  function formatHour(h) {
+    if (h === 0)  return '12am';
+    if (h === 12) return '12pm';
+    return h < 12 ? h + 'am' : (h - 12) + 'pm';
+  }
+
+  function ordinal(n) {
+    const num = parseInt(n, 10);
+    const s = ['th','st','nd','rd'];
+    const v = num % 100;
+    return num + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function humanList(arr) {
+    if (arr.length === 1) return arr[0];
+    if (arr.length === 2) return arr[0] + ' and ' + arr[1];
+    return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+  }
+
+  function formatDate(dt) {
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const d = days[dt.getDay()];
+    const mo = months[dt.getMonth()];
+    const dy = dt.getDate();
+    const yr = dt.getFullYear();
+    const h  = dt.getHours();
+    const mn = String(dt.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'pm' : 'am';
+    const h12  = h % 12 || 12;
+    return d + ', ' + mo + ' ' + dy + ', ' + yr + ' at ' + h12 + ':' + mn + ' ' + ampm;
+  }
+
+  function relativeTime(now, future) {
+    const diff = future - now;
+    const mins = Math.round(diff / 60000);
+    if (mins < 60)  return 'in ' + mins + ' min';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return 'in ' + hrs + ' hr' + (hrs === 1 ? '' : 's');
+    const days = Math.floor(hrs / 24);
+    if (days < 30)  return 'in ' + days + ' day' + (days === 1 ? '' : 's');
+    const mos = Math.floor(days / 30);
+    return 'in ~' + mos + ' month' + (mos === 1 ? '' : 's');
+  }
+
+  function toggleFaq(el) {
+    el.parentElement.classList.toggle('open');
+  }
+
+  /* ===================================================
+     INIT
+  =================================================== */
+  handleCron(document.getElementById('cron-input').value);
+</script>
+
+</body>
+</html>

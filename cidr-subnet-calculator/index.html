@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free CIDR Subnet Calculator: break down any IP block into its network address, broadcast address, usable host range, and total host count instantly in your browser. No install required." />
+  <meta name="keywords" content="cidr subnet calculator, ip subnet calculator, network address calculator, broadcast address, usable host range, subnet mask, wildcard mask, cidr notation, ipv4 subnet, network engineering tool, sysadmin tool, devops calculator, ip block calculator, cidr prefix, subnetting tool" />
+  <title>CIDR Subnet Calculator: Break Down IP Blocks and Host Ranges | AxiomApe</title>
+
+  <link rel="canonical" href="https://axiomape.com/cidr-subnet-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "CIDR Subnet Calculator",
+        "description": "Free CIDR Subnet Calculator: break down any IP block into its network address, broadcast address, usable host range, and total host count instantly in your browser. No install required.",
+        "url": "https://axiomape.com/cidr-subnet-calculator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why do standard subnets lose two IP addresses?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every subnet reserves its lowest address as the Network Address (used to identify the subnet itself) and its highest address as the Broadcast Address (used to reach all hosts simultaneously). Neither can be assigned to a device, so usable hosts equal the total IP count minus two."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are /31 and /32 subnets used for?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A /31 subnet contains exactly two IP addresses and is used for point-to-point links between two routers (per RFC 3021), where both addresses are usable. A /32 is a host route representing a single specific IP address, commonly used for loopback interfaces, policy routing, or advertising a precise host in BGP."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I calculate a wildcard mask from a subnet mask?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Subtract each octet of the subnet mask from 255. For example, 255.255.255.0 becomes 0.0.0.255. The wildcard mask is the bitwise inverse of the subnet mask and is used in Cisco ACLs and OSPF configurations to define which bits must match."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are the private IP address ranges from RFC 1918?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "RFC 1918 defines three private (non-routable) IPv4 ranges: 10.0.0.0/8 (Class A, over 16 million addresses), 172.16.0.0/12 (Class B, about 1 million addresses), and 192.168.0.0/16 (Class C, 65,536 addresses). These are used for internal networks and are never routed on the public internet."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between IPv4 and IPv6?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "IPv4 uses 32-bit addresses written in dotted-decimal notation (e.g. 192.168.1.0), supporting about 4.3 billion unique addresses. IPv6 uses 128-bit addresses in hexadecimal colon notation (e.g. 2001:db8::1), supporting approximately 340 undecillion addresses. This calculator handles IPv4 only."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ──────────────────────────────────────────── */
+    :root {
+      --bg:          #0F172A;
+      --bg-card:     #1E293B;
+      --bg-deep:     #0D1525;
+      --border:      #334155;
+      --border-mid:  #475569;
+      --text:        #E2E8F0;
+      --text-muted:  #94A3B8;
+      --text-dim:    #64748B;
+
+      /* accent palette */
+      --green:       #10B981;
+      --green-dim:   rgba(16,185,129,.12);
+      --green-glow:  rgba(16,185,129,.25);
+      --blue:        #3B82F6;
+      --blue-dim:    rgba(59,130,246,.12);
+      --blue-glow:   rgba(59,130,246,.22);
+      --amber:       #F59E0B;
+      --amber-dim:   rgba(245,158,11,.13);
+
+      --radius:      10px;
+      --ease:        0.18s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Tool header ─────────────────────────────────────────────── */
+    .tool-header {
+      text-align: center;
+      padding: 40px 20px 32px;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--green) 0%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    .tool-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+
+    /* ── Input grid ──────────────────────────────────────────────── */
+    .input-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--green);
+      border-bottom: 1px solid var(--green-dim);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 24px;
+    }
+    @media (max-width: 600px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .field label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .02em;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: var(--bg-deep);
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+      padding: 10px 13px;
+      transition: border-color var(--ease), box-shadow var(--ease);
+      outline: none;
+      width: 100%;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-glow);
+    }
+    input.invalid {
+      border-color: #F87171;
+      box-shadow: 0 0 0 3px rgba(248,113,113,.18);
+    }
+    .error-hint {
+      font-size: 0.72rem;
+      color: #F87171;
+      min-height: 1em;
+    }
+
+    /* CIDR slider row */
+    .cidr-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cidr-prefix-display {
+      font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--green);
+      min-width: 38px;
+      text-align: center;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(to right, var(--green) var(--pct, 73%), var(--border) var(--pct, 73%));
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg-card);
+      box-shadow: 0 0 0 2px var(--green-glow);
+      cursor: pointer;
+      transition: box-shadow var(--ease);
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 4px var(--green-glow);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg-card);
+      cursor: pointer;
+    }
+
+    select {
+      cursor: pointer;
+    }
+    select option {
+      background: var(--bg-deep);
+    }
+
+    /* ── Output section ──────────────────────────────────────────── */
+    .output-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    /* Hero metric */
+    .hero-metric {
+      text-align: center;
+      padding: 24px 0 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .hero-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .hero-value {
+      font-size: clamp(2.2rem, 8vw, 3.5rem);
+      font-weight: 900;
+      font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+      color: var(--green);
+      line-height: 1;
+      text-shadow: 0 0 30px var(--green-glow);
+      letter-spacing: -.02em;
+    }
+    .hero-sublabel {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Broadcast domain warning badge */
+    .broadcast-warning {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--amber-dim);
+      border: 1px solid rgba(245,158,11,.35);
+      border-radius: 6px;
+      padding: 8px 14px;
+      margin: 12px auto 0;
+      max-width: 420px;
+      font-size: 0.78rem;
+      color: var(--amber);
+      font-weight: 600;
+    }
+    .broadcast-warning.visible { display: flex; }
+    .broadcast-warning svg { flex-shrink: 0; }
+
+    /* Data grid */
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 600px) {
+      .data-grid { grid-template-columns: 1fr; }
+    }
+
+    .data-node {
+      background: var(--bg-deep);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    .data-node:hover {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+    .data-node.full-width { grid-column: 1 / -1; }
+    .node-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+    .node-value {
+      font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--blue);
+      word-break: break-all;
+    }
+    .node-value.green { color: var(--green); }
+    .node-value.amber { color: var(--amber); }
+
+    /* Placeholder state */
+    .data-node.placeholder .node-value {
+      color: var(--border-mid);
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--text-dim);
+      font-size: 0.92rem;
+    }
+    .empty-state span {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    /* ── Ad placements ───────────────────────────────────────────── */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    /* ── Glossary ────────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .glossary-item {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 15px;
+    }
+    .glossary-term {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ─────────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .edu-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px;
+    }
+    .edu-section ul li {
+      color: var(--text-muted);
+      line-height: 1.7;
+      padding-left: 1.3em;
+      position: relative;
+      margin-bottom: 4px;
+    }
+    .edu-section ul li::before {
+      content: '>';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    /* FAQ */
+    .faq-list { margin-top: 16px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--bg-deep);
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background var(--ease);
+      user-select: none;
+    }
+    .faq-q:hover { background: #172033; }
+    .faq-q .arrow {
+      color: var(--green);
+      font-size: 1.1rem;
+      transition: transform var(--ease);
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-q .arrow { transform: rotate(45deg); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.28s ease;
+    }
+    .faq-item.open .faq-a { max-height: 400px; }
+    .faq-a-inner {
+      padding: 14px 16px;
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Bit visualizer ──────────────────────────────────────────── */
+    .bit-vis {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 18px;
+      overflow-x: auto;
+    }
+    .bit-vis-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .bit-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      min-width: 560px;
+    }
+    .bit-row-label {
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      width: 86px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 6px;
+    }
+    .bits {
+      display: flex;
+      gap: 2px;
+      flex-wrap: nowrap;
+    }
+    .bit {
+      width: 14px;
+      height: 20px;
+      border-radius: 3px;
+      font-size: 0.6rem;
+      font-family: monospace;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .bit.one  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+    .bit.zero { background: #1a2535; color: var(--text-dim); border: 1px solid var(--border); }
+    .bit-sep { width: 4px; }
+
+    /* ── Responsive tweaks ───────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .card, .output-card { padding: 18px; }
+      .hero-value { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="tool-header">
+    <h1>CIDR Subnet Calculator</h1>
+    <p>Break down any IPv4 address block into its network address, broadcast address, usable host range, and total host count. Instant, client-side, no signup.</p>
+  </header>
+
+  <main class="container" id="main">
+
+    <!-- ════════════════════════════════════════════════════════════
+         INPUT CARD
+    ════════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="input-section-label">IPv4 Address Configuration</div>
+
+      <div class="input-grid">
+
+        <!-- IP Address -->
+        <div class="field">
+          <label for="ip-input">IP Address</label>
+          <input
+            type="text"
+            id="ip-input"
+            value="192.168.1.0"
+            placeholder="192.168.1.0"
+            maxlength="15"
+            autocomplete="off"
+            spellcheck="false"
+            oninput="onIpInput()"
+          />
+          <span class="error-hint" id="ip-error"></span>
+        </div>
+
+        <!-- CIDR Prefix -->
+        <div class="field">
+          <label for="cidr-slider">CIDR Prefix Notation</label>
+          <div class="cidr-row">
+            <span class="cidr-prefix-display" id="cidr-display">/24</span>
+            <input
+              type="range"
+              id="cidr-slider"
+              min="1" max="32" value="24"
+              oninput="onCidrSlide()"
+            />
+          </div>
+        </div>
+
+        <!-- Subnet Mask (two-way bound) -->
+        <div class="field">
+          <label for="mask-select">Subnet Mask</label>
+          <select id="mask-select" onchange="onMaskChange()"></select>
+        </div>
+
+        <!-- CIDR number input (alternative precise entry) -->
+        <div class="field">
+          <label for="cidr-num">Prefix Length (number)</label>
+          <input
+            type="number"
+            id="cidr-num"
+            min="1" max="32" value="24"
+            oninput="onCidrNumInput()"
+          />
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         OUTPUT CARD
+    ════════════════════════════════════════════════════════════ -->
+    <div class="output-card" id="output-card">
+
+      <!-- Hero: Total Usable Hosts -->
+      <div class="hero-metric">
+        <div class="hero-label">Total Usable Hosts</div>
+        <div class="hero-value" id="out-hosts">254</div>
+        <div class="hero-sublabel" id="out-total-label">256 total IP addresses in block</div>
+        <div class="broadcast-warning" id="broadcast-warning">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Large Broadcast Domain - consider subnetting to reduce broadcast storm risk
+        </div>
+      </div>
+
+      <!-- Data nodes -->
+      <div class="data-grid" id="data-grid">
+        <div class="data-node">
+          <div class="node-label">Network Address</div>
+          <div class="node-value green" id="out-network">192.168.1.0</div>
+        </div>
+        <div class="data-node">
+          <div class="node-label">Broadcast Address</div>
+          <div class="node-value amber" id="out-broadcast">192.168.1.255</div>
+        </div>
+        <div class="data-node">
+          <div class="node-label">Subnet Mask</div>
+          <div class="node-value" id="out-mask">255.255.255.0</div>
+        </div>
+        <div class="data-node">
+          <div class="node-label">Wildcard Mask</div>
+          <div class="node-value" id="out-wildcard">0.0.0.255</div>
+        </div>
+        <div class="data-node full-width">
+          <div class="node-label">Usable IP Range</div>
+          <div class="node-value green" id="out-range">192.168.1.1 - 192.168.1.254</div>
+        </div>
+      </div>
+
+      <!-- Bit visualizer -->
+      <div class="bit-vis" id="bit-vis">
+        <div class="bit-vis-label">Binary Breakdown</div>
+        <div class="bit-row">
+          <div class="bit-row-label">IP Address</div>
+          <div class="bits" id="bits-ip"></div>
+        </div>
+        <div class="bit-row">
+          <div class="bit-row-label">Subnet Mask</div>
+          <div class="bits" id="bits-mask"></div>
+        </div>
+        <div class="bit-row">
+          <div class="bit-row-label">Network Addr</div>
+          <div class="bits" id="bits-net"></div>
+        </div>
+      </div>
+
+    </div><!-- /.output-card -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         GLOSSARY
+    ════════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">CIDR</div>
+          <div class="glossary-def">Classless Inter-Domain Routing. A flexible method for allocating IP addresses and routing using a prefix length (e.g. /24) instead of fixed class boundaries.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Subnet Mask</div>
+          <div class="glossary-def">A 32-bit number (e.g. 255.255.255.0) that divides an IP address into its network and host portions by masking with 1s for network bits and 0s for host bits.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Network Address</div>
+          <div class="glossary-def">The lowest IP in a subnet, used to identify the network itself. Calculated by a bitwise AND of the IP and the subnet mask. Cannot be assigned to a host.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Broadcast Address</div>
+          <div class="glossary-def">The highest IP in a subnet. Packets sent to this address reach all hosts simultaneously within the subnet. Cannot be assigned to a host.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Wildcard Mask</div>
+          <div class="glossary-def">The bitwise inverse of the subnet mask. Used in Cisco ACLs, OSPF, and firewall rules. Calculated by subtracting each octet of the subnet mask from 255.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">IPv4 vs IPv6</div>
+          <div class="glossary-def">IPv4 uses 32-bit dotted-decimal addresses (about 4.3 billion total). IPv6 uses 128-bit hexadecimal addresses, virtually unlimited. This calculator covers IPv4 only.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Octet</div>
+          <div class="glossary-def">One of the four 8-bit groups in an IPv4 address, separated by dots. Each octet ranges from 0 to 255, representing 8 binary bits.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Broadcast Domain</div>
+          <div class="glossary-def">The set of all hosts that will receive a broadcast packet. Large domains (small CIDR prefix, e.g. /8) can create broadcast storms if traffic spikes.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         EDUCATIONAL SECTION
+    ════════════════════════════════════════════════════════════ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to CIDR Subnetting</h2>
+
+      <p class="section-intro">
+        Whether you are designing a VPC in AWS, segmenting an on-prem network, or writing firewall ACLs, understanding CIDR notation and subnetting math is a core skill for any network engineer, sysadmin, or DevOps practitioner. This guide explains how the numbers work so you can subnet confidently without memorizing tables.
+      </p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>
+        Enter any IPv4 address in the top field (e.g. 10.0.0.0) and adjust the CIDR prefix slider or type a prefix length (1-32). The subnet mask dropdown and prefix fields are two-way bound: changing one updates the others instantly. Results appear in real time with no button press needed.
+      </p>
+      <p>
+        The binary breakdown panel below the results shows exactly which bits belong to the network portion (green ones) and which belong to the host portion, making the bitwise AND operation that computes the Network Address visually obvious.
+      </p>
+
+      <h3>How Subnet Math Works</h3>
+      <p>
+        Every IPv4 address is a 32-bit integer. The CIDR prefix (e.g. /24) tells you how many leading bits identify the network. A /24 produces a subnet mask of 24 ones followed by 8 zeros, which in decimal is 255.255.255.0.
+      </p>
+      <ul>
+        <li>Network Address: IP AND Subnet Mask (zero out all host bits)</li>
+        <li>Broadcast Address: Network Address OR NOT(Subnet Mask) (set all host bits to 1)</li>
+        <li>Total IPs: 2 raised to the power of (32 minus the prefix length)</li>
+        <li>Usable Hosts: Total IPs minus 2 (remove network and broadcast addresses)</li>
+        <li>Wildcard Mask: 255.255.255.255 minus the subnet mask, octet by octet</li>
+      </ul>
+
+      <h3>Choosing the Right Prefix Size</h3>
+      <p>
+        For cloud VPCs, a /16 gives 65,534 usable hosts - large enough to subdivide further into application tiers. A /24 (254 hosts) is a common workload subnet. A /28 (14 hosts) suits small services like NAT gateways or load balancers. Going smaller than /28 is rare but valid.
+      </p>
+      <p>
+        For point-to-point router links, use /30 (2 usable hosts) or /31 per RFC 3021 (2 IPs, both usable). Use /32 as a host route for loopback addresses or precise BGP advertisements.
+      </p>
+
+      <h3>RFC 1918 Private Ranges to Know</h3>
+      <ul>
+        <li>10.0.0.0/8 - Class A private range, 16,777,214 usable hosts. Common in large enterprise and cloud VPCs.</li>
+        <li>172.16.0.0/12 - Class B private range, 1,048,574 usable hosts. Often used in data center fabrics.</li>
+        <li>192.168.0.0/16 - Class C private range, 65,534 usable hosts. Standard in home and small office networks.</li>
+      </ul>
+
+      <h3>Broadcast Storm Risk at Large Prefix Sizes</h3>
+      <p>
+        When a single subnet contains tens of thousands of hosts (e.g. /8 or /12), every broadcast packet - ARP requests, DHCP, routing updates - is delivered to every device simultaneously. This can saturate links and CPU cycles in a broadcast storm. The calculator flags subnets above a threshold with a warning badge to prompt you to consider further segmentation using VLANs or smaller subnets.
+      </p>
+
+      <!-- FAQ -->
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Why do standard subnets lose two IP addresses?
+            <span class="arrow">+</span>
+          </div>
+          <div class="faq-a">
+            <div class="faq-a-inner">
+              Every subnet reserves its lowest address as the Network Address (used to identify the subnet itself) and its highest address as the Broadcast Address (used to reach all hosts simultaneously). Neither can be assigned to a device, so usable hosts equal the total IP count minus two.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            What are /31 and /32 subnets used for?
+            <span class="arrow">+</span>
+          </div>
+          <div class="faq-a">
+            <div class="faq-a-inner">
+              A /31 subnet contains exactly two IP addresses and is used for point-to-point links between two routers (per RFC 3021), where both addresses are usable - no network or broadcast reservation applies. A /32 is a host route representing a single specific IP address, commonly used for loopback interfaces, policy routing, or advertising a precise host in BGP.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            How do I calculate a wildcard mask from a subnet mask?
+            <span class="arrow">+</span>
+          </div>
+          <div class="faq-a">
+            <div class="faq-a-inner">
+              Subtract each octet of the subnet mask from 255. For example, 255.255.255.0 becomes 0.0.0.255. The wildcard mask is the bitwise inverse of the subnet mask and is used in Cisco ACLs and OSPF configurations to define which bits must match.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            What are the private IP address ranges (RFC 1918)?
+            <span class="arrow">+</span>
+          </div>
+          <div class="faq-a">
+            <div class="faq-a-inner">
+              RFC 1918 defines three private (non-routable) IPv4 ranges: 10.0.0.0/8 (Class A, over 16 million addresses), 172.16.0.0/12 (Class B, about 1 million addresses), and 192.168.0.0/16 (Class C, 65,536 addresses). These are used for internal networks and are never routed on the public internet.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            What is the difference between IPv4 and IPv6?
+            <span class="arrow">+</span>
+          </div>
+          <div class="faq-a">
+            <div class="faq-a-inner">
+              IPv4 uses 32-bit addresses written in dotted-decimal notation (e.g. 192.168.1.0), supporting about 4.3 billion unique addresses. IPv6 uses 128-bit addresses in hexadecimal colon notation (e.g. 2001:db8::1), supporting approximately 340 undecillion addresses. This calculator handles IPv4 only.
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.faq-list -->
+    </div><!-- /.edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════
+       CIDR SUBNET CALCULATOR - CLIENT-SIDE ENGINE
+       All arithmetic is pure bitwise JavaScript. No network calls.
+    ═══════════════════════════════════════════════════════════════ */
+
+    // ── CIDR prefix -> subnet mask lookup table ──────────────────
+    const MASKS = [
+      '',
+      '128.0.0.0','192.0.0.0','224.0.0.0','240.0.0.0',
+      '248.0.0.0','252.0.0.0','254.0.0.0','255.0.0.0',
+      '255.128.0.0','255.192.0.0','255.224.0.0','255.240.0.0',
+      '255.248.0.0','255.252.0.0','255.254.0.0','255.255.0.0',
+      '255.255.128.0','255.255.192.0','255.255.224.0','255.255.240.0',
+      '255.255.248.0','255.255.252.0','255.255.254.0','255.255.255.0',
+      '255.255.255.128','255.255.255.192','255.255.255.224','255.255.255.240',
+      '255.255.255.248','255.255.255.252','255.255.255.254','255.255.255.255'
+    ];
+
+    // Build mask -> prefix reverse map
+    const MASK_TO_PREFIX = {};
+    MASKS.forEach((m, i) => { if (i > 0) MASK_TO_PREFIX[m] = i; });
+
+    // ── Populate mask dropdown ───────────────────────────────────
+    const maskSelect = document.getElementById('mask-select');
+    for (let p = 1; p <= 32; p++) {
+      const opt = document.createElement('option');
+      opt.value = String(p);
+      opt.textContent = MASKS[p] + '  (/' + p + ')';
+      maskSelect.appendChild(opt);
+    }
+    maskSelect.value = '24';
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function parseIp(str) {
+      const parts = str.trim().split('.');
+      if (parts.length !== 4) return null;
+      const nums = parts.map(Number);
+      if (nums.some(n => isNaN(n) || n < 0 || n > 255 || String(n) !== parts[nums.indexOf(n)])) return null;
+      return (nums[0] << 24 | nums[1] << 16 | nums[2] << 8 | nums[3]) >>> 0;
+    }
+
+    function toOctetStr(n32) {
+      return [
+        (n32 >>> 24) & 0xff,
+        (n32 >>> 16) & 0xff,
+        (n32 >>> 8)  & 0xff,
+         n32         & 0xff
+      ].join('.');
+    }
+
+    function addToIp(n32, delta) {
+      return (n32 + delta) >>> 0;
+    }
+
+    function formatHostCount(n) {
+      if (n >= 1_000_000) return n.toLocaleString();
+      return n.toLocaleString();
+    }
+
+    // ── Bit visualizer ───────────────────────────────────────────
+    function renderBits(containerId, n32, highlightCount) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = '';
+      for (let i = 31; i >= 0; i--) {
+        if (i === 23 || i === 15 || i === 7) {
+          const sep = document.createElement('div');
+          sep.className = 'bit-sep';
+          el.appendChild(sep);
+        }
+        const bit = (n32 >>> i) & 1;
+        const div = document.createElement('div');
+        div.className = 'bit ' + (bit ? 'one' : 'zero');
+        div.textContent = bit;
+        el.appendChild(div);
+      }
+    }
+
+    // ── Main calculation ─────────────────────────────────────────
+    function calculate() {
+      const ipStr  = document.getElementById('ip-input').value;
+      const cidr   = parseInt(document.getElementById('cidr-slider').value, 10);
+      const ipErr  = document.getElementById('ip-error');
+      const ipInput = document.getElementById('ip-input');
+
+      const ipInt = parseIp(ipStr);
+
+      if (ipInt === null) {
+        ipInput.classList.add('invalid');
+        ipErr.textContent = 'Enter a valid IPv4 address (0-255 per octet)';
+        clearOutputs();
+        return;
+      }
+
+      ipInput.classList.remove('invalid');
+      ipErr.textContent = '';
+
+      // Subnet mask as 32-bit int
+      const maskInt = cidr === 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) >>> 0;
+
+      // Network address
+      const netInt  = (ipInt & maskInt) >>> 0;
+
+      // Broadcast address
+      const wildInt = (~maskInt) >>> 0;
+      const bcInt   = (netInt | wildInt) >>> 0;
+
+      // Total and usable hosts
+      const hostBits = 32 - cidr;
+      const totalIps = hostBits >= 30 ? Math.pow(2, hostBits) : Math.pow(2, hostBits);
+
+      let usableHosts, firstHost, lastHost, rangeStr;
+
+      if (cidr === 32) {
+        usableHosts = 1;
+        firstHost   = netInt;
+        lastHost    = netInt;
+        rangeStr    = toOctetStr(netInt) + ' (host route)';
+      } else if (cidr === 31) {
+        // RFC 3021 point-to-point
+        usableHosts = 2;
+        firstHost   = netInt;
+        lastHost    = bcInt;
+        rangeStr    = toOctetStr(firstHost) + ' - ' + toOctetStr(lastHost) + ' (P2P)';
+      } else {
+        usableHosts = Math.max(0, totalIps - 2);
+        firstHost   = addToIp(netInt, 1);
+        lastHost    = addToIp(bcInt, -1);
+        rangeStr    = toOctetStr(firstHost) + ' - ' + toOctetStr(lastHost);
+      }
+
+      // Wildcard mask
+      const wildcardStr = toOctetStr(wildInt);
+
+      // Update hero
+      document.getElementById('out-hosts').textContent = formatHostCount(usableHosts);
+      document.getElementById('out-total-label').textContent =
+        formatHostCount(totalIps) + ' total IP address' + (totalIps === 1 ? '' : 'es') + ' in block';
+
+      // Broadcast domain warning: flag if usable hosts > 65534 (more than a /16)
+      const warning = document.getElementById('broadcast-warning');
+      if (usableHosts > 65534) {
+        warning.classList.add('visible');
+      } else {
+        warning.classList.remove('visible');
+      }
+
+      // Update data nodes
+      document.getElementById('out-network').textContent   = toOctetStr(netInt);
+      document.getElementById('out-broadcast').textContent = toOctetStr(bcInt);
+      document.getElementById('out-mask').textContent      = MASKS[cidr];
+      document.getElementById('out-wildcard').textContent  = wildcardStr;
+      document.getElementById('out-range').textContent     = rangeStr;
+
+      // Bit visualizer
+      renderBits('bits-ip',   ipInt,  cidr);
+      renderBits('bits-mask', maskInt, cidr);
+      renderBits('bits-net',  netInt,  cidr);
+    }
+
+    function clearOutputs() {
+      document.getElementById('out-hosts').textContent       = '--';
+      document.getElementById('out-total-label').textContent = '';
+      document.getElementById('out-network').textContent     = '--';
+      document.getElementById('out-broadcast').textContent   = '--';
+      document.getElementById('out-mask').textContent        = '--';
+      document.getElementById('out-wildcard').textContent    = '--';
+      document.getElementById('out-range').textContent       = '--';
+      document.getElementById('broadcast-warning').classList.remove('visible');
+      document.getElementById('bits-ip').innerHTML   = '';
+      document.getElementById('bits-mask').innerHTML = '';
+      document.getElementById('bits-net').innerHTML  = '';
+    }
+
+    // ── Slider fill update ───────────────────────────────────────
+    function updateSliderFill(val) {
+      const slider = document.getElementById('cidr-slider');
+      const pct = ((val - 1) / 31) * 100;
+      slider.style.setProperty('--pct', pct + '%');
+    }
+
+    // ── Event handlers ───────────────────────────────────────────
+    function onIpInput() {
+      calculate();
+    }
+
+    function onCidrSlide() {
+      const val = parseInt(document.getElementById('cidr-slider').value, 10);
+      document.getElementById('cidr-display').textContent = '/' + val;
+      document.getElementById('cidr-num').value  = val;
+      document.getElementById('mask-select').value = String(val);
+      updateSliderFill(val);
+      calculate();
+    }
+
+    function onCidrNumInput() {
+      let val = parseInt(document.getElementById('cidr-num').value, 10);
+      if (isNaN(val)) return;
+      val = Math.max(1, Math.min(32, val));
+      document.getElementById('cidr-slider').value = val;
+      document.getElementById('cidr-display').textContent = '/' + val;
+      document.getElementById('mask-select').value = String(val);
+      updateSliderFill(val);
+      calculate();
+    }
+
+    function onMaskChange() {
+      const val = parseInt(document.getElementById('mask-select').value, 10);
+      document.getElementById('cidr-slider').value = val;
+      document.getElementById('cidr-display').textContent = '/' + val;
+      document.getElementById('cidr-num').value = val;
+      updateSliderFill(val);
+      calculate();
+    }
+
+    // ── FAQ accordion ────────────────────────────────────────────
+    function toggleFaq(el) {
+      const item = el.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // ── Init ─────────────────────────────────────────────────────
+    updateSliderFill(24);
+    calculate();
+  </script>
+
+</body>
+</html>
