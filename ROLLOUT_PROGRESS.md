@@ -246,6 +246,9 @@ Legend: [x] done, [ ] not started
 - [x] concrete-masonry-calculator
 
 ## Batch 39 (new tools, built directly to template) - DONE
+- [x] social-media-image-resizer
+
+## Batch 39 (new tools, built directly to template) - DONE
 - [x] auto-depreciation-estimator
 
 ## Batch 40 (new tools, built directly to template) - DONE
@@ -256,6 +259,21 @@ Legend: [x] done, [ ] not started
 
 ## Batch 42 (new tools, built directly to template) - DONE
 - [x] tiktok-engagement-rate-calculator
+
+## Batch 43 (new tools, built directly to template) - DONE
+- [x] twitch-payout-estimator
+
+## Batch 44 (new tools, built directly to template) - DONE
+- [x] cron-job-generator
+
+## Batch 45 (new tools, built directly to template) - DONE
+- [x] jwt-decoder
+
+## Batch 47 (new tools, built directly to template) - DONE
+- [x] standard-deviation-calculator
+
+## Batch 48 (new tools, built directly to template) - DONE
+- [x] sql-formatter
 
 ## Remaining tools (alphabetical)
 None. Rollout complete: all tools have been updated to the site-wide template.
@@ -271,3 +289,15 @@ None. Rollout complete: all tools have been updated to the site-wide template.
 8. Insert Ad Placement 2 (mobile sticky anchor 320x50)
 9. Remove/neutralize old footer if it duplicates site-chrome footer
 10. Final grep verification (dashes = 0, classes present)
+
+## Batch 46 (new tools, built directly to template) - DONE
+- [x] matrix-calculator
+
+## Batch 49 (new tools, built directly to template) - DONE
+- [x] brick-block-wall-calculator
+
+## Batch 49 (new tools, built directly to template) - DONE
+- [x] projectile-motion-simulator
+
+## Batch 50 (new tools, built directly to template) - DONE
+- [x] concrete-slab-footing-calculator

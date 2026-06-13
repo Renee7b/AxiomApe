@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Media Image Resizer: Crop Photos to Exact Dimensions for Instagram, X, Facebook, and LinkedIn | AxiomApe</title>
+  <meta name="description" content="Free social media image resizer. Instantly crop any photo to the exact pixel dimensions required by Instagram, X (Twitter), Facebook, and LinkedIn. 100% client-side - your image never leaves your browser." />
+  <meta name="keywords" content="social media image resizer, instagram image size, twitter image size, facebook image size, linkedin image size, crop image for instagram, resize photo for social media, profile picture resizer, social media photo dimensions, image crop tool" />
+  <link rel="canonical" href="https://axiomape.com/social-media-image-resizer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Social Media Image Resizer",
+        "description": "Free social media image resizer. Instantly crop any photo to the exact pixel dimensions required by Instagram, X (Twitter), Facebook, and LinkedIn. 100% client-side - your image never leaves your browser.",
+        "url": "https://axiomape.com/social-media-image-resizer/",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why do my photos look blurry when I upload them to Instagram or Facebook?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Blurry photos usually happen when Instagram or Facebook recompresses an image that is the wrong size. When a platform receives an image that is larger or a different aspect ratio than expected, it has to scale and re-encode it, which introduces compression artifacts. The fix is to export your image at the exact pixel dimensions the platform expects (for example, 1080x1080 for an Instagram square post) so no scaling occurs during upload."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the best aspect ratio for an X (Twitter) timeline post?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The best aspect ratio for an X (Twitter) in-stream photo is 16:9, which corresponds to 1200x675 pixels. Images at this ratio display edge-to-edge in the timeline without cropping on any device. Twitter also supports square (1:1) and portrait (2:3) images, but the 16:9 landscape format gives you the most control over what the viewer sees without any automatic cropping."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is it important to resize images to exact dimensions before uploading?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every social platform has a specific aspect ratio it expects for each image type. If your uploaded image has a different ratio, the platform crops it automatically - often cutting off the most important part of your photo. Resizing to the exact dimensions beforehand gives you full control over what is and is not visible, ensures maximum image quality, and prevents unexpected cropping surprises after you hit post."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my photo uploaded to a server when I use this tool?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This tool uses the HTML5 Canvas API and the JavaScript FileReader API to load and process your image entirely inside your own browser. Your photo is never sent to any server, never stored anywhere online, and never seen by anyone else. The entire crop and download process happens locally on your device, which is why it also works offline once the page has loaded."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ================================================================
+       RESET AND BASE
+    ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --violet:         #8B5CF6;
+      --violet-dark:    #7C3AED;
+      --violet-dim:     rgba(139,92,246,.15);
+      --violet-border:  rgba(139,92,246,.4);
+      --blue:           #3B82F6;
+      --blue-dim:       rgba(59,130,246,.15);
+      --page-bg:        #0C0C14;
+      --card-bg:        #14141E;
+      --inner-bg:       #1C1C2C;
+      --panel-bg:       #20202F;
+      --border:         #2A2A3E;
+      --border-light:   #333350;
+      --text:           #E2E8F0;
+      --text-muted:     #94A3B8;
+      --text-dim:       #64748B;
+      --white:          #FFFFFF;
+      --success:        #34D399;
+      --radius-sm:      8px;
+      --radius-md:      12px;
+      --radius-lg:      18px;
+      --radius-xl:      24px;
+      --shadow-sm:      0 1px 4px rgba(0,0,0,.3);
+      --shadow-md:      0 4px 20px rgba(0,0,0,.4);
+      --shadow-lg:      0 12px 48px rgba(0,0,0,.5);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--page-bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--violet); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ================================================================
+       LAYOUT
+    ================================================================ */
+    .page-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 20px;
+      width: 100%;
+    }
+
+    /* ================================================================
+       PAGE HEADER
+    ================================================================ */
+    .page-header {
+      background: linear-gradient(135deg, #1a0b35 0%, #100d2e 40%, #0c0c14 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 24px 32px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.35rem, 3vw, 2.1rem);
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1.2;
+      max-width: 820px;
+      margin: 0 auto 12px;
+      letter-spacing: -.02em;
+    }
+
+    .page-header h1 span {
+      background: linear-gradient(90deg, var(--violet), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 16px;
+    }
+
+    .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: var(--violet-dim);
+      color: var(--violet);
+      border: 1px solid var(--violet-border);
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 4px 11px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    /* ================================================================
+       MAIN CONTENT AREA
+    ================================================================ */
+    main {
+      flex: 1;
+      padding: 36px 20px 56px;
+    }
+
+    /* ================================================================
+       APP CARD
+    ================================================================ */
+    .app-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    /* ================================================================
+       UPLOAD ZONE
+    ================================================================ */
+    .upload-section {
+      padding: 32px;
+    }
+
+    #drop-zone {
+      border: 2px dashed var(--border-light);
+      border-radius: var(--radius-lg);
+      background: var(--inner-bg);
+      padding: 52px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s, transform .12s;
+    }
+
+    #drop-zone.drag-over {
+      border-color: var(--violet);
+      background: var(--violet-dim);
+      transform: scale(1.015);
+    }
+
+    #drop-zone.hidden { display: none; }
+
+    .drop-icon-wrap {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 16px;
+      background: var(--violet-dim);
+      border: 1px solid var(--violet-border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-icon-wrap svg {
+      width: 32px;
+      height: 32px;
+      stroke: var(--violet);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .drop-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .drop-sub {
+      font-size: .88rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--violet), var(--violet-dark));
+      color: #fff;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 28px;
+      cursor: pointer;
+      transition: opacity .18s, transform .12s, box-shadow .18s;
+      box-shadow: 0 4px 16px rgba(139,92,246,.35);
+    }
+
+    .btn-primary:hover {
+      opacity: .9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(139,92,246,.45);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--inner-bg);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 500;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--panel-bg);
+      color: var(--text);
+      border-color: var(--violet-border);
+    }
+
+    .drop-formats {
+      margin-top: 14px;
+      font-size: .75rem;
+      color: var(--text-dim);
+    }
+
+    #file-input { display: none; }
+
+    /* ================================================================
+       WORKSPACE (visible after upload)
+    ================================================================ */
+    #workspace { display: none; }
+    #workspace.visible { display: block; }
+
+    /* File info bar */
+    .file-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 32px;
+      background: var(--inner-bg);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: .83rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .file-bar strong { color: var(--text); font-weight: 600; }
+    .file-bar .spacer { flex: 1; }
+
+    /* ================================================================
+       PLATFORM TABS
+    ================================================================ */
+    .platform-section {
+      padding: 24px 32px 0;
+    }
+
+    .section-label {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .platform-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .platform-tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+      background: var(--inner-bg);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+    }
+
+    .platform-tab:hover {
+      border-color: var(--violet-border);
+      color: var(--text);
+      background: var(--panel-bg);
+    }
+
+    .platform-tab.active {
+      background: var(--violet-dim);
+      border-color: var(--violet);
+      color: var(--violet);
+      box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    }
+
+    .platform-tab .tab-icon { font-size: 1.1rem; }
+
+    /* ================================================================
+       PRESET GRID
+    ================================================================ */
+    .preset-section {
+      padding: 20px 32px 0;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .preset-card {
+      background: var(--inner-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 12px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, box-shadow .15s;
+      text-align: left;
+    }
+
+    .preset-card:hover {
+      background: var(--panel-bg);
+      border-color: var(--violet-border);
+    }
+
+    .preset-card.active {
+      background: var(--violet-dim);
+      border-color: var(--violet);
+      box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    }
+
+    .preset-name {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .preset-dims {
+      font-size: .75rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .preset-ar {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--violet);
+      background: var(--violet-dim);
+      padding: 2px 7px;
+      border-radius: 10px;
+      letter-spacing: .03em;
+    }
+
+    /* ================================================================
+       CROP AREA
+    ================================================================ */
+    .crop-section {
+      padding: 24px 32px;
+    }
+
+    .crop-layout {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 720px) {
+      .crop-layout { grid-template-columns: 1fr; }
+      .platform-section, .preset-section, .crop-section, .upload-section, .file-bar { padding-left: 16px; padding-right: 16px; }
+    }
+
+    .crop-frame-wrap {
+      position: relative;
+    }
+
+    .crop-viewport-label {
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    /* The visible crop window */
+    .crop-viewport {
+      position: relative;
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      border: 2px solid var(--violet);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: grab;
+      background: #000;
+      box-shadow: 0 0 0 1px rgba(139,92,246,.3), 0 8px 32px rgba(0,0,0,.6);
+      user-select: none;
+    }
+
+    .crop-viewport:active { cursor: grabbing; }
+
+    /* Aspect ratio set via padding-top by JS */
+    .crop-viewport-inner {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    #crop-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      /* width/height/transform set by JS */
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Corner handles (decorative) */
+    .crop-handle {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-color: var(--violet);
+      border-style: solid;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .crop-handle.tl { top: -1px; left: -1px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .crop-handle.tr { top: -1px; right: -1px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .crop-handle.bl { bottom: -1px; left: -1px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .crop-handle.br { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+    .crop-crosshair {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .crop-crosshair::before,
+    .crop-crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,.12);
+    }
+
+    .crop-crosshair::before {
+      width: 100%;
+      height: 1px;
+      top: 33.333%;
+      left: 0;
+    }
+
+    /* Rule of thirds second line */
+    .crop-h2 {
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      top: 66.666%;
+      left: 0;
+      background: rgba(255,255,255,.12);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .crop-v1 {
+      position: absolute;
+      width: 1px;
+      height: 100%;
+      left: 33.333%;
+      top: 0;
+      background: rgba(255,255,255,.12);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .crop-v2 {
+      position: absolute;
+      width: 1px;
+      height: 100%;
+      left: 66.666%;
+      top: 0;
+      background: rgba(255,255,255,.12);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    /* ================================================================
+       CONTROLS PANEL
+    ================================================================ */
+    .controls-panel {
+      background: var(--inner-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .zoom-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .zoom-icon {
+      font-size: .85rem;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-light);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--violet);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(139,92,246,.5);
+      border: 2px solid var(--card-bg);
+      transition: transform .12s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+    .zoom-val {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--violet);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .format-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .format-btn {
+      flex: 1;
+      padding: 8px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+      background: var(--panel-bg);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+
+    .format-btn.active {
+      background: var(--violet-dim);
+      border-color: var(--violet);
+      color: var(--violet);
+    }
+
+    .output-info {
+      font-size: .8rem;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 10px;
+      background: var(--panel-bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      line-height: 1.5;
+    }
+
+    .output-info strong { color: var(--text); display: block; font-size: .9rem; margin-bottom: 2px; }
+
+    .btn-download {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--violet), var(--blue));
+      color: #fff;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .18s, transform .12s, box-shadow .18s;
+      box-shadow: 0 4px 20px rgba(139,92,246,.4);
+    }
+
+    .btn-download:hover {
+      opacity: .9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(139,92,246,.5);
+    }
+
+    .btn-download:active { transform: translateY(0); }
+
+    .btn-reset {
+      width: 100%;
+      padding: 9px;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+
+    .btn-reset:hover { color: var(--text-muted); border-color: var(--border-light); }
+
+    /* ================================================================
+       AD PLACEMENTS
+    ================================================================ */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 16px 20px;
+      max-width: 760px;
+      margin: 32px auto 0;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: .75rem;
+      color: var(--text-dim);
+      letter-spacing: .04em;
+    }
+
+    /* ================================================================
+       CARDS (glossary, educational)
+    ================================================================ */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      max-width: 1040px;
+      margin: 32px auto 0;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .glossary-item {
+      background: var(--inner-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .glossary-term {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--violet);
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: .83rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Educational */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .section-intro {
+      font-size: .95rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      margin-top: 24px;
+    }
+
+    .edu-section p {
+      font-size: .9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .steps-list {
+      counter-reset: step-counter;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .steps-list li {
+      counter-increment: step-counter;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: .9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .steps-list li::before {
+      content: counter(step-counter);
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      background: var(--violet-dim);
+      border: 1px solid var(--violet-border);
+      border-radius: 50%;
+      color: var(--violet);
+      font-size: .78rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: var(--inner-bg);
+      border: none;
+      padding: 16px 20px;
+      font-family: inherit;
+      font-size: .92rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background .15s;
+    }
+
+    .faq-q:hover { background: var(--panel-bg); }
+
+    .faq-q .chevron {
+      width: 18px;
+      height: 18px;
+      stroke: var(--violet);
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+      transition: transform .2s;
+    }
+
+    .faq-item.open .faq-q { background: var(--panel-bg); }
+    .faq-item.open .chevron { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 20px 16px;
+      background: var(--panel-bg);
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-a.open { display: block; }
+
+    /* ================================================================
+       PLATFORM DIMENSION REFERENCE TABLE
+    ================================================================ */
+    .dim-table-wrap {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+
+    .dim-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+
+    .dim-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: var(--inner-bg);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: .78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dim-table td {
+      padding: 9px 12px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dim-table tr:last-child td { border-bottom: none; }
+
+    .dim-table tr:hover td { background: var(--inner-bg); }
+
+    .dim-table .plat-name { color: var(--text); font-weight: 600; }
+
+    .dim-table .dim-val {
+      color: var(--violet);
+      font-weight: 600;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: .8rem;
+    }
+
+    /* ================================================================
+       MOBILE TWEAKS
+    ================================================================ */
+    @media (max-width: 600px) {
+      .page-header { padding: 28px 16px 22px; }
+      .card { padding: 20px 16px; }
+      .platform-tabs { gap: 6px; }
+      .platform-tab { padding: 8px 13px; font-size: .82rem; }
+      .preset-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Social Media Image Resizer: <span>Crop Photos to Exact Dimensions</span> for Instagram, X, Facebook, and LinkedIn</h1>
+    <p>Upload any photo and crop it to the exact pixel size each platform expects - all inside your browser. Nothing is ever sent to a server.</p>
+    <div class="badge-row">
+      <span class="badge">100% Free</span>
+      <span class="badge">Private - No Upload</span>
+      <span class="badge">Instagram</span>
+      <span class="badge">X / Twitter</span>
+      <span class="badge">Facebook</span>
+      <span class="badge">LinkedIn</span>
+    </div>
+  </header>
+
+  <main id="main-content">
+  <div class="container">
+
+    <!-- ============================================================
+         TOOL CARD
+    ============================================================ -->
+    <div class="app-card" style="margin-top:0; max-width:1040px; margin-left:auto; margin-right:auto;">
+
+      <!-- UPLOAD ZONE -->
+      <div class="upload-section">
+        <div id="drop-zone" role="button" aria-label="Upload image by clicking or dragging">
+          <div class="drop-icon-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <div class="drop-title">Drag and drop your image here</div>
+          <div class="drop-sub">Or click to browse your files</div>
+          <button class="btn-primary" id="browse-btn" type="button">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Choose Image
+          </button>
+          <div class="drop-formats">Supports JPG, PNG, and WebP</div>
+        </div>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" />
+      </div>
+
+      <!-- WORKSPACE (hidden until image loaded) -->
+      <div id="workspace">
+
+        <!-- File info bar -->
+        <div class="file-bar">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span id="file-name-display"><strong>No file loaded</strong></span>
+          <span id="file-dims-display" style="color:var(--text-dim)"></span>
+          <span class="spacer"></span>
+          <button class="btn-secondary" id="change-img-btn" type="button">Change Image</button>
+        </div>
+
+        <!-- STEP 1: Platform tabs -->
+        <div class="platform-section">
+          <div class="section-label">Step 1 - Choose Platform</div>
+          <div class="platform-tabs" role="tablist">
+            <button class="platform-tab active" data-platform="instagram" role="tab" aria-selected="true" type="button">
+              <span class="tab-icon">&#128247;</span> Instagram
+            </button>
+            <button class="platform-tab" data-platform="twitter" role="tab" aria-selected="false" type="button">
+              <span class="tab-icon">&#128248;</span> X / Twitter
+            </button>
+            <button class="platform-tab" data-platform="facebook" role="tab" aria-selected="false" type="button">
+              <span class="tab-icon">&#128515;</span> Facebook
+            </button>
+            <button class="platform-tab" data-platform="linkedin" role="tab" aria-selected="false" type="button">
+              <span class="tab-icon">&#128188;</span> LinkedIn
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 2: Image type presets -->
+        <div class="preset-section">
+          <div class="section-label" style="margin-top:20px;">Step 2 - Choose Image Type</div>
+          <div class="preset-grid" id="preset-grid" role="list"></div>
+        </div>
+
+        <!-- STEP 3: Crop and download -->
+        <div class="crop-section">
+          <div class="section-label" style="margin-bottom:14px;">Step 3 - Position Your Image and Download</div>
+          <div class="crop-layout">
+
+            <!-- Crop viewport -->
+            <div class="crop-frame-wrap">
+              <div class="crop-viewport-label" id="crop-vp-label">Drag image to reposition</div>
+              <div class="crop-viewport" id="crop-viewport">
+                <div class="crop-viewport-inner" id="crop-vp-inner">
+                  <img id="crop-img" src="" alt="Preview of uploaded image being cropped" draggable="false" />
+                  <!-- Rule of thirds overlay -->
+                  <div class="crop-crosshair" aria-hidden="true"></div>
+                  <div class="crop-h2" aria-hidden="true"></div>
+                  <div class="crop-v1" aria-hidden="true"></div>
+                  <div class="crop-v2" aria-hidden="true"></div>
+                </div>
+                <!-- Corner handles -->
+                <div class="crop-handle tl" aria-hidden="true"></div>
+                <div class="crop-handle tr" aria-hidden="true"></div>
+                <div class="crop-handle bl" aria-hidden="true"></div>
+                <div class="crop-handle br" aria-hidden="true"></div>
+              </div>
+            </div>
+
+            <!-- Controls panel -->
+            <div class="controls-panel">
+
+              <div class="control-group">
+                <div class="control-label">Zoom</div>
+                <div class="zoom-row">
+                  <span class="zoom-icon">&#128269;</span>
+                  <input type="range" id="zoom-slider" min="100" max="400" value="100" step="1" aria-label="Zoom level" />
+                  <span class="zoom-val" id="zoom-val">1.0x</span>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <div class="control-label">Output Format</div>
+                <div class="format-row">
+                  <button class="format-btn active" data-fmt="jpeg" type="button">JPG</button>
+                  <button class="format-btn" data-fmt="png" type="button">PNG</button>
+                </div>
+              </div>
+
+              <div class="output-info" id="output-info">
+                <strong id="out-dims">1080 x 1080 px</strong>
+                <span id="out-preset-name">Instagram Square Post</span>
+              </div>
+
+              <button class="btn-download" id="download-btn" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8" transform="rotate(180,12,12)"/><line x1="12" y1="3" x2="12" y2="15" transform="rotate(180,12,12)"/></svg>
+                Download Resized Image
+              </button>
+
+              <button class="btn-reset" id="reset-crop-btn" type="button">Reset Position</button>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- end #workspace -->
+
+    </div>
+    <!-- end .app-card -->
+
+  </div>
+  <!-- end .container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       GLOSSARY CARD
+  ============================================================ -->
+  <div class="container">
+    <div class="card" style="margin-top:32px;">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Aspect Ratio</div>
+          <div class="glossary-def">The proportional relationship between an image's width and height, expressed as two numbers separated by a colon (for example, 16:9 or 1:1). Aspect ratio determines the shape of an image regardless of its actual pixel size.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Pixel Dimensions</div>
+          <div class="glossary-def">The exact width and height of an image measured in pixels, for example 1080x1080. Social platforms require specific pixel dimensions to display images crisply without rescaling or cropping.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Image Resolution</div>
+          <div class="glossary-def">Describes how many pixels are packed into a given area, often expressed as PPI (pixels per inch). For social media, what matters most is the total pixel count, not the PPI value, since screens display images at their native pixel resolution.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">HTML5 Canvas</div>
+          <div class="glossary-def">A browser API that lets JavaScript draw and manipulate graphics directly in the browser tab. This tool uses Canvas to crop and export your image at the exact target pixel dimensions without ever sending data to a server.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Profile Picture</div>
+          <div class="glossary-def">The small square or circular avatar image tied to your social account. Each platform has specific dimension requirements (Instagram uses 320x320, LinkedIn and X use 400x400) and then further crops the image into a circle on display.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Cover Photo</div>
+          <div class="glossary-def">The large banner image displayed at the top of a profile or page. Cover photos are wide and short (Facebook's is 820x312, LinkedIn Personal Banner is 1584x396) and are different from post images in both size and purpose.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Lossless Compression</div>
+          <div class="glossary-def">A method of reducing file size that preserves every pixel of the original image data. PNG uses lossless compression, meaning no quality is sacrificed. JPG uses lossy compression, which reduces file size further but introduces subtle quality degradation at high compression levels.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Safe Zone</div>
+          <div class="glossary-def">The central area of an image that is guaranteed to remain visible regardless of device or display context. For social posts, keeping your subject in the central 80% of the frame helps avoid platform-side cropping in feed previews or shared link thumbnails.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Recompression</div>
+          <div class="glossary-def">What happens when a platform receives an image that is the wrong size and must rescale and re-encode it. Each round of recompression on a JPG introduces more artifacts and blurriness - which is why uploading the correct dimensions from the start keeps images sharp.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section" style="margin-top:24px;">
+      <h2>The Complete Guide to Social Media Image Sizes in 2026</h2>
+      <p class="section-intro">
+        Every time you upload a photo to Instagram, X, Facebook, or LinkedIn, the platform checks whether your image matches the expected aspect ratio. If it does not, the platform automatically crops or scales it - and often not where you would choose. This guide explains the exact dimensions each platform expects, why sizing matters for image quality, and how to use this tool to get a perfectly cropped export in seconds.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <ol class="steps-list">
+        <li>Click "Choose Image" or drag a JPG, PNG, or WebP file onto the upload zone.</li>
+        <li>Select the target platform tab: Instagram, X (Twitter), Facebook, or LinkedIn.</li>
+        <li>Click the image type preset that matches what you are creating (post, story, cover, or profile picture).</li>
+        <li>Drag the image inside the crop window to center your subject. Use the zoom slider to fill the frame.</li>
+        <li>Choose JPG for photos (smaller file, good quality) or PNG for graphics with text or transparency.</li>
+        <li>Click "Download Resized Image." The file saves directly to your device at the exact pixel dimensions required.</li>
+      </ol>
+
+      <h3>Current Standard Dimensions for Every Major Platform</h3>
+      <div class="dim-table-wrap">
+        <table class="dim-table" aria-label="Social media image dimensions reference">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Image Type</th>
+              <th>Dimensions</th>
+              <th>Aspect Ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="plat-name">Instagram</td><td>Square Post</td><td class="dim-val">1080 x 1080</td><td>1:1</td></tr>
+            <tr><td class="plat-name">Instagram</td><td>Portrait Post</td><td class="dim-val">1080 x 1350</td><td>4:5</td></tr>
+            <tr><td class="plat-name">Instagram</td><td>Story / Reel</td><td class="dim-val">1080 x 1920</td><td>9:16</td></tr>
+            <tr><td class="plat-name">Instagram</td><td>Profile Picture</td><td class="dim-val">320 x 320</td><td>1:1</td></tr>
+            <tr><td class="plat-name">X (Twitter)</td><td>In-Stream Photo</td><td class="dim-val">1200 x 675</td><td>16:9</td></tr>
+            <tr><td class="plat-name">X (Twitter)</td><td>Header Banner</td><td class="dim-val">1500 x 500</td><td>3:1</td></tr>
+            <tr><td class="plat-name">X (Twitter)</td><td>Profile Picture</td><td class="dim-val">400 x 400</td><td>1:1</td></tr>
+            <tr><td class="plat-name">Facebook</td><td>Post</td><td class="dim-val">1200 x 630</td><td>~1.91:1</td></tr>
+            <tr><td class="plat-name">Facebook</td><td>Cover Photo</td><td class="dim-val">820 x 312</td><td>~2.63:1</td></tr>
+            <tr><td class="plat-name">Facebook</td><td>Profile Picture</td><td class="dim-val">180 x 180</td><td>1:1</td></tr>
+            <tr><td class="plat-name">LinkedIn</td><td>Post / Share Image</td><td class="dim-val">1200 x 627</td><td>~1.91:1</td></tr>
+            <tr><td class="plat-name">LinkedIn</td><td>Personal Banner</td><td class="dim-val">1584 x 396</td><td>4:1</td></tr>
+            <tr><td class="plat-name">LinkedIn</td><td>Profile Picture</td><td class="dim-val">400 x 400</td><td>1:1</td></tr>
+            <tr><td class="plat-name">LinkedIn</td><td>Company Logo</td><td class="dim-val">300 x 300</td><td>1:1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Why Instagram and Facebook Make Photos Look Blurry</h3>
+      <p>
+        When you upload a photo that is already at the exact pixel dimensions the platform expects, the image is stored and displayed as-is. But when the uploaded image is a different size or aspect ratio, the platform must rescale it. If your source image is a JPG (which uses lossy compression), every rescale-and-re-encode cycle adds more compression artifacts. The result is a noticeably softer, blurrier final image even if your original photo was perfectly sharp. Exporting at the correct dimensions before uploading eliminates this extra compression step entirely.
+      </p>
+
+      <h3>Choosing Between JPG and PNG for Social Media</h3>
+      <p>
+        JPG is the better choice for photographs. It produces smaller file sizes while keeping visual quality high, and all social platforms handle it well. PNG is better for graphics, logos, illustrations, or any image that contains text or hard edges, because PNG's lossless compression preserves crisp lines that JPG would blur. Keep in mind that Instagram and Facebook will re-encode your PNG into their own compressed format during upload, so for pure photos, JPG is usually the smarter starting point.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" onclick="toggleFaq(this)" aria-expanded="false">
+          Why do my photos look blurry when I upload them to Instagram or Facebook?
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-a">
+          Blurry photos almost always happen because the platform is recompressing your image after rescaling it. When the image you upload is a different size or aspect ratio than what the platform expects, it crops and re-encodes the file before storing it. Each re-encode of a JPG introduces additional compression artifacts, which show up as blur or loss of fine detail. The fix is to export your image at the platform's exact pixel dimensions before uploading so no rescaling occurs.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the best aspect ratio for an X (Twitter) timeline post?
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-a">
+          The best aspect ratio for an X (Twitter) in-stream photo is 16:9, which corresponds to 1200x675 pixels. Images at this ratio display edge-to-edge in the timeline feed without any automatic cropping on desktop or mobile. Twitter also accepts square (1:1) and portrait (2:3) images, but the 16:9 landscape format is the safest choice because it gives you full control over framing without relying on how the platform chooses to crop the preview.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" onclick="toggleFaq(this)" aria-expanded="false">
+          Why is it important to resize images to exact dimensions before uploading?
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-a">
+          Every social platform has a specific aspect ratio it expects for each image type. If your uploaded image has a different ratio, the platform crops it automatically - and usually not in the way you would choose. A portrait photo uploaded for a Facebook cover slot, for example, will be cropped down to a wide strip and the subject may be cut off entirely. Resizing to the exact dimensions beforehand puts you in control of what is and is not visible, preserves maximum image quality, and prevents unexpected surprises after you publish.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" type="button" onclick="toggleFaq(this)" aria-expanded="false">
+          Is my photo uploaded to a server when I use this tool?
+          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-a">
+          No. This tool uses the HTML5 Canvas API and the JavaScript FileReader API to load and process your image entirely inside your own browser tab. Your photo is never sent to any external server, never stored anywhere online, and never seen by anyone other than you. The entire crop and download process happens locally on your device, which also means it works offline once the page has loaded.
+        </div>
+      </div>
+
+    </div>
+    <!-- end .edu-section -->
+  </div>
+  <!-- end .container -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* ================================================================
+   PRESET DATA
+================================================================ */
+const PRESETS = {
+  instagram: {
+    label: 'Instagram',
+    types: [
+      { id: 'ig-square',   label: 'Square Post',    w: 1080, h: 1080 },
+      { id: 'ig-portrait', label: 'Portrait Post',  w: 1080, h: 1350 },
+      { id: 'ig-story',    label: 'Story / Reel',   w: 1080, h: 1920 },
+      { id: 'ig-profile',  label: 'Profile Picture', w: 320,  h: 320  }
+    ]
+  },
+  twitter: {
+    label: 'X (Twitter)',
+    types: [
+      { id: 'tw-post',    label: 'In-Stream Photo', w: 1200, h: 675  },
+      { id: 'tw-header',  label: 'Header Banner',   w: 1500, h: 500  },
+      { id: 'tw-profile', label: 'Profile Picture', w: 400,  h: 400  }
+    ]
+  },
+  facebook: {
+    label: 'Facebook',
+    types: [
+      { id: 'fb-post',    label: 'Post',            w: 1200, h: 630  },
+      { id: 'fb-cover',   label: 'Cover Photo',     w: 820,  h: 312  },
+      { id: 'fb-profile', label: 'Profile Picture', w: 180,  h: 180  }
+    ]
+  },
+  linkedin: {
+    label: 'LinkedIn',
+    types: [
+      { id: 'li-post',    label: 'Post / Share',    w: 1200, h: 627  },
+      { id: 'li-banner',  label: 'Personal Banner', w: 1584, h: 396  },
+      { id: 'li-profile', label: 'Profile Picture', w: 400,  h: 400  },
+      { id: 'li-logo',    label: 'Company Logo',    w: 300,  h: 300  }
+    ]
+  }
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentPlatform = 'instagram';
+let currentPreset   = PRESETS.instagram.types[0];
+let sourceImg       = null;  // HTMLImageElement
+let panX = 0, panY = 0;
+let zoom = 1.0;
+let fitScale = 1.0;
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
+let dragStartPanX = 0, dragStartPanY = 0;
+let outputFormat = 'jpeg';
+
+/* ================================================================
+   DOM REFS
+================================================================ */
+const dropZone        = document.getElementById('drop-zone');
+const fileInput       = document.getElementById('file-input');
+const browseBtn       = document.getElementById('browse-btn');
+const workspace       = document.getElementById('workspace');
+const fileNameDisplay = document.getElementById('file-name-display');
+const fileDimsDisplay = document.getElementById('file-dims-display');
+const changeImgBtn    = document.getElementById('change-img-btn');
+const presetGrid      = document.getElementById('preset-grid');
+const cropViewport    = document.getElementById('crop-viewport');
+const cropVpInner     = document.getElementById('crop-vp-inner');
+const cropImg         = document.getElementById('crop-img');
+const zoomSlider      = document.getElementById('zoom-slider');
+const zoomVal         = document.getElementById('zoom-val');
+const downloadBtn     = document.getElementById('download-btn');
+const resetCropBtn    = document.getElementById('reset-crop-btn');
+const outDims         = document.getElementById('out-dims');
+const outPresetName   = document.getElementById('out-preset-name');
+
+/* ================================================================
+   FILE UPLOAD
+================================================================ */
+browseBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  fileInput.click();
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+changeImgBtn.addEventListener('click', () => {
+  fileInput.value = '';
+  fileInput.click();
+});
+
+function loadFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImg = img;
+      cropImg.src = img.src;
+      fileNameDisplay.innerHTML = '<strong>' + escHtml(file.name) + '</strong>';
+      fileDimsDisplay.textContent = img.naturalWidth + ' x ' + img.naturalHeight + ' px original';
+      dropZone.classList.add('hidden');
+      workspace.classList.add('visible');
+      initCrop();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ================================================================
+   PLATFORM TABS
+================================================================ */
+document.querySelectorAll('.platform-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.platform-tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
+    currentPlatform = tab.dataset.platform;
+    renderPresets();
+    selectPreset(PRESETS[currentPlatform].types[0]);
+  });
+});
+
+function renderPresets() {
+  presetGrid.innerHTML = '';
+  PRESETS[currentPlatform].types.forEach((preset, idx) => {
+    const ar = gcd(preset.w, preset.h);
+    const arLabel = (preset.w / ar) + ':' + (preset.h / ar);
+    const card = document.createElement('div');
+    card.className = 'preset-card' + (idx === 0 ? ' active' : '');
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+    card.innerHTML =
+      '<div class="preset-name">' + escHtml(preset.label) + '</div>' +
+      '<div class="preset-dims">' + preset.w + ' x ' + preset.h + ' px</div>' +
+      '<span class="preset-ar">' + arLabel + '</span>';
+    card.addEventListener('click', () => selectPreset(preset, card));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') selectPreset(preset, card);
+    });
+    presetGrid.appendChild(card);
+  });
+}
+
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+function selectPreset(preset, cardEl) {
+  currentPreset = preset;
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+  if (cardEl) {
+    cardEl.classList.add('active');
+  } else {
+    const cards = document.querySelectorAll('.preset-card');
+    if (cards[0]) cards[0].classList.add('active');
+  }
+  outDims.textContent = preset.w + ' x ' + preset.h + ' px';
+  outPresetName.textContent = PRESETS[currentPlatform].label + ' - ' + preset.label;
+  if (sourceImg) initCrop();
+}
+
+/* ================================================================
+   CROP ENGINE
+================================================================ */
+function initCrop() {
+  const vpW = cropVpInner.clientWidth || cropViewport.clientWidth;
+  const ratio = currentPreset.h / currentPreset.w;
+
+  // Set viewport height via padding trick for aspect ratio
+  cropVpInner.style.paddingTop = (ratio * 100) + '%';
+
+  // Compute fit scale (cover mode: image fills viewport)
+  const vpH = vpW * ratio;
+  fitScale = Math.max(vpW / sourceImg.naturalWidth, vpH / sourceImg.naturalHeight);
+
+  // Reset zoom and pan
+  zoom = 1.0;
+  zoomSlider.value = 100;
+  zoomVal.textContent = '1.0x';
+  panX = 0;
+  panY = 0;
+
+  applyTransform(vpW, vpH);
+}
+
+function applyTransform(vpW, vpH) {
+  if (!sourceImg) return;
+
+  const ratio = currentPreset.h / currentPreset.w;
+  const actualVpW = cropVpInner.clientWidth || (cropViewport.clientWidth);
+  const actualVpH = actualVpW * ratio;
+
+  const displayScale = fitScale * zoom;
+  const imgW = sourceImg.naturalWidth * displayScale;
+  const imgH = sourceImg.naturalHeight * displayScale;
+
+  // Clamp pan so image always covers viewport
+  const minX = actualVpW - imgW;
+  const minY = actualVpH - imgH;
+  panX = Math.min(0, Math.max(panX, minX));
+  panY = Math.min(0, Math.max(panY, minY));
+
+  cropImg.style.width  = imgW + 'px';
+  cropImg.style.height = imgH + 'px';
+  cropImg.style.left   = panX + 'px';
+  cropImg.style.top    = panY + 'px';
+}
+
+/* ================================================================
+   ZOOM SLIDER
+================================================================ */
+zoomSlider.addEventListener('input', () => {
+  zoom = zoomSlider.value / 100;
+  zoomVal.textContent = zoom.toFixed(1) + 'x';
+  applyTransform();
+});
+
+/* ================================================================
+   PAN (DRAG)
+================================================================ */
+cropViewport.addEventListener('mousedown', startDrag);
+cropViewport.addEventListener('touchstart', startDragTouch, { passive: true });
+
+function startDrag(e) {
+  e.preventDefault();
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragStartPanX = panX;
+  dragStartPanY = panY;
+  cropViewport.style.cursor = 'grabbing';
+}
+
+function startDragTouch(e) {
+  if (!e.touches[0]) return;
+  isDragging = true;
+  dragStartX = e.touches[0].clientX;
+  dragStartY = e.touches[0].clientY;
+  dragStartPanX = panX;
+  dragStartPanY = panY;
+}
+
+document.addEventListener('mousemove', doDrag);
+document.addEventListener('touchmove', doDragTouch, { passive: true });
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
+
+function doDrag(e) {
+  if (!isDragging) return;
+  panX = dragStartPanX + (e.clientX - dragStartX);
+  panY = dragStartPanY + (e.clientY - dragStartY);
+  applyTransform();
+}
+
+function doDragTouch(e) {
+  if (!isDragging || !e.touches[0]) return;
+  panX = dragStartPanX + (e.touches[0].clientX - dragStartX);
+  panY = dragStartPanY + (e.touches[0].clientY - dragStartY);
+  applyTransform();
+}
+
+function endDrag() {
+  isDragging = false;
+  cropViewport.style.cursor = 'grab';
+}
+
+/* ================================================================
+   RESET
+================================================================ */
+resetCropBtn.addEventListener('click', () => {
+  if (sourceImg) initCrop();
+});
+
+/* ================================================================
+   FORMAT BUTTONS
+================================================================ */
+document.querySelectorAll('.format-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    outputFormat = btn.dataset.fmt;
+  });
+});
+
+/* ================================================================
+   DOWNLOAD
+================================================================ */
+downloadBtn.addEventListener('click', () => {
+  if (!sourceImg) return;
+
+  const targetW = currentPreset.w;
+  const targetH = currentPreset.h;
+
+  // Compute the visible crop in source image natural coordinates
+  const ratio = currentPreset.h / currentPreset.w;
+  const vpW = cropVpInner.clientWidth;
+  const vpH = vpW * ratio;
+  const displayScale = fitScale * zoom;
+
+  const srcX = Math.round(-panX / displayScale);
+  const srcY = Math.round(-panY / displayScale);
+  const srcW = Math.round(vpW / displayScale);
+  const srcH = Math.round(vpH / displayScale);
+
+  // Draw to target canvas
+  const canvas = document.createElement('canvas');
+  canvas.width  = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(sourceImg, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
+
+  const mimeType = outputFormat === 'png' ? 'image/png' : 'image/jpeg';
+  const quality  = outputFormat === 'png' ? 1.0 : 0.93;
+  const ext      = outputFormat === 'png' ? 'png' : 'jpg';
+
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href    = url;
+    a.download = 'axiomape-' + currentPreset.id + '-' + targetW + 'x' + targetH + '.' + ext;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, mimeType, quality);
+});
+
+/* ================================================================
+   FAQ ACCORDION
+================================================================ */
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const answer = item.querySelector('.faq-a');
+  const isOpen = item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-item').forEach(i => {
+    i.classList.remove('open');
+    i.querySelector('.faq-a').classList.remove('open');
+    i.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    answer.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+renderPresets();
+selectPreset(PRESETS.instagram.types[0]);
+
+// Re-init crop on window resize to keep aspect ratio correct
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (sourceImg) initCrop();
+  }, 150);
+});
+</script>
+
+</body>
+</html>

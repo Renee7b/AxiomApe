@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cron Job Generator: Build and Translate Cron Expressions Instantly | AxiomApe</title>
+  <meta name="description" content="Free cron job generator and translator. Build cron schedule expressions with visual dropdowns or type one directly and instantly get a plain-English translation plus the next 5 execution times. 100% client-side." />
+  <meta name="keywords" content="cron job generator, cron expression builder, cron translator, cron to English, crontab generator, schedule expression, cron syntax, cron parser, cron schedule, linux cron, cron calculator" />
+  <link rel="canonical" href="https://axiomape.com/cron-job-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Cron Job Generator",
+        "description": "Free cron job generator and translator. Build cron schedule expressions with visual dropdowns or type one directly and instantly get a plain-English translation plus the next 5 execution times. 100% client-side.",
+        "url": "https://axiomape.com/cron-job-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a cron job and what is it used for?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A cron job is a scheduled task on a Unix-based system (Linux, macOS, BSD) that runs automatically at a set time or interval without any human interaction. The name comes from Chronos, the Greek word for time, and the jobs are managed by a background process called a daemon (specifically the cron daemon, or crond). Developers use cron jobs for a huge variety of recurring automation tasks: clearing temporary files, sending scheduled email digests, backing up databases, pulling data from an API, generating reports, running health checks, and rebuilding caches. Any task you would otherwise have to trigger manually on a regular schedule is a good candidate for a cron job."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What do the five asterisks in a cron expression mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A standard cron expression has five fields separated by spaces, read from left to right: minute (0-59), hour (0-23), day of month (1-31), month (1-12), and day of week (0-7, where both 0 and 7 represent Sunday). An asterisk (*) in any field means \"every valid value\" for that field. So five asterisks (* * * * *) means: every minute, of every hour, of every day, of every month, on every day of the week. This is equivalent to the job running once per minute, continuously, forever. When you replace an asterisk with a specific value or pattern, you narrow down exactly when the job fires."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I run a cron script exactly every 5 minutes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use the step value syntax in the minute field: */5 * * * *. The slash notation means \"every N units,\" so */5 in the minute field means \"every 5 minutes starting from minute 0.\" This fires at :00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, and :55 of every hour. You can also use step values in other fields. For example, 0 */2 * * * fires at the top of every other hour (midnight, 2am, 4am, and so on). The step value always starts from the beginning of the range unless you specify an explicit start with a range, such as 15-55/10, which fires at minutes 15, 25, 35, 45, and 55."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is cron specific only to Linux servers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Cron originated on Unix systems and is standard on Linux and macOS. However, the concept of scheduled tasks is available on virtually every platform. Windows uses the Task Scheduler (schtasks) for the same purpose, and many programming environments have their own scheduling libraries (such as node-cron for Node.js, APScheduler for Python, or Quartz for Java). Cloud platforms including AWS, Google Cloud, and Azure all support cron-syntax schedules for serverless functions, container jobs, and pipeline triggers. Many databases also support cron-like event schedulers internally. The 5-field cron syntax used in this tool is widely portable: it is understood natively by Linux crontabs, Docker, Kubernetes CronJobs, GitHub Actions, and most major cloud schedulers."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Terminal / dark base */
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #1c2330;
+      --surface-3:   #21262d;
+      --border:      #30363d;
+      --border-light:#444c56;
+
+      /* Text */
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --muted-2:     #6e7681;
+
+      /* Accent - Terminal Green */
+      --green:       #10B981;
+      --green-dim:   #0d9b6e;
+      --green-glow:  rgba(16,185,129,0.15);
+      --green-dark:  rgba(16,185,129,0.08);
+
+      /* Accent 2 - Console Cyan */
+      --cyan:        #06B6D4;
+      --cyan-dim:    #0891b2;
+      --cyan-glow:   rgba(6,182,212,0.15);
+
+      /* Status */
+      --red:         #f85149;
+      --red-bg:      rgba(248,81,73,0.12);
+      --orange:      #e3b341;
+
+      /* Layout */
+      --radius:      10px;
+      --radius-sm:   6px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.4);
+      --mono:        "Fira Code", "Courier New", Courier, monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--green); }
+
+    /* ===================================================
+       SITE-WIDE TOPBAR (hidden by site-chrome.js)
+    =================================================== */
+    .site-topbar { display: none; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d2818 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 720px;
+      margin: 0 auto 14px;
+      color: #fff;
+    }
+    .page-header h1 span { color: var(--green); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 22px 16px; }
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 22px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.02em;
+    }
+    .card-title .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: var(--green-dark);
+      color: var(--green);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ===================================================
+       SECTION LABELS
+    =================================================== */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* ===================================================
+       CRON EXPRESSION INPUT (Section A)
+    =================================================== */
+    .cron-input-wrap {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .cron-input {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 1.55rem;
+      font-weight: 500;
+      padding: 18px 20px;
+      letter-spacing: 0.12em;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .cron-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+    .cron-input.error {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-bg);
+      color: var(--red);
+    }
+    @media (max-width: 500px) {
+      .cron-input { font-size: 1.15rem; padding: 14px 14px; }
+    }
+
+    /* Field labels under input */
+    .cron-field-labels {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+    .cron-field-label {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--muted-2);
+      font-family: var(--mono);
+      letter-spacing: 0.03em;
+    }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--red-bg);
+      border: 1px solid rgba(248,81,73,0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      color: var(--red);
+      margin-bottom: 14px;
+    }
+    .error-msg.show { display: flex; }
+
+    /* Translation output */
+    .translation-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--green);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 1rem;
+      color: var(--cyan);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .translation-box .tx-icon {
+      color: var(--green);
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+    .translation-box .tx-text {
+      line-height: 1.5;
+    }
+
+    /* ===================================================
+       PRESETS
+    =================================================== */
+    .presets-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 20px;
+    }
+    .preset-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      padding: 5px 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .preset-btn:hover {
+      background: var(--green-dark);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ===================================================
+       SECTION DIVIDER
+    =================================================== */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 24px 0 22px;
+      color: var(--muted-2);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .section-divider::before,
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ===================================================
+       DROPDOWN BUILDER (Section B)
+    =================================================== */
+    .dropdown-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 640px) {
+      .dropdown-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .dropdown-grid .dg-item:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .dg-item { display: flex; flex-direction: column; gap: 6px; }
+    .dg-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .dg-label .dg-range {
+      color: var(--muted-2);
+      font-weight: 400;
+      font-size: 0.68rem;
+    }
+    .dg-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: var(--mono);
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .dg-select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px var(--cyan-glow);
+    }
+    .dg-select option { background: var(--surface-2); }
+
+    /* ===================================================
+       NEXT EXECUTIONS
+    =================================================== */
+    .executions-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+    }
+    .executions-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .executions-title .dot-live {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .exec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .exec-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+    }
+    .exec-num {
+      color: var(--muted-2);
+      font-size: 0.72rem;
+      min-width: 18px;
+    }
+    .exec-date { color: var(--green); }
+    .exec-time { color: var(--cyan); }
+    .exec-tz   { color: var(--muted-2); font-size: 0.75rem; }
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    /* ===================================================
+       EDU / GLOSSARY
+    =================================================== */
+    .edu-wrap { margin-bottom: 32px; }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cyan);
+      font-family: var(--mono);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .section-intro {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 22px;
+      font-size: 0.97rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 14px;
+      font-size: 0.93rem;
+    }
+
+    /* Syntax table */
+    .syntax-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+      font-family: var(--mono);
+    }
+    .syntax-table th {
+      background: var(--surface-2);
+      color: var(--cyan);
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .syntax-table td {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .syntax-table tr:nth-child(even) td { background: var(--surface-2); }
+    .syntax-table .hl { color: var(--green); }
+
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-item:first-child { border-top: 1px solid var(--border); }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 0.97rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 16px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      transition: color 0.15s;
+    }
+    .faq-question:hover { color: var(--green); }
+    .faq-arrow {
+      flex-shrink: 0;
+      color: var(--muted-2);
+      transition: transform 0.2s;
+      font-size: 1.1rem;
+    }
+    .faq-question.open .faq-arrow { transform: rotate(180deg); color: var(--green); }
+    .faq-answer {
+      display: none;
+      padding: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.91rem;
+      line-height: 1.75;
+    }
+    .faq-answer.open { display: block; }
+
+    /* Disclaimer */
+    .disclaimer {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.8rem;
+      color: var(--muted-2);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    /* ===================================================
+       RESPONSIVE
+    =================================================== */
+    @media (max-width: 768px) {
+      .axiom-ad-leaderboard { display: none; }
+    }
+    @media (min-width: 769px) {
+      .axiom-ad-mobile-anchor { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Cron Job <span>Generator</span></h1>
+      <p>Build cron schedule expressions visually or translate any expression into plain English. See the next 5 run times instantly, in your local timezone.</p>
+    </header>
+
+    <!-- ===================================================
+         TOOL CARD
+    =================================================== -->
+    <div class="card">
+      <div class="card-title">
+        &#9654; Cron Expression Builder
+        <span class="badge">Live</span>
+      </div>
+
+      <!-- SECTION A: Expression to Text -->
+      <div class="section-label">A - Type or paste a cron expression</div>
+
+      <div class="cron-input-wrap">
+        <input
+          type="text"
+          id="cron-input"
+          class="cron-input"
+          value="* * * * *"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Cron expression input"
+          oninput="onExpressionInput()"
+        />
+      </div>
+
+      <div class="cron-field-labels">
+        <div class="cron-field-label">minute</div>
+        <div class="cron-field-label">hour</div>
+        <div class="cron-field-label">day-of-month</div>
+        <div class="cron-field-label">month</div>
+        <div class="cron-field-label">day-of-week</div>
+      </div>
+
+      <div class="error-msg" id="error-msg" role="alert">
+        <span>&#9888;</span>
+        <span id="error-text">Invalid cron syntax.</span>
+      </div>
+
+      <div class="translation-box" id="translation-box">
+        <span class="tx-icon">&#128172;</span>
+        <span class="tx-text" id="translation-text">Every minute.</span>
+      </div>
+
+      <!-- PRESETS -->
+      <div class="presets-label">Quick Presets</div>
+      <div class="presets-row" id="presets-row"></div>
+
+      <!-- SECTION DIVIDER -->
+      <div class="section-divider">or build with dropdowns</div>
+
+      <!-- SECTION B: UI to Expression -->
+      <div class="section-label">B - Select schedule options</div>
+      <div class="dropdown-grid">
+        <div class="dg-item">
+          <div class="dg-label">Minute <span class="dg-range">0-59</span></div>
+          <select id="sel-minute" class="dg-select" onchange="onDropdownChange()" aria-label="Minute"></select>
+        </div>
+        <div class="dg-item">
+          <div class="dg-label">Hour <span class="dg-range">0-23</span></div>
+          <select id="sel-hour" class="dg-select" onchange="onDropdownChange()" aria-label="Hour"></select>
+        </div>
+        <div class="dg-item">
+          <div class="dg-label">Day of Month <span class="dg-range">1-31</span></div>
+          <select id="sel-dom" class="dg-select" onchange="onDropdownChange()" aria-label="Day of month"></select>
+        </div>
+        <div class="dg-item">
+          <div class="dg-label">Month <span class="dg-range">1-12</span></div>
+          <select id="sel-month" class="dg-select" onchange="onDropdownChange()" aria-label="Month"></select>
+        </div>
+        <div class="dg-item">
+          <div class="dg-label">Day of Week <span class="dg-range">0-7</span></div>
+          <select id="sel-dow" class="dg-select" onchange="onDropdownChange()" aria-label="Day of week"></select>
+        </div>
+      </div>
+
+      <!-- NEXT EXECUTIONS -->
+      <div class="executions-panel">
+        <div class="executions-title">
+          <span class="dot-live"></span>
+          Next 5 Execution Times (your local timezone)
+        </div>
+        <ul class="exec-list" id="exec-list">
+          <li class="exec-item"><span class="exec-num">1.</span><span class="exec-date" id="e1d">--</span><span class="exec-time" id="e1t"></span><span class="exec-tz" id="e1z"></span></li>
+          <li class="exec-item"><span class="exec-num">2.</span><span class="exec-date" id="e2d">--</span><span class="exec-time" id="e2t"></span><span class="exec-tz" id="e2z"></span></li>
+          <li class="exec-item"><span class="exec-num">3.</span><span class="exec-date" id="e3d">--</span><span class="exec-time" id="e3t"></span><span class="exec-tz" id="e3z"></span></li>
+          <li class="exec-item"><span class="exec-num">4.</span><span class="exec-date" id="e4d">--</span><span class="exec-time" id="e4t"></span><span class="exec-tz" id="e4z"></span></li>
+          <li class="exec-item"><span class="exec-num">5.</span><span class="exec-date" id="e5d">--</span><span class="exec-time" id="e5t"></span><span class="exec-tz" id="e5z"></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    =================================================== -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ===================================================
+         EDUCATIONAL CONTENT
+    =================================================== -->
+    <div class="edu-wrap">
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Cron</div>
+            <div class="glossary-def">A time-based job scheduler built into Unix-like operating systems. The name comes from Chronos, the Greek word for time. Cron wakes up once per minute and checks whether any scheduled jobs should run.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Crontab</div>
+            <div class="glossary-def">Short for "cron table." The configuration file that lists all cron jobs for a particular user. You edit it with the command `crontab -e` and view it with `crontab -l`. Each line is one job: a 5-field schedule expression followed by the command to run.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Daemon</div>
+            <div class="glossary-def">A background process that runs continuously without direct user interaction. The cron daemon (often called crond or cron) is what actually reads the crontab and fires jobs at the right time. Daemons start at boot and run silently in the background.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Wildcard (*)</div>
+            <div class="glossary-def">In cron syntax, an asterisk means "every valid value" for that field. A * in the minute field means every minute (0 through 59). A * in the month field means every month (1 through 12). Five asterisks (* * * * *) means the job runs every single minute.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Step Value (/n)</div>
+            <div class="glossary-def">The slash notation lets you specify intervals. */5 in the minute field means "every 5 minutes." */2 in the hour field means "every 2 hours." You can also combine a range with a step: 10-50/10 means "at minutes 10, 20, 30, 40, and 50."</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Epoch Time</div>
+            <div class="glossary-def">The number of seconds that have elapsed since January 1, 1970, 00:00:00 UTC (Unix time zero). Cron itself works with human-readable wall-clock time, but many scripts and log files use epoch timestamps to avoid timezone ambiguity.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Shell Script</div>
+            <div class="glossary-def">A text file containing a sequence of shell commands, typically with a .sh extension, executed by a shell interpreter like bash. Cron jobs most commonly call shell scripts to group multiple commands, handle errors, and redirect output to log files.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Range (a-b)</div>
+            <div class="glossary-def">Specifies a contiguous span of values. For example, 1-5 in the day-of-week field means Monday through Friday. Ranges can be combined with commas (1-5,7) and step values (1-5/2 means 1, 3, 5).</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">List (a,b,c)</div>
+            <div class="glossary-def">A comma-separated list of specific values. 0,15,30,45 in the minute field fires at the top, quarter-past, half-past, and quarter-to of each hour. You can mix specific values and ranges in a single list.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Cron Job Scheduling</h2>
+
+        <p class="section-intro">Whether you are a developer automating server tasks, a data engineer scheduling pipeline runs, or a DevOps engineer managing cloud jobs, understanding cron syntax is a foundational skill. This guide walks through how cron expressions work, how to read and write them confidently, and answers the questions developers search for most often.</p>
+
+        <h3>How to Use This Tool</h3>
+        <p>There are two ways to interact with the generator above. If you already have a cron expression and want to understand it, paste it directly into the expression input (Section A). The tool immediately translates it into a plain-English sentence and shows the next 5 exact run times in your browser's local timezone.</p>
+        <p>If you want to build an expression from scratch, use the dropdowns in Section B. Each dropdown covers one field: minute, hour, day of month, month, and day of week. Changing any dropdown updates the expression string at the top in real time. You can also use the quick preset buttons to jump to the most common schedules instantly.</p>
+
+        <h3>The 5 Fields of a Cron Expression</h3>
+        <p>Every standard cron expression is a string of five values separated by spaces. Reading left to right:</p>
+
+        <table class="syntax-table">
+          <thead>
+            <tr>
+              <th>Position</th>
+              <th>Field</th>
+              <th>Valid Range</th>
+              <th>Special Characters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="hl">1st</td><td>Minute</td><td>0 to 59</td><td>* , - /</td></tr>
+            <tr><td class="hl">2nd</td><td>Hour</td><td>0 to 23</td><td>* , - /</td></tr>
+            <tr><td class="hl">3rd</td><td>Day of Month</td><td>1 to 31</td><td>* , - /</td></tr>
+            <tr><td class="hl">4th</td><td>Month</td><td>1 to 12</td><td>* , - /</td></tr>
+            <tr><td class="hl">5th</td><td>Day of Week</td><td>0 to 7 (0 and 7 = Sunday)</td><td>* , - /</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Special Syntax: Wildcards, Ranges, Lists, and Steps</h3>
+        <p>The real power of cron comes from four special characters that let you express complex schedules in just a few characters. A wildcard (*) means "match every value." A range (a-b) matches every integer from a to b inclusive. A list (a,b,c) matches each of those specific values. A step (/n) skips through values at a fixed interval.</p>
+        <p>These can be combined freely. 1,15 in the day-of-month field runs on the 1st and 15th. 1-5 in the day-of-week field runs Monday through Friday. */10 in the minute field runs at minutes 0, 10, 20, 30, 40, and 50. 10-50/10 in the minute field runs at minutes 10, 20, 30, 40, and 50 only (same result, but starting at 10 instead of 0).</p>
+
+        <h3>Common Cron Expression Examples</h3>
+        <table class="syntax-table">
+          <thead>
+            <tr>
+              <th>Expression</th>
+              <th>Plain English</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="hl">* * * * *</td><td>Every minute</td></tr>
+            <tr><td class="hl">0 * * * *</td><td>At the top of every hour</td></tr>
+            <tr><td class="hl">0 0 * * *</td><td>Every day at midnight</td></tr>
+            <tr><td class="hl">*/5 * * * *</td><td>Every 5 minutes</td></tr>
+            <tr><td class="hl">0 9 * * 1</td><td>Every Monday at 9:00 AM</td></tr>
+            <tr><td class="hl">30 14 1 * *</td><td>At 2:30 PM on the 1st of every month</td></tr>
+            <tr><td class="hl">0 0 * * 0</td><td>Every Sunday at midnight</td></tr>
+            <tr><td class="hl">0 0 1 1 *</td><td>Once a year at midnight on January 1st</td></tr>
+            <tr><td class="hl">0 8-18 * * 1-5</td><td>Every hour between 8 AM and 6 PM, Monday through Friday</td></tr>
+            <tr><td class="hl">*/15 * * * *</td><td>Every 15 minutes</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Cron and Timezones</h3>
+        <p>One important thing to understand: cron itself runs in the system timezone of the server it lives on, not your local timezone. If your server is set to UTC and you write 0 9 * * *, the job fires at 9:00 AM UTC, which may be a completely different time in your local timezone. Always check your server's timezone with the command `timedatectl` (Linux) or `date` before scheduling time-sensitive jobs. Some modern schedulers, like Google Cloud Scheduler and Kubernetes CronJobs, let you specify a timezone explicitly in the configuration.</p>
+        <p>The next-5-executions panel in this tool uses your browser's local timezone (shown next to each time), so the displayed times will match what you see on your own clock, not necessarily what the server will see.</p>
+
+        <h3>Frequently Asked Questions</h3>
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is a cron job and what is it used for?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            A cron job is a scheduled task on a Unix-based system (Linux, macOS, BSD) that runs automatically at a set time or interval without any human interaction. The name comes from Chronos, the Greek word for time, and the jobs are managed by a background process called a daemon (the cron daemon, or crond). Developers use cron jobs for a huge variety of recurring automation tasks: clearing temporary files, sending scheduled email digests, backing up databases, pulling data from an API, generating reports, running health checks, and rebuilding caches. Any task you would otherwise have to trigger manually on a regular schedule is a good candidate for a cron job.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What do the five asterisks in a cron expression mean?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            A standard cron expression has five fields separated by spaces, read left to right: minute (0-59), hour (0-23), day of month (1-31), month (1-12), and day of week (0-7, where both 0 and 7 represent Sunday). An asterisk (*) in any field means "every valid value" for that field. So five asterisks (* * * * *) means: every minute, of every hour, of every day, of every month, on every day of the week. This is equivalent to the job running once per minute, continuously. When you replace an asterisk with a specific value or pattern, you narrow down exactly when the job fires.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            How do I run a cron script exactly every 5 minutes?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            Use the step value syntax in the minute field: */5 * * * *. The slash notation means "every N units," so */5 in the minute field means "every 5 minutes starting from minute 0." This fires at :00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, and :55 of every hour. You can also use step values in other fields. For example, 0 */2 * * * fires at the top of every other hour (midnight, 2am, 4am, and so on). The step value always starts from the beginning of the range unless you specify an explicit start with a range, such as 15-55/10, which fires at minutes 15, 25, 35, 45, and 55.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Is cron specific only to Linux servers?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            Cron originated on Unix systems and is standard on Linux and macOS. However, the concept of scheduled tasks is available on virtually every platform. Windows uses the Task Scheduler (schtasks) for the same purpose, and many programming environments have their own scheduling libraries (such as node-cron for Node.js, APScheduler for Python, or Quartz for Java). Cloud platforms including AWS, Google Cloud, and Azure all support cron-syntax schedules for serverless functions, container jobs, and pipeline triggers. Many databases also support cron-like event schedulers internally. The 5-field cron syntax used in this tool is widely portable: it is understood natively by Linux crontabs, Docker, Kubernetes CronJobs, GitHub Actions, and most major cloud schedulers.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /edu-wrap -->
+
+    <div class="disclaimer">
+      This tool operates entirely in your browser. No cron expressions or schedule data are ever sent to any server. Calculated execution times are based on your device's system clock and local timezone setting. Verify critical schedules in your actual environment before relying on them in production.
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ===================================================
+       PRESETS DATA
+    =================================================== */
+    var PRESETS = [
+      { label: '* * * * *',    desc: 'Every minute'            },
+      { label: '*/5 * * * *',  desc: 'Every 5 minutes'         },
+      { label: '*/15 * * * *', desc: 'Every 15 minutes'        },
+      { label: '0 * * * *',    desc: 'Every hour'              },
+      { label: '0 0 * * *',    desc: 'Every midnight'          },
+      { label: '0 6 * * *',    desc: 'Every 6am'               },
+      { label: '0 9 * * 1',    desc: 'Mon at 9am'              },
+      { label: '0 0 * * 0',    desc: 'Every Sunday midnight'   },
+      { label: '0 0 1 * *',    desc: '1st of month midnight'   },
+      { label: '0 0 1 1 *',    desc: 'Jan 1st midnight'        },
+      { label: '0 8-18 * * 1-5', desc: 'Hourly, weekdays 8-6' }
+    ];
+
+    (function buildPresets() {
+      var row = document.getElementById('presets-row');
+      PRESETS.forEach(function(p) {
+        var btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.title = p.desc;
+        btn.textContent = p.label;
+        btn.addEventListener('click', function() {
+          document.getElementById('cron-input').value = p.label;
+          onExpressionInput();
+        });
+        row.appendChild(btn);
+      });
+    })();
+
+    /* ===================================================
+       DROPDOWN POPULATION
+    =================================================== */
+    var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var DOW_NAMES   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday (7)'];
+
+    function buildSelect(id, options) {
+      var sel = document.getElementById(id);
+      options.forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        sel.appendChild(opt);
+      });
+    }
+
+    function minuteOptions() {
+      var opts = [{ value:'*', label:'* (every minute)' }];
+      for (var n = 2; n <= 30; n++) { opts.push({ value:'*/'+n, label:'Every '+n+' min (*/'+n+')' }); }
+      for (var m = 0; m <= 59; m++) { opts.push({ value:String(m), label:'Minute '+m }); }
+      return opts;
+    }
+    function hourOptions() {
+      var opts = [{ value:'*', label:'* (every hour)' }];
+      for (var n = 2; n <= 12; n++) { opts.push({ value:'*/'+n, label:'Every '+n+' hr (*/'+n+')' }); }
+      for (var h = 0; h <= 23; h++) {
+        var label = h === 0 ? '0 (midnight)' : h === 12 ? '12 (noon)' : String(h);
+        opts.push({ value:String(h), label:'Hour '+label });
+      }
+      return opts;
+    }
+    function domOptions() {
+      var opts = [{ value:'*', label:'* (every day)' }];
+      for (var d = 1; d <= 31; d++) { opts.push({ value:String(d), label:'Day '+d }); }
+      return opts;
+    }
+    function monthOptions() {
+      var opts = [{ value:'*', label:'* (every month)' }];
+      MONTH_NAMES.forEach(function(n, i) { opts.push({ value:String(i+1), label:(i+1)+' - '+n }); });
+      return opts;
+    }
+    function dowOptions() {
+      var opts = [{ value:'*', label:'* (every day)' }];
+      DOW_NAMES.forEach(function(n, i) { opts.push({ value:String(i), label:i+' - '+n }); });
+      opts.push({ value:'1-5', label:'1-5 (Mon-Fri)' });
+      opts.push({ value:'6,0', label:'6,0 (Weekends)' });
+      return opts;
+    }
+
+    buildSelect('sel-minute', minuteOptions());
+    buildSelect('sel-hour',   hourOptions());
+    buildSelect('sel-dom',    domOptions());
+    buildSelect('sel-month',  monthOptions());
+    buildSelect('sel-dow',    dowOptions());
+
+    /* ===================================================
+       CRON PARSER
+       Returns null on error, or an object with fields:
+       minute, hour, dom, month, dow
+       Each field is an array of integers that match, OR
+       a special marker for "every" (*).
+    =================================================== */
+    function parseCron(expr) {
+      var parts = expr.trim().split(/\s+/);
+      if (parts.length !== 5) return null;
+
+      var ranges = [
+        { min:0,  max:59 }, // minute
+        { min:0,  max:23 }, // hour
+        { min:1,  max:31 }, // day of month
+        { min:1,  max:12 }, // month
+        { min:0,  max:7  }  // day of week (0 and 7 both = Sunday)
+      ];
+
+      var result = [];
+      for (var i = 0; i < 5; i++) {
+        var vals = parseField(parts[i], ranges[i].min, ranges[i].max);
+        if (vals === null) return null;
+        result.push(vals);
+      }
+      return {
+        raw:    parts,
+        minute: result[0],
+        hour:   result[1],
+        dom:    result[2],
+        month:  result[3],
+        dow:    result[4]
+      };
+    }
+
+    function parseField(field, min, max) {
+      var values = new Set();
+      var parts = field.split(',');
+      for (var i = 0; i < parts.length; i++) {
+        var part = parts[i].trim();
+        if (!part) return null;
+
+        var stepParts = part.split('/');
+        if (stepParts.length > 2) return null;
+        var step = 1;
+        if (stepParts.length === 2) {
+          step = parseInt(stepParts[1], 10);
+          if (isNaN(step) || step < 1) return null;
+        }
+        var rangePart = stepParts[0];
+
+        var lo, hi;
+        if (rangePart === '*') {
+          lo = min; hi = max;
+        } else if (rangePart.indexOf('-') !== -1) {
+          var rp = rangePart.split('-');
+          if (rp.length !== 2) return null;
+          lo = parseInt(rp[0], 10);
+          hi = parseInt(rp[1], 10);
+          if (isNaN(lo) || isNaN(hi) || lo > hi) return null;
+        } else {
+          lo = parseInt(rangePart, 10);
+          if (isNaN(lo)) return null;
+          hi = lo;
+        }
+
+        if (lo < min || hi > max) return null;
+
+        for (var v = lo; v <= hi; v += step) {
+          values.add(v);
+        }
+      }
+      return Array.from(values).sort(function(a, b) { return a - b; });
+    }
+
+    /* ===================================================
+       TRANSLATOR: parsed cron -> plain English
+    =================================================== */
+    var PAD = function(n) { return n < 10 ? '0'+n : String(n); };
+
+    function translateCron(p) {
+      if (!p) return null;
+
+      var minRaw  = p.raw[0], hrRaw = p.raw[1], domRaw = p.raw[2],
+          monRaw  = p.raw[3], dowRaw = p.raw[4];
+
+      // --- TIME PHRASE ---
+      var timePhrase = '';
+      if (minRaw === '*' && hrRaw === '*') {
+        timePhrase = 'every minute';
+      } else if (minRaw === '*') {
+        timePhrase = 'every minute of ' + describeHour(hrRaw, p.hour);
+      } else if (hrRaw === '*') {
+        timePhrase = 'at minute ' + describeField(minRaw, p.minute) + ' of every hour';
+      } else {
+        // specific time(s)
+        if (p.minute.length === 1 && p.hour.length === 1) {
+          timePhrase = 'at ' + PAD(p.hour[0]) + ':' + PAD(p.minute[0]);
+        } else {
+          timePhrase = 'at minute ' + describeField(minRaw, p.minute) + ' of ' + describeHour(hrRaw, p.hour);
+        }
+      }
+
+      // --- DATE PHRASE ---
+      var datePhrase = '';
+      var hasDom = domRaw !== '*';
+      var hasMon = monRaw !== '*';
+      var hasDow = dowRaw !== '*';
+
+      if (!hasDom && !hasMon && !hasDow) {
+        datePhrase = 'every day';
+      } else if (hasDow && !hasDom && !hasMon) {
+        datePhrase = describeDoW(dowRaw, p.dow);
+      } else if (hasDom && !hasMon && !hasDow) {
+        datePhrase = 'on day ' + describeField(domRaw, p.dom) + ' of every month';
+      } else if (!hasDom && hasMon && !hasDow) {
+        datePhrase = 'every day in ' + describeMonth(monRaw, p.month);
+      } else if (hasDom && hasMon && !hasDow) {
+        datePhrase = 'on day ' + describeField(domRaw, p.dom) + ' of ' + describeMonth(monRaw, p.month);
+      } else if (hasDow && hasMon && !hasDom) {
+        datePhrase = describeDoW(dowRaw, p.dow) + ' in ' + describeMonth(monRaw, p.month);
+      } else if (hasDow && hasDom) {
+        datePhrase = describeDoW(dowRaw, p.dow) + ' and day ' + describeField(domRaw, p.dom);
+      } else {
+        datePhrase = 'on day ' + describeField(domRaw, p.dom) + ' of ' + describeMonth(monRaw, p.month);
+      }
+
+      // Combine
+      if (timePhrase === 'every minute' && datePhrase === 'every day') {
+        return 'Every minute.';
+      }
+      // Capital first letter
+      var full = timePhrase.charAt(0).toUpperCase() + timePhrase.slice(1);
+      if (datePhrase && datePhrase !== 'every day') {
+        full += ', ' + datePhrase + '.';
+      } else {
+        full += '.';
+      }
+      return full;
+    }
+
+    function describeField(raw, vals) {
+      if (raw.indexOf('/') !== -1 && raw.startsWith('*/')) {
+        return 'every ' + raw.slice(2);
+      }
+      if (raw.indexOf('-') !== -1 && raw.indexOf('/') !== -1) {
+        return raw;
+      }
+      if (raw.indexOf(',') !== -1) {
+        return vals.join(', ');
+      }
+      if (raw.indexOf('-') !== -1) {
+        return raw;
+      }
+      return raw;
+    }
+
+    function describeHour(raw, vals) {
+      if (raw === '*') return 'every hour';
+      if (raw.indexOf('/') !== -1 && raw.startsWith('*/')) {
+        return 'every ' + raw.slice(2) + ' hours';
+      }
+      if (raw.indexOf('-') !== -1 && raw.indexOf('/') === -1) {
+        return 'hours ' + raw;
+      }
+      if (vals.length === 1) {
+        var h = vals[0];
+        if (h === 0) return 'midnight (hour 0)';
+        if (h === 12) return 'noon (hour 12)';
+        var suffix = h < 12 ? 'AM' : 'PM';
+        var h12 = h % 12 || 12;
+        return h12 + ' ' + suffix;
+      }
+      return 'hours ' + vals.join(', ');
+    }
+
+    function describeDoW(raw, vals) {
+      var names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      if (raw === '1-5') return 'on weekdays (Monday through Friday)';
+      if (raw === '6,0' || raw === '0,6') return 'on weekends';
+      if (vals.length === 1) {
+        var v = vals[0] === 7 ? 0 : vals[0];
+        return 'on ' + (names[v] || 'day ' + v);
+      }
+      return 'on days ' + vals.map(function(v) { return names[v === 7 ? 0 : v] || v; }).join(', ');
+    }
+
+    function describeMonth(raw, vals) {
+      if (raw.indexOf('/') !== -1) return 'every ' + raw.slice(raw.indexOf('/') + 1) + ' months';
+      if (vals.length === 1) return MONTH_NAMES[vals[0] - 1];
+      return vals.map(function(v) { return MONTH_NAMES[v - 1]; }).join(', ');
+    }
+
+    /* ===================================================
+       EXECUTION TIME CALCULATOR
+       Uses native Date object only - no external libraries.
+    =================================================== */
+    function getNextExecutions(parsed, count) {
+      if (!parsed) return [];
+
+      var results = [];
+      var now = new Date();
+      // Start from the next minute
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+                       now.getHours(), now.getMinutes() + 1, 0, 0);
+
+      var minuteSet = new Set(parsed.minute);
+      var hourSet   = new Set(parsed.hour);
+      var domSet    = new Set(parsed.dom);
+      var monthSet  = new Set(parsed.month);
+      var dowSet    = new Set(parsed.dow);
+      // 7 and 0 are both Sunday
+      if (dowSet.has(7)) { dowSet.add(0); }
+      if (dowSet.has(0)) { dowSet.add(7); }
+
+      var maxIter = 60 * 24 * 400; // max ~400 days of minutes
+      var iter = 0;
+
+      while (results.length < count && iter < maxIter) {
+        iter++;
+        var mon = d.getMonth() + 1; // 1-12
+        if (!monthSet.has(mon)) {
+          // Jump to next month
+          d = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0);
+          continue;
+        }
+        var dow = d.getDay(); // 0=Sun
+        var dom = d.getDate();
+        if (!domSet.has(dom) || !dowSet.has(dow)) {
+          d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
+          continue;
+        }
+        var hr = d.getHours();
+        if (!hourSet.has(hr)) {
+          d = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours() + 1, 0, 0, 0);
+          continue;
+        }
+        var mn = d.getMinutes();
+        if (!minuteSet.has(mn)) {
+          d = new Date(d.getTime() + 60000);
+          continue;
+        }
+        results.push(new Date(d));
+        d = new Date(d.getTime() + 60000);
+      }
+      return results;
+    }
+
+    /* ===================================================
+       RENDER EXECUTIONS
+    =================================================== */
+    var DAY_NAMES  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var MON_SHORT  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function renderExecutions(times) {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+      for (var i = 1; i <= 5; i++) {
+        var d = times[i - 1];
+        var dEl = document.getElementById('e' + i + 'd');
+        var tEl = document.getElementById('e' + i + 't');
+        var zEl = document.getElementById('e' + i + 'z');
+        if (!d) {
+          dEl.textContent = 'No match found';
+          tEl.textContent = '';
+          zEl.textContent = '';
+        } else {
+          dEl.textContent = DAY_NAMES[d.getDay()] + ', ' + MON_SHORT[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+          tEl.textContent = ' ' + PAD(d.getHours()) + ':' + PAD(d.getMinutes());
+          zEl.textContent = tz;
+        }
+      }
+    }
+
+    /* ===================================================
+       SYNC: Expression -> Dropdowns
+    =================================================== */
+    function syncDropdownsFromExpression(parts) {
+      function setVal(id, val) {
+        var sel = document.getElementById(id);
+        var found = false;
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === val) {
+            sel.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) sel.selectedIndex = 0; // fall back to *
+      }
+      setVal('sel-minute', parts[0]);
+      setVal('sel-hour',   parts[1]);
+      setVal('sel-dom',    parts[2]);
+      setVal('sel-month',  parts[3]);
+      setVal('sel-dow',    parts[4]);
+    }
+
+    /* ===================================================
+       EVENT HANDLERS
+    =================================================== */
+    var suppressDropdown = false;
+    var suppressInput    = false;
+
+    function onExpressionInput() {
+      var expr = document.getElementById('cron-input').value;
+      var parsed = parseCron(expr);
+      var errEl  = document.getElementById('error-msg');
+      var errTxt = document.getElementById('error-text');
+      var txEl   = document.getElementById('translation-text');
+      var inp    = document.getElementById('cron-input');
+
+      if (!parsed) {
+        inp.classList.add('error');
+        errEl.classList.add('show');
+        errTxt.textContent = 'Invalid cron expression. Check field ranges and syntax.';
+        txEl.textContent = '';
+        for (var i = 1; i <= 5; i++) {
+          document.getElementById('e' + i + 'd').textContent = '--';
+          document.getElementById('e' + i + 't').textContent = '';
+          document.getElementById('e' + i + 'z').textContent = '';
+        }
+      } else {
+        inp.classList.remove('error');
+        errEl.classList.remove('show');
+        txEl.textContent = translateCron(parsed);
+
+        if (!suppressInput) {
+          suppressDropdown = true;
+          syncDropdownsFromExpression(parsed.raw);
+          suppressDropdown = false;
+        }
+
+        var times = getNextExecutions(parsed, 5);
+        renderExecutions(times);
+      }
+    }
+
+    function onDropdownChange() {
+      if (suppressDropdown) return;
+      var m  = document.getElementById('sel-minute').value;
+      var h  = document.getElementById('sel-hour').value;
+      var dm = document.getElementById('sel-dom').value;
+      var mo = document.getElementById('sel-month').value;
+      var dw = document.getElementById('sel-dow').value;
+      var expr = [m, h, dm, mo, dw].join(' ');
+      suppressInput = true;
+      document.getElementById('cron-input').value = expr;
+      suppressInput = false;
+      onExpressionInput();
+    }
+
+    /* ===================================================
+       FAQ ACCORDION
+    =================================================== */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var isOpen = btn.classList.contains('open');
+
+      document.querySelectorAll('.faq-question.open').forEach(function(el) {
+        el.classList.remove('open');
+        el.setAttribute('aria-expanded', 'false');
+        el.nextElementSibling.classList.remove('open');
+      });
+
+      if (!isOpen) {
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        answer.classList.add('open');
+      }
+    }
+
+    /* ===================================================
+       INIT
+    =================================================== */
+    onExpressionInput();
+
+  </script>
+</body>
+</html>

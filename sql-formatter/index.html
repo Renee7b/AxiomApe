@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL Formatter: Beautify and Format Raw SQL Queries Instantly | AxiomApe</title>
+  <meta name="description" content="Free SQL formatter and beautifier. Paste raw SQL and instantly get clean, syntax-highlighted output with configurable keyword casing, indentation, and comma placement. 100% client-side." />
+  <meta name="keywords" content="sql formatter, sql beautifier, sql pretty printer, format sql query, sql indenter, sql syntax highlighter, sql cleaner, sql code formatter, beautify sql, sql style, sql keyword casing" />
+  <link rel="canonical" href="https://axiomape.com/sql-formatter/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "SQL Formatter",
+        "description": "Free SQL formatter and beautifier. Paste raw SQL and instantly get clean, syntax-highlighted output with configurable keyword casing, indentation, and comma placement. 100% client-side.",
+        "url": "https://axiomape.com/sql-formatter/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is formatting SQL queries important for developers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Formatted SQL is dramatically easier to read, review, and debug. Unformatted SQL written as a single line obscures the logical structure of a query - it is hard to see which columns are selected, which tables are joined, and what conditions apply. Well-formatted SQL makes each clause visually distinct, so teammates can review it quickly in pull requests, database administrators can spot missing indexes or inefficient joins at a glance, and you can return to your own code months later and immediately understand what it does. Consistent formatting also reduces merge conflicts in version-controlled SQL files because diffs reflect actual logic changes rather than whitespace differences."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does formatting or adding line breaks change how the database executes the query?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. SQL databases parse queries by tokenizing the input - they split the text into keywords, identifiers, operators, and literals - and then build an execution plan from those tokens. Whitespace (spaces, tabs, newlines) between tokens is ignored during parsing. A query written on one line and the same query spread across twenty lines with indentation produce identical parse trees and identical execution plans. The database engine never sees your formatting; it only sees the logical structure. The only exception is whitespace inside string literals enclosed in quotes, which is preserved exactly as written."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the standard industry convention for SQL keyword capitalization?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "UPPERCASE keywords are the most widely adopted convention in professional and enterprise SQL. Writing SELECT, FROM, WHERE, and JOIN in uppercase while keeping table names, column names, and aliases in lowercase or snake_case makes the structural keywords visually pop out from the data identifiers, which aids readability at a glance. Most official SQL documentation, database textbooks, and style guides (including those from Oracle, Microsoft, and PostgreSQL) use uppercase keywords. That said, lowercase keywords have gained traction in modern analytics and data engineering workflows, partly because many query tools auto-complete in lowercase. The important thing is consistency within a project."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are my proprietary database queries sent to a server when using this tool?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This SQL formatter is entirely client-side. Your SQL is parsed and formatted using JavaScript running in your browser. Nothing you type is ever transmitted to AxiomApe servers or any third party. You can verify this by disconnecting from the internet after the page loads - the tool continues to work perfectly. This makes it safe to use with sensitive or proprietary queries that you would not want to send to an external service."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a subquery in SQL?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A subquery (also called an inner query or nested query) is a SELECT statement written inside another SQL statement. It can appear in the WHERE clause (to filter rows based on a computed set), in the FROM clause (treated as a derived table), or in the SELECT list (as a scalar subquery returning a single value). For example: SELECT name FROM employees WHERE department_id IN (SELECT id FROM departments WHERE budget > 100000). The formatter indents subqueries to make their nesting level visually clear."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark base - DB Admin IDE */
+      --bg:          #0a0e1a;
+      --surface:     #111827;
+      --surface-2:   #1a2235;
+      --surface-3:   #1f2d45;
+      --border:      #2a3a55;
+      --border-light:#374f72;
+
+      /* Text */
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --muted-2:     #64748b;
+
+      /* Accent - Database Blue */
+      --blue:        #3B82F6;
+      --blue-dim:    #2563eb;
+      --blue-glow:   rgba(59,130,246,0.18);
+      --blue-dark:   rgba(59,130,246,0.09);
+
+      /* Syntax highlight colors */
+      --kw-pink:     #EC4899;
+      --str-yellow:  #EAB308;
+      --op-cyan:     #06B6D4;
+      --num-orange:  #F97316;
+      --fn-violet:   #A78BFA;
+      --comment-grey:#6B7280;
+
+      /* Status */
+      --green:       #22c55e;
+      --red:         #f87171;
+      --red-bg:      rgba(248,113,113,0.1);
+
+      /* Layout */
+      --radius:      10px;
+      --radius-sm:   6px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.5);
+      --mono:        "Fira Code", Consolas, "Courier New", Courier, monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===================================================
+       HIDDEN LEGACY TOPBAR
+    =================================================== */
+    .site-topbar { display: none; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0a0e1a 0%, #111827 55%, #0d1a2e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 720px;
+      margin: 0 auto 14px;
+      color: #fff;
+    }
+    .page-header h1 span { color: var(--blue); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 18px 14px; }
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.02em;
+    }
+    .card-title .badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: var(--blue-dark);
+      color: var(--blue);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ===================================================
+       OPTIONS BAR
+    =================================================== */
+    .options-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 20px;
+      align-items: flex-end;
+    }
+    .opt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .opt-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .opt-select {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 7px 30px 7px 10px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 9px center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-width: 150px;
+    }
+    .opt-select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-glow);
+    }
+    .opt-select option { background: var(--surface-2); }
+
+    /* Toggle (comma placement) */
+    .toggle-wrap {
+      display: flex;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .toggle-btn.active {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 600;
+    }
+    .toggle-btn:not(.active):hover {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+
+    /* Action buttons */
+    .opt-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary.copied {
+      background: var(--green);
+    }
+    .btn-ghost {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--border-light); color: var(--text); }
+
+    /* ===================================================
+       DUAL PANEL LAYOUT
+    =================================================== */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .panels { grid-template-columns: 1fr; }
+    }
+
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel-label .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+    .dot-input  { background: var(--blue); }
+    .dot-output { background: var(--green); }
+
+    /* Input textarea */
+    #sql-input {
+      width: 100%;
+      height: 320px;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      tab-size: 4;
+    }
+    #sql-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-glow);
+    }
+    #sql-input::placeholder { color: var(--muted-2); }
+
+    /* Output block */
+    #sql-output {
+      width: 100%;
+      height: 320px;
+      background: #0d1117;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      padding: 14px 16px;
+      overflow: auto;
+      white-space: pre;
+      tab-size: 4;
+      position: relative;
+    }
+    #sql-output.has-content {
+      border-color: rgba(34,197,94,0.4);
+    }
+    #sql-output .placeholder-text {
+      color: var(--muted-2);
+      font-style: italic;
+      white-space: normal;
+    }
+
+    /* Syntax highlight spans */
+    .hl-kw   { color: var(--kw-pink);    font-weight: 600; }
+    .hl-str  { color: var(--str-yellow); }
+    .hl-num  { color: var(--num-orange); }
+    .hl-op   { color: var(--op-cyan);    }
+    .hl-fn   { color: var(--fn-violet);  }
+    .hl-cmt  { color: var(--comment-grey); font-style: italic; }
+    .hl-id   { color: var(--text); }
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard { text-align: center; margin-bottom: 28px; }
+    .axiom-ad-mobile-anchor { text-align: center; margin-top: 16px; }
+
+    /* ===================================================
+       EDU / GLOSSARY
+    =================================================== */
+    .edu-wrap { margin-bottom: 32px; }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--blue);
+      font-family: var(--mono);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .section-intro {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 22px;
+      font-size: 0.97rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 14px;
+      font-size: 0.93rem;
+    }
+
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-item:first-child { border-top: 1px solid var(--border); }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 0.97rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 16px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      transition: color 0.15s;
+    }
+    .faq-question:hover { color: var(--blue); }
+    .faq-arrow {
+      flex-shrink: 0;
+      color: var(--muted-2);
+      transition: transform 0.2s;
+      font-size: 1.1rem;
+    }
+    .faq-question.open .faq-arrow { transform: rotate(180deg); color: var(--blue); }
+    .faq-answer {
+      display: none;
+      padding: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.91rem;
+      line-height: 1.75;
+    }
+    .faq-answer.open { display: block; }
+
+    /* Disclaimer */
+    .disclaimer {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.8rem;
+      color: var(--muted-2);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    /* ===================================================
+       RESPONSIVE
+    =================================================== */
+    @media (max-width: 768px) {
+      .axiom-ad-leaderboard { display: none; }
+      .opt-actions { margin-left: 0; width: 100%; }
+    }
+    @media (min-width: 769px) {
+      .axiom-ad-mobile-anchor { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>SQL <span>Formatter</span></h1>
+      <p>Paste raw SQL and get clean, syntax-highlighted output instantly. Configure keyword casing, indentation, and comma placement. Runs entirely in your browser.</p>
+    </header>
+
+    <!-- ===================================================
+         TOOL CARD
+    =================================================== -->
+    <div class="card">
+      <div class="card-title">
+        &#10095; SQL Formatter
+        <span class="badge">Live</span>
+      </div>
+
+      <!-- OPTIONS BAR -->
+      <div class="options-bar">
+
+        <div class="opt-group">
+          <div class="opt-label">Keyword Casing</div>
+          <select id="opt-casing" class="opt-select" onchange="runFormat()" aria-label="Keyword casing">
+            <option value="upper">UPPERCASE</option>
+            <option value="lower">lowercase</option>
+            <option value="title">Capitalized</option>
+          </select>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">Indentation</div>
+          <select id="opt-indent" class="opt-select" onchange="runFormat()" aria-label="Indentation">
+            <option value="2">2 Spaces</option>
+            <option value="4" selected>4 Spaces</option>
+            <option value="tab">Tabs</option>
+          </select>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">Commas</div>
+          <div class="toggle-wrap">
+            <button class="toggle-btn active" id="comma-after" onclick="setComma('after')" aria-pressed="true">After Column</button>
+            <button class="toggle-btn" id="comma-before" onclick="setComma('before')" aria-pressed="false">Before Column</button>
+          </div>
+        </div>
+
+        <div class="opt-actions">
+          <button class="btn btn-ghost" onclick="clearInput()" aria-label="Clear input">Clear</button>
+          <button class="btn btn-primary" id="copy-btn" onclick="copyOutput()" aria-label="Copy formatted SQL">Copy Formatted SQL</button>
+        </div>
+
+      </div>
+
+      <!-- DUAL PANELS -->
+      <div class="panels">
+
+        <div>
+          <div class="panel-label">
+            <span class="dot dot-input"></span> Raw SQL Query
+          </div>
+          <textarea
+            id="sql-input"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="Paste your SQL here..."
+            oninput="runFormat()"
+            aria-label="Raw SQL input"
+          ></textarea>
+        </div>
+
+        <div>
+          <div class="panel-label">
+            <span class="dot dot-output"></span> Formatted SQL
+          </div>
+          <div id="sql-output" role="region" aria-label="Formatted SQL output" aria-live="polite">
+            <span class="placeholder-text">Formatted output will appear here as you type.</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ===================================================
+         EDUCATIONAL CONTENT
+    =================================================== -->
+    <div class="edu-wrap">
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">SQL</div>
+            <div class="glossary-def">Structured Query Language. The standard language for managing and querying relational databases. SQL is used to insert, retrieve, update, and delete data, as well as define table structures and control access permissions.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Subquery</div>
+            <div class="glossary-def">A SELECT statement nested inside another SQL statement. Subqueries can appear in WHERE, FROM, or SELECT clauses and are evaluated before the outer query. Also called an inner query or nested query. This formatter indents them to make their nesting level visually clear.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Clause</div>
+            <div class="glossary-def">A distinct section of a SQL statement introduced by a keyword such as SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, or LIMIT. Each clause performs a specific role in filtering, sorting, or shaping the result set. Formatting places each clause on its own line.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Keyword Casing</div>
+            <div class="glossary-def">The typographic convention applied to reserved SQL words like SELECT, JOIN, and WHERE. Common choices are UPPERCASE (most traditional and widely adopted), lowercase, and Capitalized (first letter only). This formatter applies your chosen casing to all reserved words without touching string literals or identifiers.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Syntax Highlighting</div>
+            <div class="glossary-def">Color-coding of code elements by category so they can be identified at a glance. In this formatter, keywords appear in pink, string literals in yellow, operators in cyan, numbers in orange, and functions in violet, mirroring the palette of professional database IDEs.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">DML</div>
+            <div class="glossary-def">Data Manipulation Language. The subset of SQL used to read and modify data: SELECT, INSERT, UPDATE, DELETE, and MERGE. DML statements are what developers write most often and what this formatter is optimized for. The counterpart DDL (Data Definition Language) covers CREATE, ALTER, and DROP.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Tokenization</div>
+            <div class="glossary-def">The process of breaking a raw text string into a sequence of meaningful units called tokens. For SQL, tokens include keywords (SELECT), identifiers (table names), string literals ('hello'), numbers, operators (+, =), and punctuation. Tokenization is the first step in any SQL parser or formatter.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Identifier</div>
+            <div class="glossary-def">A name given to a database object such as a table, column, view, or alias. Identifiers can be plain (employees, order_date) or quoted with backticks or double quotes to allow reserved words or spaces. The formatter applies casing rules only to reserved keywords, never to identifiers.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to SQL Formatting</h2>
+
+        <p class="section-intro">Whether you are a backend developer pasting a one-liner from a ORM debug log, a data analyst untangling a legacy stored procedure, or a database administrator reviewing a colleague's migration script, a SQL formatter saves real time. This guide explains how the formatter works, what each option does, and answers the questions developers search for most often.</p>
+
+        <h3>How to Use This Tool</h3>
+        <p>Paste or type your SQL into the left panel. The formatter processes your input in real time using an event listener on every keystroke - there is no button to press. The right panel immediately shows the formatted, syntax-highlighted result. Use the options bar to adjust keyword casing, indentation width, and whether commas appear before or after each column in a list. The Copy Formatted SQL button copies the plain-text (unhighlighted) version to your clipboard so you can paste it directly into a query editor or source file. The Clear button wipes the input and resets the output.</p>
+
+        <h3>What the Formatting Engine Does</h3>
+        <p>The formatter uses a two-pass approach. First, it tokenizes the input by scanning character by character and classifying each chunk as a keyword, identifier, string literal, number, operator, comment, or punctuation. String literals (everything inside single quotes or double quotes) are captured as a single token and never modified - your data values are completely preserved. Second, it applies formatting rules: major clause keywords (SELECT, FROM, WHERE, JOIN, GROUP BY, ORDER BY, HAVING, LIMIT, UNION) each start on a new line with no indentation. Column lists, JOIN conditions, and WHERE predicates are indented by one level. Subqueries wrapped in parentheses get an additional indent level. CASE/WHEN/THEN/ELSE/END blocks are indented inside the CASE block.</p>
+
+        <h3>Keyword Casing Options</h3>
+        <p>UPPERCASE is the traditional and most widely recognized convention. It creates a strong visual contrast between structural SQL keywords and your own data identifiers, making the query easier to scan at a glance. lowercase keywords are increasingly used in modern analytics workflows and are the default output of many query auto-formatters. Capitalized (first-letter uppercase only) is a compromise that some teams prefer for readability without the visual weight of all-caps. Whichever you pick, the formatter applies it consistently to every reserved SQL word in the query.</p>
+
+        <h3>Comma Placement: Before vs. After</h3>
+        <p>The "after column" style (col1, col2, col3) is the standard that most SQL developers learn first and is preferred in most style guides. The "before column" style (, col1, col2, col3) places the comma at the start of each new line, making it slightly easier to comment out a single column without breaking the syntax of the line above it. Both are syntactically identical to the database engine. Choose based on your team's or organization's preference.</p>
+
+        <h3>Syntax Highlighting Reference</h3>
+        <p>The output panel uses four color categories to help you visually parse query structure at a glance. Keywords (SELECT, JOIN, WHERE) appear in pink so structural words stand out immediately. String literals ('active', 'John') appear in yellow to remind you that their content is passed to the database exactly as written, with no casing changes. Operators (=, !=, AND, OR, IN, LIKE) appear in cyan. Built-in functions (COUNT, SUM, COALESCE, NOW) appear in violet. Numbers appear in orange.</p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Why is formatting SQL queries important for developers?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            Formatted SQL is dramatically easier to read, review, and debug. Unformatted SQL written as a single line obscures the logical structure - it is hard to see which columns are selected, which tables are joined, and what conditions apply. Well-formatted SQL makes each clause visually distinct, so teammates can review it quickly in pull requests, database administrators can spot missing indexes or inefficient joins at a glance, and you can return to your own code months later and immediately understand what it does. Consistent formatting also reduces merge conflicts in version-controlled SQL files because diffs reflect actual logic changes rather than whitespace differences.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Does formatting or adding line breaks change how the database executes the query?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            No. SQL databases parse queries by tokenizing the input - splitting the text into keywords, identifiers, operators, and literals - then building an execution plan from those tokens. Whitespace between tokens is ignored during parsing. A query written on one line and the same query spread across twenty lines with indentation produce identical parse trees and identical execution plans. The database engine never sees your formatting; it only sees the logical structure. The only exception is whitespace inside string literals enclosed in quotes, which the formatter preserves exactly as written.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is the standard industry convention for SQL keyword capitalization?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            UPPERCASE keywords are the most widely adopted convention in professional and enterprise SQL. Writing SELECT, FROM, WHERE, and JOIN in uppercase while keeping table names, column names, and aliases in lowercase or snake_case makes the structural keywords visually pop out from data identifiers, which aids readability at a glance. Most official SQL documentation, database textbooks, and style guides (including those from Oracle, Microsoft, and PostgreSQL) use uppercase keywords. That said, lowercase keywords have gained traction in modern analytics and data engineering workflows, partly because many query tools auto-complete in lowercase. The important thing is consistency within a project.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Are my proprietary database queries sent to a server when using this tool?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            No. This SQL formatter is entirely client-side. Your SQL is parsed and formatted using JavaScript running in your browser. Nothing you type is ever transmitted to AxiomApe servers or any third party. You can verify this by disconnecting from the internet after the page loads - the tool continues to work perfectly. This makes it safe to use with sensitive or proprietary queries that you would not want to send to an external service.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is a subquery in SQL?
+            <span class="faq-arrow">&#8964;</span>
+          </button>
+          <div class="faq-answer">
+            A subquery (also called an inner query or nested query) is a SELECT statement written inside another SQL statement. It can appear in the WHERE clause (to filter rows based on a computed set), in the FROM clause (treated as a derived table), or in the SELECT list (as a scalar subquery returning a single value). For example: SELECT name FROM employees WHERE department_id IN (SELECT id FROM departments WHERE budget > 100000). The formatter indents subqueries to make their nesting level visually clear.
+          </div>
+        </div>
+
+      </div><!-- /edu-section -->
+
+    </div><!-- /edu-wrap -->
+
+    <div class="disclaimer">
+      This tool operates entirely in your browser. No SQL queries or any other data are ever sent to any server. All formatting and syntax highlighting is performed locally by JavaScript. This tool is not affiliated with any specific database vendor.
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ===================================================
+       STATE
+    =================================================== */
+    var commaPlacement = 'after'; // 'after' | 'before'
+
+    function setComma(val) {
+      commaPlacement = val;
+      document.getElementById('comma-after').classList.toggle('active', val === 'after');
+      document.getElementById('comma-before').classList.toggle('active', val === 'before');
+      document.getElementById('comma-after').setAttribute('aria-pressed', val === 'after' ? 'true' : 'false');
+      document.getElementById('comma-before').setAttribute('aria-pressed', val === 'before' ? 'true' : 'false');
+      runFormat();
+    }
+
+    /* ===================================================
+       TOKENIZER
+       Returns array of token objects: { type, value }
+       Types: 'keyword', 'function', 'identifier', 'string',
+              'number', 'operator', 'comment', 'whitespace',
+              'comma', 'lparen', 'rparen', 'semicolon', 'other'
+    =================================================== */
+    var SQL_KEYWORDS = new Set([
+      'SELECT','FROM','WHERE','JOIN','INNER','LEFT','RIGHT','FULL','OUTER','CROSS',
+      'ON','AS','AND','OR','NOT','IN','IS','NULL','LIKE','BETWEEN','EXISTS',
+      'DISTINCT','ALL','UNION','INTERSECT','EXCEPT','GROUP','BY','ORDER','HAVING',
+      'LIMIT','OFFSET','INSERT','INTO','VALUES','UPDATE','SET','DELETE','MERGE',
+      'CASE','WHEN','THEN','ELSE','END','CREATE','TABLE','VIEW','INDEX','ALTER',
+      'DROP','TRUNCATE','BEGIN','COMMIT','ROLLBACK','TRANSACTION','WITH','RECURSIVE',
+      'WINDOW','OVER','PARTITION','ROW','ROWS','RANGE','PRECEDING','FOLLOWING',
+      'CURRENT','UNBOUNDED','ASC','DESC','NULLS','FIRST','LAST','TOP','FETCH',
+      'NEXT','ONLY','PERCENT','WITH','TIES','EXPLAIN','ANALYZE','VERBOSE',
+      'PRIMARY','KEY','FOREIGN','REFERENCES','UNIQUE','DEFAULT','CHECK','CONSTRAINT',
+      'IF','ELSE','RETURN','DECLARE','PROCEDURE','FUNCTION','TRIGGER','RETURNS',
+      'LANGUAGE','USING','REPLACE','IGNORE','NATURAL','STRAIGHT_JOIN','FORCE',
+      'USE','STRAIGHT'
+    ]);
+
+    var SQL_FUNCTIONS = new Set([
+      'COUNT','SUM','AVG','MIN','MAX','COALESCE','NULLIF','IFNULL','ISNULL',
+      'NVL','DECODE','GREATEST','LEAST','NOW','GETDATE','SYSDATE','CURRENT_DATE',
+      'CURRENT_TIME','CURRENT_TIMESTAMP','DATE','TIME','YEAR','MONTH','DAY',
+      'HOUR','MINUTE','SECOND','DATEADD','DATEDIFF','DATEPART','DATENAME',
+      'EXTRACT','TO_DATE','TO_CHAR','TO_NUMBER','CAST','CONVERT','TRIM','LTRIM',
+      'RTRIM','UPPER','LOWER','LCASE','UCASE','LENGTH','LEN','SUBSTR','SUBSTRING',
+      'LEFT','RIGHT','CHARINDEX','POSITION','INSTR','REPLACE','TRANSLATE',
+      'CONCAT','CONCAT_WS','FORMAT','PRINTF','LPAD','RPAD','REPEAT','REVERSE',
+      'SPACE','STUFF','ROUND','FLOOR','CEIL','CEILING','ABS','MOD','POWER',
+      'SQRT','EXP','LOG','LOG10','SIGN','TRUNC','TRUNCATE','RAND','RANDOM',
+      'ROW_NUMBER','RANK','DENSE_RANK','NTILE','LAG','LEAD','FIRST_VALUE',
+      'LAST_VALUE','NTH_VALUE','CUME_DIST','PERCENT_RANK','LISTAGG','STRING_AGG',
+      'GROUP_CONCAT','ARRAY_AGG','JSON_AGG','JSON_OBJECT','JSON_ARRAY',
+      'UNNEST','GENERATE_SERIES','REGEXP_REPLACE','REGEXP_MATCH'
+    ]);
+
+    var SQL_OPERATORS = new Set([
+      '=','!=','<>','<','<=','>','>=','+','-','*','/',
+      '%','||','->','->>','::','!~','~','~*','!~*'
+    ]);
+
+    function tokenize(sql) {
+      var tokens = [];
+      var i = 0;
+      var len = sql.length;
+
+      while (i < len) {
+        var ch = sql[i];
+
+        // Whitespace
+        if (/\s/.test(ch)) {
+          var ws = '';
+          while (i < len && /\s/.test(sql[i])) ws += sql[i++];
+          tokens.push({ type: 'whitespace', value: ws });
+          continue;
+        }
+
+        // Line comment --
+        if (ch === '-' && sql[i+1] === '-') {
+          var cmt = '';
+          while (i < len && sql[i] !== '\n') cmt += sql[i++];
+          tokens.push({ type: 'comment', value: cmt });
+          continue;
+        }
+
+        // Block comment /* ... */
+        if (ch === '/' && sql[i+1] === '*') {
+          var cmt = '';
+          i += 2;
+          while (i < len && !(sql[i] === '*' && sql[i+1] === '/')) cmt += sql[i++];
+          if (i < len) i += 2;
+          tokens.push({ type: 'comment', value: '/*' + cmt + '*/' });
+          continue;
+        }
+
+        // String literal: single-quoted (handles escaped '')
+        if (ch === "'") {
+          var str = "'";
+          i++;
+          while (i < len) {
+            if (sql[i] === "'" && sql[i+1] === "'") {
+              str += "''";
+              i += 2;
+            } else if (sql[i] === "'") {
+              str += "'";
+              i++;
+              break;
+            } else {
+              str += sql[i++];
+            }
+          }
+          tokens.push({ type: 'string', value: str });
+          continue;
+        }
+
+        // String literal: double-quoted identifier or string
+        if (ch === '"') {
+          var str = '"';
+          i++;
+          while (i < len) {
+            if (sql[i] === '"' && sql[i+1] === '"') {
+              str += '""';
+              i += 2;
+            } else if (sql[i] === '"') {
+              str += '"';
+              i++;
+              break;
+            } else {
+              str += sql[i++];
+            }
+          }
+          tokens.push({ type: 'string', value: str });
+          continue;
+        }
+
+        // Backtick-quoted identifier (MySQL)
+        if (ch === '`') {
+          var str = '`';
+          i++;
+          while (i < len && sql[i] !== '`') str += sql[i++];
+          if (i < len) { str += '`'; i++; }
+          tokens.push({ type: 'identifier', value: str });
+          continue;
+        }
+
+        // Number (integer or decimal)
+        if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(sql[i+1] || ''))) {
+          var num = '';
+          while (i < len && /[0-9eE.+\-]/.test(sql[i])) num += sql[i++];
+          tokens.push({ type: 'number', value: num });
+          continue;
+        }
+
+        // Word: keyword, function, or identifier
+        if (/[a-zA-Z_$#]/.test(ch)) {
+          var word = '';
+          while (i < len && /[a-zA-Z0-9_$#.]/.test(sql[i])) word += sql[i++];
+          var upper = word.toUpperCase().replace(/\./g, '');
+          var wordUpper = word.toUpperCase();
+          if (SQL_KEYWORDS.has(wordUpper)) {
+            tokens.push({ type: 'keyword', value: word });
+          } else if (SQL_FUNCTIONS.has(wordUpper)) {
+            tokens.push({ type: 'function', value: word });
+          } else {
+            tokens.push({ type: 'identifier', value: word });
+          }
+          continue;
+        }
+
+        // Operators (multi-char first)
+        var matched = false;
+        var ops2 = ['!=','<>','<=','>=','->','->>','::','!~','~*','!~*'];
+        for (var oi = 0; oi < ops2.length; oi++) {
+          var op = ops2[oi];
+          if (sql.substring(i, i + op.length) === op) {
+            tokens.push({ type: 'operator', value: op });
+            i += op.length;
+            matched = true;
+            break;
+          }
+        }
+        if (matched) continue;
+
+        // Single char operators and punctuation
+        if ('=<>+*/%|'.indexOf(ch) !== -1) {
+          tokens.push({ type: 'operator', value: ch });
+          i++;
+          continue;
+        }
+        if (ch === '-') {
+          tokens.push({ type: 'operator', value: ch });
+          i++;
+          continue;
+        }
+        if (ch === ',') { tokens.push({ type: 'comma', value: ch }); i++; continue; }
+        if (ch === '(') { tokens.push({ type: 'lparen', value: ch }); i++; continue; }
+        if (ch === ')') { tokens.push({ type: 'rparen', value: ch }); i++; continue; }
+        if (ch === ';') { tokens.push({ type: 'semicolon', value: ch }); i++; continue; }
+        if (ch === '.') { tokens.push({ type: 'other', value: ch }); i++; continue; }
+
+        tokens.push({ type: 'other', value: ch });
+        i++;
+      }
+
+      return tokens;
+    }
+
+    /* ===================================================
+       APPLY KEYWORD CASING
+    =================================================== */
+    function applyCase(word, mode) {
+      if (mode === 'upper') return word.toUpperCase();
+      if (mode === 'lower') return word.toLowerCase();
+      if (mode === 'title') return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      return word;
+    }
+
+    /* ===================================================
+       FORMATTER
+       Walks tokens and builds an indented string.
+    =================================================== */
+    var CLAUSE_KEYWORDS = new Set([
+      'SELECT','FROM','WHERE','GROUP','ORDER','HAVING','LIMIT','OFFSET',
+      'UNION','INTERSECT','EXCEPT','INSERT','INTO','VALUES','UPDATE','SET',
+      'DELETE','MERGE','WITH','WINDOW','EXPLAIN','ANALYZE'
+    ]);
+
+    var JOIN_KEYWORDS = new Set([
+      'JOIN','INNER','LEFT','RIGHT','FULL','OUTER','CROSS','NATURAL','STRAIGHT_JOIN'
+    ]);
+
+    var NEWLINE_BEFORE = new Set([
+      'SELECT','FROM','WHERE','GROUP','ORDER','HAVING','LIMIT','OFFSET',
+      'UNION','INTERSECT','EXCEPT','INSERT','INTO','VALUES','UPDATE','SET',
+      'DELETE','MERGE','ON','USING','WITH','WINDOW',
+      'JOIN','INNER','LEFT','RIGHT','FULL','OUTER','CROSS','NATURAL',
+      'CASE','WHEN','THEN','ELSE','END','EXPLAIN','ANALYZE'
+    ]);
+
+    function getIndent(depth, indentStr) {
+      var s = '';
+      for (var i = 0; i < depth; i++) s += indentStr;
+      return s;
+    }
+
+    function formatSQL(sql, casingMode, indentOpt, commaStyle) {
+      var indentStr = indentOpt === 'tab' ? '\t' : (indentOpt === '2' ? '  ' : '    ');
+      var tokens = tokenize(sql);
+
+      // Filter out whitespace tokens; we rebuild spacing
+      var toks = tokens.filter(function(t) { return t.type !== 'whitespace'; });
+
+      var result = '';
+      var depth = 0;
+      var lineDepth = 0; // depth at start of current line
+      var inSelectList = false;
+      var selectDepth = 0;
+      var caseDepth = 0;
+      var firstToken = true;
+      var prevType = null;
+      var prevUpper = null;
+
+      function nl(d) {
+        result += '\n' + getIndent(d, indentStr);
+      }
+
+      for (var i = 0; i < toks.length; i++) {
+        var tok = toks[i];
+        var upper = tok.value.toUpperCase();
+        var nextTok = toks[i + 1];
+        var nextUpper = nextTok ? nextTok.value.toUpperCase() : '';
+
+        if (tok.type === 'keyword') {
+          var casedVal = applyCase(tok.value, casingMode);
+
+          // CASE block handling
+          if (upper === 'CASE') {
+            if (!firstToken) result += ' ';
+            result += casedVal;
+            caseDepth++;
+            depth++;
+            firstToken = false;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+          if (upper === 'END' && caseDepth > 0) {
+            caseDepth--;
+            depth = Math.max(0, depth - 1);
+            nl(depth);
+            result += casedVal;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+          if ((upper === 'WHEN' || upper === 'THEN' || upper === 'ELSE') && caseDepth > 0) {
+            nl(depth);
+            result += casedVal;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          // JOIN compound: keep INNER/LEFT/RIGHT/FULL/OUTER on same line as JOIN
+          if (JOIN_KEYWORDS.has(upper) && upper !== 'JOIN') {
+            if (!firstToken) nl(depth);
+            result += casedVal;
+            prevType = tok.type; prevUpper = upper;
+            firstToken = false;
+            continue;
+          }
+          if (upper === 'JOIN') {
+            if (prevUpper && JOIN_KEYWORDS.has(prevUpper) && prevUpper !== 'JOIN') {
+              result += ' ' + casedVal;
+            } else {
+              if (!firstToken) nl(depth);
+              result += casedVal;
+            }
+            prevType = tok.type; prevUpper = upper;
+            firstToken = false;
+            continue;
+          }
+
+          // GROUP BY / ORDER BY: keep BY on same line
+          if (upper === 'BY' && (prevUpper === 'GROUP' || prevUpper === 'ORDER' || prevUpper === 'PARTITION')) {
+            result += ' ' + casedVal;
+            if (prevUpper === 'GROUP' || prevUpper === 'ORDER') {
+              inSelectList = true;
+              selectDepth = depth + 1;
+            }
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          // ON keyword (JOIN condition)
+          if (upper === 'ON') {
+            nl(depth + 1);
+            result += casedVal;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          // UNION / INTERSECT / EXCEPT - put blank line before
+          if ((upper === 'UNION' || upper === 'INTERSECT' || upper === 'EXCEPT') && !firstToken) {
+            result += '\n';
+            nl(0);
+            result += casedVal;
+            inSelectList = false;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          // SELECT - start new clause
+          if (upper === 'SELECT') {
+            if (!firstToken) { result += '\n'; nl(depth); }
+            result += casedVal;
+            inSelectList = true;
+            selectDepth = depth + 1;
+            prevType = tok.type; prevUpper = upper;
+            firstToken = false;
+            continue;
+          }
+
+          // WHERE, FROM, HAVING, LIMIT, OFFSET, SET, VALUES, etc.
+          if (NEWLINE_BEFORE.has(upper) && !firstToken) {
+            nl(depth);
+            result += casedVal;
+            if (upper === 'WHERE' || upper === 'HAVING' || upper === 'SET') {
+              inSelectList = true;
+              selectDepth = depth + 1;
+            } else {
+              inSelectList = false;
+            }
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          // AND / OR inside WHERE / HAVING
+          if ((upper === 'AND' || upper === 'OR' || upper === 'NOT') && inSelectList) {
+            nl(selectDepth);
+            result += casedVal;
+            prevType = tok.type; prevUpper = upper;
+            continue;
+          }
+
+          if (firstToken) {
+            result += casedVal;
+            firstToken = false;
+          } else {
+            result += ' ' + casedVal;
+          }
+          prevType = tok.type; prevUpper = upper;
+          continue;
+        }
+
+        // COMMA
+        if (tok.type === 'comma') {
+          if (commaStyle === 'before' && inSelectList) {
+            nl(selectDepth);
+            result += ', ';
+          } else {
+            result += ',';
+            if (inSelectList) {
+              nl(selectDepth);
+            } else {
+              result += ' ';
+            }
+          }
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+
+        // LPAREN
+        if (tok.type === 'lparen') {
+          if (!firstToken && prevType !== 'function' && prevType !== 'identifier' && prevType !== 'keyword') {
+            result += ' ';
+          }
+          result += '(';
+          depth++;
+          // If next token is SELECT, we're in a subquery: newline+indent
+          if (nextUpper === 'SELECT') {
+            nl(depth);
+          }
+          prevType = tok.type; prevUpper = null;
+          firstToken = false;
+          continue;
+        }
+
+        // RPAREN
+        if (tok.type === 'rparen') {
+          depth = Math.max(0, depth - 1);
+          // If last line was a subquery, close on new line
+          var prevMeaningful = '';
+          for (var pi = i - 1; pi >= 0; pi--) {
+            if (toks[pi].type !== 'whitespace') { prevMeaningful = toks[pi].type; break; }
+          }
+          result += ')';
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+
+        // SEMICOLON
+        if (tok.type === 'semicolon') {
+          result += ';';
+          depth = 0;
+          inSelectList = false;
+          if (i < toks.length - 1) result += '\n\n';
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+
+        // COMMENT
+        if (tok.type === 'comment') {
+          if (!firstToken) nl(depth);
+          result += tok.value;
+          if (i < toks.length - 1) nl(depth);
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+
+        // STRING, NUMBER, IDENTIFIER, FUNCTION, OPERATOR, OTHER
+        var addSpace = !firstToken
+          && prevType !== 'lparen'
+          && tok.type !== 'rparen'
+          && tok.type !== 'comma'
+          && tok.type !== 'semicolon'
+          && tok.type !== 'other'
+          && prevType !== 'other'
+          && !(tok.type === 'lparen')
+          && !(prevType === 'operator' && tok.type === 'operator');
+
+        // Dot-qualified names: no space around dot
+        if (tok.type === 'other' && tok.value === '.') {
+          result += '.';
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+        if (prevType === 'other' && tok.type === 'identifier') {
+          result += tok.value;
+          prevType = tok.type; prevUpper = null;
+          continue;
+        }
+
+        if (firstToken) {
+          result += tok.value;
+          firstToken = false;
+        } else {
+          result += (addSpace ? ' ' : '') + tok.value;
+        }
+        prevType = tok.type; prevUpper = null;
+      }
+
+      // Trim trailing whitespace from each line
+      return result.split('\n').map(function(line) { return line.trimRight(); }).join('\n').trim();
+    }
+
+    /* ===================================================
+       SYNTAX HIGHLIGHTER
+       Takes a plain-formatted SQL string and returns HTML
+    =================================================== */
+    function escHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function highlightSQL(sql) {
+      var tokens = tokenize(sql);
+      var html = '';
+      for (var i = 0; i < tokens.length; i++) {
+        var tok = tokens[i];
+        var val = escHtml(tok.value);
+        switch (tok.type) {
+          case 'keyword':   html += '<span class="hl-kw">'  + val + '</span>'; break;
+          case 'function':  html += '<span class="hl-fn">'  + val + '</span>'; break;
+          case 'string':    html += '<span class="hl-str">' + val + '</span>'; break;
+          case 'number':    html += '<span class="hl-num">' + val + '</span>'; break;
+          case 'operator':  html += '<span class="hl-op">'  + val + '</span>'; break;
+          case 'comment':   html += '<span class="hl-cmt">' + val + '</span>'; break;
+          default:          html += val;
+        }
+      }
+      return html;
+    }
+
+    /* ===================================================
+       MAIN RUNNER
+    =================================================== */
+    var _formattedPlain = '';
+
+    function runFormat() {
+      var raw = document.getElementById('sql-input').value;
+      var out = document.getElementById('sql-output');
+
+      if (!raw.trim()) {
+        out.innerHTML = '<span class="placeholder-text">Formatted output will appear here as you type.</span>';
+        out.classList.remove('has-content');
+        _formattedPlain = '';
+        return;
+      }
+
+      var casing = document.getElementById('opt-casing').value;
+      var indent = document.getElementById('opt-indent').value;
+
+      // Format
+      var plain = formatSQL(raw, casing, indent, commaPlacement);
+      _formattedPlain = plain;
+
+      // Highlight the formatted plain text
+      var highlighted = highlightSQL(plain);
+      out.innerHTML = highlighted;
+      out.classList.add('has-content');
+    }
+
+    /* ===================================================
+       COPY BUTTON
+    =================================================== */
+    function copyOutput() {
+      if (!_formattedPlain) return;
+      var btn = document.getElementById('copy-btn');
+      navigator.clipboard.writeText(_formattedPlain).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy Formatted SQL';
+          btn.classList.remove('copied');
+        }, 1800);
+      }).catch(function() {
+        // Fallback for older browsers
+        var ta = document.createElement('textarea');
+        ta.value = _formattedPlain;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy Formatted SQL';
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    }
+
+    /* ===================================================
+       CLEAR
+    =================================================== */
+    function clearInput() {
+      document.getElementById('sql-input').value = '';
+      runFormat();
+    }
+
+    /* ===================================================
+       FAQ ACCORDION
+    =================================================== */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var isOpen = btn.classList.contains('open');
+      document.querySelectorAll('.faq-question.open').forEach(function(el) {
+        el.classList.remove('open');
+        el.setAttribute('aria-expanded', 'false');
+        el.nextElementSibling.classList.remove('open');
+      });
+      if (!isOpen) {
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        answer.classList.add('open');
+      }
+    }
+
+    /* ===================================================
+       INIT: pre-load example query
+    =================================================== */
+    (function init() {
+      var example = "SELECT u.id, u.first_name, u.last_name, u.email, o.order_date, SUM(oi.quantity * oi.unit_price) AS total_value FROM users u INNER JOIN orders o ON u.id = o.user_id INNER JOIN order_items oi ON o.id = oi.order_id WHERE o.status = 'completed' AND o.order_date >= '2024-01-01' GROUP BY u.id, u.first_name, u.last_name, u.email, o.order_date HAVING SUM(oi.quantity * oi.unit_price) > 100 ORDER BY total_value DESC LIMIT 50;";
+      document.getElementById('sql-input').value = example;
+      runFormat();
+    })();
+  </script>
+</body>
+</html>

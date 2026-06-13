@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projectile Motion Simulator: Calculate Trajectory, Max Height, and Distance | AxiomApe</title>
+  <meta name="description" content="Free projectile motion simulator. Enter launch velocity, angle, and initial height to instantly calculate trajectory, maximum height, total distance, and time of flight. Supports metric and imperial units with Earth, Moon, and Mars gravity presets." />
+  <meta name="keywords" content="projectile motion simulator, projectile calculator, trajectory calculator, max height calculator, range calculator, launch angle calculator, physics simulator, ballistics calculator, kinematics calculator, projectile motion calculator" />
+  <link rel="canonical" href="https://axiomape.com/projectile-motion-simulator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Projectile Motion Simulator",
+      "description": "Free projectile motion simulator. Enter launch velocity, angle, and initial height to instantly calculate trajectory, maximum height, total distance, and time of flight. Supports metric and imperial units with Earth, Moon, and Mars gravity presets.",
+      "url": "https://axiomape.com/projectile-motion-simulator/",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why does a 45-degree launch angle usually yield the maximum distance?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When launching from ground level with no air resistance, the horizontal range formula is R = (v0 squared times sin(2 times theta)) divided by g. This is maximized when sin(2 times theta) equals 1, which occurs at theta = 45 degrees. At this angle, the projectile perfectly balances horizontal speed and time of flight. However, when launching from an elevated position, the optimal angle drops below 45 degrees because the extra initial height already extends time of flight without needing as steep a launch."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the mass of the object change its trajectory in an ideal physics simulation?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. In an ideal simulation that ignores air resistance, mass has no effect on trajectory. This is a direct consequence of Galileo's equivalence principle: the gravitational force is proportional to mass, but so is inertia, so the acceleration due to gravity (g) is constant for all masses. A bowling ball and a feather in a vacuum follow identical parabolic arcs when launched with the same initial conditions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does launching from a cliff (initial height) change the optimal launch angle?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When launching from an elevated position, the optimal angle for maximum range is always less than 45 degrees. The extra height means the projectile is already partway through its vertical journey, so a flatter trajectory takes better advantage of the available fall distance. The exact optimal angle depends on the ratio of initial height to the energy term v0 squared divided by (2g). For very large initial heights, the optimal angle approaches 0 degrees."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does this simulator ignore air resistance?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Air resistance (drag) is ignored because it depends on the object's shape, size, cross-sectional area, surface roughness, and velocity in a complex nonlinear way described by the drag equation: F_drag = 0.5 times Cd times rho times A times v squared. Including it would require knowing the projectile's specific aerodynamic properties. The vacuum model used here is the standard starting point in physics education and gives accurate results for dense, compact objects at moderate speeds."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <style>
+    /* ============================================================
+       BASE LAYOUT
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.35rem, 3vw, 1.95rem);
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      color: #94a3b8;
+      font-size: 1rem;
+      max-width: 660px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       CARD
+    ============================================================ */
+    .card {
+      background: #1a1d26;
+      border: 1px solid #252836;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: .78rem;
+      font-weight: 800;
+      color: #3B82F6;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 20px;
+    }
+
+    /* ============================================================
+       CONTROLS BAR
+    ============================================================ */
+    .controls-bar {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .unit-toggle {
+      display: flex;
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .unit-toggle button {
+      padding: 8px 18px;
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      transition: background .15s, color .15s;
+    }
+
+    .unit-toggle button.active {
+      background: #3B82F6;
+      color: #fff;
+    }
+
+    .gravity-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .gravity-group label {
+      color: #64748b;
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .gravity-group select {
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 7px;
+      color: #e2e8f0;
+      padding: 8px 10px;
+      font-size: .88rem;
+      cursor: pointer;
+    }
+
+    .gravity-group select:focus { outline: 2px solid #3B82F6; outline-offset: 1px; }
+
+    #customGravity {
+      width: 88px;
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 7px;
+      color: #e2e8f0;
+      padding: 8px 10px;
+      font-size: .88rem;
+    }
+
+    #customGravity:focus { outline: 2px solid #3B82F6; outline-offset: 1px; }
+
+    /* ============================================================
+       INPUT GRID
+    ============================================================ */
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 580px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-group label {
+      font-size: .75rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: #3B82F6;
+      cursor: pointer;
+      height: 4px;
+    }
+
+    .num-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .num-row input[type="number"] {
+      flex: 1;
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 7px;
+      color: #e2e8f0;
+      padding: 7px 10px;
+      font-size: .92rem;
+      font-weight: 600;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .num-row input[type="number"]:focus {
+      outline: 2px solid #3B82F6;
+      outline-offset: 1px;
+    }
+
+    .unit-tag {
+      font-size: .75rem;
+      color: #475569;
+      white-space: nowrap;
+      min-width: 28px;
+    }
+
+    /* ============================================================
+       GRAPH
+    ============================================================ */
+    .graph-wrap {
+      background: #0b0e18;
+      border: 1px solid #252836;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    #trajectoryCanvas {
+      display: block;
+      width: 100%;
+      height: 320px;
+    }
+
+    /* ============================================================
+       HERO METRICS
+    ============================================================ */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 10px;
+      padding: 16px 14px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: .68rem;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: #3B82F6;
+      line-height: 1;
+      letter-spacing: -.01em;
+    }
+
+    .metric-card.accent-red .metric-value { color: #EF4444; }
+
+    .metric-sub {
+      font-size: .74rem;
+      color: #475569;
+      margin-top: 5px;
+    }
+
+    /* ============================================================
+       AD PLACEMENTS
+    ============================================================ */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px;
+      color: #374151;
+      font-size: .72rem;
+    }
+
+    /* ============================================================
+       GLOSSARY
+    ============================================================ */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 16px;
+    }
+
+    .glossary-item { display: flex; flex-direction: column; gap: 4px; }
+
+    .glossary-term {
+      font-size: .83rem;
+      font-weight: 700;
+      color: #3B82F6;
+    }
+
+    .glossary-def {
+      font-size: .81rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       EDU SECTION
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-bottom: 14px;
+    }
+
+    .section-intro {
+      color: #94a3b8;
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    .edu-section h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 22px 0 10px;
+    }
+
+    .edu-section p {
+      color: #94a3b8;
+      line-height: 1.75;
+      margin-bottom: 12px;
+      font-size: .92rem;
+    }
+
+    /* ============================================================
+       FAQ
+    ============================================================ */
+    .faq-item {
+      border-top: 1px solid #252836;
+      padding: 14px 0;
+    }
+
+    .faq-item:last-child { border-bottom: 1px solid #252836; }
+
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      cursor: pointer;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .faq-q span:first-child {
+      font-size: .9rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .faq-toggle {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #3B82F6;
+      flex-shrink: 0;
+      line-height: 1;
+      margin-top: 1px;
+      transition: transform .2s;
+    }
+
+    .faq-toggle.open { transform: rotate(45deg); }
+
+    .faq-a {
+      display: none;
+      padding-top: 10px;
+      color: #94a3b8;
+      font-size: .88rem;
+      line-height: 1.75;
+    }
+
+    .faq-a.open { display: block; }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .disclaimer {
+      background: #12151f;
+      border: 1px solid #1e2234;
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-size: .77rem;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .disclaimer strong { color: #64748b; }
+  </style>
+</head>
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Projectile Motion Simulator: Calculate Trajectory, Max Height, and Distance</h1>
+      <p>Enter your launch parameters and instantly visualize the parabolic arc. Adjust velocity, angle, gravity, and height to see physics come alive in real time.</p>
+    </header>
+
+    <!-- ============================================================
+         TOOL CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Ballistics and Physics Lab</div>
+
+      <!-- Controls: unit toggle + gravity -->
+      <div class="controls-bar">
+        <div class="unit-toggle">
+          <button id="btnMetric" class="active" onclick="setUnit('metric')">Metric (m/s)</button>
+          <button id="btnImperial" onclick="setUnit('imperial')">Imperial (ft/s)</button>
+        </div>
+        <div class="gravity-group">
+          <label for="gravityPreset">Gravity:</label>
+          <select id="gravityPreset" onchange="handleGravityChange()">
+            <option value="earth">Earth (9.81 m/s^2)</option>
+            <option value="moon">Moon (1.62 m/s^2)</option>
+            <option value="mars">Mars (3.72 m/s^2)</option>
+            <option value="custom">Custom</option>
+          </select>
+          <input type="number" id="customGravity" value="9.81" min="0.01" step="0.01"
+                 style="display:none" oninput="recalc()" aria-label="Custom gravity value" />
+        </div>
+      </div>
+
+      <!-- Input grid -->
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="v0Num">Initial Velocity (v0)</label>
+          <div class="slider-row">
+            <input type="range" id="v0Slider" min="1" max="200" value="50"
+                   oninput="syncFromSlider('v0Slider','v0Num')">
+          </div>
+          <div class="num-row">
+            <input type="number" id="v0Num" min="0" max="9999" value="50" step="0.5"
+                   oninput="syncFromNum('v0Num','v0Slider');recalc()">
+            <span class="unit-tag" id="velUnit">m/s</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="angleNum">Launch Angle (theta)</label>
+          <div class="slider-row">
+            <input type="range" id="angleSlider" min="0" max="89" value="45"
+                   oninput="syncFromSlider('angleSlider','angleNum')">
+          </div>
+          <div class="num-row">
+            <input type="number" id="angleNum" min="0" max="89" value="45" step="0.5"
+                   oninput="syncFromNum('angleNum','angleSlider');recalc()">
+            <span class="unit-tag">deg</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="h0Num">Initial Height (h0)</label>
+          <div class="slider-row">
+            <input type="range" id="h0Slider" min="0" max="500" value="0"
+                   oninput="syncFromSlider('h0Slider','h0Num')">
+          </div>
+          <div class="num-row">
+            <input type="number" id="h0Num" min="0" max="99999" value="0" step="0.5"
+                   oninput="syncFromNum('h0Num','h0Slider');recalc()">
+            <span class="unit-tag" id="distUnit">m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trajectory graph -->
+      <div class="graph-wrap">
+        <canvas id="trajectoryCanvas"></canvas>
+      </div>
+
+      <!-- Hero metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Distance</div>
+          <div class="metric-value" id="metricRange">--</div>
+          <div class="metric-sub" id="metricRangeUnit">m</div>
+        </div>
+        <div class="metric-card accent-red">
+          <div class="metric-label">Maximum Height</div>
+          <div class="metric-value" id="metricHeight">--</div>
+          <div class="metric-sub" id="metricHeightUnit">m</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Time of Flight</div>
+          <div class="metric-value" id="metricTime">--</div>
+          <div class="metric-sub">seconds</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <span class="glossary-term">Projectile</span>
+          <span class="glossary-def">Any object launched into the air that travels under gravity alone, with no additional thrust after the moment of launch.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Trajectory</span>
+          <span class="glossary-def">The curved path a projectile follows from launch to landing, fully determined by its initial speed, angle, height, and the local gravitational field.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Parabola</span>
+          <span class="glossary-def">The geometric shape of a projectile's path in ideal conditions. It is a symmetric curve described by a quadratic equation in x and y.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Initial Velocity (v0)</span>
+          <span class="glossary-def">The speed at which the projectile leaves the launcher. It is resolved into horizontal and vertical components using the launch angle.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Launch Angle (theta)</span>
+          <span class="glossary-def">The angle above the horizontal at which the projectile is launched. 45 degrees maximizes range from flat ground in a vacuum.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Gravitational Acceleration (g)</span>
+          <span class="glossary-def">The constant downward acceleration due to gravity. On Earth it is 9.81 m/s squared. Every second of free fall, a projectile gains 9.81 m/s of downward speed.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Air Resistance (Drag)</span>
+          <span class="glossary-def">The opposing force a moving object experiences due to the air it pushes through. This simulator assumes a perfect vacuum, so drag is zero.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Velocity Components</span>
+          <span class="glossary-def">The horizontal speed (v0x = v0 times cos theta) stays constant throughout the flight. The vertical speed (v0y = v0 times sin theta) decreases at rate g until the projectile lands.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Projectile Motion Physics</h2>
+      <p class="section-intro">Whether you are a physics student checking homework, a game developer tuning ballistics, or just curious about what happens when you throw a ball off a cliff on the Moon, this simulator models the motion using the exact kinematic equations taught in every introductory mechanics course. All calculations happen instantly in your browser with no data sent to any server.</p>
+
+      <h3>How to Use This Simulator</h3>
+      <p>Set the <strong>Initial Velocity</strong> (how fast the object leaves the launch point), the <strong>Launch Angle</strong> (the angle above horizontal), and the <strong>Initial Height</strong> (height of the launch point above the landing surface). Select a gravity environment and a unit system. The blue trajectory arc, the three hero metrics, and all axis labels update instantly with every input change. The red dot marks the peak altitude (H) and the red dot at the right marks the landing point (R).</p>
+
+      <h3>The Physics Engine: Step by Step</h3>
+      <p>Step 1 - Angle conversion: theta in radians equals theta in degrees times pi divided by 180. Step 2 - Velocity components: horizontal speed v0x = v0 times cos(theta_rad) remains constant (no drag); initial vertical speed v0y = v0 times sin(theta_rad) decreases as gravity acts. Step 3 - Time of flight: setting y(t) = h0 + v0y times t minus 0.5 times g times t squared equal to zero and solving the quadratic gives T = (v0y + sqrt(v0y squared + 2 times g times h0)) / g. Step 4 - Results: Max Height H = h0 + v0y squared / (2 times g); Total Range R = v0x times T.</p>
+
+      <h3>The Graph: Cartesian Coordinates with Dynamic Scaling</h3>
+      <p>The canvas displays a Cartesian grid where the horizontal axis is distance (x) and the vertical axis is height (y). The grid scales automatically so the entire arc always fits with padding on all sides. The trajectory arc is drawn by sampling 400 time steps from launch to landing, plotting (v0x times t, h0 + v0y times t minus 0.5 times g times t squared) at each step.</p>
+
+      <h3>Why Gravity Changes Everything</h3>
+      <p>Because the Moon's gravity (1.62 m/s squared) is roughly one-sixth of Earth's, a ball launched at the same speed and angle would travel about six times farther and soar six times higher. Mars sits between the two at 3.72 m/s squared. Try the Moon preset with a 45-degree launch to see just how dramatic the difference is. The Custom gravity input lets you model hypothetical planets, asteroids, or even artificial gravity environments.</p>
+
+      <h3>Metric vs. Imperial Units</h3>
+      <p>Toggling the unit switch converts all inputs and outputs between the metric system (m/s and meters) and the imperial system (ft/s and feet). The physics equations are identical in both systems. Only the gravity constant changes value: Earth's 9.81 m/s squared becomes 32.174 ft/s squared. The Moon and Mars presets adjust accordingly.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>Why does a 45-degree launch angle usually yield the maximum distance?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">
+          When launching from ground level with no air resistance, the horizontal range formula is R = (v0 squared times sin(2 times theta)) / g. This expression is maximized when sin(2 times theta) = 1, which happens at theta = 45 degrees. At this angle, the projectile perfectly balances horizontal speed and time of flight: a steeper angle gives more hang time but sacrifices horizontal velocity, while a shallower angle preserves horizontal speed but the projectile lands too quickly. When launching from an elevated position, the optimal angle drops below 45 degrees because the initial height already extends time of flight, so a slightly flatter trajectory earns more horizontal distance.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>Does the mass of the object change its trajectory in an ideal physics simulation?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">
+          No. In an ideal simulation that ignores air resistance, mass has absolutely no effect on trajectory. This follows directly from Galileo's equivalence principle and Newton's second law: F = m times g (gravitational force is proportional to mass), and F = m times a (inertia also scales with mass), so the mass cancels out and every object experiences the same acceleration g. A bowling ball and a feather released in a vacuum fall at exactly the same rate and follow identical parabolic arcs when launched with the same speed and angle. Galileo famously demonstrated this by dropping objects from the Tower of Pisa.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>How does launching from a cliff (initial height) change the optimal launch angle?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">
+          When launching from an elevated position, the optimal angle for maximum range is always less than 45 degrees. The extra height means the projectile is already partway through its vertical journey before it even reaches ground level, so a flatter launch trajectory takes better advantage of the available fall distance. As a rough intuition: for a very tall cliff where the height completely dominates the launch energy, the optimal angle approaches 0 degrees because a nearly horizontal shot maximizes horizontal velocity while the cliff provides all the drop time you need. Try setting initial height to 200 m in the simulator and varying the angle to see this effect.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>Why does this simulator ignore air resistance?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">
+          Air resistance (drag) is ignored because it depends on the object's shape, size, cross-sectional area, surface roughness, and velocity in a complex nonlinear way. The drag force is F_drag = 0.5 times Cd times rho times A times v squared, where Cd is the drag coefficient (different for a sphere vs. a bullet vs. a feather), rho is air density, and A is cross-sectional area. Incorporating drag correctly requires knowing these object-specific properties, which would make the simulator specific to one object rather than a general physics tool. The vacuum model used here is the standard starting point in every introductory physics course and gives accurate results for dense, compact objects at moderate speeds over short distances.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="disclaimer">
+      <strong>Educational Simulator:</strong> This tool models ideal projectile motion with no air resistance, spin, or wind effects. Results represent theoretical physics in a vacuum and will differ from real-world ballistics. All calculations are 100% client-side; nothing is ever sent to a server.
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       GRAVITY PRESETS (metric m/s^2 and imperial ft/s^2)
+    ============================================================ */
+    const G_PRESETS = {
+      metric:   { earth: 9.81,   moon: 1.62,  mars: 3.72  },
+      imperial: { earth: 32.174, moon: 5.318, mars: 12.205 }
+    };
+
+    let currentUnit = 'metric';
+
+    /* ============================================================
+       UNIT TOGGLE
+    ============================================================ */
+    function setUnit(u) {
+      currentUnit = u;
+      document.getElementById('btnMetric').classList.toggle('active', u === 'metric');
+      document.getElementById('btnImperial').classList.toggle('active', u === 'imperial');
+
+      const isM = u === 'metric';
+      document.getElementById('velUnit').textContent       = isM ? 'm/s' : 'ft/s';
+      document.getElementById('distUnit').textContent      = isM ? 'm'   : 'ft';
+      document.getElementById('metricRangeUnit').textContent  = isM ? 'm'   : 'ft';
+      document.getElementById('metricHeightUnit').textContent = isM ? 'm'   : 'ft';
+
+      // Update gravity select text
+      const sel = document.getElementById('gravityPreset');
+      sel.options[0].text = isM ? 'Earth (9.81 m/s^2)'  : 'Earth (32.17 ft/s^2)';
+      sel.options[1].text = isM ? 'Moon (1.62 m/s^2)'   : 'Moon (5.32 ft/s^2)';
+      sel.options[2].text = isM ? 'Mars (3.72 m/s^2)'   : 'Mars (12.21 ft/s^2)';
+
+      // Sync the custom gravity field to the selected preset in the new unit
+      const preset = sel.value;
+      if (preset !== 'custom') {
+        document.getElementById('customGravity').value = G_PRESETS[u][preset].toFixed(3);
+      }
+      recalc();
+    }
+
+    /* ============================================================
+       GRAVITY DROPDOWN
+    ============================================================ */
+    function handleGravityChange() {
+      const sel     = document.getElementById('gravityPreset');
+      const custEl  = document.getElementById('customGravity');
+      const preset  = sel.value;
+
+      if (preset === 'custom') {
+        custEl.style.display = '';
+      } else {
+        custEl.style.display = 'none';
+        custEl.value = G_PRESETS[currentUnit][preset].toFixed(3);
+      }
+      recalc();
+    }
+
+    function getG() {
+      return Math.abs(parseFloat(document.getElementById('customGravity').value)) || 9.81;
+    }
+
+    /* ============================================================
+       SLIDER / NUMBER SYNC
+    ============================================================ */
+    function syncFromSlider(sliderId, numId) {
+      document.getElementById(numId).value = document.getElementById(sliderId).value;
+      recalc();
+    }
+
+    function syncFromNum(numId, sliderId) {
+      const v = parseFloat(document.getElementById(numId).value);
+      const slider = document.getElementById(sliderId);
+      const min = parseFloat(slider.min);
+      const max = parseFloat(slider.max);
+      slider.value = Math.min(max, Math.max(min, v));
+    }
+
+    /* ============================================================
+       PHYSICS ENGINE
+    ============================================================ */
+    function compute(v0, thetaDeg, h0, g) {
+      if (!isFinite(v0) || v0 < 0) return null;
+      if (!isFinite(h0) || h0 < 0) return null;
+      if (!isFinite(g)  || g <= 0) return null;
+
+      const thetaRad = thetaDeg * Math.PI / 180;
+      const v0x = v0 * Math.cos(thetaRad);
+      const v0y = v0 * Math.sin(thetaRad);
+
+      // Quadratic: solve 0 = h0 + v0y*t - 0.5*g*t^2
+      const disc = v0y * v0y + 2 * g * h0;
+      if (disc < 0) return null;
+
+      const T = (v0y + Math.sqrt(disc)) / g;
+      if (T < 0) return null;
+
+      const H = h0 + (v0y * v0y) / (2 * g);
+      const R = v0x * T;
+
+      return { v0x, v0y, T, H: Math.max(H, h0), R: Math.max(R, 0) };
+    }
+
+    /* ============================================================
+       CANVAS DRAWING
+    ============================================================ */
+    const canvas = document.getElementById('trajectoryCanvas');
+    const ctx    = canvas.getContext('2d');
+
+    function drawTrajectory(v0x, v0y, h0, g, T, H, R) {
+      const dpr  = window.devicePixelRatio || 1;
+      const cssW = canvas.clientWidth  || 860;
+      const cssH = 320;
+
+      canvas.width  = cssW * dpr;
+      canvas.height = cssH * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const W = cssW;
+      const CH = cssH;
+
+      ctx.clearRect(0, 0, W, CH);
+
+      const PAD = { top: 28, right: 28, bottom: 40, left: 54 };
+      const plotW = W - PAD.left - PAD.right;
+      const plotH = CH - PAD.top  - PAD.bottom;
+
+      // Scale with 8% vertical padding above peak
+      const xMax = R  > 0 ? R  : 1;
+      const yPad = H  * 0.08;
+      const yMin = 0;
+      const yMax = H  + yPad;
+
+      function toX(x) { return PAD.left + (x / xMax) * plotW; }
+      function toY(y) { return PAD.top + plotH - ((y - yMin) / (yMax - yMin)) * plotH; }
+
+      // ---- Grid lines ----
+      ctx.strokeStyle = '#1a1e2e';
+      ctx.lineWidth   = 1;
+      const xTicks = 6;
+      const yTicks = 5;
+      for (let i = 0; i <= xTicks; i++) {
+        const cx = PAD.left + (i / xTicks) * plotW;
+        ctx.beginPath(); ctx.moveTo(cx, PAD.top); ctx.lineTo(cx, PAD.top + plotH); ctx.stroke();
+      }
+      for (let i = 0; i <= yTicks; i++) {
+        const cy = PAD.top + (i / yTicks) * plotH;
+        ctx.beginPath(); ctx.moveTo(PAD.left, cy); ctx.lineTo(PAD.left + plotW, cy); ctx.stroke();
+      }
+
+      // ---- Axes ----
+      ctx.strokeStyle = '#2e3348';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, PAD.top + plotH);
+      ctx.lineTo(PAD.left + plotW, PAD.top + plotH);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, PAD.top);
+      ctx.lineTo(PAD.left, PAD.top + plotH);
+      ctx.stroke();
+
+      // ---- Tick labels ----
+      const unitLabel = currentUnit === 'metric' ? 'm' : 'ft';
+      ctx.font        = '10px system-ui, sans-serif';
+      ctx.fillStyle   = '#3d4a6a';
+      ctx.textAlign   = 'center';
+      for (let i = 0; i <= xTicks; i++) {
+        const val = (xMax * i / xTicks);
+        const cx  = PAD.left + (i / xTicks) * plotW;
+        ctx.fillText(val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val.toFixed(0), cx, PAD.top + plotH + 14);
+      }
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= yTicks; i++) {
+        const val = (yMax * (yTicks - i) / yTicks);
+        const cy  = PAD.top + (i / yTicks) * plotH;
+        ctx.fillText(val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val.toFixed(0), PAD.left - 6, cy + 4);
+      }
+
+      // ---- Axis labels ----
+      ctx.fillStyle = '#3d4a6a';
+      ctx.font      = '10px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Distance (' + unitLabel + ')', PAD.left + plotW / 2, CH - 4);
+      ctx.save();
+      ctx.translate(13, PAD.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('Height (' + unitLabel + ')', 0, 0);
+      ctx.restore();
+
+      // ---- Ground dashed line ----
+      ctx.strokeStyle = '#252c42';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, toY(0));
+      ctx.lineTo(PAD.left + plotW, toY(0));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // ---- Initial height marker ----
+      if (h0 > 0) {
+        ctx.strokeStyle = '#2e3a56';
+        ctx.lineWidth   = 1;
+        ctx.setLineDash([3, 6]);
+        ctx.beginPath();
+        ctx.moveTo(PAD.left, toY(h0));
+        ctx.lineTo(toX(R * 0.12), toY(h0));
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // ---- Trajectory arc ----
+      const steps    = 500;
+      const gradient = ctx.createLinearGradient(PAD.left, 0, PAD.left + plotW, 0);
+      gradient.addColorStop(0,    '#3B82F6');
+      gradient.addColorStop(0.55, '#60A5FA');
+      gradient.addColorStop(1,    '#EF4444');
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth   = 2.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t  = (i / steps) * T;
+        const px = v0x * t;
+        const py = h0 + v0y * t - 0.5 * g * t * t;
+        const cx = toX(px);
+        const cy = toY(Math.max(py, 0));
+        if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+
+      // ---- Peak dot and label ----
+      const tPeak = v0y / g;
+      if (tPeak > 0 && tPeak < T) {
+        const cpx = toX(v0x * tPeak);
+        const cpy = toY(H);
+        ctx.fillStyle = '#EF4444';
+        ctx.beginPath(); ctx.arc(cpx, cpy, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle   = '#EF4444';
+        ctx.font        = 'bold 9px system-ui, sans-serif';
+        ctx.textAlign   = 'center';
+        ctx.fillText('H=' + H.toFixed(1), cpx, cpy - 10);
+      }
+
+      // ---- Launch dot ----
+      ctx.fillStyle = '#3B82F6';
+      ctx.beginPath(); ctx.arc(toX(0), toY(h0), 5, 0, Math.PI * 2); ctx.fill();
+
+      // ---- Landing dot and label ----
+      ctx.fillStyle = '#EF4444';
+      ctx.beginPath(); ctx.arc(toX(R), toY(0), 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#EF4444';
+      ctx.font      = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('R=' + R.toFixed(1), toX(R), toY(0) - 10);
+    }
+
+    function clearCanvas() {
+      const dpr  = window.devicePixelRatio || 1;
+      const cssW = canvas.clientWidth || 860;
+      canvas.width  = cssW * dpr;
+      canvas.height = 320 * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, 320);
+
+      ctx.fillStyle = '#1e2338';
+      ctx.font      = '14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Enter valid launch parameters to draw the trajectory.', cssW / 2, 160);
+    }
+
+    /* ============================================================
+       MAIN RECALC
+    ============================================================ */
+    function recalc() {
+      const v0    = parseFloat(document.getElementById('v0Num').value)    || 0;
+      const theta = parseFloat(document.getElementById('angleNum').value) || 0;
+      const h0    = parseFloat(document.getElementById('h0Num').value)    || 0;
+      const g     = getG();
+
+      const result = compute(v0, theta, h0, g);
+
+      if (!result) {
+        document.getElementById('metricRange').textContent  = '--';
+        document.getElementById('metricHeight').textContent = '--';
+        document.getElementById('metricTime').textContent   = '--';
+        clearCanvas();
+        return;
+      }
+
+      document.getElementById('metricRange').textContent  = result.R.toFixed(2);
+      document.getElementById('metricHeight').textContent = result.H.toFixed(2);
+      document.getElementById('metricTime').textContent   = result.T.toFixed(2);
+
+      drawTrajectory(result.v0x, result.v0y, h0, g, result.T, result.H, result.R);
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(el) {
+      const answer = el.nextElementSibling;
+      const toggle = el.querySelector('.faq-toggle');
+      const isOpen = answer.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-a.open').forEach(function(a) { a.classList.remove('open'); });
+      document.querySelectorAll('.faq-toggle.open').forEach(function(t) { t.classList.remove('open'); });
+      // Open clicked (if it was closed)
+      if (!isOpen) {
+        answer.classList.add('open');
+        toggle.classList.add('open');
+      }
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    window.addEventListener('load', function() {
+      // Init gravity display text to metric defaults
+      document.getElementById('gravityPreset').value = 'earth';
+      document.getElementById('customGravity').value = '9.810';
+      recalc();
+    });
+
+    window.addEventListener('resize', function() {
+      recalc();
+    });
+  </script>
+</body>
+</html>

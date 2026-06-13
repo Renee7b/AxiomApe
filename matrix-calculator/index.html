@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrix Calculator: Add, Subtract, or Multiply Matrices | AxiomApe</title>
+  <meta name="description" content="Free online matrix calculator. Add, subtract, or multiply two matrices up to 5x5 with instant real-time results. 100% client-side - no data leaves your browser." />
+  <meta name="keywords" content="matrix calculator, matrix addition, matrix subtraction, matrix multiplication, dot product, linear algebra calculator, matrix operations online, math calculator, education tool" />
+  <link rel="canonical" href="https://axiomape.com/matrix-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Matrix Calculator",
+        "description": "Free online matrix calculator. Add, subtract, or multiply two matrices up to 5x5 with instant real-time results. 100% client-side - no data leaves your browser.",
+        "url": "https://axiomape.com/matrix-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do you add or subtract two matrices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "To add or subtract two matrices, they must have identical dimensions (the same number of rows and columns). You then add or subtract the corresponding elements in each position. For example, the element in row 1, column 1 of Matrix A is added to the element in row 1, column 1 of Matrix B to produce the result in row 1, column 1 of Matrix C. This process is repeated for every element. If the matrices have different dimensions, the operation is undefined."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why must matrices have specific dimensions to be multiplied?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Matrix multiplication requires the number of columns in the first matrix (Matrix A) to equal the number of rows in the second matrix (Matrix B). This constraint exists because multiplication works by computing dot products: each element of the result is the sum of products between a row of Matrix A and a column of Matrix B. If the inner dimensions do not match, there is no way to pair up elements to compute these dot products. For example, a 2x3 matrix can be multiplied by a 3x4 matrix (inner dimensions both 3), producing a 2x4 result. A 2x3 multiplied by a 2x4 is undefined."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is matrix multiplication commutative - does A times B equal B times A?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No, matrix multiplication is generally not commutative. In most cases, A times B does not equal B times A, and sometimes only one of the two products is even defined (because the dimension requirements differ depending on order). Even when both products are defined and have the same dimensions (as with square matrices), the resulting matrices are usually different. This is a fundamental difference between matrix multiplication and ordinary number multiplication."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are matrices actually used for in real life?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Matrices are used across virtually every technical field. In computer graphics, matrices are used to rotate, scale, and translate objects in 2D and 3D space. In machine learning, neural networks are essentially chains of matrix multiplications applied to input data. In economics, input-output models represent entire industries as matrices to study how sectors depend on each other. In physics and engineering, systems of equations describing circuits, fluid flow, and structural stress are solved using matrix operations. Matrices are also the foundation of Google's original PageRank algorithm, statistics, and quantum mechanics."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the identity matrix?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The identity matrix is a square matrix with 1s along the main diagonal (top-left to bottom-right) and 0s everywhere else. It plays the same role in matrix multiplication that the number 1 plays in regular multiplication: multiplying any matrix by the appropriately sized identity matrix leaves the original matrix unchanged. For a 2x2 matrix, the identity is [[1,0],[0,1]]. For a 3x3 matrix it is [[1,0,0],[0,1,0],[0,0,1]]."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================
+       RESET & BASE
+    ============================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0b0d14;
+      --surface:     #111320;
+      --surface2:    #181b2e;
+      --surface3:    #1e2238;
+      --border:      #252840;
+      --border2:     #2e3254;
+      --text:        #e2e8f0;
+      --muted:       #8892a4;
+      --sans:        'Segoe UI', system-ui, sans-serif;
+      --radius:      12px;
+      --radius-sm:   8px;
+
+      /* Math Indigo + Logic Cyan accent scheme */
+      --indigo:        #4F46E5;
+      --indigo-dim:    rgba(79,70,229,0.12);
+      --indigo-border: rgba(79,70,229,0.35);
+      --indigo-glow:   rgba(79,70,229,0.20);
+      --cyan:          #06B6D4;
+      --cyan-dim:      rgba(6,182,212,0.10);
+      --cyan-border:   rgba(6,182,212,0.30);
+      --cyan-glow:     rgba(6,182,212,0.15);
+      --green:         #10b981;
+      --green-dim:     rgba(16,185,129,0.10);
+      --red:           #f87171;
+      --red-dim:       rgba(248,113,113,0.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================
+       SITE NAV (hidden by site-chrome.js)
+    ============================================ */
+    .site-nav {
+      text-align: center;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .site-nav a { font-weight: 600; color: var(--cyan); }
+
+    /* ============================================
+       PAGE WRAPPER
+    ============================================ */
+    .page-wrap {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* ============================================
+       PAGE HEADER
+    ============================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .h-indigo { color: var(--indigo); }
+    .h-cyan   { color: var(--cyan); }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 580px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================================
+       OPERATION CONTROLS
+    ============================================ */
+    .op-panel {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .op-btn {
+      padding: 10px 28px;
+      border-radius: 8px;
+      border: 2px solid var(--border2);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.02em;
+      min-width: 100px;
+      text-align: center;
+    }
+    .op-btn:hover {
+      border-color: var(--indigo);
+      color: #fff;
+    }
+    .op-btn.active {
+      background: var(--indigo-dim);
+      border-color: var(--indigo);
+      color: #fff;
+      box-shadow: 0 0 18px var(--indigo-glow);
+    }
+
+    /* ============================================
+       MATRIX LAYOUT
+    ============================================ */
+    .matrices-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 700px) {
+      .matrices-row {
+        grid-template-columns: 1fr;
+      }
+      .op-symbol-col { display: none; }
+    }
+
+    .op-symbol-col {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 80px;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--indigo);
+      min-width: 48px;
+    }
+
+    /* ============================================
+       MATRIX PANEL
+    ============================================ */
+    .matrix-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .matrix-panel-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Dimension controls */
+    .dim-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .dim-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dim-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .dim-select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 4px 8px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .dim-select:focus { border-color: var(--indigo); }
+    .dim-size-badge {
+      font-size: 0.75rem;
+      color: var(--cyan);
+      font-weight: 700;
+      background: var(--cyan-dim);
+      border: 1px solid var(--cyan-border);
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+
+    /* Matrix bracket container */
+    .bracket-wrap {
+      display: flex;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .bracket {
+      display: flex;
+      align-items: center;
+      color: var(--indigo);
+      font-size: 2.6rem;
+      font-weight: 100;
+      line-height: 1;
+      user-select: none;
+      opacity: 0.85;
+    }
+    .matrix-grid-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .matrix-row-cells {
+      display: flex;
+      gap: 6px;
+    }
+    .cell-input {
+      width: 54px;
+      height: 48px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      /* remove spinners */
+      -moz-appearance: textfield;
+    }
+    .cell-input::-webkit-outer-spin-button,
+    .cell-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .cell-input:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px var(--indigo-glow);
+    }
+    .cell-input::placeholder { color: var(--border2); }
+
+    @media (max-width: 480px) {
+      .cell-input { width: 42px; height: 42px; font-size: 0.85rem; }
+    }
+
+    /* ============================================
+       RESULT SECTION
+    ============================================ */
+    .result-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .result-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+    .result-dim-badge {
+      font-size: 0.75rem;
+      color: var(--indigo);
+      font-weight: 700;
+      background: var(--indigo-dim);
+      border: 1px solid var(--indigo-border);
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+
+    .constraint-warning {
+      background: var(--red-dim);
+      border: 1px solid rgba(248,113,113,0.30);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 0.9rem;
+      padding: 12px 16px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .result-bracket-wrap {
+      display: flex;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .result-bracket {
+      display: flex;
+      align-items: center;
+      color: var(--cyan);
+      font-size: 2.6rem;
+      font-weight: 100;
+      line-height: 1;
+      user-select: none;
+    }
+    .result-grid-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .result-row {
+      display: flex;
+      gap: 6px;
+    }
+    .result-cell {
+      width: 72px;
+      height: 48px;
+      background: var(--surface2);
+      border: 1.5px solid var(--indigo-border);
+      border-radius: 6px;
+      color: var(--cyan);
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.01em;
+    }
+
+    /* ============================================
+       AD PLACEMENTS (site-chrome handles hide/show)
+    ============================================ */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 24px 0;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      margin: 16px 0;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ============================================
+       CARDS (glossary, edu)
+    ============================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--cyan);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Edu section */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--indigo);
+      margin: 22px 0 8px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.93rem;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.75;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text);
+      padding: 14px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+    .faq-q:hover { color: var(--cyan); }
+    .faq-chevron {
+      color: var(--indigo);
+      font-size: 1rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-chevron.open { transform: rotate(180deg); }
+    .faq-a {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.75;
+      padding-bottom: 14px;
+      display: none;
+    }
+    .faq-a.open { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- hidden by site-chrome.js -->
+  <nav class="site-nav"><a href="https://axiomape.com">axiomape.com</a></nav>
+
+  <main class="page-wrap" id="main">
+
+    <header class="page-header">
+      <h1><span class="h-indigo">Matrix Calculator:</span> <span class="h-cyan">Add, Subtract, or Multiply Matrices</span></h1>
+      <p>Enter values into Matrix A and Matrix B, choose an operation, and see Matrix C update in real time. No sign-up, no server calls.</p>
+    </header>
+
+    <!-- ============================================================
+         OPERATION CONTROL PANEL
+    ============================================================ -->
+    <div class="op-panel" role="group" aria-label="Choose matrix operation">
+      <button class="op-btn active" id="btn-add"      onclick="setOp('add')">A + B</button>
+      <button class="op-btn"        id="btn-subtract" onclick="setOp('subtract')">A - B</button>
+      <button class="op-btn"        id="btn-multiply" onclick="setOp('multiply')">A x B</button>
+    </div>
+
+    <!-- ============================================================
+         MATRICES ROW
+    ============================================================ -->
+    <div class="matrices-row">
+
+      <!-- Matrix A -->
+      <div class="matrix-panel">
+        <div class="matrix-panel-title">Matrix A</div>
+        <div class="dim-controls">
+          <div class="dim-group">
+            <span class="dim-label">Rows</span>
+            <select class="dim-select" id="a-rows" onchange="buildGrids(); compute();">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="dim-group">
+            <span class="dim-label">Cols</span>
+            <select class="dim-select" id="a-cols" onchange="buildGrids(); compute();">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <span class="dim-size-badge" id="a-size-badge">2x2</span>
+        </div>
+        <div class="bracket-wrap">
+          <span class="bracket" aria-hidden="true">[</span>
+          <div class="matrix-grid-wrap" id="grid-a"></div>
+          <span class="bracket" aria-hidden="true">]</span>
+        </div>
+      </div>
+
+      <!-- Operation symbol -->
+      <div class="op-symbol-col" id="op-symbol" aria-hidden="true">+</div>
+
+      <!-- Matrix B -->
+      <div class="matrix-panel">
+        <div class="matrix-panel-title">Matrix B</div>
+        <div class="dim-controls">
+          <div class="dim-group">
+            <span class="dim-label">Rows</span>
+            <select class="dim-select" id="b-rows" onchange="buildGrids(); compute();">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="dim-group">
+            <span class="dim-label">Cols</span>
+            <select class="dim-select" id="b-cols" onchange="buildGrids(); compute();">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <span class="dim-size-badge" id="b-size-badge">2x2</span>
+        </div>
+        <div class="bracket-wrap">
+          <span class="bracket" aria-hidden="true">[</span>
+          <div class="matrix-grid-wrap" id="grid-b"></div>
+          <span class="bracket" aria-hidden="true">]</span>
+        </div>
+      </div>
+
+    </div><!-- /.matrices-row -->
+
+    <!-- ============================================================
+         RESULT: MATRIX C
+    ============================================================ -->
+    <div class="result-section">
+      <div class="result-header">
+        <span class="result-label">Result: Matrix C</span>
+        <span class="result-dim-badge" id="result-dim-badge" style="display:none"></span>
+      </div>
+      <div id="result-output"></div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Matrix</div>
+          <div class="glossary-def">A rectangular array of numbers arranged in rows and columns, used to represent data or transformations.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Element</div>
+          <div class="glossary-def">A single number inside a matrix, identified by its row and column position (e.g., row 2, column 3).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Row</div>
+          <div class="glossary-def">A horizontal line of elements in a matrix. A matrix with m rows has m horizontal layers of numbers.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Column</div>
+          <div class="glossary-def">A vertical line of elements in a matrix. A matrix with n columns has n vertical groups of numbers.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Dimensions (m x n)</div>
+          <div class="glossary-def">The size of a matrix expressed as rows by columns. A 3x4 matrix has 3 rows and 4 columns, totaling 12 elements.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Dot Product</div>
+          <div class="glossary-def">The sum of products of corresponding elements in two equal-length sequences. Used row-by-column to compute each element of a matrix product.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Commutative Property</div>
+          <div class="glossary-def">A property where order does not matter (e.g., 2+3 = 3+2). Matrix addition IS commutative; matrix multiplication is NOT.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Identity Matrix</div>
+          <div class="glossary-def">A square matrix with 1s on the main diagonal and 0s elsewhere. Multiplying any matrix by the identity matrix leaves it unchanged.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Matrix Operations</h2>
+      <p class="section-intro">Matrices are one of the most powerful and widely applied structures in all of mathematics. Whether you are a student learning linear algebra for the first time or an engineer refreshing your memory, this guide walks through everything you need to understand matrix addition, subtraction, and multiplication.</p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>Set the number of rows and columns for Matrix A and Matrix B using the dropdowns in each panel. Click any cell and type a number. The result in Matrix C updates the moment you type. To switch between operations, click the A + B, A - B, or A x B buttons at the top. Empty cells are treated as zero. There is no submit button - everything is live.</p>
+
+      <h3>Addition and Subtraction: Element by Element</h3>
+      <p>Adding or subtracting matrices is straightforward: both matrices must have the exact same dimensions, and you simply apply the operation to each pair of corresponding elements. The element at row 1, column 1 of Matrix A is added to (or subtracted from) the element at row 1, column 1 of Matrix B. This produces the element at row 1, column 1 of the result. The result matrix always has the same dimensions as the inputs. If the dimensions do not match, the operation is mathematically undefined.</p>
+      <p>Because matrix addition follows the same element-by-element rule as regular addition, it inherits commutativity: A + B always equals B + A. Subtraction, however, is not commutative - A - B is generally not the same as B - A, just as 5 - 3 differs from 3 - 5.</p>
+
+      <h3>Multiplication: Rows Meet Columns</h3>
+      <p>Matrix multiplication is more nuanced. To multiply Matrix A (size m x p) by Matrix B (size p x n), the number of columns in A must equal the number of rows in B - those are the "inner" dimensions. The result, Matrix C, has dimensions m x n.</p>
+      <p>Each element of Matrix C is computed as the dot product of a row from Matrix A and a column from Matrix B. Specifically, C[i][j] = sum over k of A[i][k] times B[k][j]. For every element in the result, you are pairing up an entire row of A with an entire column of B, multiplying each pair, and summing the products. This is why the inner dimensions must agree - there must be an equal number of elements to pair up.</p>
+      <p>Unlike addition, matrix multiplication is not commutative. A x B usually does not equal B x A. Sometimes only one order is even valid. In real applications - graphics pipelines, neural networks, quantum mechanics - the order of matrix multiplication determines the meaning of the transformation.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How do you add or subtract two matrices?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Both matrices must have identical dimensions. You add or subtract the corresponding element in each position. For example, the element in row 1, column 1 of Matrix A is added to the element in row 1, column 1 of Matrix B to produce the result in row 1, column 1 of Matrix C. If the matrices have different dimensions, the operation is undefined.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why must matrices have specific dimensions to be multiplied?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Matrix multiplication requires the number of columns in Matrix A to equal the number of rows in Matrix B. This is because each result element is computed as a dot product between a row of A and a column of B. Without matching inner dimensions, there is no way to pair up elements to perform those products. A 2x3 matrix can multiply a 3x4 matrix (inner dimension 3 matches), yielding a 2x4 result. A 2x3 multiplied by a 2x4 is undefined.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Is matrix multiplication commutative - does A x B equal B x A?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          No. Matrix multiplication is generally not commutative. In most cases A x B does not equal B x A, and sometimes only one order is even defined. Even when both products exist and have the same shape (as with square matrices), the results are usually different matrices. This is a fundamental distinction from regular number multiplication.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What are matrices actually used for in real life?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Matrices appear across virtually every technical field. In computer graphics, they rotate, scale, and translate objects in 2D and 3D space. In machine learning, neural networks are chains of matrix multiplications applied to data. In economics, input-output models represent entire industries as matrices. In physics and engineering, circuits, structural stress, and fluid flow are all described by matrix equations. Matrices are also the foundation of Google's original PageRank algorithm, modern cryptography, and quantum mechanics.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the identity matrix and why does it matter?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          The identity matrix is a square matrix with 1s along the main diagonal (top-left to bottom-right) and 0s everywhere else. It is the matrix equivalent of the number 1: multiplying any matrix by the appropriately sized identity matrix leaves the original matrix unchanged. For a 2x2 case the identity is [[1,0],[0,1]], for 3x3 it is [[1,0,0],[0,1,0],[0,0,1]]. Understanding the identity is essential for grasping matrix inverses and solving linear systems.
+        </div>
+      </div>
+
+    </div><!-- /.edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================
+       STATE
+    ============================================ */
+    let currentOp = 'add';
+
+    /* ============================================
+       OPERATION TOGGLE
+    ============================================ */
+    function setOp(op) {
+      currentOp = op;
+      document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + op).classList.add('active');
+      const symbols = { add: '+', subtract: '-', multiply: 'x' };
+      document.getElementById('op-symbol').textContent = symbols[op];
+      compute();
+    }
+
+    /* ============================================
+       GRID BUILDERS
+    ============================================ */
+    function buildGrid(containerId, rows, cols, prefix) {
+      const wrap = document.getElementById(containerId);
+      // Preserve existing values
+      const old = {};
+      wrap.querySelectorAll('input').forEach(inp => { old[inp.dataset.key] = inp.value; });
+      wrap.innerHTML = '';
+      for (let r = 0; r < rows; r++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'matrix-row-cells';
+        for (let c = 0; c < cols; c++) {
+          const inp = document.createElement('input');
+          inp.type = 'number';
+          inp.className = 'cell-input';
+          inp.placeholder = '0';
+          inp.dataset.key = r + '_' + c;
+          inp.value = old[r + '_' + c] !== undefined ? old[r + '_' + c] : '';
+          inp.setAttribute('aria-label', prefix + ' row ' + (r+1) + ' column ' + (c+1));
+          inp.oninput = compute;
+          rowDiv.appendChild(inp);
+        }
+        wrap.appendChild(rowDiv);
+      }
+    }
+
+    function buildGrids() {
+      const ar = +document.getElementById('a-rows').value;
+      const ac = +document.getElementById('a-cols').value;
+      const br = +document.getElementById('b-rows').value;
+      const bc = +document.getElementById('b-cols').value;
+      buildGrid('grid-a', ar, ac, 'Matrix A');
+      buildGrid('grid-b', br, bc, 'Matrix B');
+      document.getElementById('a-size-badge').textContent = ar + 'x' + ac;
+      document.getElementById('b-size-badge').textContent = br + 'x' + bc;
+    }
+
+    /* ============================================
+       READ MATRIX VALUES
+    ============================================ */
+    function readMatrix(gridId, rows, cols) {
+      const wrap = document.getElementById(gridId);
+      const M = [];
+      for (let r = 0; r < rows; r++) {
+        M[r] = [];
+        for (let c = 0; c < cols; c++) {
+          const inp = wrap.querySelector('[data-key="' + r + '_' + c + '"]');
+          M[r][c] = inp && inp.value !== '' ? parseFloat(inp.value) : 0;
+        }
+      }
+      return M;
+    }
+
+    /* ============================================
+       COMPUTE
+    ============================================ */
+    function compute() {
+      const ar = +document.getElementById('a-rows').value;
+      const ac = +document.getElementById('a-cols').value;
+      const br = +document.getElementById('b-rows').value;
+      const bc = +document.getElementById('b-cols').value;
+
+      const out = document.getElementById('result-output');
+      const dimBadge = document.getElementById('result-dim-badge');
+
+      // Constraint checks
+      if (currentOp === 'add' || currentOp === 'subtract') {
+        if (ar !== br || ac !== bc) {
+          showWarning('Matrices must have the same dimensions to be added or subtracted.');
+          dimBadge.style.display = 'none';
+          return;
+        }
+      }
+      if (currentOp === 'multiply') {
+        if (ac !== br) {
+          showWarning('Inner dimensions must match for multiplication (Matrix A columns must equal Matrix B rows).');
+          dimBadge.style.display = 'none';
+          return;
+        }
+      }
+
+      const A = readMatrix('grid-a', ar, ac);
+      const B = readMatrix('grid-b', br, bc);
+      let C, cr, cc;
+
+      if (currentOp === 'add') {
+        cr = ar; cc = ac;
+        C = A.map((row, r) => row.map((v, c) => v + B[r][c]));
+      } else if (currentOp === 'subtract') {
+        cr = ar; cc = ac;
+        C = A.map((row, r) => row.map((v, c) => v - B[r][c]));
+      } else {
+        // multiply: A is ar x ac, B is br x bc (ac === br verified above)
+        cr = ar; cc = bc;
+        C = [];
+        for (let r = 0; r < cr; r++) {
+          C[r] = [];
+          for (let c = 0; c < cc; c++) {
+            let sum = 0;
+            for (let k = 0; k < ac; k++) sum += A[r][k] * B[k][c];
+            C[r][c] = sum;
+          }
+        }
+      }
+
+      dimBadge.style.display = '';
+      dimBadge.textContent = cr + 'x' + cc;
+      renderResult(C, cr, cc);
+    }
+
+    function showWarning(msg) {
+      document.getElementById('result-output').innerHTML =
+        '<div class="constraint-warning">' + msg + '</div>';
+    }
+
+    function renderResult(C, rows, cols) {
+      const wrap = document.createElement('div');
+      wrap.className = 'result-bracket-wrap';
+
+      const lb = document.createElement('span');
+      lb.className = 'result-bracket';
+      lb.setAttribute('aria-hidden', 'true');
+      lb.textContent = '[';
+      wrap.appendChild(lb);
+
+      const grid = document.createElement('div');
+      grid.className = 'result-grid-wrap';
+
+      for (let r = 0; r < rows; r++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'result-row';
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'result-cell';
+          // Format: strip trailing .0000 noise
+          const val = C[r][c];
+          cell.textContent = Number.isInteger(val) ? val : parseFloat(val.toFixed(6));
+          rowDiv.appendChild(cell);
+        }
+        grid.appendChild(rowDiv);
+      }
+      wrap.appendChild(grid);
+
+      const rb = document.createElement('span');
+      rb.className = 'result-bracket';
+      rb.setAttribute('aria-hidden', 'true');
+      rb.textContent = ']';
+      wrap.appendChild(rb);
+
+      const out = document.getElementById('result-output');
+      out.innerHTML = '';
+      out.appendChild(wrap);
+    }
+
+    /* ============================================
+       FAQ TOGGLE
+    ============================================ */
+    function toggleFaq(el) {
+      const answer = el.nextElementSibling;
+      const chevron = el.querySelector('.faq-chevron');
+      answer.classList.toggle('open');
+      chevron.classList.toggle('open');
+    }
+
+    /* ============================================
+       INIT
+    ============================================ */
+    buildGrids();
+    compute();
+  </script>
+</body>
+</html>
