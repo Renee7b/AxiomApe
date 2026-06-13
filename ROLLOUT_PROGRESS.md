@@ -245,6 +245,18 @@ Legend: [x] done, [ ] not started
 ## Batch 38 (new tools, built directly to template) - DONE
 - [x] concrete-masonry-calculator
 
+## Batch 39 (new tools, built directly to template) - DONE
+- [x] auto-depreciation-estimator
+
+## Batch 40 (new tools, built directly to template) - DONE
+- [x] youtube-tag-generator
+
+## Batch 41 (new tools, built directly to template) - DONE
+- [x] credit-card-payoff-calculator
+
+## Batch 42 (new tools, built directly to template) - DONE
+- [x] tiktok-engagement-rate-calculator
+
 ## Remaining tools (alphabetical)
 None. Rollout complete: all tools have been updated to the site-wide template.
 
