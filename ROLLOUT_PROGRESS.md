@@ -221,6 +221,30 @@ Legend: [x] done, [ ] not started
 - [x] youtube-thumbnail-downloader
 - [x] youtube-title-analyzer
 
+## Batch 32 (new tools, built directly to template) - DONE
+- [x] drip-calculator
+
+## Batch 33 (new tools, built directly to template) - DONE
+- [x] deck-material-estimator
+
+## Batch 31 (new tools) - DONE
+- [x] capital-gains-tax-calculator
+
+## Batch 34 (new tools, built directly to template) - DONE
+- [x] hvac-sizing-calculator
+
+## Batch 35 (new tools, built directly to template) - DONE
+- [x] fire-calculator
+
+## Batch 36 (new tools, built directly to template) - DONE
+- [x] mortgage-refinance-calculator
+
+## Batch 37 (new tools, built directly to template) - DONE
+- [x] wallpaper-calculator
+
+## Batch 38 (new tools, built directly to template) - DONE
+- [x] concrete-masonry-calculator
+
 ## Remaining tools (alphabetical)
 None. Rollout complete: all tools have been updated to the site-wide template.
 

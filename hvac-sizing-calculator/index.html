@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HVAC Sizing Calculator: Estimate the BTUs Needed to Cool or Heat a Room | AxiomApe</title>
+  <meta name="description" content="Free HVAC sizing calculator. Enter your room's length, width, and ceiling height plus insulation, sun exposure, and climate zone to instantly estimate the cooling and heating BTUs you need, plus AC tonnage." />
+  <meta name="keywords" content="hvac sizing calculator, btu calculator, air conditioner size calculator, heating load calculator, ac tonnage calculator, room btu calculator, hvac btu estimator" />
+
+  <!-- Google Fonts: Inter for clean, modern readability -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- ============================================================
+       STYLES
+       "Climate Control" layout: standard AxiomApe dark UI,
+       offset with two high-contrast accent points:
+         --cool : #0EA5E9 (Ice Blue)   - cooling elements
+         --heat : #EF4444 (Thermal Red) - heating elements / active states
+       ============================================================ -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0b1220;
+      --bg-soft:       #0f1b2e;
+      --card-bg:       #131f33;
+      --card-bg-2:     #0f1b2e;
+      --border:        #243348;
+      --text:          #e8eef7;
+      --text-muted:    #94a3b8;
+      --text-light:    #64748b;
+
+      --cool:          #0EA5E9;
+      --cool-bg:       rgba(14,165,233,0.12);
+      --cool-border:   rgba(14,165,233,0.35);
+
+      --heat:          #EF4444;
+      --heat-bg:       rgba(239,68,68,0.12);
+      --heat-border:   rgba(239,68,68,0.35);
+
+      --neutral:       #64748b;
+      --neutral-bg:    rgba(148,163,184,0.12);
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 18px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.3);
+
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0c1e33 0%, #102a44 45%, #0c1e33 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .tool-header .header-icon {
+      font-size: 38px;
+      margin-bottom: 10px;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+      background: linear-gradient(90deg, var(--cool), var(--heat));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .tool-header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .main-content {
+      padding: 32px 0 48px;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 22px 18px; }
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Unit toggle (segmented control) ─────────────────────── */
+    .unit-toggle-wrap {
+      display: flex;
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: 100px;
+      padding: 4px;
+      margin-bottom: 28px;
+      width: fit-content;
+      gap: 4px;
+    }
+
+    .unit-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 10px 26px;
+      border-radius: 100px;
+      transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+      line-height: 1;
+    }
+
+    .unit-btn.active {
+      background: var(--cool);
+      color: #04212f;
+      box-shadow: 0 2px 10px rgba(14,165,233,.45);
+    }
+
+    .unit-btn:not(.active):hover {
+      background: var(--cool-bg);
+      color: var(--cool);
+    }
+
+    /* ── Section labels ───────────────────────────────────────── */
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-light);
+      margin: 28px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label:first-of-type { margin-top: 0; }
+
+    .section-label .icon { font-size: 14px; }
+
+    /* ── Input grid ───────────────────────────────────────────── */
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .input-grid { grid-template-columns: 1fr 1fr; }
+      .input-grid .input-group:last-child { grid-column: span 2; }
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: .01em;
+    }
+
+    .input-unit { position: relative; }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 13px 16px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    input[type="number"]:focus {
+      border-color: var(--cool);
+      box-shadow: 0 0 0 3px rgba(14,165,233,.18);
+    }
+
+    .input-unit input { padding-right: 46px; }
+
+    .input-unit .unit-label {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .field-hint {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 6px;
+    }
+
+    /* ── Button groups (environmental factors) ───────────────── */
+    .factor-group { margin-bottom: 22px; }
+    .factor-group:last-child { margin-bottom: 0; }
+
+    .factor-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .tooltip-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px; height: 16px;
+      background: var(--cool-bg);
+      color: var(--cool);
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .tooltip-icon:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #020817;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.4;
+      padding: 8px 12px;
+      border-radius: 8px;
+      width: 230px;
+      white-space: normal;
+      z-index: 10;
+      pointer-events: none;
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .btn-group { grid-template-columns: 1fr; }
+    }
+
+    .factor-btn {
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 12px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s ease;
+      line-height: 1.3;
+    }
+
+    .factor-btn .sub {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-light);
+      margin-top: 2px;
+    }
+
+    .factor-btn:hover {
+      border-color: var(--cool-border);
+      color: var(--text);
+    }
+
+    /* Active state: neutral options use ice blue */
+    .factor-btn.active {
+      background: var(--cool-bg);
+      border-color: var(--cool);
+      color: var(--cool);
+    }
+    .factor-btn.active .sub { color: var(--cool); opacity: .8; }
+
+    /* Active state: heating-leaning options use thermal red */
+    .factor-btn.active.warm {
+      background: var(--heat-bg);
+      border-color: var(--heat);
+      color: var(--heat);
+    }
+    .factor-btn.active.warm .sub { color: var(--heat); opacity: .8; }
+
+    /* Active state: cooling-leaning extreme options */
+    .factor-btn.active.cool-strong {
+      background: var(--cool-bg);
+      border-color: var(--cool);
+      color: var(--cool);
+      box-shadow: 0 0 0 1px var(--cool-border) inset;
+    }
+
+    /* Active state: neutral/moderate */
+    .factor-btn.active.neutral {
+      background: var(--neutral-bg);
+      border-color: var(--text-light);
+      color: var(--text);
+    }
+    .factor-btn.active.neutral .sub { color: var(--text-muted); }
+
+    /* ── Divider ──────────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+
+    /* ── Results card ─────────────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-box {
+      border-radius: var(--radius-sm);
+      padding: 22px 20px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+      background: var(--bg-soft);
+      transition: border-color .3s ease, background .3s ease;
+    }
+
+    .result-box.cooling {
+      border-color: var(--cool-border);
+      background: var(--cool-bg);
+    }
+
+    .result-box.heating {
+      border-color: var(--heat-border);
+      background: var(--heat-bg);
+    }
+
+    .result-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .result-box.cooling .result-label { color: var(--cool); }
+    .result-box.heating .result-label { color: var(--heat); }
+
+    .result-value {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      line-height: 1.1;
+      color: var(--text);
+    }
+
+    .result-box.cooling .result-value { color: var(--cool); }
+    .result-box.heating .result-value { color: var(--heat); }
+
+    .result-unit {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Tonnage strip */
+    .tonnage-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 22px;
+    }
+
+    .tonnage-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .tonnage-label strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--cool);
+      margin-bottom: 4px;
+    }
+
+    .tonnage-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+      white-space: nowrap;
+    }
+
+    .tonnage-value span {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Calculation breakdown note */
+    .calc-note {
+      font-size: 12.5px;
+      color: var(--text-light);
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      line-height: 1.7;
+    }
+
+    .calc-note strong { color: var(--text-muted); }
+
+    /* ── Glossary ─────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px 24px;
+    }
+
+    @media (max-width: 560px) {
+      .glossary-grid { grid-template-columns: 1fr; }
+    }
+
+    .glossary-item { border-left: 2px solid var(--cool-border); padding-left: 14px; }
+
+    .glossary-term {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ── Educational section ──────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -.01em;
+    }
+
+    .edu-section h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 22px 0 10px;
+      color: var(--text);
+    }
+
+    .edu-section p, .edu-section li {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      line-height: 1.75;
+    }
+
+    .edu-section ul { padding-left: 22px; margin-bottom: 14px; }
+
+    .section-intro { font-size: 15px; color: var(--text); }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: var(--bg-soft);
+    }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 16px 18px;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-family: inherit;
+      transition: background .2s ease;
+    }
+
+    .faq-question:hover { background: var(--cool-bg); }
+
+    .faq-question .arrow {
+      font-size: 11px;
+      color: var(--cool);
+      transition: transform .25s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-question[aria-expanded="true"] .arrow { transform: rotate(180deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+
+    .faq-answer.open { display: block; }
+
+    /* ── Tool-specific disclaimer ────────────────────────────── */
+    .disclaimer {
+      background: var(--heat-bg);
+      border: 1.5px solid var(--heat-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #fecaca;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .disclaimer strong { color: var(--heat); font-weight: 700; }
+
+    .hidden { display: none !important; }
+  </style>
+  <link rel="canonical" href="https://axiomape.com/hvac-sizing-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+       ============================================================ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "HVAC Sizing Calculator",
+        "description": "Free HVAC sizing calculator. Enter your room's length, width, and ceiling height plus insulation, sun exposure, and climate zone to instantly estimate the cooling and heating BTUs you need, plus AC tonnage.",
+        "url": "https://axiomape.com/hvac-sizing-calculator/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What happens if my air conditioner is too big (oversized) for the room?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An oversized air conditioner cools the room to the thermostat setting very quickly, then shuts off, only to turn back on again a short time later. This pattern is called short cycling. Because the unit never runs long enough to complete a full cooling cycle, it removes far less humidity from the air, leaving the room feeling cold but damp and clammy. Short cycling also puts extra wear on the compressor and other components, increases your energy bills due to the energy spent on frequent startups, and tends to shorten the overall lifespan of the system. Choosing a unit sized correctly for the room, rather than the biggest one available, results in steadier temperatures, better humidity control, and lower long-term costs."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do high ceilings impact my heating and cooling needs?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard BTU guidelines assume a typical 8 foot ceiling height. Taller ceilings mean a larger volume of air for your system to heat or cool, even if the floor area stays the same. As ceiling height increases beyond 8 feet, this calculator increases the base BTU estimate by 10 percent for every additional 2 feet of height. Rooms with vaulted or cathedral ceilings also tend to develop temperature stratification, where warm air collects near the ceiling while the floor stays cooler, which is why ceiling fans and properly sized equipment matter even more in these spaces."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How many BTUs are in one ton of air conditioning?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "One ton of air conditioning capacity equals 12,000 BTUs per hour. The term originated from the amount of heat needed to melt one ton of ice over 24 hours, and it has carried over into modern HVAC sizing as a standard unit. To convert a cooling load in BTUs to tonnage, divide by 12,000. For example, a 30,000 BTU cooling load equals 2.5 tons of air conditioning capacity. HVAC equipment is typically sold in half-ton increments, such as 1.5, 2, 2.5, and 3 ton units."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How accurate is this BTU calculator?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This calculator applies the widely used 25 BTU per square foot rule of thumb, then adjusts that baseline for ceiling height, insulation quality, sun exposure, and climate zone. It gives a solid starting estimate for a single room, but it does not account for every variable a professional load calculation considers, such as the number and orientation of windows, air leakage, local building codes, or how a room connects to the rest of the home. For whole-home systems or before purchasing equipment, a licensed HVAC contractor can perform a detailed Manual J load calculation for a more precise result."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between the cooling load and the heating load for the same room?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The cooling load is the amount of heat that needs to be removed from a room to keep it comfortable in warm weather, while the heating load is the amount of heat that needs to be added to keep it comfortable in cold weather. The two numbers often differ because some factors push them in opposite directions. A very sunny room, for example, gains extra heat from sunlight, which increases its cooling load, while a cold climate zone adds extra demand to the heating load to make up for heat lost through walls and windows in winter. This is why this calculator shows both figures separately rather than a single combined number."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+
+<body>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SITE HEADER
+       ════════════════════════════════════════════════════════════ -->
+  <header class="tool-header">
+    <div class="header-icon">🌡️</div>
+    <h1>HVAC Sizing Calculator</h1>
+    <p>Estimate the BTUs needed to cool or heat a specific room. Enter your room size and a few environmental details for an instant cooling and heating load estimate, plus AC tonnage.</p>
+  </header>
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════════════════════════════ -->
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <article aria-label="HVAC Sizing Calculator tool">
+
+      <!-- ── Calculator card ──────────────────────────────────── -->
+      <section class="card" aria-labelledby="calc-heading">
+        <h2 class="card-title" id="calc-heading">Room and Environment Details</h2>
+        <p class="card-subtitle">Results update automatically as you type or change any option below.</p>
+
+        <!-- Unit toggle -->
+        <div class="unit-toggle-wrap" role="group" aria-label="Choose unit system">
+          <button class="unit-btn active" id="btn-imperial" onclick="setUnit('imperial')" aria-pressed="true" type="button">
+            Imperial (ft)
+          </button>
+          <button class="unit-btn" id="btn-metric" onclick="setUnit('metric')" aria-pressed="false" type="button">
+            Metric (m)
+          </button>
+        </div>
+
+        <!-- ── Room dimensions ──────────────────────────────── -->
+        <div class="section-label"><span class="icon">📐</span> Room Dimensions</div>
+
+        <div class="input-grid">
+          <div class="input-group">
+            <label for="length">Length</label>
+            <div class="input-unit">
+              <input type="number" id="length" min="1" max="200" step="0.1" placeholder="12" value="12" inputmode="decimal" />
+              <span class="unit-label" id="unit-length">ft</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="width">Width</label>
+            <div class="input-unit">
+              <input type="number" id="width" min="1" max="200" step="0.1" placeholder="10" value="10" inputmode="decimal" />
+              <span class="unit-label" id="unit-width">ft</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="height">Ceiling Height</label>
+            <div class="input-unit">
+              <input type="number" id="height" min="6" max="30" step="0.1" placeholder="8" value="8" inputmode="decimal" />
+              <span class="unit-label" id="unit-height">ft</span>
+            </div>
+            <div class="field-hint" id="height-hint">Standard is 8 ft</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- ── Environmental factors ────────────────────────── -->
+        <div class="section-label"><span class="icon">🏠</span> Environmental Factors</div>
+
+        <!-- Insulation Quality -->
+        <div class="factor-group">
+          <div class="factor-label">
+            Insulation Quality
+            <span class="tooltip-icon" data-tip="How well your walls, attic, and windows resist heat transfer. Poor insulation lets more heat in or out, increasing the load.">?</span>
+          </div>
+          <div class="btn-group" role="group" aria-label="Insulation quality">
+            <button class="factor-btn" type="button" data-group="insulation" data-value="poor" onclick="setFactor('insulation','poor')">
+              Poor<span class="sub">+15% load</span>
+            </button>
+            <button class="factor-btn active neutral" type="button" data-group="insulation" data-value="average" onclick="setFactor('insulation','average')">
+              Average<span class="sub">baseline</span>
+            </button>
+            <button class="factor-btn" type="button" data-group="insulation" data-value="good" onclick="setFactor('insulation','good')">
+              Good<span class="sub">-10% load</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sun Exposure -->
+        <div class="factor-group">
+          <div class="factor-label">
+            Sun Exposure
+            <span class="tooltip-icon" data-tip="How much direct sunlight the room gets through windows and walls. More sun adds extra heat that your AC has to remove.">?</span>
+          </div>
+          <div class="btn-group" role="group" aria-label="Sun exposure">
+            <button class="factor-btn" type="button" data-group="sun" data-value="shaded" onclick="setFactor('sun','shaded')">
+              Heavily Shaded<span class="sub">-10% cooling</span>
+            </button>
+            <button class="factor-btn active neutral" type="button" data-group="sun" data-value="normal" onclick="setFactor('sun','normal')">
+              Normal<span class="sub">baseline</span>
+            </button>
+            <button class="factor-btn" type="button" data-group="sun" data-value="sunny" onclick="setFactor('sun','sunny')">
+              Very Sunny<span class="sub">+10% cooling</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Climate Zone -->
+        <div class="factor-group">
+          <div class="factor-label">
+            Climate Zone
+            <span class="tooltip-icon" data-tip="Your general regional climate. Hot zones add extra demand to the cooling load, while cold zones add extra demand to the heating load.">?</span>
+          </div>
+          <div class="btn-group" role="group" aria-label="Climate zone">
+            <button class="factor-btn" type="button" data-group="climate" data-value="hot" onclick="setFactor('climate','hot')">
+              Hot / Southern<span class="sub">+20% cooling</span>
+            </button>
+            <button class="factor-btn active neutral" type="button" data-group="climate" data-value="moderate" onclick="setFactor('climate','moderate')">
+              Moderate<span class="sub">baseline</span>
+            </button>
+            <button class="factor-btn" type="button" data-group="climate" data-value="cold" onclick="setFactor('climate','cold')">
+              Cold / Northern<span class="sub">+20% heating</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+      <!-- end calculator card -->
+
+
+      <!-- ── Results card ──────────────────────────────────────── -->
+      <section class="card" id="results-card" aria-live="polite" aria-atomic="true" aria-labelledby="results-heading">
+        <h2 class="card-title" id="results-heading">Your Estimated HVAC Load</h2>
+        <p class="card-subtitle">Based on the room and environment details above.</p>
+
+        <div class="results-grid">
+          <div class="result-box cooling">
+            <div class="result-label">❄️ Estimated Cooling Load (AC)</div>
+            <div class="result-value" id="cooling-btu">--</div>
+            <div class="result-unit">BTUs per hour</div>
+          </div>
+          <div class="result-box heating">
+            <div class="result-label">🔥 Estimated Heating Load</div>
+            <div class="result-value" id="heating-btu">--</div>
+            <div class="result-unit">BTUs per hour</div>
+          </div>
+        </div>
+
+        <div class="tonnage-box">
+          <div class="tonnage-label">
+            <strong>AC Tonnage</strong>
+            Cooling BTUs converted to standard AC unit sizing
+          </div>
+          <div class="tonnage-value" id="tonnage-value">-- <span>tons</span></div>
+        </div>
+
+        <div class="calc-note" id="calc-note">
+          Enter your room dimensions above to see a breakdown.
+        </div>
+
+        <aside class="disclaimer" style="margin-top:20px;">
+          <strong>Note:</strong> This is a rule of thumb estimate based on 25 BTUs per square foot, adjusted for ceiling height, insulation, sun exposure, and climate zone. It is not a substitute for a professional Manual J load calculation, especially for whole-home systems or before purchasing equipment.
+        </aside>
+
+      </section>
+      <!-- end results card -->
+      </article>
+
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- ── Glossary card ─────────────────────────────────────── -->
+      <section class="card" aria-labelledby="glossary-heading">
+        <h2 class="card-title" id="glossary-heading">Key Terms Explained</h2>
+        <p class="card-subtitle">Plain-language definitions for the HVAC terms used on this page.</p>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">BTU (British Thermal Unit)</div>
+            <div class="glossary-def">A unit of heat energy. One BTU is roughly the amount of energy released by burning a single match. HVAC equipment is rated by how many BTUs per hour it can add or remove from a space.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">HVAC Tonnage</div>
+            <div class="glossary-def">A way of describing the cooling capacity of an air conditioner. One ton equals 12,000 BTUs per hour. Residential units are commonly sold in 1.5, 2, 2.5, 3, and 4 ton sizes.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Heat Load</div>
+            <div class="glossary-def">The amount of heat that must be added (heating load) or removed (cooling load) from a space per hour to keep it at a comfortable temperature, measured in BTUs per hour.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Short Cycling</div>
+            <div class="glossary-def">When an HVAC system turns on and off too frequently, usually because it is oversized for the space. It wastes energy, wears out components faster, and leaves humidity poorly controlled.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">R-Value</div>
+            <div class="glossary-def">A measure of how well an insulating material resists heat flow. Higher R-values mean better insulation, which lowers both heating and cooling loads.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Heat Pump</div>
+            <div class="glossary-def">An HVAC system that can both heat and cool a space by moving heat into or out of a building, rather than generating heat directly. It is sized using the same BTU principles as a standard air conditioner or furnace.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">SEER Rating</div>
+            <div class="glossary-def">Seasonal Energy Efficiency Ratio. It measures how efficiently an air conditioner uses electricity over a cooling season. A higher SEER rating means lower running costs for the same BTU output.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Solar Heat Gain</div>
+            <div class="glossary-def">The extra heat that enters a room through sunlight hitting windows and walls. Rooms with more direct sun exposure need additional cooling capacity to offset this gain.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Square Footage</div>
+            <div class="glossary-def">The floor area of a room, found by multiplying its length by its width. It is the starting point for most BTU sizing rules of thumb.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Climate Zone</div>
+            <div class="glossary-def">A general classification of a region's typical weather, such as hot, moderate, or cold. It determines whether a home leans more on cooling, heating, or a balance of both.</div>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ── Educational section card ─────────────────────────── -->
+      <section class="card edu-section" aria-labelledby="guide-heading">
+        <h2 id="guide-heading">The Complete Guide to Sizing an HVAC System for a Room</h2>
+
+        <p class="section-intro">
+          Choosing an air conditioner or heater that matches the actual needs of a room is one of the most overlooked steps in home comfort. A unit that is too small struggles to keep up on the hottest or coldest days, while a unit that is too big cycles on and off too quickly, wastes energy, and leaves the room feeling damp or stuffy. This guide walks through how the BTU estimates above are calculated and how to use them when shopping for equipment.
+        </p>
+
+        <h3>How to use this calculator</h3>
+        <p>
+          Start by entering the length and width of the room in the Room Dimensions section, using either feet or meters depending on which unit system you prefer. The calculator multiplies these two numbers to find the floor area, then applies a baseline of 25 BTUs per square foot, which is a widely used starting point for residential rooms with a standard 8 foot ceiling.
+        </p>
+        <p>
+          Next, enter the ceiling height. If it is taller than 8 feet, the calculator increases the baseline estimate by 10 percent for every additional 2 feet, since taller rooms contain more air volume to heat or cool. Finally, choose the option that best matches your room for Insulation Quality, Sun Exposure, and Climate Zone. Each choice nudges the estimate up or down to reflect how that factor affects the room's real-world heating and cooling demand. The Estimated Cooling Load, Estimated Heating Load, and AC Tonnage all update instantly as you change any value, with no need to click a button.
+        </p>
+
+        <h3>Why cooling and heating loads can differ</h3>
+        <p>
+          You will often see the Estimated Cooling Load and Estimated Heating Load show different numbers for the same room, and that is by design. Sun exposure and insulation affect both numbers in the same direction: a poorly insulated, very sunny room needs more cooling in summer and more heating in winter. Climate zone, however, pulls in only one direction. A hot, southern climate adds 20 percent to the cooling load because summers are more intense, while a cold, northern climate adds 20 percent to the heating load because winters are more demanding. A moderate climate leaves both numbers unaffected by this particular factor.
+        </p>
+
+        <h3>From BTUs to a real piece of equipment</h3>
+        <p>
+          Once you have an estimated cooling load in BTUs, the AC Tonnage figure translates that number into the units used to shop for equipment. Dividing the cooling BTUs by 12,000 and rounding to the nearest half ton gives you a starting point for the size of a window unit, mini-split, or central air system that would be appropriate for a room of this size and these conditions. For heating, the BTU figure can be compared directly against the BTU rating printed on space heaters, furnaces, or the heating capacity of a heat pump.
+        </p>
+
+        <h3>Why both undersizing and oversizing are problems</h3>
+        <p>
+          It can feel intuitive to simply buy the biggest, most powerful unit available, but bigger is not always better. An undersized system runs constantly and may never quite reach the target temperature on extreme days. An oversized system reaches the target temperature quickly, shuts off, and then turns back on again soon after, a pattern known as short cycling. Short cycling is hard on the compressor, wastes electricity on frequent startups, and crucially does not run long enough to remove humidity from the air, which can leave a room feeling cold and clammy even though the thermostat reads the correct temperature. The goal of sizing is a system that runs in long, steady cycles that match the room's actual load.
+        </p>
+
+        <h3>Limitations of a BTU per square foot estimate</h3>
+        <ul>
+          <li>This calculator looks at one room at a time and assumes that room is reasonably enclosed, rather than fully open to other large spaces.</li>
+          <li>It does not separately account for the number, size, or orientation of individual windows and doors, only an overall sun exposure setting.</li>
+          <li>Air leakage from gaps, ductwork losses, and the number of people and appliances regularly using the room are not factored in.</li>
+          <li>For whole-home systems, new construction, or before purchasing major equipment, a licensed HVAC contractor performing a full Manual J load calculation will give a far more precise and code-compliant result.</li>
+        </ul>
+
+        <section aria-labelledby="faq-heading">
+        <h3 id="faq-heading">Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" data-target="faq1" type="button">
+            What happens if my air conditioner is too big (oversized) for the room?
+            <span class="arrow">▼</span>
+          </button>
+          <div class="faq-answer" id="faq1">
+            An oversized air conditioner cools the room to the thermostat setting very quickly, then shuts off, only to turn back on again a short time later. This pattern is called short cycling. Because the unit never runs long enough to complete a full cooling cycle, it removes far less humidity from the air, leaving the room feeling cold but damp and clammy. Short cycling also puts extra wear on the compressor and other components, increases your energy bills due to the energy spent on frequent startups, and tends to shorten the overall lifespan of the system. Choosing a unit sized correctly for the room, rather than the biggest one available, results in steadier temperatures, better humidity control, and lower long-term costs.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" data-target="faq2" type="button">
+            How do high ceilings impact my heating and cooling needs?
+            <span class="arrow">▼</span>
+          </button>
+          <div class="faq-answer" id="faq2">
+            Standard BTU guidelines assume a typical 8 foot ceiling height. Taller ceilings mean a larger volume of air for your system to heat or cool, even if the floor area stays the same. As ceiling height increases beyond 8 feet, this calculator increases the base BTU estimate by 10 percent for every additional 2 feet of height. Rooms with vaulted or cathedral ceilings also tend to develop temperature stratification, where warm air collects near the ceiling while the floor stays cooler, which is why ceiling fans and properly sized equipment matter even more in these spaces.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" data-target="faq3" type="button">
+            How many BTUs are in one ton of air conditioning?
+            <span class="arrow">▼</span>
+          </button>
+          <div class="faq-answer" id="faq3">
+            One ton of air conditioning capacity equals 12,000 BTUs per hour. The term originated from the amount of heat needed to melt one ton of ice over 24 hours, and it has carried over into modern HVAC sizing as a standard unit. To convert a cooling load in BTUs to tonnage, divide by 12,000. For example, a 30,000 BTU cooling load equals 2.5 tons of air conditioning capacity. HVAC equipment is typically sold in half-ton increments, such as 1.5, 2, 2.5, and 3 ton units.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" data-target="faq4" type="button">
+            How accurate is this BTU calculator?
+            <span class="arrow">▼</span>
+          </button>
+          <div class="faq-answer" id="faq4">
+            This calculator applies the widely used 25 BTU per square foot rule of thumb, then adjusts that baseline for ceiling height, insulation quality, sun exposure, and climate zone. It gives a solid starting estimate for a single room, but it does not account for every variable a professional load calculation considers, such as the number and orientation of windows, air leakage, local building codes, or how a room connects to the rest of the home. For whole-home systems or before purchasing equipment, a licensed HVAC contractor can perform a detailed Manual J load calculation for a more precise result.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" data-target="faq5" type="button">
+            What is the difference between the cooling load and the heating load for the same room?
+            <span class="arrow">▼</span>
+          </button>
+          <div class="faq-answer" id="faq5">
+            The cooling load is the amount of heat that needs to be removed from a room to keep it comfortable in warm weather, while the heating load is the amount of heat that needs to be added to keep it comfortable in cold weather. The two numbers often differ because some factors push them in opposite directions. A very sunny room, for example, gains extra heat from sunlight, which increases its cooling load, while a cold climate zone adds extra demand to the heating load to make up for heat lost through walls and windows in winter. This is why this calculator shows both figures separately rather than a single combined number.
+          </div>
+        </div>
+
+        </section>
+      </section>
+
+    </div><!-- end .container -->
+  </main>
+
+  <!-- ════════════════════════════════════════════════════════════
+       AD PLACEMENT 2: Mobile sticky anchor (320x50)
+       Mobile only (768px and below).
+       ════════════════════════════════════════════════════════════ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       JAVASCRIPT
+       All logic is self-contained here: no external dependencies.
+       ════════════════════════════════════════════════════════════ -->
+  <script>
+    /* ──────────────────────────────────────────────────────────
+       STATE
+    ────────────────────────────────────────────────────────── */
+    let currentUnit = 'imperial'; // 'imperial' | 'metric'
+    const factors = {
+      insulation: 'average', // 'poor' | 'average' | 'good'
+      sun: 'normal',         // 'shaded' | 'normal' | 'sunny'
+      climate: 'moderate'    // 'hot' | 'moderate' | 'cold'
+    };
+
+    const FT_TO_M = 0.3048;
+    const M_TO_FT = 3.28084;
+
+    /* ──────────────────────────────────────────────────────────
+       UNIT TOGGLE
+       Converts current dimension values between feet and meters
+       and updates labels / defaults.
+    ────────────────────────────────────────────────────────── */
+    function setUnit(unit) {
+      if (unit === currentUnit) return;
+
+      const lengthEl = document.getElementById('length');
+      const widthEl  = document.getElementById('width');
+      const heightEl = document.getElementById('height');
+
+      const factor = unit === 'metric' ? FT_TO_M : M_TO_FT;
+
+      [lengthEl, widthEl, heightEl].forEach(el => {
+        const val = parseFloat(el.value);
+        if (!isNaN(val)) {
+          el.value = (Math.round(val * factor * 100) / 100).toString();
+        }
+      });
+
+      currentUnit = unit;
+      const isImperial = unit === 'imperial';
+
+      // Update unit labels
+      const lengthUnit = isImperial ? 'ft' : 'm';
+      document.getElementById('unit-length').textContent = lengthUnit;
+      document.getElementById('unit-width').textContent  = lengthUnit;
+      document.getElementById('unit-height').textContent = lengthUnit;
+      document.getElementById('height-hint').textContent = isImperial
+        ? 'Standard is 8 ft'
+        : 'Standard is 2.4 m';
+
+      // Adjust input steps/min/max for the new unit
+      if (isImperial) {
+        lengthEl.min = 1; lengthEl.max = 200; lengthEl.step = 0.1;
+        widthEl.min  = 1; widthEl.max  = 200; widthEl.step  = 0.1;
+        heightEl.min = 6; heightEl.max = 30;  heightEl.step = 0.1;
+      } else {
+        lengthEl.min = 0.3; lengthEl.max = 60; lengthEl.step = 0.1;
+        widthEl.min  = 0.3; widthEl.max  = 60; widthEl.step  = 0.1;
+        heightEl.min = 1.8; heightEl.max = 9;  heightEl.step = 0.1;
+      }
+
+      // Update button states + ARIA
+      const btnImp = document.getElementById('btn-imperial');
+      const btnMet = document.getElementById('btn-metric');
+      btnImp.classList.toggle('active', isImperial);
+      btnMet.classList.toggle('active', !isImperial);
+      btnImp.setAttribute('aria-pressed', String(isImperial));
+      btnMet.setAttribute('aria-pressed', String(!isImperial));
+
+      calculate();
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       ENVIRONMENTAL FACTOR BUTTON GROUPS
+    ────────────────────────────────────────────────────────── */
+    function setFactor(group, value) {
+      factors[group] = value;
+
+      document.querySelectorAll('.factor-btn[data-group="' + group + '"]').forEach(btn => {
+        const btnValue = btn.getAttribute('data-value');
+        const isActive = btnValue === value;
+        btn.classList.toggle('active', isActive);
+
+        // Reset styling classes
+        btn.classList.remove('warm', 'cool-strong', 'neutral');
+
+        if (!isActive) return;
+
+        // Color the active state based on whether this choice leans
+        // toward more heating demand (warm/red) or is the neutral middle option.
+        if (group === 'insulation') {
+          if (value === 'poor') btn.classList.add('warm');
+          else if (value === 'average') btn.classList.add('neutral');
+          // 'good' keeps the default ice-blue active style
+        } else if (group === 'sun') {
+          if (value === 'shaded') btn.classList.add('warm');
+          else if (value === 'normal') btn.classList.add('neutral');
+          // 'sunny' keeps the default ice-blue active style
+        } else if (group === 'climate') {
+          if (value === 'cold') btn.classList.add('warm');
+          else if (value === 'moderate') btn.classList.add('neutral');
+          // 'hot' keeps the default ice-blue active style
+        }
+      });
+
+      calculate();
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       MAIN CALCULATION
+    ────────────────────────────────────────────────────────── */
+    function calculate() {
+      const lengthRaw = parseFloat(document.getElementById('length').value);
+      const widthRaw  = parseFloat(document.getElementById('width').value);
+      const heightRaw = parseFloat(document.getElementById('height').value);
+
+      if (isNaN(lengthRaw) || isNaN(widthRaw) || isNaN(heightRaw) ||
+          lengthRaw <= 0 || widthRaw <= 0 || heightRaw <= 0) {
+        document.getElementById('cooling-btu').textContent = '--';
+        document.getElementById('heating-btu').textContent = '--';
+        document.getElementById('tonnage-value').innerHTML = '-- <span>tons</span>';
+        document.getElementById('calc-note').textContent = 'Enter your room dimensions above to see a breakdown.';
+        return;
+      }
+
+      // Convert everything to feet for the standard 25 BTU/sqft rule
+      const toFeet = currentUnit === 'metric' ? M_TO_FT : 1;
+      const lengthFt = lengthRaw * toFeet;
+      const widthFt  = widthRaw  * toFeet;
+      const heightFt = heightRaw * toFeet;
+
+      // ── Base BTU: square footage x 25 BTU/sqft ──
+      const sqft = lengthFt * widthFt;
+      const baseBTU = sqft * 25;
+
+      // ── Volume adjustment: +10% for every extra 2 ft of ceiling height over 8 ft ──
+      const extraHeight = Math.max(0, heightFt - 8);
+      const heightFactor = 1 + 0.10 * (extraHeight / 2);
+
+      // ── Environmental adjustments ──
+      let sunAdj = 0;
+      if (factors.sun === 'sunny') sunAdj = 0.10;
+      else if (factors.sun === 'shaded') sunAdj = -0.10;
+
+      let insulationAdj = 0;
+      if (factors.insulation === 'poor') insulationAdj = 0.15;
+      else if (factors.insulation === 'good') insulationAdj = -0.10;
+
+      const envFactor = 1 + sunAdj + insulationAdj;
+
+      const adjustedBase = baseBTU * heightFactor * envFactor;
+
+      // ── Climate zone: +20% to cooling for Hot, +20% to heating for Cold ──
+      const coolingBTU = adjustedBase * (factors.climate === 'hot' ? 1.20 : 1);
+      const heatingBTU = adjustedBase * (factors.climate === 'cold' ? 1.20 : 1);
+
+      // ── Tonnage: cooling BTUs / 12,000, rounded to nearest 0.5 ──
+      const tonnage = Math.round((coolingBTU / 12000) * 2) / 2;
+
+      // ── Display ──
+      const coolingRounded = Math.round(coolingBTU / 50) * 50;
+      const heatingRounded = Math.round(heatingBTU / 50) * 50;
+
+      document.getElementById('cooling-btu').textContent = coolingRounded.toLocaleString('en-US');
+      document.getElementById('heating-btu').textContent = heatingRounded.toLocaleString('en-US');
+      document.getElementById('tonnage-value').innerHTML = tonnage.toFixed(1).replace(/\.0$/, '') + ' <span>tons</span>';
+
+      // ── Breakdown note ──
+      const sqftLabel = sqft.toFixed(1).replace(/\.0$/, '');
+      let note = '<strong>Square footage:</strong> ' + sqftLabel + ' sq ft (' +
+        lengthFt.toFixed(1).replace(/\.0$/, '') + ' x ' + widthFt.toFixed(1).replace(/\.0$/, '') + ' ft) x 25 BTU/sq ft = ' +
+        Math.round(baseBTU).toLocaleString('en-US') + ' BTU base.';
+
+      if (extraHeight > 0) {
+        note += ' Ceiling height adjustment for ' + heightFt.toFixed(1).replace(/\.0$/, '') + ' ft: +' +
+          (heightFactor * 100 - 100).toFixed(0) + '%.';
+      }
+
+      const adjParts = [];
+      if (insulationAdj !== 0) adjParts.push((insulationAdj > 0 ? '+' : '') + (insulationAdj * 100).toFixed(0) + '% insulation');
+      if (sunAdj !== 0) adjParts.push((sunAdj > 0 ? '+' : '') + (sunAdj * 100).toFixed(0) + '% sun exposure');
+      if (adjParts.length) note += ' Adjustments: ' + adjParts.join(', ') + '.';
+
+      if (factors.climate === 'hot') note += ' Hot climate adds +20% to the cooling load only.';
+      if (factors.climate === 'cold') note += ' Cold climate adds +20% to the heating load only.';
+
+      document.getElementById('calc-note').innerHTML = note;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       REAL-TIME LISTENERS
+       No calculate button: every input/change recalculates instantly.
+    ────────────────────────────────────────────────────────── */
+    ['length', 'width', 'height'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', calculate);
+      el.addEventListener('change', calculate);
+    });
+
+    /* ──────────────────────────────────────────────────────────
+       FAQ ACCORDION
+    ────────────────────────────────────────────────────────── */
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const answer   = document.getElementById(targetId);
+        const isOpen   = btn.getAttribute('aria-expanded') === 'true';
+
+        answer.classList.toggle('open', !isOpen);
+        btn.setAttribute('aria-expanded', String(!isOpen));
+      });
+    });
+
+    /* ──────────────────────────────────────────────────────────
+       INITIAL CALCULATION ON LOAD
+    ────────────────────────────────────────────────────────── */
+    calculate();
+  </script>
+
+</body>
+</html>
