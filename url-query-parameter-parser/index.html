@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Query Parameter Parser: Clean Up Complex URLs into Structured Logs | AxiomApe</title>
+  <meta name="description" content="Free URL query parameter parser. Paste any URL or query string to instantly extract, decode, and display every key-value pair in a clean structured table. Export as JSON or CSV. 100% client-side." />
+  <meta name="keywords" content="URL query parameter parser, URL parameter extractor, decode URL parameters, parse query string, URLSearchParams tool, URL breakdown, utm parameter parser, percent decode URL, query string analyzer, developer URL tool, marketing URL parser, URL key value extractor" />
+  <link rel="canonical" href="https://axiomape.com/url-query-parameter-parser/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "URL Query Parameter Parser",
+        "description": "Free URL query parameter parser. Paste any URL or query string to instantly extract, decode, and display every key-value pair in a clean structured table. Export as JSON or CSV. 100% client-side.",
+        "url": "https://axiomape.com/url-query-parameter-parser/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a URL query parameter used for?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Query parameters are key-value pairs appended to a URL after a question mark (?) that pass additional data to a web server or tracking system without changing the page path. Common uses include search queries (q=shoes), analytics tagging (utm_source=google), filtering results (color=blue&size=medium), session tracking, A/B test flags, and referral attribution. Marketers use them for campaign tracking while developers use them to pass state, filter data, and control application behavior without a form submission."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do URLs have %20 and %2F in them?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "URLs can only contain a limited set of safe ASCII characters. Spaces, slashes, ampersands, and many other characters have special meaning inside a URL and cannot appear literally in a query value. Percent-encoding (also called URL encoding) converts unsafe characters into a % sign followed by the two-digit hexadecimal ASCII code for that character. A space becomes %20 because space is ASCII character 32, which is 0x20 in hex. A forward slash becomes %2F because / is ASCII 47, or 0x2F. This lets you safely embed arbitrary text inside a URL without breaking its structure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I extract parameters from a URL string?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In a browser or Node.js, the native URLSearchParams interface is the cleanest approach. Pass the query string portion to new URLSearchParams(queryString) and then iterate with .forEach() or .entries(). Each entry gives you a decoded key and a decoded value. For a full URL, first parse it with new URL(rawUrl) and then access .searchParams directly. This tool does exactly that for you visually - paste the URL and every parameter appears in the table instantly with both its raw encoded value and its decoded human-readable value side by side."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it safe to paste URLs containing secret access tokens here?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, technically - this tool is 100% client-side and never sends your input to any server. You can verify this in your browser's Network tab: you will see zero outbound requests while using the tool. That said, you should treat any URL containing a live secret token (OAuth tokens, API keys, signed S3 URLs, magic login links) the way you would treat a password. Paste it here to inspect and debug, then invalidate or rotate the token afterward. Never paste tokens into any online tool you do not fully trust, and never share token-bearing URLs in Slack, email, or screenshots."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are UTM parameters and why do marketers care about them?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "UTM parameters are a standardized set of five query parameters - utm_source, utm_medium, utm_campaign, utm_term, and utm_content - defined by Google to track the origin of web traffic inside analytics platforms like Google Analytics and GA4. When a visitor arrives at a page via a tagged URL, the analytics platform reads those parameters and attributes the session to the correct campaign. Marketers use them to measure which ad, email, social post, or newsletter drove a conversion. This tool lets you instantly decode and audit any UTM-tagged URL to verify the tagging is correct before publishing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a URL fragment and a query parameter?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A query parameter appears after the ? and is sent to the server as part of the HTTP request. A URL fragment appears after the # symbol and is never sent to the server at all - it is processed entirely by the browser on the client side. Fragments are typically used for in-page navigation (jumping to a heading with id='contact') or by single-page applications that encode routing state in the hash. Because the fragment never leaves the browser, the server cannot read it. This tool displays the fragment in the URL breakdown card so you can see it, but it is not parsed as a parameter because it is not part of the query string."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0d14;
+      --surface:   #111320;
+      --surface2:  #181b2e;
+      --border:    #252840;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --radius:    10px;
+      --sans:      'Segoe UI', system-ui, sans-serif;
+      --mono:      'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+
+      /* Accent palette */
+      --yellow:        #FACC15;
+      --yellow-dim:    rgba(250, 204, 21, 0.12);
+      --yellow-bdr:    rgba(250, 204, 21, 0.30);
+      --blue:          #3B82F6;
+      --blue-dim:      rgba(59, 130, 246, 0.12);
+      --blue-bdr:      rgba(59, 130, 246, 0.30);
+      --green:         #10B981;
+      --danger:        #EF4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       SITE NAV STUB (hidden by site-chrome.js)
+    ============================================================ */
+    .site-nav {
+      text-align: center;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .page-wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 36px 16px 72px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .h-yellow { color: var(--yellow); }
+    .h-blue   { color: var(--blue); }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================================================
+       CARD
+    ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      margin-bottom: 20px;
+    }
+    .card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ============================================================
+       INPUT AREA
+    ============================================================ */
+    .input-card { border-color: var(--yellow-bdr); }
+
+    textarea#url-input {
+      width: 100%;
+      min-height: 110px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.87rem;
+      line-height: 1.6;
+      padding: 12px 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    textarea#url-input:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px var(--yellow-dim);
+    }
+    textarea#url-input::placeholder { color: var(--muted); }
+
+    /* Quick-action row */
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+    .btn-ghost {
+      background: var(--surface2);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--yellow); color: var(--yellow); }
+    .btn-blue {
+      background: var(--blue-dim);
+      border-color: var(--blue-bdr);
+      color: var(--blue);
+    }
+    .btn-blue:hover { background: var(--blue); color: #fff; }
+    .btn-yellow {
+      background: var(--yellow-dim);
+      border-color: var(--yellow-bdr);
+      color: var(--yellow);
+    }
+    .btn-yellow:hover { background: var(--yellow); color: #000; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Sort toggle */
+    .sort-wrap {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+    .toggle-switch input { display: none; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--yellow-dim);
+      border-color: var(--yellow-bdr);
+    }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(18px) translateY(-50%);
+      background: var(--yellow);
+    }
+
+    /* ============================================================
+       URL BREAKDOWN CARD
+    ============================================================ */
+    .breakdown-card { border-color: var(--blue-bdr); }
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 640px) {
+      .breakdown-grid { grid-template-columns: 1fr; }
+    }
+    .bd-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .bd-label {
+      font-size: 0.70rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .bd-value {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--blue);
+      word-break: break-all;
+      min-height: 1.2em;
+    }
+    .bd-value.empty { color: var(--muted); font-style: italic; font-family: var(--sans); }
+
+    /* ============================================================
+       PARAMETER TABLE
+    ============================================================ */
+    .table-card { border-color: var(--yellow-bdr); }
+    .param-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--yellow);
+      background: var(--yellow-dim);
+      border: 1px solid var(--yellow-bdr);
+      border-radius: 99px;
+      padding: 2px 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .table-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .table-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--muted);
+    }
+    .export-btns { display: flex; gap: 8px; }
+
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.70rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--yellow-bdr);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--yellow-dim); }
+    tbody td {
+      padding: 10px 14px;
+      vertical-align: top;
+      word-break: break-all;
+    }
+    td.col-key {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--yellow);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    td.col-raw {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    td.col-decoded {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+    td.col-decoded.changed { color: var(--blue); }
+
+    /* Empty / placeholder state */
+    .table-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .table-empty-icon { font-size: 2.4rem; margin-bottom: 10px; }
+
+    /* ============================================================
+       COPY FEEDBACK TOAST
+    ============================================================ */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--green);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 9px 22px;
+      border-radius: 99px;
+      box-shadow: 0 4px 20px rgba(16,185,129,0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s, transform 0.22s;
+      z-index: 9999;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ============================================================
+       AD PLACEMENTS (managed by site-chrome.js classes)
+    ============================================================ */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    /* ============================================================
+       GLOSSARY
+    ============================================================ */
+    .card-title-lg {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 15px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--yellow);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 22px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--surface2);
+      padding: 13px 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.90rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+      gap: 10px;
+    }
+    .faq-q:hover { color: var(--yellow); }
+    .faq-chevron {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--yellow); }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ============================================================
+       DISCLAIMER
+    ============================================================ */
+    .tool-disclaimer {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.80rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 600px) {
+      .card { padding: 16px; }
+      .actions-row { flex-direction: column; align-items: flex-start; }
+      .sort-wrap { margin-left: 0; }
+      .table-header-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js hides this -->
+  <nav class="site-nav"><a href="/">AxiomApe</a> &rsaquo; <a href="/">All Tools</a></nav>
+
+  <main class="page-wrap" id="main">
+
+    <header class="page-header">
+      <h1>URL Query Parameter <span class="h-yellow">Parser</span> <span class="h-blue">&amp; Table View</span></h1>
+      <p>Paste any URL or query string to instantly decode every key-value pair into a clean, structured table. Export as JSON or CSV in one click. 100% client-side - nothing ever leaves your browser.</p>
+    </header>
+
+    <!-- ============================================================
+         INPUT CARD
+    ============================================================ -->
+    <div class="card input-card">
+      <div class="card-label">Input - Paste URL or Query String</div>
+      <textarea
+        id="url-input"
+        oninput="parseUrl()"
+        placeholder="https://example.com/path?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=spring_sale&amp;q=running+shoes&#10;&#10;Or just: ?key=value&amp;another=%2Fencoded%2Fpath"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+      ></textarea>
+      <div class="actions-row">
+        <button class="btn btn-ghost" onclick="pasteFromClipboard()" title="Paste from clipboard">
+          &#128203; Paste from Clipboard
+        </button>
+        <button class="btn btn-ghost" onclick="clearInput()">
+          &#10005; Clear
+        </button>
+        <div class="sort-wrap">
+          <span>A-Z Sort</span>
+          <label class="toggle-switch" title="Toggle alphabetical sort">
+            <input type="checkbox" id="sort-toggle" onchange="parseUrl()" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         URL BREAKDOWN CARD
+    ============================================================ -->
+    <div class="card breakdown-card">
+      <div class="card-label">URL Breakdown</div>
+      <div class="breakdown-grid">
+        <div class="bd-item">
+          <div class="bd-label">Base URL</div>
+          <div class="bd-value empty" id="bd-base">Paste a URL above</div>
+        </div>
+        <div class="bd-item">
+          <div class="bd-label">Path</div>
+          <div class="bd-value empty" id="bd-path">-</div>
+        </div>
+        <div class="bd-item">
+          <div class="bd-label">Fragment (#)</div>
+          <div class="bd-value empty" id="bd-fragment">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         PARAMETER TABLE CARD
+    ============================================================ -->
+    <div class="card table-card">
+      <div class="table-header-row">
+        <div class="table-title">
+          Parameters
+          <span class="param-count-badge" id="param-count" style="display:none">0</span>
+        </div>
+        <div class="export-btns">
+          <button class="btn btn-yellow" id="btn-json" onclick="exportJSON()" disabled>&#128203; Copy as JSON</button>
+          <button class="btn btn-blue"   id="btn-csv"  onclick="exportCSV()"  disabled>&#128203; Copy as CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="param-table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Raw Value</th>
+              <th>Decoded Value</th>
+            </tr>
+          </thead>
+          <tbody id="param-tbody">
+            <tr>
+              <td colspan="3">
+                <div class="table-empty">
+                  <div class="table-empty-icon">&#128279;</div>
+                  Paste a URL or query string above to see parameters here.
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title-lg">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">URL (Uniform Resource Locator)</div>
+          <div class="glossary-def">The full web address of a resource, including the protocol (https), domain, path, query string, and optional fragment. Every URL is a unique identifier that tells the browser exactly where to find something on the internet.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Query Parameter</div>
+          <div class="glossary-def">A key-value pair appended to a URL after the question mark (?). Multiple parameters are joined by ampersands (&amp;). They pass extra data to a server or tracking system - for example, search terms, filter values, or campaign tags - without changing the page path itself.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">URL Encoding (Percent-Encoding)</div>
+          <div class="glossary-def">A scheme that converts characters that are unsafe or reserved in URLs into a percent sign (%) followed by their two-digit hexadecimal ASCII code. A space becomes %20, a forward slash becomes %2F, an at-sign becomes %40. This lets arbitrary text be embedded safely inside a URL.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Base Domain</div>
+          <div class="glossary-def">The scheme plus the host of a URL - for example, https://www.example.com. Everything after the first slash in the path, and everything after the question mark, is separate from the base domain. The base domain determines which server receives the request.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Fragment Identifier (#)</div>
+          <div class="glossary-def">The portion of a URL that begins with a hash symbol (#). Unlike query parameters, the fragment is never sent to the server - it stays in the browser. It is used for in-page navigation (linking to a heading) and by single-page apps that encode client-side routing state in the URL hash.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">UTM Parameters</div>
+          <div class="glossary-def">Five standardized query parameters (utm_source, utm_medium, utm_campaign, utm_term, utm_content) used by Google Analytics and other platforms to attribute web traffic to specific marketing campaigns, ad groups, or content pieces. They are added to URLs in ads, emails, and social posts to track what drives conversions.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">URLSearchParams</div>
+          <div class="glossary-def">A native JavaScript interface available in all modern browsers and Node.js that parses and manipulates URL query strings. It handles encoding and decoding automatically, lets you get, set, and delete individual parameters, and can serialize back to a valid query string.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">decodeURIComponent()</div>
+          <div class="glossary-def">A built-in JavaScript function that decodes percent-encoded sequences in a string. It converts sequences like %20 back to a space, %2F back to a slash, and %C3%A9 back to the letter e with an acute accent (e). It is the counterpart of encodeURIComponent().</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to URL Query Parameters</h2>
+      <p class="section-intro">URLs look simple at first glance, but the query string after the ? can pack an enormous amount of structured information - tracking IDs, search terms, filter states, A/B test flags, API keys, and more. This guide explains how query strings work, why values get encoded, and how to extract and analyze them effectively.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Copy any URL from your browser address bar, an email link, a marketing report, a server log, or a code editor. Paste it directly into the input box above. The tool parses the URL instantly and populates three areas: the URL Breakdown card (showing the base domain, path, and fragment), the parameter table (showing each key with its raw encoded value and decoded human-readable value side by side), and the export buttons for copying the results as JSON or CSV.</p>
+      <p>If you only have the query string portion (starting with ? or even just key=value), you can paste that too. The parser automatically prepends a dummy host internally so the native URL object can still process the string - you will see the breakdown card show a placeholder for the base URL while the parameter table fills in normally.</p>
+      <p>Toggle "A-Z Sort" to reorder parameters alphabetically, which is useful when comparing two similar URLs that may have the same parameters in a different order. The decoded value column highlights in blue whenever a value differs from its raw form, making it easy to spot encoded values at a glance.</p>
+
+      <h3>Why the Query String Exists</h3>
+      <p>HTTP servers receive only the path portion of a URL to determine which resource to return. The query string is the standard mechanism for the browser to pass additional context to the server alongside that path request. Rather than requiring a separate POST form submission for every filter, search, or setting, the query string lets the client encode state directly into a GET request URL - which means the URL is bookmarkable, shareable, and cacheable in a way that POST requests are not.</p>
+      <p>This is why Google search results, e-commerce product filters, analytics dashboards, and API endpoints all lean heavily on query parameters. The URL itself becomes a complete description of the page state.</p>
+
+      <h3>Reading Percent-Encoded Values</h3>
+      <p>The decoded value column in this tool uses the same JavaScript decodeURIComponent() function that browsers use internally. When you see %20 in the raw column and a space in the decoded column, that is percent-encoding at work. When you see %7B and %7D, those decode to curly braces { and } - common in URLs that embed JSON fragments or template variables. Long Base64 strings ending in = signs are common in OAuth redirect URLs and signed request parameters.</p>
+
+      <h3>The Security Note on Tokens in URLs</h3>
+      <p>Developers often use this kind of tool to debug URLs containing OAuth tokens, signed S3 download URLs, or magic login links. Those tokens are legitimate in context but should be treated with care. Tokens embedded in URLs appear in browser history, server access logs, referrer headers, and anywhere the URL is shared. Audit the token, then rotate or revoke it. This tool is 100% client-side, so the URL never leaves your machine while you inspect it here.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq1">
+        <div class="faq-q" onclick="toggleFaq('faq1')">
+          What is a URL query parameter used for?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">Query parameters are key-value pairs appended to a URL after a question mark (?) that pass additional data to a web server or tracking system without changing the page path. Common uses include search queries (q=shoes), analytics tagging (utm_source=google), filtering results (color=blue&size=medium), session tracking, A/B test flags, and referral attribution. Marketers use them for campaign tracking while developers use them to pass state, filter data, and control application behavior without a form submission.</div>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <div class="faq-q" onclick="toggleFaq('faq2')">
+          Why do URLs have %20 and %2F in them?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">URLs can only contain a limited set of safe ASCII characters. Spaces, slashes, ampersands, and many other characters have special meaning inside a URL and cannot appear literally in a query value. Percent-encoding converts unsafe characters into a % sign followed by the two-digit hexadecimal ASCII code. A space becomes %20 because space is ASCII 32 (0x20 in hex). A forward slash becomes %2F because / is ASCII 47 (0x2F). This lets you safely embed arbitrary text inside a URL without breaking its structure.</div>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <div class="faq-q" onclick="toggleFaq('faq3')">
+          How do I extract parameters from a URL string?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">In a browser or Node.js, the native URLSearchParams interface is the cleanest approach. Pass the query string portion to new URLSearchParams(queryString) and then iterate with .forEach() or .entries(). Each entry gives you a decoded key and a decoded value. For a full URL, first parse it with new URL(rawUrl) and then access .searchParams directly. This tool does exactly that for you visually - paste the URL and every parameter appears in the table instantly with both its raw encoded value and its decoded human-readable value side by side.</div>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <div class="faq-q" onclick="toggleFaq('faq4')">
+          Is it safe to paste URLs containing secret access tokens here?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">Yes, technically - this tool is 100% client-side and never sends your input to any server. You can verify this in your browser's Network tab: you will see zero outbound requests while using the tool. That said, treat any URL containing a live secret token (OAuth tokens, API keys, signed S3 URLs, magic login links) the way you would treat a password. Paste it here to inspect and debug, then invalidate or rotate the token afterward. Never paste tokens into any online tool you do not fully trust, and never share token-bearing URLs in Slack, email, or screenshots.</div>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <div class="faq-q" onclick="toggleFaq('faq5')">
+          What are UTM parameters and why do marketers care about them?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">UTM parameters are a standardized set of five query parameters - utm_source, utm_medium, utm_campaign, utm_term, and utm_content - defined by Google to track the origin of web traffic inside analytics platforms like Google Analytics and GA4. When a visitor arrives at a page via a tagged URL, the analytics platform reads those parameters and attributes the session to the correct campaign. Marketers use them to measure which ad, email, social post, or newsletter drove a conversion. This tool lets you instantly decode and audit any UTM-tagged URL to verify the tagging is correct before publishing.</div>
+      </div>
+
+      <div class="faq-item" id="faq6">
+        <div class="faq-q" onclick="toggleFaq('faq6')">
+          What is the difference between a URL fragment and a query parameter?
+          <span class="faq-chevron">&#9660;</span>
+        </div>
+        <div class="faq-a">A query parameter appears after the ? and is sent to the server as part of the HTTP request. A URL fragment appears after the # symbol and is never sent to the server at all - it is processed entirely by the browser on the client side. Fragments are typically used for in-page navigation (jumping to a heading with id='contact') or by single-page applications that encode routing state in the hash. Because the fragment never leaves the browser, the server cannot read it. This tool displays the fragment in the URL breakdown card so you can see it, but it is not parsed as a parameter because it is not part of the query string.</div>
+      </div>
+    </div>
+
+    <!-- Tool disclaimer -->
+    <div class="tool-disclaimer">
+      This tool is 100% client-side. No URLs, tokens, or parameter values are ever transmitted, logged, or stored. All parsing happens locally in your browser using the native JavaScript URL and URLSearchParams interfaces.
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- Copy feedback toast -->
+  <div id="toast">Copied to clipboard!</div>
+
+  <script>
+    /* ============================================================
+       PARSING ENGINE
+    ============================================================ */
+
+    // Cached parsed state
+    let _params = []; // [{key, raw, decoded}]
+
+    function parseUrl() {
+      const raw = document.getElementById('url-input').value.trim();
+
+      if (!raw) {
+        resetUI();
+        return;
+      }
+
+      // Attempt to parse as a full URL.
+      // If the input starts with ? or is just key=value pairs, prepend a dummy host
+      // so the URL constructor can handle it without throwing.
+      let parsed = null;
+      let inputToTry = raw;
+
+      if (!raw.match(/^https?:\/\//i) && !raw.match(/^\/\//)) {
+        // Possibly a bare query string or partial URL
+        if (raw.startsWith('?') || raw.startsWith('&') || !raw.includes('://')) {
+          inputToTry = 'http://dummy.internal/' + (raw.startsWith('?') ? '' : '?') + raw;
+        }
+      }
+
+      try {
+        parsed = new URL(inputToTry);
+      } catch (_) {
+        // Still failed - try with dummy prefix as fallback
+        try {
+          parsed = new URL('http://dummy.internal/?' + raw.replace(/^\?/, ''));
+        } catch (__) {
+          resetUI();
+          return;
+        }
+      }
+
+      // --- URL Breakdown ---
+      const isDummy = parsed.hostname === 'dummy.internal';
+      const baseUrl = isDummy ? '(query string only)' : (parsed.protocol + '//' + parsed.host);
+      const path    = isDummy ? '(none)' : (parsed.pathname || '/');
+      const frag    = parsed.hash ? parsed.hash : null;
+
+      setBreakdown('bd-base',     baseUrl, isDummy || baseUrl === 'http://dummy.internal');
+      setBreakdown('bd-path',     path,    path === '/' && isDummy);
+      setBreakdown('bd-fragment', frag || '(none)', !frag);
+
+      // --- Parameters ---
+      const sp     = parsed.searchParams;
+      const pairs  = [];
+
+      sp.forEach((value, key) => {
+        let decoded = value;
+        try { decoded = decodeURIComponent(value); } catch (_) { /* keep raw if malformed */ }
+        pairs.push({ key, raw: value, decoded });
+      });
+
+      const sort = document.getElementById('sort-toggle').checked;
+      if (sort) {
+        pairs.sort((a, b) => a.key.localeCompare(b.key));
+      }
+
+      _params = pairs;
+      renderTable(pairs);
+    }
+
+    function setBreakdown(id, text, isEmpty) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'bd-value' + (isEmpty ? ' empty' : '');
+    }
+
+    function renderTable(pairs) {
+      const tbody    = document.getElementById('param-tbody');
+      const countEl  = document.getElementById('param-count');
+      const btnJson  = document.getElementById('btn-json');
+      const btnCsv   = document.getElementById('btn-csv');
+
+      if (pairs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3"><div class="table-empty"><div class="table-empty-icon">&#128203;</div>No query parameters found in this URL.</div></td></tr>';
+        countEl.style.display = 'none';
+        btnJson.disabled = true;
+        btnCsv.disabled  = true;
+        return;
+      }
+
+      countEl.textContent = pairs.length + ' param' + (pairs.length !== 1 ? 's' : '');
+      countEl.style.display = '';
+      btnJson.disabled = false;
+      btnCsv.disabled  = false;
+
+      tbody.innerHTML = pairs.map(p => {
+        const changed = p.decoded !== p.raw;
+        return `<tr>
+          <td class="col-key">${escHtml(p.key)}</td>
+          <td class="col-raw">${escHtml(p.raw)}</td>
+          <td class="col-decoded${changed ? ' changed' : ''}">${escHtml(p.decoded)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function resetUI() {
+      setBreakdown('bd-base',     'Paste a URL above', true);
+      setBreakdown('bd-path',     '-', true);
+      setBreakdown('bd-fragment', '-', true);
+      _params = [];
+      renderTable([]);
+    }
+
+    /* ============================================================
+       HELPERS
+    ============================================================ */
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg || 'Copied to clipboard!';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    /* ============================================================
+       QUICK ACTIONS
+    ============================================================ */
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('url-input').value = text;
+        parseUrl();
+      } catch (_) {
+        document.getElementById('url-input').focus();
+        alert('Click inside the text box and press Ctrl+V (or Cmd+V) to paste.');
+      }
+    }
+
+    function clearInput() {
+      document.getElementById('url-input').value = '';
+      parseUrl();
+    }
+
+    /* ============================================================
+       EXPORT
+    ============================================================ */
+
+    function exportJSON() {
+      if (!_params.length) return;
+      const obj = {};
+      _params.forEach(p => {
+        // Handle duplicate keys: convert to array
+        if (Object.prototype.hasOwnProperty.call(obj, p.key)) {
+          if (!Array.isArray(obj[p.key])) obj[p.key] = [obj[p.key]];
+          obj[p.key].push(p.decoded);
+        } else {
+          obj[p.key] = p.decoded;
+        }
+      });
+      navigator.clipboard.writeText(JSON.stringify(obj, null, 2))
+        .then(() => showToast('Copied as JSON!'))
+        .catch(() => fallbackCopy(JSON.stringify(obj, null, 2)));
+    }
+
+    function exportCSV() {
+      if (!_params.length) return;
+      const header = 'Key,Raw Value,Decoded Value\n';
+      const rows = _params.map(p =>
+        [csvEsc(p.key), csvEsc(p.raw), csvEsc(p.decoded)].join(',')
+      ).join('\n');
+      const csv = header + rows;
+      navigator.clipboard.writeText(csv)
+        .then(() => showToast('Copied as CSV!'))
+        .catch(() => fallbackCopy(csv));
+    }
+
+    function csvEsc(s) {
+      const str = String(s);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity  = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Copied to clipboard!');
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      item.classList.toggle('open');
+    }
+
+    /* ============================================================
+       INIT: parse on load if URL hash contains a sample
+    ============================================================ */
+    // Nothing to auto-parse on load - wait for user input.
+  </script>
+
+</body>
+</html>

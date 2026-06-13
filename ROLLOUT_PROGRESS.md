@@ -501,3 +501,30 @@ None. Rollout complete: all tools have been updated to the site-wide template.
 
 ## Batch 89 (new tools, built directly to template) - DONE
 - [x] htaccess-redirect-url-mapping
+
+## Batch 90 (new tools, built directly to template) - DONE
+- [x] bcrypt-password-hasher
+
+## Batch 90 (new tools, built directly to template) - DONE
+- [x] nginx-reverse-proxy-config-builder
+
+## Batch 91 (new tools, built directly to template) - DONE
+- [x] graphql-schema-to-json-mock-generator
+
+## Batch 90 (new tools, built directly to template) - DONE
+- [x] docker-file-boilerplate-scaffolder
+
+## Batch 91 (new tools, built directly to template) - DONE
+- [x] ssh-key-generator
+
+## Batch 91 (new tools, built directly to template) - DONE
+- [x] url-query-parameter-parser
+
+## Batch 91 (new tools, built directly to template) - DONE
+- [x] reel-engagement-calculator
+
+## Batch 92 (new tools, built directly to template) - DONE
+- [x] youtube-tag-extractor
+
+## Batch 93 (new tools, built directly to template) - DONE
+- [x] social-media-aspect-resizer

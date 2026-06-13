@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dockerfile Boilerplate Scaffolder: Generate Node, Python, and Go Dockerfiles Instantly | AxiomApe</title>
+  <meta name="description" content="Free Dockerfile boilerplate scaffolder. Pick Node.js, Python, or Go, choose your base image, package manager, and best-practice options to generate a production-ready Dockerfile in real time. 100% client-side." />
+  <meta name="keywords" content="dockerfile generator, dockerfile boilerplate, docker scaffolder, node dockerfile, python dockerfile, go dockerfile, multi-stage docker build, dockerfile best practices, alpine dockerfile, docker layer caching, rootless container dockerfile, devops docker tool" />
+  <link rel="canonical" href="https://axiomape.com/docker-file-boilerplate-scaffolder/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Dockerfile Boilerplate Scaffolder",
+        "description": "Free Dockerfile boilerplate scaffolder. Pick Node.js, Python, or Go, choose your base image, package manager, and best-practice options to generate a production-ready Dockerfile in real time. 100% client-side.",
+        "url": "https://axiomape.com/docker-file-boilerplate-scaffolder/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why should I use Alpine or Slim base images instead of the full official image?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Alpine Linux images are typically 5 to 10 times smaller than their full Debian-based counterparts. A Node.js 20 image on Debian weighs around 350 MB; the 20-alpine variant comes in under 60 MB. Smaller images pull faster in CI pipelines, cost less to store in registries, and present a smaller attack surface because they ship with far fewer system packages. The main trade-off is that Alpine uses musl libc instead of glibc, which can occasionally cause compatibility issues with native Node.js modules or compiled Python extensions. Slim images (like python:3.12-slim) are a middle ground: still Debian-based and glibc-compatible, but with most non-essential packages stripped out."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a multi-stage build make my Docker image smaller?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A multi-stage build uses more than one FROM instruction in a single Dockerfile. The first stage (often called builder) installs compilers, build tools, dev dependencies, and any other heavy tooling needed to produce the final artifact. The second stage starts from a fresh, minimal base image and copies only the compiled output or production assets from the builder stage, leaving all the build-time tooling behind. For a Go binary, the builder stage might use golang:1.21-alpine and produce a statically linked binary of 10 to 15 MB; the final stage can start FROM scratch or a minimal distroless image and contain only that binary, dropping the image from several hundred megabytes to under 20 MB. For Node.js, the builder stage installs all devDependencies to compile TypeScript or bundle assets, while the final stage copies only the dist folder and installs only production dependencies."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is it dangerous to run containers as the root user?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "By default, processes inside a Docker container run as root (UID 0). If an attacker finds a vulnerability in your application and achieves code execution, they are executing as root inside the container. If there is also a container-escape vulnerability in the Docker runtime or the kernel, a root process inside the container has a much greater chance of gaining root on the host machine than a non-privileged process would. Creating a dedicated user and group with no login shell, no home directory, and no sudo access, then switching to that user with the USER directive before your CMD or ENTRYPOINT, follows the principle of least privilege. It limits what an attacker can do even if they gain control of the running process."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Docker layer caching speed up builds?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Docker builds images layer by layer, one instruction at a time. Each layer is cached by a hash of its inputs. When you rebuild, Docker reuses cached layers up to the first instruction whose inputs have changed, then re-executes every instruction after that point. This is why the order of COPY and RUN instructions matters enormously for caching. If you copy your entire source tree first and then run npm install, every source code change invalidates the npm install layer and forces a full dependency reinstall. The correct pattern is to copy only your dependency manifest first (package.json, requirements.txt, or go.mod plus go.sum), run the install command so that layer is cached, and only then copy the rest of your source code. Source code changes will hit the cache for the slow install step and only re-run the fast COPY step."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between ENTRYPOINT and CMD in a Dockerfile?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "ENTRYPOINT sets the executable that always runs when the container starts. CMD provides the default arguments to that executable, and can be overridden at runtime with docker run arguments. When both are present, ENTRYPOINT defines what runs and CMD defines the default arguments passed to it. For example, ENTRYPOINT [\"node\"] and CMD [\"server.js\"] would run node server.js by default, but docker run myimage app.js would run node app.js instead. If you use only CMD, the entire command can be overridden at runtime, which is common for development containers. Use ENTRYPOINT when you want a container to always run a specific executable, and CMD when you want to provide a sensible default that can be easily changed."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --docker-blue:   #2496ED;
+      --docker-dark:   #1366a8;
+      --docker-deeper: #0d4a7a;
+      --whale-gray:    #9CA3AF;
+      --bg:            #0f1419;
+      --bg-card:       #1a2332;
+      --bg-input:      #121c28;
+      --border:        #2a3a4f;
+      --border-active: #2496ED;
+      --text:          #e2e8f0;
+      --muted:         #9CA3AF;
+      --green:         #22c55e;
+      --output-bg:     #0d1520;
+      --radius:        12px;
+      --shadow:        0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--docker-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #5ab3f3; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, var(--docker-deeper) 0%, #1a3a6c 60%, #1c2e4a 100%);
+      color: #fff;
+      padding: 48px 20px 40px;
+      text-align: center;
+      border-bottom: 2px solid var(--docker-blue);
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.3;
+      max-width: 800px;
+      margin: 0 auto 14px;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: #93c5e8;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .docker-icon { font-size: 2.4rem; margin-bottom: 12px; display: block; }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 20px 16px; }
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--docker-blue);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    /* ===================================================
+       INPUT GRID
+    =================================================== */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 640px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-group label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--whale-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .input-group select,
+    .input-group input[type="number"] {
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.97rem;
+      padding: 10px 12px;
+      width: 100%;
+      transition: border-color 0.18s;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+    .input-group select:focus,
+    .input-group input[type="number"]:focus {
+      outline: none;
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 3px rgba(36,150,237,0.18);
+    }
+    .input-group select option {
+      background: #1a2332;
+      color: var(--text);
+    }
+    /* custom select arrow */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: "▾";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--whale-gray);
+      pointer-events: none;
+      font-size: 0.85rem;
+    }
+
+    /* ===================================================
+       TOGGLES
+    =================================================== */
+    .toggles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    @media (max-width: 640px) {
+      .toggles-grid { grid-template-columns: 1fr; }
+    }
+    .toggle-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+    }
+    .toggle-item:hover { border-color: var(--docker-blue); }
+    .toggle-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: var(--docker-blue);
+      margin-top: 2px;
+      cursor: pointer;
+    }
+    .toggle-item.checked {
+      border-color: var(--docker-blue);
+      background: rgba(36,150,237,0.07);
+    }
+    .toggle-label { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+    .toggle-desc { font-size: 0.79rem; color: var(--whale-gray); margin-top: 3px; line-height: 1.4; }
+
+    /* ===================================================
+       OUTPUT BLOCK
+    =================================================== */
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .output-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--docker-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .output-label .filename {
+      font-family: "Fira Code", "Source Code Pro", "Courier New", monospace;
+      background: rgba(36,150,237,0.14);
+      color: var(--docker-blue);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    .btn-row { display: flex; gap: 10px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 7px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.18s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-copy {
+      background: var(--docker-blue);
+      color: #fff;
+    }
+    .btn-copy:hover { background: var(--docker-dark); }
+    .btn-copy.success { background: var(--green); }
+    .btn-download {
+      background: var(--border);
+      color: var(--text);
+    }
+    .btn-download:hover { background: #3a4f67; }
+
+    .output-pre {
+      background: var(--output-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 20px;
+      overflow-x: auto;
+      font-family: "Fira Code", "Source Code Pro", "Courier New", monospace;
+      font-size: 0.84rem;
+      line-height: 1.7;
+      color: #c9d9ea;
+      white-space: pre;
+      min-height: 200px;
+    }
+    /* syntax coloring */
+    .kw  { color: #7ec8e3; }   /* FROM, RUN, COPY, etc. */
+    .str { color: #a8d8a8; }   /* quoted strings, paths */
+    .cmt { color: #5a7a8a; font-style: italic; }  /* comments */
+    .arg { color: #f0c070; }   /* args / env vars */
+    .num { color: #e8a87c; }   /* ports / numbers */
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-bottom: 24px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--docker-blue);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .edu-section .section-intro {
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--docker-blue);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ol {
+      margin: 10px 0 16px 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .edu-section li { margin-bottom: 6px; }
+
+    .faq-item {
+      border-top: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.97rem;
+      user-select: none;
+    }
+    .faq-q:hover { color: var(--docker-blue); }
+    .faq-icon {
+      flex-shrink: 0;
+      color: var(--docker-blue);
+      font-size: 1.2rem;
+      transition: transform 0.2s;
+    }
+    .faq-a {
+      display: none;
+      padding-top: 10px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.93rem;
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+
+    /* ===================================================
+       SECTION DIVIDER
+    =================================================== */
+    .section-header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .section-header-row .card-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <span class="docker-icon">&#127433;</span>
+    <h1>Dockerfile Boilerplate Scaffolder</h1>
+    <p>Generate a production-ready Dockerfile for Node.js, Python, or Go instantly. Pick your options and watch the output update in real time.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- TOOL CARD -->
+    <div class="card">
+      <div class="card-title">Configure Your Environment</div>
+
+      <!-- ROW 1: Language + Base Image -->
+      <div class="input-grid" style="margin-bottom:20px;">
+        <div class="input-group">
+          <label for="sel-lang">Environment</label>
+          <div class="select-wrap">
+            <select id="sel-lang" onchange="onLangChange()">
+              <option value="node">Node.js</option>
+              <option value="python">Python</option>
+              <option value="go">Go</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="sel-tag">Base Image Tag</label>
+          <div class="select-wrap">
+            <select id="sel-tag" onchange="generate()"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Package Manager + Port -->
+      <div class="input-grid" style="margin-bottom:24px;">
+        <div class="input-group">
+          <label for="sel-pm">Package Manager</label>
+          <div class="select-wrap">
+            <select id="sel-pm" onchange="generate()"></select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="inp-port">Exposed Port</label>
+          <input type="number" id="inp-port" min="1" max="65535" value="3000" oninput="generate()" />
+        </div>
+      </div>
+
+      <!-- ROW 3: Best Practices Toggles -->
+      <div class="card-title" style="margin-bottom:14px;">Best Practices</div>
+      <div class="toggles-grid" id="toggles-grid">
+        <label class="toggle-item" id="lbl-multistage">
+          <input type="checkbox" id="chk-multistage" checked onchange="updateToggle(this);generate();" />
+          <div>
+            <div class="toggle-label">Enable Multi-Stage Build</div>
+            <div class="toggle-desc">Separates build tools from runtime, dramatically reducing final image size.</div>
+          </div>
+        </label>
+        <label class="toggle-item" id="lbl-nonroot">
+          <input type="checkbox" id="chk-nonroot" checked onchange="updateToggle(this);generate();" />
+          <div>
+            <div class="toggle-label">Run as Non-Root User</div>
+            <div class="toggle-desc">Creates a dedicated user/group to limit privilege escalation risk.</div>
+          </div>
+        </label>
+        <label class="toggle-item" id="lbl-envvar">
+          <input type="checkbox" id="chk-envvar" checked onchange="updateToggle(this);generate();" />
+          <div>
+            <div class="toggle-label">Set Production ENV Vars</div>
+            <div class="toggle-desc">Injects NODE_ENV=production, PYTHONUNBUFFERED=1, or CGO_ENABLED=0 for the selected runtime.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- OUTPUT CARD -->
+    <div class="card">
+      <div class="output-header">
+        <div class="output-label">
+          Generated Output
+          <span class="filename">Dockerfile</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-copy" id="btn-copy" onclick="copyToClipboard()">&#128203; Copy</button>
+          <button class="btn btn-download" onclick="downloadFile()">&#11015;&#65039; Download</button>
+        </div>
+      </div>
+      <pre class="output-pre" id="output-pre"></pre>
+    </div>
+
+    <!-- AD PLACEMENT 1 -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Dockerfile</div>
+          <div class="glossary-def">A plain text file that contains a sequence of instructions Docker reads top to bottom to assemble a container image. Every instruction creates a new layer in the image.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Image vs. Container</div>
+          <div class="glossary-def">An image is a read-only snapshot built from a Dockerfile. A container is a running instance of that image with an added writable layer. One image can spawn many simultaneous containers.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Multi-Stage Build</div>
+          <div class="glossary-def">A Dockerfile technique that uses multiple FROM instructions to keep build tools in an early stage and copy only the finished artifacts into a lean final image, slashing image size.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Alpine Linux</div>
+          <div class="glossary-def">A security-oriented, minimal Linux distribution that weighs under 5 MB. Used as a base for Docker images to reduce size and attack surface. Uses musl libc instead of glibc.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Layer Caching</div>
+          <div class="glossary-def">Docker reuses unchanged layers from a previous build. Ordering instructions so slow steps (like npm install) come before frequently changing files (like source code) keeps builds fast.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">ENTRYPOINT vs. CMD</div>
+          <div class="glossary-def">ENTRYPOINT sets the fixed executable that always runs. CMD sets its default arguments, which can be overridden at runtime. Together they define what the container does when started.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Rootless Container</div>
+          <div class="glossary-def">A container whose main process runs as a non-root user, created with addgroup/adduser and the USER directive. Limits the blast radius if an attacker gains code execution inside the container.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">WORKDIR</div>
+          <div class="glossary-def">Sets the working directory for all subsequent RUN, COPY, ADD, CMD, and ENTRYPOINT instructions. Creates the directory if it does not exist and avoids fragile absolute-path assumptions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Writing Production-Ready Dockerfiles</h2>
+      <p class="section-intro">A working Dockerfile that just runs your app is easy to write. A Dockerfile that produces a small, secure, and cache-efficient image takes a little more thought. This guide walks through the decisions this tool makes for you and explains the reasoning behind each one.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Select your runtime from the Environment dropdown. The Base Image Tag and Package Manager dropdowns populate automatically with the most relevant options for your language. Set the port your app listens on. Toggle the three best-practice options to match your needs. The Dockerfile output updates instantly with every change. Click Copy to grab it for your clipboard, or Download to save a file named Dockerfile with no extension, ready to drop into your project root.</p>
+
+      <h3>Why Instruction Order Is a Performance Decision</h3>
+      <p>Docker rebuilds every instruction after the first one that has changed since the last build. If you copy all your source files before installing dependencies, a one-line change in any file forces a full reinstall on the next build. The correct pattern is to copy only the dependency manifest first, run the install, then copy the rest of the source. This way, dependency installation is only repeated when the manifest actually changes, keeping your CI pipeline fast even on large codebases.</p>
+
+      <h3>Multi-Stage Builds: Where the Size Savings Come From</h3>
+      <p>A Go binary compiled inside a golang:1.21-alpine image can be as small as 8 to 15 MB as a static binary. But the image containing the Go compiler and toolchain is around 250 MB. Multi-stage builds let you keep the compiler in the builder stage and copy only the finished binary into a FROM scratch or minimal Alpine image, producing a final image that is a fraction of the size. For Node.js, the same principle applies: the builder stage can install TypeScript and all devDependencies to compile your code, while the final stage installs only the production dependencies from package.json.</p>
+
+      <h3>The Security Case for Non-Root Users</h3>
+      <p>Running as root inside a container is the Docker equivalent of running your web server as root on a bare metal server: technically it works, but it maximizes the damage a successful exploit can do. The addgroup and adduser commands create a minimal system account with no login shell and no home directory. The USER directive then switches to that account before the CMD or ENTRYPOINT fires. Even if an attacker achieves remote code execution in your app, they are executing as an unprivileged user with no ability to modify system files or escalate privilege through standard paths.</p>
+
+      <h3>Environment Variables That Change Runtime Behavior</h3>
+      <p>Setting NODE_ENV=production tells Express, Next.js, and most other Node.js frameworks to disable development-only features like verbose error stacks and hot reloading, and to apply production-grade caching and optimizations. Setting PYTHONUNBUFFERED=1 forces Python to flush stdout and stderr immediately rather than buffering output, which is critical in containers because buffered output may never appear in your logs if the process is killed. For Go, CGO_ENABLED=0 tells the compiler to produce a statically linked binary with no dependency on C libraries, which is what allows the binary to run on a FROM scratch base image.</p>
+
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why should I use Alpine or Slim base images instead of the full official image? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Alpine Linux images are typically 5 to 10 times smaller than their full Debian-based counterparts. A Node.js 20 image on Debian weighs around 350 MB; the 20-alpine variant comes in under 60 MB. Smaller images pull faster in CI pipelines, cost less to store in registries, and present a smaller attack surface because they ship with far fewer system packages. The main trade-off is that Alpine uses musl libc instead of glibc, which can occasionally cause compatibility issues with native Node.js modules or compiled Python extensions. Slim images (like python:3.12-slim) are a middle ground: still Debian-based and glibc-compatible, but with most non-essential packages stripped out.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How does a multi-stage build make my Docker image smaller? <span class="faq-icon">+</span></div>
+        <div class="faq-a">A multi-stage build uses more than one FROM instruction in a single Dockerfile. The first stage (the builder) installs compilers, build tools, and dev dependencies to produce the final artifact. The second stage starts from a fresh, minimal base image and copies only the compiled output, leaving all the build-time tooling behind. For a Go binary, the builder stage compiles a statically linked binary of 10 to 15 MB; the final stage can start FROM scratch and contain only that binary, dropping the total image from several hundred megabytes to under 20 MB.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why is it dangerous to run containers as the root user? <span class="faq-icon">+</span></div>
+        <div class="faq-a">By default, processes inside a Docker container run as root (UID 0). If an attacker finds a vulnerability and achieves code execution, they are executing as root. If there is also a container-escape vulnerability in the Docker runtime or the kernel, a root process inside the container has a much greater chance of gaining root on the host machine. Creating a dedicated user with no login shell and switching to it with the USER directive follows the principle of least privilege. It limits what an attacker can do even if they gain control of the running process.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How does Docker layer caching speed up builds? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Docker builds images layer by layer. Each layer is cached by a hash of its inputs. When you rebuild, Docker reuses cached layers up to the first instruction whose inputs have changed, then re-executes every instruction after that point. This is why copying only your dependency manifest first, running the install, and only then copying the rest of your source code is so important. Source code changes hit the cache for the slow install step and only re-run the fast COPY of your source files.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">What is the difference between ENTRYPOINT and CMD in a Dockerfile? <span class="faq-icon">+</span></div>
+        <div class="faq-a">ENTRYPOINT sets the executable that always runs when the container starts. CMD provides the default arguments to that executable, and can be overridden at runtime. When both are present, ENTRYPOINT defines what runs and CMD defines the default arguments. For example, ENTRYPOINT ["node"] and CMD ["server.js"] runs node server.js by default, but docker run myimage app.js would run node app.js instead. Use ENTRYPOINT when you want a container to always run a specific executable, and CMD when you want an easily changeable default.</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AD PLACEMENT 2 -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ===================================================
+       DATA MAPS
+    =================================================== */
+    const LANG_DATA = {
+      node: {
+        tags: ['20-alpine', '18-alpine', '22-alpine', 'latest'],
+        pms: ['npm', 'yarn', 'pnpm'],
+        defaultPort: 3000,
+        envVar: 'NODE_ENV=production',
+        manifestFiles: {
+          npm:  { copy: 'COPY package*.json ./', install: 'RUN npm ci --omit=dev' },
+          yarn: { copy: 'COPY package.json yarn.lock ./', install: 'RUN yarn install --frozen-lockfile --production' },
+          pnpm: { copy: 'COPY package.json pnpm-lock.yaml ./', install: 'RUN corepack enable && pnpm install --frozen-lockfile --prod' }
+        },
+        buildInstall: {
+          npm:  'RUN npm ci',
+          yarn: 'RUN yarn install --frozen-lockfile',
+          pnpm: 'RUN corepack enable && pnpm install --frozen-lockfile'
+        },
+        cmd: 'CMD ["node", "server.js"]',
+        workdir: '/app',
+        groupUser: ['appgroup', 'appuser']
+      },
+      python: {
+        tags: ['3.12-slim', '3.11-slim', '3.12-alpine', '3.11-alpine'],
+        pms: ['pip', 'poetry'],
+        defaultPort: 8000,
+        envVar: 'PYTHONUNBUFFERED=1',
+        manifestFiles: {
+          pip:    { copy: 'COPY requirements.txt ./', install: 'RUN pip install --no-cache-dir -r requirements.txt' },
+          poetry: { copy: 'COPY pyproject.toml poetry.lock ./', install: 'RUN pip install --no-cache-dir poetry && poetry install --no-dev --no-interaction --no-ansi' }
+        },
+        buildInstall: {
+          pip:    'RUN pip install --no-cache-dir -r requirements.txt',
+          poetry: 'RUN pip install --no-cache-dir poetry && poetry install --no-interaction --no-ansi'
+        },
+        cmd: 'CMD ["python", "app.py"]',
+        workdir: '/app',
+        groupUser: ['appgroup', 'appuser']
+      },
+      go: {
+        tags: ['1.22-alpine', '1.21-alpine', '1.23-alpine'],
+        pms: ['go mod'],
+        defaultPort: 8080,
+        envVar: 'CGO_ENABLED=0\nENV GOOS=linux',
+        manifestFiles: {
+          'go mod': { copy: 'COPY go.mod go.sum ./', install: 'RUN go mod download' }
+        },
+        buildInstall: {
+          'go mod': 'RUN go mod download'
+        },
+        cmd: 'CMD ["/app/main"]',
+        workdir: '/app',
+        groupUser: ['appgroup', 'appuser']
+      }
+    };
+
+    /* ===================================================
+       UI HELPERS
+    =================================================== */
+    function getLang()      { return document.getElementById('sel-lang').value; }
+    function getTag()       { return document.getElementById('sel-tag').value; }
+    function getPM()        { return document.getElementById('sel-pm').value; }
+    function getPort()      { return parseInt(document.getElementById('inp-port').value) || LANG_DATA[getLang()].defaultPort; }
+    function isMultiStage() { return document.getElementById('chk-multistage').checked; }
+    function isNonRoot()    { return document.getElementById('chk-nonroot').checked; }
+    function isEnvVar()     { return document.getElementById('chk-envvar').checked; }
+
+    function updateToggle(chk) {
+      const id = chk.id.replace('chk-', 'lbl-');
+      document.getElementById(id).classList.toggle('checked', chk.checked);
+    }
+
+    function onLangChange() {
+      const lang = getLang();
+      const data = LANG_DATA[lang];
+
+      const tagSel = document.getElementById('sel-tag');
+      tagSel.innerHTML = '';
+      data.tags.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t; o.textContent = lang + ':' + t;
+        tagSel.appendChild(o);
+      });
+
+      const pmSel = document.getElementById('sel-pm');
+      pmSel.innerHTML = '';
+      data.pms.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p; o.textContent = p;
+        pmSel.appendChild(o);
+      });
+
+      document.getElementById('inp-port').value = data.defaultPort;
+      generate();
+    }
+
+    /* ===================================================
+       DOCKERFILE GENERATION ENGINE
+    =================================================== */
+    function generate() {
+      const lang  = getLang();
+      const tag   = getTag();
+      const pm    = getPM();
+      const port  = getPort();
+      const multi = isMultiStage();
+      const noRoot = isNonRoot();
+      const envV  = isEnvVar();
+      const data  = LANG_DATA[lang];
+
+      if (!tag || !pm) return;
+
+      const manifest = data.manifestFiles[pm];
+      const [group, user] = data.groupUser;
+      let lines = [];
+
+      if (lang === 'go' && multi) {
+        // Go multi-stage: builder compiles binary, final stage is minimal
+        lines.push('# ---- Builder stage ----');
+        lines.push('FROM golang:' + tag + ' AS builder');
+        lines.push('');
+        lines.push('WORKDIR /build');
+        lines.push('');
+        if (envV) {
+          lines.push('ENV CGO_ENABLED=0');
+          lines.push('ENV GOOS=linux');
+          lines.push('');
+        }
+        lines.push('# Cache dependencies before copying full source');
+        lines.push(manifest.copy);
+        lines.push(data.buildInstall[pm]);
+        lines.push('');
+        lines.push('COPY . .');
+        lines.push('RUN go build -ldflags="-w -s" -o main .');
+        lines.push('');
+        lines.push('# ---- Runtime stage ----');
+        lines.push('FROM alpine:3.19');
+        lines.push('');
+        if (noRoot) {
+          lines.push('# Create non-root user');
+          lines.push('RUN addgroup -S ' + group + ' && adduser -S ' + user + ' -G ' + group);
+          lines.push('');
+        }
+        lines.push('WORKDIR /app');
+        lines.push('');
+        lines.push('# Copy compiled binary from builder');
+        lines.push('COPY --from=builder /build/main ./main');
+        lines.push('');
+        lines.push('EXPOSE ' + port);
+        lines.push('');
+        if (noRoot) {
+          lines.push('USER ' + user);
+          lines.push('');
+        }
+        lines.push('ENTRYPOINT ["./main"]');
+
+      } else if (lang === 'node' && multi) {
+        // Node multi-stage: builder runs full install + build, final copies prod deps
+        lines.push('# ---- Builder stage ----');
+        lines.push('FROM node:' + tag + ' AS builder');
+        lines.push('');
+        lines.push('WORKDIR /app');
+        lines.push('');
+        if (envV) {
+          lines.push('ENV NODE_ENV=production');
+          lines.push('');
+        }
+        lines.push('# Cache dependencies before copying full source');
+        lines.push(manifest.copy);
+        lines.push(data.buildInstall[pm]);
+        lines.push('');
+        lines.push('COPY . .');
+        if (pm === 'npm')       lines.push('RUN npm run build --if-present');
+        else if (pm === 'yarn') lines.push('RUN yarn build --if-present 2>/dev/null || true');
+        else                    lines.push('RUN pnpm run build --if-present 2>/dev/null || true');
+        lines.push('');
+        lines.push('# ---- Runtime stage ----');
+        lines.push('FROM node:' + tag);
+        lines.push('');
+        if (envV) {
+          lines.push('ENV NODE_ENV=production');
+          lines.push('');
+        }
+        if (noRoot) {
+          lines.push('# Create non-root user');
+          lines.push('RUN addgroup --system ' + group + ' && adduser --system --ingroup ' + group + ' ' + user);
+          lines.push('');
+        }
+        lines.push('WORKDIR /app');
+        lines.push('');
+        lines.push('# Copy only production artifacts from builder');
+        lines.push('COPY --from=builder /app/node_modules ./node_modules');
+        lines.push('COPY --from=builder /app/dist ./dist');
+        lines.push('COPY --from=builder /app/package.json ./');
+        lines.push('');
+        lines.push('EXPOSE ' + port);
+        lines.push('');
+        if (noRoot) {
+          lines.push('USER ' + user);
+          lines.push('');
+        }
+        lines.push('CMD ["node", "dist/server.js"]');
+
+      } else if (lang === 'python' && multi) {
+        // Python multi-stage: builder installs deps, final copies site-packages
+        const isAlpine = tag.includes('alpine');
+        lines.push('# ---- Builder stage ----');
+        lines.push('FROM python:' + tag + ' AS builder');
+        lines.push('');
+        lines.push('WORKDIR /app');
+        lines.push('');
+        if (envV) {
+          lines.push('ENV PYTHONUNBUFFERED=1');
+          lines.push('');
+        }
+        lines.push('# Cache dependencies before copying full source');
+        lines.push(manifest.copy);
+        if (pm === 'pip') {
+          lines.push('RUN pip install --no-cache-dir --prefix=/install -r requirements.txt');
+        } else {
+          lines.push('RUN pip install --no-cache-dir poetry && \\');
+          lines.push('    poetry config virtualenvs.create false && \\');
+          lines.push('    poetry install --no-dev --no-interaction --no-ansi');
+        }
+        lines.push('');
+        lines.push('# ---- Runtime stage ----');
+        lines.push('FROM python:' + tag);
+        lines.push('');
+        if (envV) {
+          lines.push('ENV PYTHONUNBUFFERED=1');
+          lines.push('');
+        }
+        if (noRoot) {
+          if (isAlpine) {
+            lines.push('# Create non-root user (Alpine)');
+            lines.push('RUN addgroup -S ' + group + ' && adduser -S ' + user + ' -G ' + group);
+          } else {
+            lines.push('# Create non-root user (Debian/Slim)');
+            lines.push('RUN groupadd --system ' + group + ' && useradd --system --gid ' + group + ' ' + user);
+          }
+          lines.push('');
+        }
+        lines.push('WORKDIR /app');
+        lines.push('');
+        if (pm === 'pip') {
+          lines.push('# Copy installed packages from builder');
+          lines.push('COPY --from=builder /install /usr/local');
+        } else {
+          lines.push('# Copy installed packages from builder');
+          lines.push('COPY --from=builder /usr/local/lib/python3 /usr/local/lib/python3');
+        }
+        lines.push('');
+        lines.push('COPY . .');
+        lines.push('');
+        lines.push('EXPOSE ' + port);
+        lines.push('');
+        if (noRoot) {
+          lines.push('USER ' + user);
+          lines.push('');
+        }
+        lines.push('CMD ["python", "app.py"]');
+
+      } else {
+        // Single-stage (no multi-stage)
+        const imageTag = lang === 'go' ? 'golang:' + tag : (lang === 'node' ? 'node:' + tag : 'python:' + tag);
+        lines.push('FROM ' + imageTag);
+        lines.push('');
+
+        if (envV) {
+          if (lang === 'node')   { lines.push('ENV NODE_ENV=production'); }
+          if (lang === 'python') { lines.push('ENV PYTHONUNBUFFERED=1'); }
+          if (lang === 'go')     { lines.push('ENV CGO_ENABLED=0'); lines.push('ENV GOOS=linux'); }
+          lines.push('');
+        }
+
+        if (noRoot) {
+          const isAlpine = tag.includes('alpine');
+          if (lang === 'go' || isAlpine) {
+            lines.push('# Create non-root user');
+            lines.push('RUN addgroup -S ' + group + ' && adduser -S ' + user + ' -G ' + group);
+          } else {
+            lines.push('# Create non-root user');
+            lines.push('RUN groupadd --system ' + group + ' && useradd --system --gid ' + group + ' ' + user);
+          }
+          lines.push('');
+        }
+
+        lines.push('WORKDIR ' + data.workdir);
+        lines.push('');
+        lines.push('# Cache dependency layer before copying full source');
+        lines.push(manifest.copy);
+        lines.push(data.manifestFiles[pm].install);
+        lines.push('');
+        lines.push('COPY . .');
+        lines.push('');
+
+        if (lang === 'go') {
+          lines.push('RUN go build -ldflags="-w -s" -o main .');
+          lines.push('');
+        }
+
+        lines.push('EXPOSE ' + port);
+        lines.push('');
+
+        if (noRoot) {
+          lines.push('USER ' + user);
+          lines.push('');
+        }
+
+        if (lang === 'go') {
+          lines.push('ENTRYPOINT ["./main"]');
+        } else {
+          lines.push(data.cmd);
+        }
+      }
+
+      renderOutput(lines.join('\n'));
+    }
+
+    /* ===================================================
+       SYNTAX HIGHLIGHTING
+    =================================================== */
+    function renderOutput(text) {
+      const pre = document.getElementById('output-pre');
+      const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const highlighted = escaped
+        .replace(/^(FROM|RUN|COPY|WORKDIR|EXPOSE|CMD|ENTRYPOINT|ENV|USER|ARG|LABEL|ADD|VOLUME|HEALTHCHECK|SHELL|ONBUILD|STOPSIGNAL)(\s)/gm,
+          '<span class="kw">$1</span>$2')
+        .replace(/(#.*?)$/gm, '<span class="cmt">$1</span>')
+        .replace(/(["'][^"']*["'])/g, '<span class="str">$1</span>')
+        .replace(/(\b\d{2,5}\b)/g, '<span class="num">$1</span>');
+
+      pre.innerHTML = highlighted;
+      window._lastRawOutput = text;
+    }
+
+    /* ===================================================
+       COPY / DOWNLOAD
+    =================================================== */
+    function copyToClipboard() {
+      if (!window._lastRawOutput) return;
+      navigator.clipboard.writeText(window._lastRawOutput).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = 'Copied!';
+        btn.classList.add('success');
+        setTimeout(() => {
+          btn.innerHTML = '&#128203; Copy';
+          btn.classList.remove('success');
+        }, 1800);
+      }).catch(() => {
+        // fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = window._lastRawOutput;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      });
+    }
+
+    function downloadFile() {
+      if (!window._lastRawOutput) return;
+      const blob = new Blob([window._lastRawOutput], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Dockerfile';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    /* ===================================================
+       FAQ ACCORDION
+    =================================================== */
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+
+    /* ===================================================
+       INIT
+    =================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      // init checked state for toggles
+      ['multistage','nonroot','envvar'].forEach(id => {
+        const chk = document.getElementById('chk-' + id);
+        if (chk && chk.checked) {
+          document.getElementById('lbl-' + id).classList.add('checked');
+        }
+      });
+      onLangChange();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GraphQL Schema to JSON Mock Generator: Instant API Response Previews | AxiomApe</title>
+  <meta name="description" content="Paste your GraphQL SDL schema and instantly generate realistic JSON mock responses in your browser. Supports nested types, enums, lists, circular reference protection, and smart field-name heuristics - 100% client-side." />
+  <meta name="keywords" content="graphql mock generator, graphql schema to json, graphql sdl parser, mock api response, graphql json mock, graphql testing tool, schema definition language, ast parser, api mocking, graphql faker, graphql developer tool, json mock data, graphql playground" />
+  <link rel="canonical" href="https://axiomape.com/graphql-schema-to-json-mock-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "GraphQL Schema to JSON Mock Generator",
+        "description": "Paste your GraphQL SDL schema and instantly generate realistic JSON mock responses in your browser. Supports nested types, enums, lists, circular reference protection, and smart field-name heuristics - 100% client-side.",
+        "url": "https://axiomape.com/graphql-schema-to-json-mock-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why mock a GraphQL API before the backend is finished?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Mocking lets frontend teams build and test UI components against realistic data shapes before the backend resolvers exist. Instead of waiting for the API to be ready, you paste your agreed-upon schema into this tool and get a valid JSON response your components can consume immediately. This decouples frontend and backend development cycles, catching data structure mismatches early when they are cheap to fix rather than late in integration testing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does this tool handle circular references in my schema?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GraphQL schemas often have circular relationships - for example, a User type that has a friends field returning a list of User objects, each of which also has friends. This tool uses a nesting depth limit slider (default: 2 levels) combined with a visited-type tracker. When the generator encounters a type it has already started building on the current branch, it returns null rather than recursing infinitely. The depth limit provides a hard ceiling so even deeply nested non-circular schemas stay manageable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are the default scalar types in GraphQL?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GraphQL ships with five built-in scalar types: String (UTF-8 text), Int (signed 32-bit integer), Float (double-precision floating point), Boolean (true or false), and ID (a unique identifier serialized as a string). Schemas can also declare custom scalars - for example, Date, DateTime, JSON, or URL - using the scalar keyword. This tool generates sensible placeholder values for all five built-in scalars and falls back to a generic string value for any custom scalars it encounters."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does this run entirely in the browser instead of on a server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Client-side execution means your schema never leaves your machine. Production schemas often contain proprietary type names, business logic clues, and internal data structures that your organization may not want transmitted to a third-party server. Running the SDL parser and mock generator directly in your browser's JavaScript engine eliminates that risk entirely. It also means the tool works offline, has zero latency from network round trips, and requires no account or API key."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between Static Types and Smart Data mocking modes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Static Types mode generates the simplest possible placeholder for each scalar - the string 'string', the number 0, and the boolean true. This is useful when you only care about the shape of the response, not the content. Smart Data mode reads the field name and applies heuristics: a field named email gets test@example.com, a field named createdAt gets an ISO timestamp, a field named price gets a realistic decimal number. Smart Data mode produces mock responses that are much easier to visually validate and share with stakeholders."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       FONTS
+    ============================================================ */
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ============================================================
+       RESET
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --bg:           #0d0c15;
+      --bg-card:      #12111e;
+      --bg-input:     #0a0912;
+      --bg-panel:     #0f0e1a;
+      --border:       #1f1d30;
+      --border-hi:    #302d52;
+      --pink:         #E10098;
+      --pink-dim:     #b8007a;
+      --pink-glow:    rgba(225,0,152,0.14);
+      --yellow:       #EAB308;
+      --yellow-dim:   #ca9a04;
+      --yellow-glow:  rgba(234,179,8,0.12);
+      --cyan:         #67e8f9;
+      --orange:       #f97316;
+      --text:         #dddcee;
+      --text-muted:   #787890;
+      --text-dim:     #38364f;
+      --mono:         'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+      --sans:         'Inter', system-ui, -apple-system, sans-serif;
+      --radius:       10px;
+      --radius-lg:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 700;
+      color: var(--pink);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       CARDS
+    ============================================================ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--pink);
+      margin-bottom: 18px;
+      font-family: var(--mono);
+    }
+
+    /* ============================================================
+       TOOL CARD
+    ============================================================ */
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       SETTINGS BAR
+    ============================================================ */
+    .settings-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+      padding: 16px 24px;
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .setting-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    .slider-min, .slider-max {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--pink);
+      cursor: pointer;
+      height: 4px;
+      min-width: 80px;
+    }
+    .slider-val {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--pink);
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toggle-option {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .toggle-option.active {
+      color: var(--bg);
+      background: var(--pink);
+      border-color: var(--pink);
+      font-weight: 700;
+    }
+    .toggle-option:not(.active):hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+    }
+
+    /* ============================================================
+       DUAL PANEL
+    ============================================================ */
+    .dual-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: 460px;
+    }
+    @media (max-width: 720px) {
+      .dual-panel { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 460px;
+    }
+    .panel-a {
+      border-right: 1px solid var(--border);
+    }
+    @media (max-width: 720px) {
+      .panel-a {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        min-height: 260px;
+      }
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-input);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .panel-title span {
+      color: var(--pink);
+    }
+
+    .btn-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .btn-copy:hover {
+      color: var(--yellow);
+      border-color: var(--yellow);
+    }
+    .btn-copy.success {
+      color: #4ade80;
+      border-color: #4ade80;
+    }
+
+    /* ============================================================
+       SCHEMA TEXTAREA (Panel A)
+    ============================================================ */
+    #schemaInput {
+      flex: 1;
+      width: 100%;
+      background: var(--bg-panel);
+      border: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      padding: 16px;
+      resize: none;
+      outline: none;
+      min-height: 400px;
+      tab-size: 2;
+    }
+    #schemaInput:focus {
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--pink-glow);
+    }
+
+    /* ============================================================
+       JSON OUTPUT (Panel B)
+    ============================================================ */
+    .output-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: auto;
+      background: var(--bg-panel);
+    }
+    #jsonOutput {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+      white-space: pre;
+      overflow-wrap: normal;
+      margin: 0;
+      background: transparent;
+      border: none;
+    }
+
+    /* JSON Syntax Colors */
+    .j-key    { color: var(--pink); }
+    .j-str    { color: var(--yellow); }
+    .j-num    { color: var(--cyan); }
+    .j-bool   { color: var(--orange); }
+    .j-null   { color: var(--text-dim); font-style: italic; }
+    .j-struct { color: #a0a0c0; }
+
+    /* Error overlay */
+    .error-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(13,12,21,0.88);
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 10;
+    }
+    .error-overlay.visible {
+      display: flex;
+    }
+    .error-box {
+      background: rgba(225,0,0,0.08);
+      border: 1px solid rgba(225,0,0,0.35);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      max-width: 420px;
+      text-align: center;
+    }
+    .error-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    .error-title {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fb7185;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .error-msg {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: #fca5a5;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    /* ============================================================
+       GLOSSARY
+    ============================================================ */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .glossary-term {
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      font-weight: 700;
+      color: var(--pink);
+      margin-bottom: 5px;
+      letter-spacing: 0.04em;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.75;
+    }
+    .edu-section h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--pink);
+      margin: 22px 0 8px;
+      font-family: var(--mono);
+      letter-spacing: 0.05em;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.75;
+    }
+    code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--yellow);
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    .faq-item {
+      border-top: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+    .faq-q:hover { color: var(--pink); }
+    .faq-arrow {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      flex-shrink: 0;
+      transition: transform 0.25s;
+    }
+    .faq-a {
+      display: none;
+      padding-top: 10px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.75;
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    /* ============================================================
+       AD PLACEHOLDERS
+    ============================================================ */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin: 20px 0;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>GraphQL Schema to JSON Mock Generator</h1>
+      <p>Paste your SDL schema and get a live JSON mock response. Real-time, client-side, no install required.</p>
+    </header>
+
+    <!-- ======================================================
+         TOOL CARD
+    ====================================================== -->
+    <div class="tool-card">
+
+      <!-- Settings Bar -->
+      <div class="settings-bar">
+
+        <div class="setting-group">
+          <span class="setting-label">List Length</span>
+          <div class="slider-wrap">
+            <span class="slider-min">1</span>
+            <input type="range" id="listSlider" min="1" max="10" value="3" />
+            <span class="slider-max">10</span>
+          </div>
+          <span class="slider-val" id="listVal">3</span>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Nesting Depth</span>
+          <div class="slider-wrap">
+            <span class="slider-min">1</span>
+            <input type="range" id="depthSlider" min="1" max="5" value="2" />
+            <span class="slider-max">5</span>
+          </div>
+          <span class="slider-val" id="depthVal">2</span>
+        </div>
+
+        <div class="setting-group" style="flex:none">
+          <span class="setting-label">Mode</span>
+          <div class="toggle-wrap">
+            <span class="toggle-option" id="toggleStatic" onclick="setMode('static')">Static Types</span>
+            <span class="toggle-option active" id="toggleSmart" onclick="setMode('smart')">Smart Data</span>
+          </div>
+        </div>
+
+      </div><!-- /settings-bar -->
+
+      <!-- Dual Panel -->
+      <div class="dual-panel">
+
+        <!-- Panel A: Schema Input -->
+        <div class="panel panel-a">
+          <div class="panel-header">
+            <span class="panel-title">// <span>Schema Input</span> (SDL)</span>
+          </div>
+          <textarea id="schemaInput" spellcheck="false" autocomplete="off" aria-label="GraphQL SDL schema input">type Query {
+  user(id: ID!): User
+  posts(limit: Int): [Post!]!
+  me: User
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  username: String!
+  age: Int
+  bio: String
+  avatar: String
+  createdAt: String!
+  posts: [Post!]!
+  friends: [User!]!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  body: String!
+  slug: String!
+  status: PostStatus!
+  author: User!
+  comments: [Comment!]!
+  tags: [String!]!
+  viewCount: Int!
+  rating: Float
+  publishedAt: String
+}
+
+type Comment {
+  id: ID!
+  message: String!
+  author: User!
+  createdAt: String!
+  likes: Int!
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}</textarea>
+        </div>
+
+        <!-- Panel B: JSON Output -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">// <span>JSON Mock</span> Output</span>
+            <button class="btn-copy" id="copyBtn" onclick="copyOutput()">&#128203; Copy</button>
+          </div>
+          <div class="output-wrapper">
+            <div class="error-overlay" id="errorOverlay">
+              <div class="error-box">
+                <div class="error-icon">&#9888;</div>
+                <div class="error-title">Invalid GraphQL Syntax</div>
+                <div class="error-msg" id="errorMsg"></div>
+              </div>
+            </div>
+            <pre id="jsonOutput" aria-live="polite" aria-label="Generated JSON mock output"></pre>
+          </div>
+        </div>
+
+      </div><!-- /dual-panel -->
+    </div><!-- /tool-card -->
+
+    <!-- ======================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ====================================================== -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ======================================================
+         GLOSSARY
+    ====================================================== -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">GraphQL</div>
+          <div class="glossary-def">A query language for APIs developed by Facebook in 2012 and open-sourced in 2015. Unlike REST, GraphQL lets clients request exactly the fields they need, reducing over-fetching and under-fetching. The server exposes a single endpoint that accepts structured queries.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Schema Definition Language (SDL)</div>
+          <div class="glossary-def">The human-readable syntax used to define a GraphQL schema. SDL describes every type, field, argument, enum, and relationship in a schema using plain text. It is language-agnostic - the same SDL works whether your server is Node.js, Python, Go, or any other language.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Abstract Syntax Tree (AST)</div>
+          <div class="glossary-def">A tree data structure that represents the parsed structure of source code. When this tool reads your SDL, it converts the raw text into an AST - a nested object where each node represents a type definition, field, or argument. The mock generator then walks this tree to produce JSON.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Scalar Types</div>
+          <div class="glossary-def">The primitive leaf values in a GraphQL schema - String, Int, Float, Boolean, and ID. Scalars cannot have sub-fields; they always resolve to a single concrete value. Custom scalars like Date or JSON can be declared using the scalar keyword.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Resolver</div>
+          <div class="glossary-def">A function in the GraphQL server that fetches or computes the value for a single field. When a client sends a query, the server calls the resolver for each requested field. Mocking removes the need for real resolvers during early frontend development.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Mutation</div>
+          <div class="glossary-def">A GraphQL operation that writes data, analogous to POST, PUT, or DELETE in REST. Mutations are defined in a special root type called Mutation. Like queries, they return a typed response - the same schema types used for reads can appear in mutation responses.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Circular Dependency</div>
+          <div class="glossary-def">When two or more types in a schema reference each other, creating a cycle. For example: User has friends of type User, and Post has an author of type User who has posts. GraphQL allows this, but a naive mock generator would loop forever. This tool breaks cycles using a visited-type tracker and depth limit.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Enum</div>
+          <div class="glossary-def">A special scalar type restricted to a defined set of named values. In SDL, enums are declared with the enum keyword. At runtime, an enum field can only hold one of its declared values. This tool always picks the first declared enum value for mock output.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================
+         EDUCATIONAL SECTION
+    ====================================================== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to GraphQL Schema Mocking</h2>
+
+      <p class="section-intro">
+        Modern API development rarely has frontend and backend teams finishing work at the same time. The schema is agreed on first - it is the contract between client and server. This tool turns that schema contract into usable mock data instantly, letting your frontend team write real components against real data shapes before a single resolver is implemented.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <p>
+        Paste any valid GraphQL SDL schema into the left panel. The tool parses it in real time and generates a JSON mock response in the right panel. The output mirrors exactly the shape a real GraphQL API would return, starting from the Query root type (or the first defined type if your schema has no Query).
+      </p>
+      <p>
+        Use the <strong style="color:var(--text)">List Length</strong> slider to control how many items appear in array fields. Use the <strong style="color:var(--text)">Nesting Depth</strong> slider to limit how deeply nested objects are generated - especially important for schemas with circular references like <code>User.friends: [User]</code>. Switch between <strong style="color:var(--text)">Smart Data</strong> (field-name heuristics) and <strong style="color:var(--text)">Static Types</strong> (bare placeholder values) depending on whether you need presentable output or just shape verification.
+      </p>
+
+      <h3>How the SDL Parser Works</h3>
+      <p>
+        The tool includes a complete custom SDL tokenizer and recursive-descent parser written in plain JavaScript - no external libraries, no network calls. The tokenizer reads your schema character by character, discarding comments (lines starting with <code>#</code>) and block-string descriptions (<code>"""..."""</code>), then produces a flat stream of tokens: names, punctuation marks, and structural characters.
+      </p>
+      <p>
+        The parser then walks that token stream to reconstruct the type graph: object types, enum types, union types, interface types, and custom scalars. Fields are read with their full type references, including list wrappers (<code>[Post!]!</code>) and non-null modifiers (<code>!</code>). Directives and argument definitions on fields are gracefully skipped since they do not affect the mock output shape.
+      </p>
+
+      <h3>Smart Data Field Heuristics</h3>
+      <p>
+        In Smart Data mode, the mock engine inspects each field name before deciding what value to generate. A field named <code>email</code> returns <code>test@example.com</code>. A field named <code>createdAt</code> returns an ISO 8601 timestamp. A field named <code>avatar</code> returns a plausible image URL. A field named <code>slug</code> returns <code>sample-slug</code>. These heuristics make the mock output readable enough to paste directly into a Figma mockup or share in a Slack design review without looking like raw placeholder data.
+      </p>
+
+      <h3>Circular Reference Protection</h3>
+      <p>
+        The mock generator uses two complementary defenses against infinite recursion. The Nesting Depth slider sets a hard limit on how many levels deep the generator will traverse from the root. Separately, a per-branch visited-type set tracks which types are already being built on the current stack. If the generator encounters a type it is already building (indicating a cycle), it substitutes <code>null</code> immediately rather than recursing. This means <code>User.friends[0].friends[0]</code> will stop building at the depth limit, never spiraling forever.
+      </p>
+
+      <h3>Reading the Generated Output</h3>
+      <p>
+        The JSON output wraps everything in a <code>data</code> envelope, matching the actual response format a GraphQL server returns. Each field on the Query type becomes a top-level key inside <code>data</code>. If your schema has a Query type with <code>user</code> and <code>posts</code> fields, the output will have <code>data.user</code> as an object and <code>data.posts</code> as an array with as many items as your List Length slider specifies.
+      </p>
+
+      <!-- FAQ -->
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why mock a GraphQL API before the backend is finished?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">Mocking lets frontend teams build and test UI components against realistic data shapes before the backend resolvers exist. Instead of waiting for the API to be ready, you paste your agreed-upon schema into this tool and get a valid JSON response your components can consume immediately. This decouples frontend and backend development cycles, catching data structure mismatches early when they are cheap to fix rather than late in integration testing.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How does this tool handle circular references in my schema?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">GraphQL schemas often have circular relationships - for example, a User type that has a friends field returning a list of User objects, each of which also has friends. This tool uses a nesting depth limit slider (default: 2 levels) combined with a visited-type tracker. When the generator encounters a type it has already started building on the current branch, it returns null rather than recursing infinitely. The depth limit provides a hard ceiling so even deeply nested non-circular schemas stay manageable.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What are the default scalar types in GraphQL?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">GraphQL ships with five built-in scalar types: String (UTF-8 text), Int (signed 32-bit integer), Float (double-precision floating point), Boolean (true or false), and ID (a unique identifier serialized as a string). Schemas can also declare custom scalars - for example, Date, DateTime, JSON, or URL - using the scalar keyword. This tool generates sensible placeholder values for all five built-in scalars and falls back to a generic string value for any custom scalars it encounters.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why does this run entirely in the browser instead of on a server?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">Client-side execution means your schema never leaves your machine. Production schemas often contain proprietary type names, business logic clues, and internal data structures that your organization may not want transmitted to a third-party server. Running the SDL parser and mock generator directly in your browser's JavaScript engine eliminates that risk entirely. It also means the tool works offline, has zero latency from network round trips, and requires no account or API key.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between Static Types and Smart Data mocking modes?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">Static Types mode generates the simplest possible placeholder for each scalar - the string "string", the number 0, and the boolean true. This is useful when you only care about the shape of the response, not the content. Smart Data mode reads the field name and applies heuristics: a field named email gets test@example.com, a field named createdAt gets an ISO timestamp, a field named price gets a realistic decimal number. Smart Data mode produces mock responses that are much easier to visually validate and share with stakeholders.</div>
+      </div>
+
+    </div><!-- /edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+  /* ============================================================
+     SDL TOKENIZER
+  ============================================================ */
+  function tokenizeSDL(source) {
+    const tokens = [];
+    let i = 0;
+    const n = source.length;
+
+    while (i < n) {
+      // Skip whitespace and commas
+      if (/[\s,]/.test(source[i])) { i++; continue; }
+
+      // Skip line comments
+      if (source[i] === '#') {
+        while (i < n && source[i] !== '\n') i++;
+        continue;
+      }
+
+      // Block string descriptions: """..."""
+      if (source.substring(i, i + 3) === '"""') {
+        i += 3;
+        while (i < n && source.substring(i, i + 3) !== '"""') {
+          if (source[i] === '\\') i++;
+          i++;
+        }
+        i += 3;
+        continue;
+      }
+
+      // Regular string descriptions: "..."
+      if (source[i] === '"') {
+        i++;
+        while (i < n && source[i] !== '"') {
+          if (source[i] === '\\') i++;
+          i++;
+        }
+        i++;
+        continue;
+      }
+
+      // Punctuators
+      if ('{}()[]!@|=:'.indexOf(source[i]) !== -1) {
+        tokens.push({ type: 'PUNCT', value: source[i] });
+        i++;
+        continue;
+      }
+
+      // Names (identifiers)
+      if (/[a-zA-Z_]/.test(source[i])) {
+        let name = '';
+        while (i < n && /[a-zA-Z_0-9]/.test(source[i])) {
+          name += source[i++];
+        }
+        tokens.push({ type: 'NAME', value: name });
+        continue;
+      }
+
+      // Numbers and minus - skip
+      if (/[-0-9]/.test(source[i])) {
+        while (i < n && /[-0-9.eE+]/.test(source[i])) i++;
+        continue;
+      }
+
+      // Unknown char - skip
+      i++;
+    }
+
+    return tokens;
+  }
+
+  /* ============================================================
+     SDL TOKEN PARSER
+  ============================================================ */
+  function parseSDL(source) {
+    const tokens = tokenizeSDL(source);
+    let pos = 0;
+
+    function peek() {
+      return tokens[pos] || { type: 'EOF', value: '' };
+    }
+    function next() {
+      return tokens[pos++] || { type: 'EOF', value: '' };
+    }
+    function expectPunct(ch) {
+      const tok = next();
+      if (tok.value !== ch) throw new Error('Expected "' + ch + '" but got "' + tok.value + '"');
+    }
+    function expectName() {
+      const tok = next();
+      if (tok.type !== 'NAME') throw new Error('Expected identifier but got "' + tok.value + '"');
+      return tok.value;
+    }
+    function skipArgs() {
+      if (peek().value === '(') {
+        next();
+        let depth = 1;
+        while (depth > 0 && pos < tokens.length) {
+          const v = next().value;
+          if (v === '(') depth++;
+          else if (v === ')') depth--;
+        }
+      }
+    }
+    function skipDirectives() {
+      while (peek().value === '@') {
+        next(); // consume @
+        expectName(); // directive name
+        skipArgs();
+      }
+    }
+    function readTypeRef() {
+      if (peek().value === '[') {
+        next();
+        const inner = readTypeRef();
+        expectPunct(']');
+        if (peek().value === '!') next(); // non-null wrapper on list
+        return { kind: 'list', type: inner };
+      } else {
+        const name = expectName();
+        if (peek().value === '!') next(); // non-null
+        return { kind: 'named', name };
+      }
+    }
+    function skipImplements() {
+      if (peek().value === 'implements') {
+        next();
+        if (peek().value === '&') next();
+        expectName();
+        while (peek().value === '&') {
+          next();
+          expectName();
+        }
+      }
+    }
+    function readFields() {
+      expectPunct('{');
+      const fields = [];
+      while (peek().value !== '}' && peek().type !== 'EOF') {
+        const name = expectName();
+        skipArgs();
+        expectPunct(':');
+        const type = readTypeRef();
+        skipDirectives();
+        fields.push({ name, type });
+      }
+      expectPunct('}');
+      return fields;
+    }
+    function readEnumValues() {
+      expectPunct('{');
+      const values = [];
+      while (peek().value !== '}' && peek().type !== 'EOF') {
+        values.push(expectName());
+        skipDirectives();
+      }
+      expectPunct('}');
+      return values;
+    }
+    function skipBlock() {
+      expectPunct('{');
+      let depth = 1;
+      while (depth > 0 && pos < tokens.length) {
+        const v = next().value;
+        if (v === '{') depth++;
+        else if (v === '}') depth--;
+      }
+    }
+
+    const definitions = [];
+
+    while (peek().type !== 'EOF') {
+      const kw = next();
+      if (kw.type !== 'NAME') {
+        // Skip unexpected token
+        continue;
+      }
+
+      if (kw.value === 'type' || kw.value === 'interface' || kw.value === 'input') {
+        const name = expectName();
+        skipImplements();
+        skipDirectives();
+        const fields = readFields();
+        const kind = kw.value === 'input' ? 'input'
+                   : kw.value === 'interface' ? 'interface'
+                   : 'object';
+        definitions.push({ kind, name, fields });
+
+      } else if (kw.value === 'enum') {
+        const name = expectName();
+        skipDirectives();
+        const values = readEnumValues();
+        definitions.push({ kind: 'enum', name, values });
+
+      } else if (kw.value === 'scalar') {
+        const name = expectName();
+        skipDirectives();
+        definitions.push({ kind: 'scalar', name });
+
+      } else if (kw.value === 'union') {
+        const name = expectName();
+        skipDirectives();
+        expectPunct('=');
+        if (peek().value === '|') next();
+        const types = [expectName()];
+        while (peek().value === '|') {
+          next();
+          types.push(expectName());
+        }
+        definitions.push({ kind: 'union', name, types });
+
+      } else if (kw.value === 'schema') {
+        skipDirectives();
+        skipBlock();
+
+      } else if (kw.value === 'extend') {
+        // Skip: extend type Foo { ... }
+        if (peek().type === 'NAME') next(); // keyword (type/enum/etc.)
+        if (peek().type === 'NAME') next(); // name
+        // skip directives and possible block
+        skipDirectives();
+        if (peek().value === '{') skipBlock();
+
+      } else if (kw.value === 'directive') {
+        // directive @name(args) on LOCATION ...
+        if (peek().value === '@') { next(); }
+        if (peek().type === 'NAME') next(); // name
+        skipArgs();
+        if (peek().value === 'repeatable') next();
+        if (peek().value === 'on') {
+          next();
+          if (peek().type === 'NAME') next();
+          while (peek().value === '|') {
+            next();
+            if (peek().type === 'NAME') next();
+          }
+        }
+
+      } else {
+        // Unknown keyword - attempt recovery by skipping an optional block
+        if (peek().value === '{') skipBlock();
+      }
+    }
+
+    return definitions;
+  }
+
+  /* ============================================================
+     TYPE MAP BUILDER
+  ============================================================ */
+  function buildTypeMap(definitions) {
+    const map = {};
+    for (const def of definitions) {
+      map[def.name] = def;
+    }
+    return map;
+  }
+
+  /* ============================================================
+     SCALAR MOCKING
+  ============================================================ */
+  function randomId() {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  function smartMockString(fieldName) {
+    const lc = fieldName.toLowerCase();
+    if (lc.includes('email'))                                     return 'jane@example.com';
+    if (lc === 'firstname' || lc.includes('first_name'))          return 'Jane';
+    if (lc === 'lastname'  || lc.includes('last_name'))           return 'Doe';
+    if (lc === 'name' || lc.includes('fullname') || lc.includes('displayname') || lc.includes('full_name')) return 'Jane Doe';
+    if (lc === 'username'  || lc.includes('handle'))              return 'janedoe42';
+    if (lc === 'id'        || lc.endsWith('id'))                  return randomId();
+    if (lc.includes('url') || lc.includes('website') || lc.includes('link') || lc.includes('href')) return 'https://example.com';
+    if (lc.includes('avatar') || lc.includes('photo') || lc.includes('image') || lc.includes('thumbnail') || lc.includes('picture')) return 'https://example.com/avatar.jpg';
+    if (lc.includes('phone') || lc.includes('mobile') || lc.includes('tel')) return '555-123-4567';
+    if (lc.includes('address') || lc.includes('street'))         return '123 Main St';
+    if (lc === 'city')                                            return 'Springfield';
+    if (lc.includes('state') || lc.includes('province') || lc.includes('region')) return 'California';
+    if (lc.includes('country'))                                   return 'United States';
+    if (lc.includes('zip') || lc.includes('postal'))             return '90210';
+    if (lc.includes('createdat') || lc.includes('updatedat') || lc.includes('publishedat') || lc.includes('date') || lc.includes('timestamp')) {
+      return new Date().toISOString();
+    }
+    if (lc === 'title')                                           return 'Sample Title';
+    if (lc.includes('description') || lc.includes('bio') || lc.includes('body') || lc.includes('content') || lc.includes('summary')) {
+      return 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+    }
+    if (lc.includes('message') || lc.includes('comment') || lc.includes('note') || lc.includes('reply')) return 'This is a sample message.';
+    if (lc.includes('status'))                                    return 'active';
+    if (lc.includes('slug'))                                      return 'sample-slug';
+    if (lc.includes('token') || lc.includes('secret'))           return 'tok_abc123xyz';
+    if (lc.includes('color') || lc.includes('colour'))           return '#3B82F6';
+    if (lc.includes('tag') || lc.includes('label'))              return 'technology';
+    if (lc.includes('role') || lc.includes('type'))              return 'user';
+    if (lc.includes('category'))                                  return 'general';
+    if (lc.includes('language') || lc.includes('locale'))        return 'en-US';
+    if (lc.includes('currency'))                                  return 'USD';
+    return 'sample_' + fieldName;
+  }
+
+  function smartMockInt(fieldName) {
+    const lc = fieldName.toLowerCase();
+    if (lc.includes('age'))                                       return 29;
+    if (lc.includes('year'))                                      return 2024;
+    if (lc.includes('count') || lc.includes('total') || lc.includes('quantity') || lc.includes('num')) {
+      return Math.floor(Math.random() * 50) + 1;
+    }
+    if (lc.includes('score') || lc.includes('rating'))           return 4;
+    if (lc.includes('likes') || lc.includes('views') || lc.includes('viewcount')) {
+      return Math.floor(Math.random() * 10000) + 100;
+    }
+    if (lc.includes('page') || lc.includes('limit') || lc.includes('offset')) return 10;
+    if (lc.includes('priority') || lc.includes('order'))         return 1;
+    if (lc.includes('size') || lc.includes('length'))            return 42;
+    return Math.floor(Math.random() * 100) + 1;
+  }
+
+  function smartMockFloat(fieldName) {
+    const lc = fieldName.toLowerCase();
+    if (lc.includes('price') || lc.includes('amount') || lc.includes('cost') || lc.includes('fee')) {
+      return parseFloat((Math.random() * 200 + 5).toFixed(2));
+    }
+    if (lc.includes('rating') || lc.includes('score'))           return 4.7;
+    if (lc.includes('lat') || lc.includes('latitude'))           return 37.7749;
+    if (lc.includes('lon') || lc.includes('longitude') || lc.includes('lng')) return -122.4194;
+    if (lc.includes('percent') || lc.includes('ratio'))          return 0.85;
+    if (lc.includes('tax') || lc.includes('discount'))           return 0.08;
+    return parseFloat((Math.random() * 100).toFixed(2));
+  }
+
+  function mockScalar(typeName, fieldName, smartMode) {
+    if (!smartMode) {
+      if (typeName === 'String')  return 'string';
+      if (typeName === 'Int')     return 0;
+      if (typeName === 'Float')   return 0;
+      if (typeName === 'Boolean') return true;
+      if (typeName === 'ID')      return 'id';
+      return 'value';
+    }
+    // Smart mode
+    if (typeName === 'ID')      return randomId();
+    if (typeName === 'Boolean') return Math.random() > 0.3;
+    if (typeName === 'Int')     return smartMockInt(fieldName);
+    if (typeName === 'Float')   return smartMockFloat(fieldName);
+    if (typeName === 'String')  return smartMockString(fieldName);
+    // Custom scalar - use field name heuristics same as String
+    return smartMockString(fieldName);
+  }
+
+  /* ============================================================
+     RECURSIVE MOCK GENERATOR
+  ============================================================ */
+  function generateMockForType(typeName, typeMap, depth, maxDepth, listLength, smartMode, visitedOnBranch) {
+    if (depth > maxDepth) return null;
+
+    const def = typeMap[typeName];
+
+    if (!def) {
+      // Unknown / custom scalar
+      return mockScalar('String', typeName.toLowerCase(), smartMode);
+    }
+
+    if (def.kind === 'scalar') {
+      return mockScalar(typeName, typeName.toLowerCase(), smartMode);
+    }
+
+    if (def.kind === 'enum') {
+      return def.values.length > 0 ? def.values[0] : 'ENUM_VALUE';
+    }
+
+    if (def.kind === 'union') {
+      if (!def.types || def.types.length === 0) return null;
+      return generateMockForType(def.types[0], typeMap, depth, maxDepth, listLength, smartMode, visitedOnBranch);
+    }
+
+    if (def.kind === 'object' || def.kind === 'interface' || def.kind === 'input') {
+      // Break circular references
+      if (visitedOnBranch.has(typeName)) return null;
+
+      const newVisited = new Set(visitedOnBranch);
+      newVisited.add(typeName);
+
+      const obj = {};
+      for (const field of def.fields) {
+        obj[field.name] = generateMockForField(field.type, field.name, typeMap, depth, maxDepth, listLength, smartMode, newVisited);
+      }
+      return obj;
+    }
+
+    return null;
+  }
+
+  function generateMockForField(typeRef, fieldName, typeMap, depth, maxDepth, listLength, smartMode, visitedOnBranch) {
+    if (typeRef.kind === 'list') {
+      const arr = [];
+      for (let i = 0; i < listLength; i++) {
+        arr.push(generateMockForField(typeRef.type, fieldName, typeMap, depth + 1, maxDepth, listLength, smartMode, visitedOnBranch));
+      }
+      return arr;
+    }
+
+    // Named type
+    const typeName = typeRef.name;
+
+    // Built-in scalars
+    if (['String', 'Int', 'Float', 'Boolean', 'ID'].indexOf(typeName) !== -1) {
+      return mockScalar(typeName, fieldName, smartMode);
+    }
+
+    // Look up in type map
+    const def = typeMap[typeName];
+    if (!def) {
+      // Unknown custom scalar
+      return mockScalar('String', fieldName, smartMode);
+    }
+
+    if (def.kind === 'scalar') {
+      return mockScalar(typeName, fieldName, smartMode);
+    }
+
+    if (def.kind === 'enum') {
+      return def.values.length > 0 ? def.values[0] : 'ENUM_VALUE';
+    }
+
+    // Object / interface / union / input: recurse
+    return generateMockForType(typeName, typeMap, depth + 1, maxDepth, listLength, smartMode, visitedOnBranch);
+  }
+
+  /* ============================================================
+     MAIN ENTRY: generate full mock from schema
+  ============================================================ */
+  function generateMock(sdlSource, listLength, maxDepth, smartMode) {
+    const definitions = parseSDL(sdlSource);
+    const typeMap = buildTypeMap(definitions);
+
+    // Find Query root (or first object type)
+    let rootTypeName = 'Query';
+    if (!typeMap['Query']) {
+      const firstObj = definitions.find(d => d.kind === 'object');
+      if (!firstObj) return { data: {} };
+      rootTypeName = firstObj.name;
+    }
+
+    const rootDef = typeMap[rootTypeName];
+    if (!rootDef || !rootDef.fields) return { data: {} };
+
+    const data = {};
+    for (const field of rootDef.fields) {
+      data[field.name] = generateMockForField(
+        field.type, field.name, typeMap,
+        0, maxDepth, listLength, smartMode,
+        new Set([rootTypeName])
+      );
+    }
+
+    return { data };
+  }
+
+  /* ============================================================
+     JSON SYNTAX HIGHLIGHTER
+  ============================================================ */
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function highlightJSON(jsonStr) {
+    let result = '';
+    let i = 0;
+    const n = jsonStr.length;
+
+    while (i < n) {
+      const ch = jsonStr[i];
+
+      // Structural punctuation
+      if ('{}[],'.indexOf(ch) !== -1) {
+        result += '<span class="j-struct">' + escapeHtml(ch) + '</span>';
+        i++;
+        continue;
+      }
+
+      // Colon separator - output plain
+      if (ch === ':') {
+        result += '<span class="j-struct">:</span>';
+        i++;
+        continue;
+      }
+
+      // Strings
+      if (ch === '"') {
+        let raw = '"';
+        i++;
+        while (i < n) {
+          if (jsonStr[i] === '\\') {
+            raw += jsonStr[i] + (jsonStr[i + 1] || '');
+            i += 2;
+          } else if (jsonStr[i] === '"') {
+            raw += '"';
+            i++;
+            break;
+          } else {
+            raw += jsonStr[i++];
+          }
+        }
+        // Determine if key (followed by optional whitespace then colon)
+        let j = i;
+        while (j < n && (jsonStr[j] === ' ' || jsonStr[j] === '\n' || jsonStr[j] === '\r' || jsonStr[j] === '\t')) j++;
+        const isKey = jsonStr[j] === ':';
+        if (isKey) {
+          result += '<span class="j-key">' + escapeHtml(raw) + '</span>';
+        } else {
+          result += '<span class="j-str">' + escapeHtml(raw) + '</span>';
+        }
+        continue;
+      }
+
+      // Numbers
+      if (ch === '-' || (ch >= '0' && ch <= '9')) {
+        let num = '';
+        while (i < n && /[-0-9.eE+]/.test(jsonStr[i])) {
+          num += jsonStr[i++];
+        }
+        result += '<span class="j-num">' + num + '</span>';
+        continue;
+      }
+
+      // Keywords: true, false, null
+      if (/[a-z]/.test(ch)) {
+        let kw = '';
+        while (i < n && /[a-z]/.test(jsonStr[i])) kw += jsonStr[i++];
+        if (kw === 'true' || kw === 'false') {
+          result += '<span class="j-bool">' + kw + '</span>';
+        } else if (kw === 'null') {
+          result += '<span class="j-null">' + kw + '</span>';
+        } else {
+          result += kw;
+        }
+        continue;
+      }
+
+      // Whitespace - preserve as-is
+      result += escapeHtml(ch);
+      i++;
+    }
+
+    return result;
+  }
+
+  /* ============================================================
+     RENDER
+  ============================================================ */
+  function renderMock() {
+    const schema = document.getElementById('schemaInput').value.trim();
+    const listLength = parseInt(document.getElementById('listSlider').value, 10);
+    const maxDepth   = parseInt(document.getElementById('depthSlider').value, 10);
+    const smartMode  = currentMode === 'smart';
+
+    const overlay = document.getElementById('errorOverlay');
+    const output  = document.getElementById('jsonOutput');
+
+    if (!schema) {
+      overlay.classList.remove('visible');
+      output.innerHTML = '<span style="color:var(--text-dim)">// Paste a GraphQL SDL schema in the left panel...</span>';
+      return;
+    }
+
+    try {
+      const mock = generateMock(schema, listLength, maxDepth, smartMode);
+      const jsonStr = JSON.stringify(mock, null, 2);
+      overlay.classList.remove('visible');
+      output.innerHTML = highlightJSON(jsonStr);
+    } catch (err) {
+      overlay.classList.add('visible');
+      document.getElementById('errorMsg').textContent = err.message || String(err);
+      output.innerHTML = '';
+    }
+  }
+
+  /* ============================================================
+     MODE TOGGLE
+  ============================================================ */
+  let currentMode = 'smart';
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('toggleStatic').classList.toggle('active', mode === 'static');
+    document.getElementById('toggleSmart').classList.toggle('active', mode === 'smart');
+    renderMock();
+  }
+
+  /* ============================================================
+     SLIDERS
+  ============================================================ */
+  document.getElementById('listSlider').addEventListener('input', function() {
+    document.getElementById('listVal').textContent = this.value;
+    renderMock();
+  });
+  document.getElementById('depthSlider').addEventListener('input', function() {
+    document.getElementById('depthVal').textContent = this.value;
+    renderMock();
+  });
+
+  /* ============================================================
+     DEBOUNCED TEXTAREA INPUT
+  ============================================================ */
+  let debounceTimer = null;
+  document.getElementById('schemaInput').addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(renderMock, 350);
+  });
+
+  /* ============================================================
+     COPY BUTTON
+  ============================================================ */
+  function copyOutput() {
+    const output = document.getElementById('jsonOutput');
+    const text = output.innerText || output.textContent || '';
+    if (!text.trim()) return;
+
+    navigator.clipboard.writeText(text).then(function() {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('success');
+      setTimeout(function() {
+        btn.innerHTML = '&#128203; Copy';
+        btn.classList.remove('success');
+      }, 2000);
+    }).catch(function() {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  /* ============================================================
+     FAQ ACCORDION
+  ============================================================ */
+  function toggleFaq(el) {
+    el.closest('.faq-item').classList.toggle('open');
+  }
+
+  /* ============================================================
+     INITIAL RENDER
+  ============================================================ */
+  renderMock();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nginx Reverse Proxy Config Builder: Generate Upstream and Server Block Logic | AxiomApe</title>
+  <meta name="description" content="Free Nginx reverse proxy config builder. Define upstream servers, pick a load balancing method, and instantly generate a ready-to-paste nginx.conf server block with proxy headers. 100% client-side." />
+  <meta name="keywords" content="nginx reverse proxy config generator, nginx upstream block, nginx server block builder, nginx load balancing config, nginx proxy pass generator, nginx config tool, reverse proxy config, nginx least conn, nginx ip hash, nginx proxy headers, devops nginx tool, sysadmin nginx, nginx configuration generator" />
+  <link rel="canonical" href="https://axiomape.com/nginx-reverse-proxy-config-builder/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Nginx Reverse Proxy Config Builder",
+        "description": "Free Nginx reverse proxy config builder. Define upstream servers, pick a load balancing method, and instantly generate a ready-to-paste nginx.conf server block with proxy headers. 100% client-side.",
+        "url": "https://axiomape.com/nginx-reverse-proxy-config-builder/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between a web server and a reverse proxy?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A web server like Apache or Nginx serves static files and application responses directly to clients. A reverse proxy sits in front of one or more backend servers and forwards client requests to them, then returns the response back to the client. The client never talks to the backend directly. Nginx is commonly used as both, but its reverse proxy role is specifically the proxy_pass and upstream configuration."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do I need to pass the X-Real-IP header?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When Nginx forwards a request to your backend application, the backend only sees Nginx's IP address as the source, not the original visitor's IP. Setting proxy_set_header X-Real-IP $remote_addr tells Nginx to attach the client's actual IP to the forwarded request. Your backend app can then read that header to log, rate-limit, or geo-restrict based on the true visitor IP."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does IP Hash load balancing work in Nginx?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "With ip_hash, Nginx hashes the client's IP address and always routes that IP to the same upstream server (as long as the server is available). This creates sticky sessions without requiring any session cookie or shared session store on your backend. It is useful for applications that store session state locally on each server, but it can cause uneven load distribution if a small number of IPs generate most of your traffic."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where do I save this configuration file on my Linux server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "On most Linux distributions, Nginx site configs go in /etc/nginx/sites-available/ using a descriptive filename like yourdomain.conf. After saving, create a symlink to /etc/nginx/sites-enabled/ with: sudo ln -s /etc/nginx/sites-available/yourdomain.conf /etc/nginx/sites-enabled/. Then test with sudo nginx -t and reload with sudo systemctl reload nginx. On some setups (RHEL, CentOS, or manual installs) you drop the file directly in /etc/nginx/conf.d/ instead."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does proxy_pass do in Nginx?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "proxy_pass tells Nginx where to forward the incoming request. It can point to a specific IP and port like http://192.168.1.10:3000, or to a named upstream block like http://backend_cluster. When you define an upstream block with multiple servers, Nginx handles load balancing automatically using whichever method you specified (round robin by default)."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface2:     #22263a;
+      --border:       #2e3347;
+      --border-focus: #22C55E;
+      --green:        #22C55E;
+      --green-dim:    #16a34a;
+      --green-glow:   rgba(34,197,94,0.18);
+      --gray:         #4B5563;
+      --gray-light:   #6B7280;
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+      --radius:       10px;
+      --radius-sm:    6px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.45);
+      --mono:         'Fira Code', 'Courier New', 'Consolas', monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #4ade80; }
+
+    /* ===== SITE TOPBAR (hidden by site-chrome) ===== */
+    .site-topbar { display: none; }
+
+    /* ===== PAGE HEADER ===== */
+    .page-header {
+      background: linear-gradient(135deg, #0a0d14 0%, #111827 60%, #0f1a0f 100%);
+      border-bottom: 1px solid var(--border);
+      color: #fff;
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(34,197,94,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.45rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      color: #f0fdf4;
+      letter-spacing: -0.01em;
+    }
+    .page-header h1 span { color: var(--green); }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ===== LAYOUT ===== */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ===== FORM GRID ===== */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) { .input-grid { grid-template-columns: 1fr; } }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2322C55E' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+      cursor: pointer;
+    }
+    select option { background: var(--surface2); color: var(--text); }
+
+    /* ===== PORT ROW ===== */
+    .port-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .port-row input { flex: 1; }
+    .ssl-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ssl-toggle input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    /* ===== UPSTREAM SERVERS ===== */
+    .upstream-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .upstream-row {
+      display: grid;
+      grid-template-columns: 1fr 120px auto;
+      gap: 10px;
+      align-items: center;
+    }
+    @media (max-width: 520px) {
+      .upstream-row { grid-template-columns: 1fr 90px auto; }
+    }
+    .remove-btn {
+      background: transparent;
+      border: 1px solid #3f4560;
+      border-radius: var(--radius-sm);
+      color: #ef4444;
+      font-size: 1rem;
+      width: 34px; height: 34px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .remove-btn:hover { background: rgba(239,68,68,0.12); border-color: #ef4444; }
+    .remove-btn:disabled { opacity: 0.25; cursor: default; }
+
+    .add-server-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: transparent;
+      border: 1px dashed var(--green-dim);
+      border-radius: var(--radius-sm);
+      color: var(--green);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .add-server-btn:hover { background: var(--green-glow); border-color: var(--green); }
+
+    /* ===== SECTION DIVIDER ===== */
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--gray-light);
+      margin: 20px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ===== HEADERS TOGGLE ===== */
+    .headers-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 40px; height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--green); }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    .headers-panel {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .header-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .header-check:hover { border-color: var(--green-dim); background: rgba(34,197,94,0.05); }
+    .header-check input[type="checkbox"] { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
+    .header-check-name { font-size: 0.83rem; font-family: var(--mono); color: var(--text); font-weight: 500; }
+
+    /* ===== OUTPUT ===== */
+    .output-card {
+      background: #0a0d14;
+      border: 1px solid var(--border-focus);
+      border-radius: var(--radius);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.1), var(--shadow);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .output-topbar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .output-dots { display: flex; gap: 6px; }
+    .dot-red, .dot-yellow, .dot-green-sm {
+      width: 12px; height: 12px; border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green-sm { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    .output-filename {
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background: var(--green-dim);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      text-transform: uppercase;
+    }
+    .copy-btn:hover { background: var(--green); }
+    .copy-btn:active { transform: scale(0.97); }
+    .copy-btn.copied { background: #1d4ed8; }
+
+    .output-pre {
+      margin: 0;
+      padding: 20px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: #a3e635;
+      white-space: pre;
+      min-height: 180px;
+    }
+    .output-pre .c-comment { color: #4a5568; }
+    .output-pre .c-keyword { color: #22C55E; }
+    .output-pre .c-value   { color: #e2e8f0; }
+    .output-pre .c-block   { color: #86efac; }
+    .output-pre .c-header  { color: #67e8f9; }
+    .output-pre .c-num     { color: #f59e0b; }
+
+    /* ===== STATUS BAR ===== */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 16px;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      flex-wrap: wrap;
+    }
+    .status-item { display: flex; align-items: center; gap: 5px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    /* ===== AD PLACEMENTS ===== */
+    .axiom-ad-leaderboard {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    /* ===== GLOSSARY ===== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--green);
+      margin-bottom: 5px;
+      font-family: var(--mono);
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ===== EDUCATIONAL SECTION ===== */
+    .edu-section { margin-bottom: 28px; }
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .edu-section .section-intro {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ===== FAQ ===== */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--surface2);
+      padding: 13px 16px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: #2a3050; }
+    .faq-q .faq-arrow { color: var(--green); font-size: 0.9rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .faq-a code {
+      font-family: var(--mono);
+      background: var(--surface2);
+      color: var(--green);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.82rem;
+    }
+
+    /* ===== MOBILE ANCHOR AD ===== */
+    .axiom-ad-mobile-anchor {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      padding: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .page-header { padding: 36px 16px 30px; }
+      .card { padding: 18px; }
+      .headers-panel { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects the global header, footer, privacy badge, and disclaimer -->
+
+  <header class="page-header">
+    <h1>Nginx <span>Reverse Proxy</span> Config Builder</h1>
+    <p>Define your upstream servers, choose a load balancing method, and get a production-ready <code style="color:var(--green);background:rgba(34,197,94,0.1);padding:1px 6px;border-radius:4px;font-size:0.9em;">nginx.conf</code> block in real time.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ===== TOOL CARD ===== -->
+    <div class="card">
+      <div class="card-title">Server Configuration</div>
+
+      <div class="input-grid">
+        <div>
+          <label for="serverName">Server Name (Domain)</label>
+          <input type="text" id="serverName" placeholder="example.com" oninput="buildConfig()" />
+        </div>
+        <div>
+          <label>Listen Port</label>
+          <div class="port-row">
+            <input type="number" id="listenPort" value="80" min="1" max="65535" oninput="buildConfig()" />
+            <label class="ssl-toggle" title="Toggle 443 SSL port">
+              <input type="checkbox" id="sslToggle" onchange="toggleSSL()" />
+              <span class="toggle-track"></span>
+              443 SSL
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Upstream Servers</div>
+      <div class="upstream-list" id="upstreamList"></div>
+      <button class="add-server-btn" onclick="addServer()">+ Add Server</button>
+
+      <div class="section-label">Load Balancing Method</div>
+      <select id="lbMethod" onchange="buildConfig()">
+        <option value="">Round Robin (Default)</option>
+        <option value="least_conn">Least Connections (least_conn)</option>
+        <option value="ip_hash">IP Hash (ip_hash)</option>
+      </select>
+
+      <div class="section-label">Proxy Headers</div>
+      <div class="headers-toggle-row" onclick="toggleHeadersPanel()">
+        <label class="toggle-switch">
+          <input type="checkbox" id="headersEnabled" checked onchange="buildConfig()" onclick="event.stopPropagation()" />
+          <span class="toggle-track"></span>
+        </label>
+        <span style="font-size:0.85rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;">Advanced Proxy Headers</span>
+      </div>
+      <div class="headers-panel" id="headersPanel">
+        <label class="header-check">
+          <input type="checkbox" id="hXRealIP" checked onchange="buildConfig()" />
+          <span class="header-check-name">X-Real-IP</span>
+        </label>
+        <label class="header-check">
+          <input type="checkbox" id="hXForwardedFor" checked onchange="buildConfig()" />
+          <span class="header-check-name">X-Forwarded-For</span>
+        </label>
+        <label class="header-check">
+          <input type="checkbox" id="hXForwardedProto" checked onchange="buildConfig()" />
+          <span class="header-check-name">X-Forwarded-Proto</span>
+        </label>
+        <label class="header-check">
+          <input type="checkbox" id="hHost" checked onchange="buildConfig()" />
+          <span class="header-check-name">Host</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ===== OUTPUT CARD ===== -->
+    <div class="output-card">
+      <div class="output-topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="output-dots">
+            <div class="dot-red"></div>
+            <div class="dot-yellow"></div>
+            <div class="dot-green-sm"></div>
+          </div>
+          <span class="output-filename">nginx.conf</span>
+        </div>
+        <button class="copy-btn" id="copyBtn" onclick="copyConfig()">Copy</button>
+      </div>
+      <pre class="output-pre" id="configOutput"><code></code></pre>
+      <div class="status-bar" id="statusBar">
+        <span class="status-item"><span class="status-dot"></span> Ready</span>
+      </div>
+    </div>
+
+    <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only) -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ===== GLOSSARY ===== -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Reverse Proxy</div>
+          <div class="glossary-def">A server that sits in front of your backend application and accepts client connections on its behalf. The client only ever communicates with the proxy, never with the origin server directly. Nginx is one of the most widely used reverse proxies.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Upstream Server</div>
+          <div class="glossary-def">Any backend server that Nginx forwards requests to. You define upstream servers in an <code style="font-family:monospace;color:#22C55E;">upstream</code> block with their IP address and port. The upstream block is also where you configure load balancing behavior.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Load Balancing</div>
+          <div class="glossary-def">Distributing incoming requests across multiple backend servers to avoid overwhelming any single one. Nginx supports several methods: round robin, least connections, and IP hash, each suited to different traffic patterns and application architectures.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Round Robin</div>
+          <div class="glossary-def">The default Nginx load balancing method. Each new request is forwarded to the next server in the list, cycling through them in order. All servers receive roughly equal shares of traffic assuming similar request durations.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">SSL Termination</div>
+          <div class="glossary-def">The process of decrypting HTTPS traffic at the reverse proxy layer so the backend servers only ever receive plain HTTP. This offloads the CPU cost of TLS handshakes from your app servers and centralizes certificate management on the proxy.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">proxy_pass</div>
+          <div class="glossary-def">The Nginx directive that tells a <code style="font-family:monospace;color:#22C55E;">location</code> block where to send matched requests. The value can be a direct IP:port or a named upstream block. This is the core directive that makes Nginx a reverse proxy.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">X-Forwarded-For</div>
+          <div class="glossary-def">An HTTP header that carries the originating client IP address through the proxy chain. Each proxy appends its own IP, building a comma-separated list. Your backend reads this header to identify the true client IP instead of seeing only the proxy's address.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">server_name</div>
+          <div class="glossary-def">An Nginx directive that binds a server block to one or more domain names. Nginx uses the Host header of the incoming request to pick the matching server block. You can list multiple names separated by spaces, and use wildcards like <code style="font-family:monospace;color:#22C55E;">*.example.com</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EDUCATIONAL SECTION ===== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Nginx Reverse Proxy Configuration</h2>
+      <p class="section-intro">Nginx is the engine behind more than a third of the web's busiest sites. Its reverse proxy and upstream load balancing features let you put a fast, reliable gateway in front of any backend - Node.js, Python, Java, or anything that speaks HTTP. This guide explains every directive this tool generates so you can adapt it confidently.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Enter your domain name and the port Nginx should listen on (port 80 for plain HTTP, or enable the 443 SSL toggle if you are terminating HTTPS here). Add at least one upstream server with its IP or hostname and port. If you add two or more servers, the tool generates a full <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">upstream</code> block and wires the <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">proxy_pass</code> directive to it. With a single server, it proxies directly. Choose a load balancing method and toggle any proxy headers on or off. The config updates instantly in the output panel above.</p>
+
+      <h3>Understanding the Upstream Block</h3>
+      <p>The <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">upstream</code> block defines a named pool of backend servers. Nginx selects a server from the pool for each request using your chosen balancing method. The block name (here <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">backend_cluster</code>) is arbitrary - you reference it in <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">proxy_pass http://backend_cluster</code>. If you only have one upstream server the upstream block is unnecessary, so this tool omits it and passes directly to the IP and port.</p>
+
+      <h3>Proxy Headers Explained</h3>
+      <p><strong style="color:var(--text);">X-Real-IP</strong> passes the original client IP to your backend. Without it, your app sees Nginx's loopback address for every request, making logs and IP-based rate limiting useless. <strong style="color:var(--text);">X-Forwarded-For</strong> is the industry-standard header that accumulates IPs across a proxy chain, read by most frameworks automatically. <strong style="color:var(--text);">X-Forwarded-Proto</strong> tells your backend whether the original client connected over HTTP or HTTPS - critical for apps that generate redirect URLs or set cookie security flags. <strong style="color:var(--text);">Host</strong> preserves the original Host header value, which your backend may use for virtual hosting or link generation.</p>
+
+      <h3>Deploying Your Config</h3>
+      <p>Save the generated block to <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">/etc/nginx/sites-available/yourdomain.conf</code>, then symlink it: <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">sudo ln -s /etc/nginx/sites-available/yourdomain.conf /etc/nginx/sites-enabled/</code>. Test with <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">sudo nginx -t</code> before applying. If all is well, reload with <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">sudo systemctl reload nginx</code>. On RHEL-based systems, drop the file in <code style="font-family:monospace;color:#22C55E;font-size:0.85em;">/etc/nginx/conf.d/</code> instead.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between a web server and a reverse proxy?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">A web server like Apache or Nginx serves static files and application responses directly to clients. A reverse proxy sits in front of one or more backend servers and forwards client requests to them, then returns the response back to the client. The client never talks to the backend directly. Nginx is commonly used as both, but its reverse proxy role is specifically the <code>proxy_pass</code> and upstream configuration.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why do I need to pass the X-Real-IP header?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">When Nginx forwards a request to your backend application, the backend only sees Nginx's IP address as the source, not the original visitor's IP. Setting <code>proxy_set_header X-Real-IP $remote_addr</code> tells Nginx to attach the client's actual IP to the forwarded request. Your backend app can then read that header to log, rate-limit, or geo-restrict based on the true visitor IP.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How does IP Hash load balancing work in Nginx?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">With <code>ip_hash</code>, Nginx hashes the client's IP address and always routes that IP to the same upstream server (as long as the server is available). This creates sticky sessions without requiring any session cookie or shared session store on your backend. It is useful for applications that store session state locally on each server, but it can cause uneven load distribution if a small number of IPs generate most of your traffic.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Where do I save this configuration file on my Linux server?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">On most Linux distributions, Nginx site configs go in <code>/etc/nginx/sites-available/</code> using a descriptive filename like <code>yourdomain.conf</code>. After saving, create a symlink to <code>/etc/nginx/sites-enabled/</code> with: <code>sudo ln -s /etc/nginx/sites-available/yourdomain.conf /etc/nginx/sites-enabled/</code>. Then test with <code>sudo nginx -t</code> and reload with <code>sudo systemctl reload nginx</code>. On some setups (RHEL, CentOS, or manual installs) you drop the file directly in <code>/etc/nginx/conf.d/</code> instead.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What does proxy_pass do in Nginx?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a"><code>proxy_pass</code> tells Nginx where to forward the incoming request. It can point to a specific IP and port like <code>http://192.168.1.10:3000</code>, or to a named upstream block like <code>http://backend_cluster</code>. When you define an upstream block with multiple servers, Nginx handles load balancing automatically using whichever method you specified (round robin by default).</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AD PLACEMENT 2: Mobile Sticky Anchor (mobile only) -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let serverCount = 0;
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    function init() {
+      addServer('127.0.0.1', '3000');
+      buildConfig();
+    }
+
+    // ============================================================
+    // SERVER ROWS
+    // ============================================================
+    function addServer(ip, port) {
+      serverCount++;
+      const id = serverCount;
+      const list = document.getElementById('upstreamList');
+      const row = document.createElement('div');
+      row.className = 'upstream-row';
+      row.id = 'srv-' + id;
+      row.innerHTML =
+        '<input type="text" placeholder="Server IP or hostname" value="' + (ip || '') + '" oninput="buildConfig()" />' +
+        '<input type="number" placeholder="Port" value="' + (port || '') + '" min="1" max="65535" oninput="buildConfig()" />' +
+        '<button class="remove-btn" onclick="removeServer(' + id + ')" title="Remove server">&#215;</button>';
+      list.appendChild(row);
+      updateRemoveButtons();
+      buildConfig();
+    }
+
+    function removeServer(id) {
+      const row = document.getElementById('srv-' + id);
+      if (row) row.remove();
+      updateRemoveButtons();
+      buildConfig();
+    }
+
+    function updateRemoveButtons() {
+      const rows = document.querySelectorAll('.upstream-row');
+      rows.forEach(function(r) {
+        const btn = r.querySelector('.remove-btn');
+        if (btn) btn.disabled = rows.length <= 1;
+      });
+    }
+
+    function getServers() {
+      const rows = document.querySelectorAll('.upstream-row');
+      const servers = [];
+      rows.forEach(function(r) {
+        const inputs = r.querySelectorAll('input');
+        const ip = inputs[0].value.trim();
+        const port = inputs[1].value.trim();
+        if (ip) servers.push({ ip: ip, port: port || '80' });
+      });
+      return servers;
+    }
+
+    // ============================================================
+    // SSL TOGGLE
+    // ============================================================
+    function toggleSSL() {
+      const cb = document.getElementById('sslToggle');
+      const portInput = document.getElementById('listenPort');
+      if (cb.checked) {
+        portInput.value = '443';
+      } else {
+        portInput.value = '80';
+      }
+      buildConfig();
+    }
+
+    // ============================================================
+    // HEADERS PANEL
+    // ============================================================
+    function toggleHeadersPanel() {
+      const cb = document.getElementById('headersEnabled');
+      cb.checked = !cb.checked;
+      buildConfig();
+    }
+
+    // ============================================================
+    // CONFIG BUILDER
+    // ============================================================
+    function buildConfig() {
+      const serverName = document.getElementById('serverName').value.trim() || 'example.com';
+      const port = document.getElementById('listenPort').value.trim() || '80';
+      const isSsl = document.getElementById('sslToggle').checked;
+      const lbMethod = document.getElementById('lbMethod').value;
+      const headersOn = document.getElementById('headersEnabled').checked;
+      const servers = getServers();
+
+      const hXRealIP = headersOn && document.getElementById('hXRealIP').checked;
+      const hXFF = headersOn && document.getElementById('hXForwardedFor').checked;
+      const hXFP = headersOn && document.getElementById('hXForwardedProto').checked;
+      const hHost = headersOn && document.getElementById('hHost').checked;
+
+      const useUpstream = servers.length > 1;
+      const lines = [];
+
+      // Upstream block (only when >1 server)
+      if (useUpstream) {
+        lines.push('upstream backend_cluster {');
+        if (lbMethod) lines.push('    ' + lbMethod + ';');
+        servers.forEach(function(s) {
+          lines.push('    server ' + s.ip + ':' + s.port + ';');
+        });
+        lines.push('}');
+        lines.push('');
+      }
+
+      // Server block
+      lines.push('server {');
+      if (isSsl) {
+        lines.push('    listen ' + port + ' ssl;');
+        lines.push('    # ssl_certificate     /etc/nginx/ssl/' + serverName + '.crt;');
+        lines.push('    # ssl_certificate_key /etc/nginx/ssl/' + serverName + '.key;');
+      } else {
+        lines.push('    listen ' + port + ';');
+      }
+      lines.push('    server_name ' + serverName + ';');
+      lines.push('');
+      lines.push('    location / {');
+
+      const proxyTarget = useUpstream
+        ? 'http://backend_cluster'
+        : (servers.length === 1 ? 'http://' + servers[0].ip + ':' + servers[0].port : 'http://127.0.0.1:80');
+
+      lines.push('        proxy_pass ' + proxyTarget + ';');
+
+      if (hXRealIP)  lines.push('        proxy_set_header X-Real-IP         $remote_addr;');
+      if (hXFF)      lines.push('        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;');
+      if (hXFP)      lines.push('        proxy_set_header X-Forwarded-Proto $scheme;');
+      if (hHost)     lines.push('        proxy_set_header Host               $host;');
+
+      lines.push('    }');
+      lines.push('}');
+
+      document.getElementById('configOutput').textContent = lines.join('\n');
+      updateStatusBar(servers, lbMethod, port, isSsl);
+    }
+
+    // ============================================================
+    // STATUS BAR
+    // ============================================================
+    function updateStatusBar(servers, lbMethod, port, isSsl) {
+      const lbLabel = lbMethod === 'least_conn' ? 'Least Conn' : lbMethod === 'ip_hash' ? 'IP Hash' : 'Round Robin';
+      const bar = document.getElementById('statusBar');
+      bar.innerHTML =
+        '<span class="status-item"><span class="status-dot"></span> ' + servers.length + ' server' + (servers.length !== 1 ? 's' : '') + '</span>' +
+        '<span class="status-item">Port ' + (port || '80') + (isSsl ? ' (SSL)' : '') + '</span>' +
+        (servers.length > 1 ? '<span class="status-item">LB: ' + lbLabel + '</span>' : '') +
+        '<span class="status-item">Ready to deploy</span>';
+    }
+
+    // ============================================================
+    // COPY
+    // ============================================================
+    function copyConfig() {
+      const text = document.getElementById('configOutput').textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1800);
+      }).catch(function() {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    }
+
+    // ============================================================
+    // FAQ
+    // ============================================================
+    function toggleFaq(el) {
+      const answer = el.nextElementSibling;
+      const isOpen = answer.style.display === 'block';
+      answer.style.display = isOpen ? 'none' : 'block';
+      el.classList.toggle('open', !isOpen);
+    }
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
