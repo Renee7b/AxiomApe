@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baker's Percentage and Dough Hydration Calculator: Scale Bread Formulas by Weight | AxiomApe</title>
+  <meta name="description" content="Free baker's percentage calculator and dough hydration tool. Adjust bread formulas relative to total flour mass, calculate true sourdough hydration, and scale recipes to any batch size. 100% browser-based." />
+  <meta name="keywords" content="baker's percentage calculator, dough hydration calculator, bread formula calculator, sourdough hydration, true hydration sourdough, bread recipe scaling, baker's math, hydration percentage bread, sourdough starter hydration, total flour weight calculator, bread dough yield, bakers percent tool" />
+  <link rel="canonical" href="https://axiomape.com/dough-hydration-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Baker's Percentage and Dough Hydration Calculator",
+        "description": "Free baker's percentage calculator and dough hydration tool. Adjust bread formulas relative to total flour mass, calculate true sourdough hydration, and scale recipes to any batch size. 100% browser-based.",
+        "url": "https://axiomape.com/dough-hydration-calculator/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a Baker's Percentage and why is flour always 100%?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A baker's percentage expresses every ingredient as a ratio of the total flour weight, not the total recipe weight. Flour is always set to 100% as the fixed reference point. If a recipe has 500g flour and 375g water, the water is 75% (375 / 500 x 100). This system makes it easy to compare recipes, spot hydration at a glance, and scale any batch size without recalculating every ingredient separately."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I calculate true hydration if my recipe uses a sourdough starter?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A sourdough starter contains both flour and water, so listing its weight as a single ingredient underreports the true water and flour content. To find true hydration, first split the starter weight into its flour and water components using its hydration percentage: starter flour = starter weight / (1 + starter hydration / 100), starter water = starter weight minus starter flour. Then add starter flour to your total flour and starter water to your total water before calculating: true hydration = (added water + starter water) / (added flour + starter flour) x 100. This calculator does that split automatically."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should I measure bread ingredients by weight instead of volume?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Volume measures like cups vary significantly depending on how tightly flour is packed, the humidity in the room, and which brand or grind of flour you use. A cup of all-purpose flour can weigh anywhere from 120g to 160g. Weight is absolute: 500g of flour is exactly 500g every time, anywhere in the world. Professional bakers and serious home bakers use weight for consistency, especially for high-hydration doughs like sourdough where even a 5% hydration difference changes the crumb structure significantly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a good hydration percentage for a beginner baker?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For beginner bakers, a hydration of 65% to 70% is ideal. At this range, the dough is firm enough to hold its shape, easy to knead by hand, and forgiving during shaping. As your skills develop, you can increase hydration toward 75% to 80% for a more open crumb. High-hydration doughs above 80% require advanced shaping techniques like stretch-and-fold and are better tackled once you have a feel for gluten development."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does hydration affect the crumb and crust of the bread?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Higher hydration generally produces a more open, irregular crumb with large holes, a glossy interior, and a crackly, blistered crust - the style seen in artisan sourdough. Lower hydration produces a tighter, more uniform crumb that slices cleanly, typical of sandwich loaves. Hydration also affects baking: wetter doughs produce more steam inside the crust during oven spring, contributing to a thicker and crispier exterior. The ideal hydration depends on the flour type, since whole wheat and rye absorb more water than white flour."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* Reset and base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Accent colors */
+      --amber:       #D97706;
+      --amber-hover: #B45309;
+      --amber-glow:  rgba(217,119,6,.20);
+      --blue:        #3B82F6;
+      --blue-hover:  #2563EB;
+      --blue-glow:   rgba(59,130,246,.20);
+
+      /* Dark panel theme (tool area) */
+      --dk-bg:     #111827;
+      --dk-card:   #1F2937;
+      --dk-card2:  #374151;
+      --dk-border: #4B5563;
+      --dk-text:   #F9FAFB;
+      --dk-muted:  #9CA3AF;
+      --dk-dim:    #6B7280;
+
+      /* Light page theme (edu section) */
+      --page-bg:  #F8FAFC;
+      --card-bg:  #FFFFFF;
+      --border:   #E2E8F0;
+      --text:     #0F172A;
+      --muted:    #64748B;
+      --light:    #94A3B8;
+
+      --radius:    14px;
+      --radius-sm: 8px;
+      --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--page-bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Tool header - dark gradient with amber accent border */
+    .tool-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #334155 100%);
+      padding: 48px 20px 36px;
+      text-align: center;
+      color: var(--dk-text);
+      border-bottom: 3px solid var(--amber);
+    }
+
+    .tool-header h1 {
+      font-size: clamp(19px, 4vw, 28px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 10px;
+      letter-spacing: -.02em;
+    }
+
+    .tool-header h1 .accent { color: var(--amber); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: var(--dk-muted);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Layout container */
+    .container {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .main-content { padding: 24px 0 48px; }
+
+    /* Three-panel dashboard grid */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 260px 1fr 280px;
+      gap: 14px;
+      margin-bottom: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel-output { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 580px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+
+    /* Dark panel base */
+    .panel {
+      background: var(--dk-card);
+      border-radius: var(--radius);
+      padding: 18px;
+      border: 1px solid var(--dk-border);
+    }
+
+    .panel-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      color: var(--dk-dim);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--dk-border);
+    }
+
+    /* Field label */
+    .field-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--dk-muted);
+      margin-bottom: 5px;
+    }
+
+    /* Toggle group (pill buttons) */
+    .toggle-group {
+      display: flex;
+      background: var(--dk-bg);
+      border: 1px solid var(--dk-border);
+      border-radius: 100px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 2px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dk-muted);
+      padding: 7px 10px;
+      border-radius: 100px;
+      transition: all .2s;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .toggle-btn.on-amber { background: var(--amber); color: #fff; }
+    .toggle-btn.on-blue  { background: var(--blue);  color: #fff; }
+    .toggle-btn:not(.on-amber):not(.on-blue):hover {
+      background: var(--dk-card2);
+      color: var(--dk-text);
+    }
+
+    /* Primary scale input */
+    .scale-input-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .scale-input-wrap input[type="number"] {
+      width: 100%;
+      background: var(--dk-bg);
+      border: 1.5px solid var(--dk-border);
+      border-radius: var(--radius-sm);
+      color: var(--dk-text);
+      font-family: inherit;
+      font-size: 22px;
+      font-weight: 800;
+      padding: 11px 48px 11px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .scale-input-wrap input::-webkit-outer-spin-button,
+    .scale-input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .scale-input-wrap input:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-glow);
+    }
+
+    .scale-unit-tag {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--dk-dim);
+      pointer-events: none;
+    }
+
+    /* True Hydration readout */
+    .hydration-box {
+      background: var(--dk-bg);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 0 16px var(--blue-glow);
+    }
+
+    .hydration-box-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      color: var(--blue);
+      margin-bottom: 4px;
+    }
+
+    .hydration-number {
+      font-size: 38px;
+      font-weight: 900;
+      color: var(--blue);
+      letter-spacing: -.03em;
+      line-height: 1;
+    }
+
+    .hydration-note {
+      font-size: 11px;
+      color: var(--dk-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Formula builder */
+    .ing-col-headers {
+      display: grid;
+      grid-template-columns: 1fr 66px 76px 26px;
+      gap: 4px;
+      margin-bottom: 4px;
+      padding: 0 2px;
+    }
+
+    .ing-col-headers span {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--dk-dim);
+    }
+
+    .ing-col-headers span:nth-child(2),
+    .ing-col-headers span:nth-child(3) { text-align: right; padding-right: 4px; }
+
+    .ingredient-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ing-row {
+      display: grid;
+      grid-template-columns: 1fr 66px 76px 26px;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .ing-row input,
+    .ing-row select {
+      background: var(--dk-bg);
+      border: 1px solid var(--dk-border);
+      border-radius: 6px;
+      color: var(--dk-text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 7px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .ing-row input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
+      text-align: right;
+    }
+
+    .ing-row input[type="number"]::-webkit-outer-spin-button,
+    .ing-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .ing-row input:focus,
+    .ing-row select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px var(--amber-glow);
+    }
+
+    .ing-row input[type="text"] { text-align: left; }
+
+    .del-btn {
+      width: 26px;
+      height: 26px;
+      background: transparent;
+      border: 1px solid var(--dk-border);
+      border-radius: 5px;
+      color: var(--dk-dim);
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .del-btn:hover { background: rgba(239,68,68,.12); border-color: #ef4444; color: #ef4444; }
+
+    /* Starter sub-row */
+    .starter-sub {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 3px 0 2px 4px;
+      font-size: 11px;
+      color: var(--dk-muted);
+    }
+
+    .starter-sub input[type="number"] {
+      width: 58px;
+      background: var(--dk-bg);
+      border: 1px solid var(--dk-border);
+      border-radius: 5px;
+      color: var(--dk-text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 4px 6px;
+      outline: none;
+      text-align: right;
+      appearance: textfield;
+      -moz-appearance: textfield;
+      transition: border-color .15s;
+    }
+
+    .starter-sub input[type="number"]::-webkit-outer-spin-button,
+    .starter-sub input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .starter-sub input[type="number"]:focus { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue-glow); }
+
+    .starter-decomp {
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Add ingredient row */
+    .add-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .add-row select {
+      flex: 1;
+      background: var(--dk-bg);
+      border: 1px solid var(--dk-border);
+      border-radius: 6px;
+      color: var(--dk-text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    .add-row select:focus { border-color: var(--amber); }
+
+    .add-btn {
+      background: transparent;
+      border: 1.5px solid var(--amber);
+      border-radius: 6px;
+      color: var(--amber);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    .add-btn:hover { background: var(--amber); color: #fff; }
+
+    /* Recipe output panel */
+    .recipe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .copy-btn {
+      background: var(--amber);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 13px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover  { background: var(--amber-hover); }
+    .copy-btn.copied { background: #22c55e; }
+
+    .recipe-list { display: flex; flex-direction: column; gap: 4px; }
+
+    .recipe-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 11px;
+      background: var(--dk-bg);
+      border-radius: 6px;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .ri-name { color: var(--dk-text); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ri-pct  { color: var(--dk-dim); font-size: 11px; min-width: 36px; text-align: right; flex-shrink: 0; }
+    .ri-wt   { color: var(--amber); font-weight: 700; min-width: 54px; text-align: right; flex-shrink: 0; }
+
+    .recipe-divider { height: 1px; background: var(--dk-border); margin: 2px 0; }
+
+    .recipe-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 11px;
+      background: var(--dk-card2);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--dk-text);
+      margin-top: 4px;
+    }
+
+    .recipe-total .rt-wt { color: var(--amber); }
+
+    .recipe-empty {
+      text-align: center;
+      color: var(--dk-dim);
+      font-size: 13px;
+      padding: 24px 8px;
+      line-height: 1.5;
+    }
+
+    /* Light-theme educational cards */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 26px 30px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) { .card { padding: 18px 16px; } }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+
+    /* Glossary grid */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 16px;
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 7px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.75;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 7px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+      padding: 13px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      transition: background .15s;
+      line-height: 1.4;
+    }
+
+    .faq-q:hover { background: #f1f5f9; }
+    .faq-q.open  { background: #fff7ed; color: var(--amber); }
+
+    .faq-icon {
+      flex-shrink: 0;
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--light);
+      transition: transform .22s;
+      margin-top: -1px;
+    }
+
+    .faq-q.open .faq-icon { transform: rotate(45deg); color: var(--amber); }
+
+    .faq-a {
+      display: none;
+      padding: 0 15px 13px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.75;
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-a.open { display: block; }
+
+    /* Utility */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+    }
+
+    @media (max-width: 480px) {
+      .ing-row         { grid-template-columns: 1fr 58px 68px 26px; }
+      .ing-col-headers { grid-template-columns: 1fr 58px 68px 26px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Tool header (outside main, sibling before main per SOP) -->
+  <header class="tool-header">
+    <h1>Baker's Percentage and <span class="accent">Dough Hydration</span> Calculator</h1>
+    <p>Adjust bread formulas relative to total flour mass. Calculate true sourdough hydration and scale recipes to any batch size.</p>
+  </header>
+
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- ========================================================
+           THREE-PANEL INTERACTIVE DASHBOARD
+           Panel 1: Global Settings and Scaling
+           Panel 2: Formula Builder
+           Panel 3: Recipe Output Card
+           ======================================================== -->
+      <div class="dashboard" role="region" aria-label="Baker's percentage dough hydration tool">
+
+        <!-- PANEL 1: Global Settings and Scaling -->
+        <div class="panel panel-settings">
+          <div class="panel-label">Global Settings</div>
+
+          <!-- Unit toggle -->
+          <label class="field-label" id="unit-label">Weight Unit</label>
+          <div class="toggle-group" role="group" aria-labelledby="unit-label">
+            <button class="toggle-btn on-amber" id="btn-g"  onclick="setUnit('g')"  aria-pressed="true">Grams</button>
+            <button class="toggle-btn"          id="btn-oz" onclick="setUnit('oz')" aria-pressed="false">Ounces</button>
+          </div>
+
+          <!-- Scaling mode toggle -->
+          <label class="field-label" id="mode-label">Scaling Mode</label>
+          <div class="toggle-group" role="group" aria-labelledby="mode-label">
+            <button class="toggle-btn on-amber" id="btn-flour" onclick="setScaleMode('flour')" aria-pressed="true">Total Flour</button>
+            <button class="toggle-btn"          id="btn-dough" onclick="setScaleMode('dough')" aria-pressed="false">Target Yield</button>
+          </div>
+
+          <!-- Primary scale input -->
+          <label class="field-label" id="scale-lbl">Total Flour Weight</label>
+          <div class="scale-input-wrap">
+            <input type="number" id="scale-val" value="500" min="1" step="1"
+              aria-labelledby="scale-lbl" oninput="recalc()" />
+            <span class="scale-unit-tag" id="scale-unit-tag" aria-hidden="true">g</span>
+          </div>
+
+          <!-- True Hydration readout -->
+          <div class="hydration-box" role="status" aria-live="polite" aria-label="True dough hydration percentage">
+            <div class="hydration-box-label">True Dough Hydration</div>
+            <div class="hydration-number" id="hyd-num">--</div>
+            <div class="hydration-note"  id="hyd-note">Add flour and liquid to calculate</div>
+          </div>
+        </div>
+        <!-- end panel 1 -->
+
+
+        <!-- PANEL 2: Formula Builder -->
+        <div class="panel panel-builder">
+          <div class="panel-label">Formula Builder</div>
+
+          <div class="ing-col-headers" aria-hidden="true">
+            <span>Ingredient</span>
+            <span>%</span>
+            <span>Weight</span>
+            <span></span>
+          </div>
+
+          <div class="ingredient-list" id="ing-list" role="list" aria-label="Bread formula ingredients">
+            <!-- Rows injected by JavaScript -->
+          </div>
+
+          <!-- Add ingredient control -->
+          <div class="add-row">
+            <select id="add-type" aria-label="Ingredient type to add">
+              <option value="Flour">Flour</option>
+              <option value="Liquid">Liquid</option>
+              <option value="Salt">Salt</option>
+              <option value="Yeast">Yeast</option>
+              <option value="Fat">Fat</option>
+              <option value="Sugar">Sugar</option>
+              <option value="Starter">Sourdough Starter</option>
+              <option value="Other">Other</option>
+            </select>
+            <button class="add-btn" onclick="addIngredient()" aria-label="Add selected ingredient type">+ Add</button>
+          </div>
+        </div>
+        <!-- end panel 2 -->
+
+
+        <!-- PANEL 3: Recipe Output Card -->
+        <div class="panel panel-output">
+          <div class="recipe-header">
+            <div class="panel-label" style="margin-bottom:0; flex:1;">Final Recipe</div>
+            <button class="copy-btn" id="copy-btn" onclick="copyRecipe()" aria-label="Copy recipe to clipboard">Copy Recipe</button>
+          </div>
+
+          <div class="recipe-list" id="recipe-out" role="list" aria-label="Final bread recipe output">
+            <div class="recipe-empty">Fill out the Formula Builder to see the sorted recipe card here.</div>
+          </div>
+        </div>
+        <!-- end panel 3 -->
+
+      </div>
+      <!-- end dashboard -->
+
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+
+      <!-- Glossary card -->
+      <div class="card">
+        <div class="card-title">Key Terms: Baker's Percentage Glossary</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Baker's Percentage</div>
+            <div class="glossary-def">A system where every ingredient is expressed as a percentage of the total flour weight, which is always fixed at 100%. Makes recipes easy to compare and scale.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">True Hydration</div>
+            <div class="glossary-def">The actual water-to-flour ratio that accounts for hidden water and flour inside a sourdough starter. More accurate than the apparent hydration read from a raw ingredient list.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Levain / Sourdough Starter</div>
+            <div class="glossary-def">A fermented mixture of flour and water cultured with wild yeast and lactic acid bacteria. Used to leaven bread naturally without commercial yeast.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Autolyse</div>
+            <div class="glossary-def">A rest period (typically 20 to 60 minutes) where flour and water are combined and left to hydrate before other ingredients are added. Improves extensibility and reduces mixing time.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Total Dough Weight (Yield)</div>
+            <div class="glossary-def">The combined weight of all ingredients before baking. Useful for planning loaf count and for reverse-scaling a formula from a desired final yield.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Crumb</div>
+            <div class="glossary-def">The interior texture of baked bread. High-hydration doughs tend to produce an open, irregular crumb with large holes; lower hydration yields a tighter, more uniform crumb.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Gluten Development</div>
+            <div class="glossary-def">The formation of a protein network in dough that traps gas bubbles and gives bread its structure. Achieved through mixing, folding, time, and hydration.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Inoculation Rate</div>
+            <div class="glossary-def">The percentage of sourdough starter relative to total flour. A higher rate speeds up fermentation; a lower rate slows it down for a longer, more flavorful result.</div>
+          </div>
+        </div>
+      </div>
+      <!-- end glossary -->
+
+
+      <!-- Educational section -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Baker's Percentages and Dough Hydration</h2>
+        <p class="section-intro">
+          Baker's percentages are the universal language of professional bread baking. Once you understand the system, you can read any recipe at a glance, predict how a dough will handle before mixing it, and confidently scale a formula from a single loaf to a full bakery batch without a spreadsheet.
+        </p>
+
+        <h3>How to Use This Dough Hydration Calculator</h3>
+        <p>
+          Start in the Global Settings panel. Choose your weight unit (Grams or Ounces), then pick a Scaling Mode. "Total Flour" lets you enter the flour weight directly and all other ingredient weights follow from their baker's percentages. "Target Yield" works backward: enter the total finished dough weight you need, and the calculator finds the exact flour weight required so that all ingredients sum to that target.
+        </p>
+        <p>
+          In the Formula Builder, adjust the baker's percentage for each ingredient. Edit the percentage and the weight updates in real time. Edit the weight and the percentage back-calculates automatically. The True Dough Hydration readout in Global Settings updates live as you work. The Final Recipe card on the right shows ingredients sorted by category and provides a one-click copy button.
+        </p>
+
+        <h3>Why Flour is Always 100%</h3>
+        <p>
+          In baker's math, flour is the denominator for every ratio in the formula. No matter how much or how little you use, the flour weight always represents 100%. Every other ingredient is expressed relative to that fixed base. A formula that reads "75% water" always means 75g of water for every 100g of flour, whether you are making a 300g test loaf or a 10kg production batch. The ratios hold constant at every scale.
+        </p>
+        <p>
+          When a formula uses more than one flour type (for example, 75% white flour and 25% whole wheat), those percentages together sum to 100%. They form the flour base. Any ingredient tagged as Flour type in this calculator contributes to that shared 100% base.
+        </p>
+
+        <h3>Sourdough Starter and True Hydration</h3>
+        <p>
+          A sourdough starter is not a single ingredient: it is a blend of flour and water. At 100% hydration (equal parts flour and water by weight), 100g of starter contains 50g of flour and 50g of water. Listing it as "100g starter" without splitting it will give you an inaccurate hydration reading.
+        </p>
+        <p>
+          This calculator decomposes the starter automatically. Enter the starter's hydration percentage on the ingredient row (default: 100%) and the True Hydration readout reflects the actual total water content (added water plus starter water) divided by the actual total flour content (added flour plus starter flour). For most sourdough formulas, true hydration runs several percentage points higher than the apparent hydration shown by the raw ingredient list.
+        </p>
+
+        <h3>Scaling by Target Dough Yield</h3>
+        <p>
+          Professional bakers often work backward from a target: "I need 2,000g of dough to fill three 650g loaves with pan waste." In Target Yield mode, enter that final weight and the calculator divides it by the sum of all baker's percentages to find the exact flour weight required, then calculates every other ingredient from there. This is how production runs are planned without guessing.
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What is a Baker's Percentage and why is flour always 100%?
+            <span class="faq-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-a" role="region">
+            A baker's percentage expresses every ingredient as a ratio of the total flour weight, not the total recipe weight. Flour is always set to 100% as the fixed reference point. If a recipe has 500g flour and 375g water, the water is 75% (375 divided by 500, times 100). This system makes it easy to compare recipes, spot hydration at a glance, and scale any batch size without recalculating every ingredient separately.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            How do I calculate true hydration if my recipe uses a sourdough starter?
+            <span class="faq-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-a" role="region">
+            A sourdough starter contains both flour and water, so listing its weight as a single ingredient underreports the true water and flour content. To find true hydration, first split the starter weight using its hydration percentage: starter flour = starter weight / (1 + starter hydration / 100), and starter water = starter weight minus starter flour. Add starter flour to your total flour and starter water to your total water before dividing: true hydration = (added water + starter water) / (added flour + starter flour) x 100. This calculator performs that split automatically when you add a Sourdough Starter ingredient.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Why should I measure bread ingredients by weight instead of volume?
+            <span class="faq-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-a" role="region">
+            Volume measures like cups vary significantly depending on how tightly flour is packed, the humidity in the room, and which brand or grind of flour you use. A cup of all-purpose flour can weigh anywhere from 120g to 160g. Weight is absolute: 500g of flour is exactly 500g every time, anywhere in the world. Professional bakers and serious home bakers use weight for consistency, especially for high-hydration doughs like sourdough where even a 5% hydration difference changes the crumb structure significantly.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What is a good hydration percentage for a beginner baker?
+            <span class="faq-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-a" role="region">
+            For beginner bakers, a hydration of 65% to 70% is ideal. At this range, the dough is firm enough to hold its shape, easy to knead by hand, and forgiving during shaping. As your skills develop, you can increase hydration toward 75% to 80% for a more open crumb. High-hydration doughs above 80% require advanced shaping techniques like stretch-and-fold and are better tackled once you have a feel for gluten development.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            How does hydration affect the crumb and crust of the bread?
+            <span class="faq-icon" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-a" role="region">
+            Higher hydration generally produces a more open, irregular crumb with large holes, a glossy interior, and a crackly, blistered crust - the style seen in artisan sourdough. Lower hydration produces a tighter, more uniform crumb that slices cleanly, typical of sandwich loaves. Hydration also affects baking: wetter doughs produce more steam inside the crust during oven spring, contributing to a thicker and crispier exterior. The ideal hydration depends on flour type, since whole wheat and rye absorb more water than white flour.
+          </div>
+        </div>
+
+      </div>
+      <!-- end educational section -->
+
+    </div>
+    <!-- end container -->
+  </main>
+
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+
+  <script>
+    /* ================================================================
+       STATE
+    ================================================================ */
+    let unit      = 'g';      // 'g' | 'oz'
+    let scaleMode = 'flour';  // 'flour' | 'dough'
+    let nextId    = 0;
+    let ings      = [];       // ingredient objects
+
+    /* Ingredient schema:
+       { id, name, type, pct, starterHydration? }
+       type: 'Flour' | 'Liquid' | 'Salt' | 'Yeast' | 'Fat' | 'Sugar' | 'Starter' | 'Other'
+    */
+
+    /* ================================================================
+       INITIALISE WITH DEFAULT SOURDOUGH FORMULA
+    ================================================================ */
+    function init() {
+      ings = [
+        { id: nextId++, name: 'White Flour',       type: 'Flour',   pct: 75 },
+        { id: nextId++, name: 'Whole Wheat Flour',  type: 'Flour',   pct: 25 },
+        { id: nextId++, name: 'Water',              type: 'Liquid',  pct: 75 },
+        { id: nextId++, name: 'Salt',               type: 'Salt',    pct: 2  },
+        { id: nextId++, name: 'Sourdough Starter',  type: 'Starter', pct: 20, starterHydration: 100 },
+      ];
+      renderRows();
+      recalc();
+    }
+
+    /* ================================================================
+       UNIT TOGGLE
+    ================================================================ */
+    function setUnit(u) {
+      unit = u;
+      document.getElementById('btn-g').classList.toggle('on-amber', u === 'g');
+      document.getElementById('btn-oz').classList.toggle('on-amber', u === 'oz');
+      document.getElementById('btn-g').setAttribute('aria-pressed', String(u === 'g'));
+      document.getElementById('btn-oz').setAttribute('aria-pressed', String(u === 'oz'));
+      document.getElementById('scale-unit-tag').textContent = u;
+      recalc();
+    }
+
+    /* ================================================================
+       SCALING MODE TOGGLE
+    ================================================================ */
+    function setScaleMode(mode) {
+      scaleMode = mode;
+      const isFlour = mode === 'flour';
+      document.getElementById('btn-flour').classList.toggle('on-amber', isFlour);
+      document.getElementById('btn-dough').classList.toggle('on-amber', !isFlour);
+      document.getElementById('btn-flour').setAttribute('aria-pressed', String(isFlour));
+      document.getElementById('btn-dough').setAttribute('aria-pressed', String(!isFlour));
+      document.getElementById('scale-lbl').textContent =
+        isFlour ? 'Total Flour Weight' : 'Target Total Dough Weight (Yield)';
+      recalc();
+    }
+
+    /* ================================================================
+       CORE BAKER'S MATH
+       Returns { flourWeight, weights{id:weight} }
+    ================================================================ */
+    function computeWeights() {
+      const scaleVal = parseFloat(document.getElementById('scale-val').value) || 0;
+
+      /* Sum all baker's percentages (used for dough yield mode) */
+      const sumPct = ings.reduce((s, i) => s + (i.pct || 0), 0);
+
+      let flourWeight = 0;
+      if (scaleMode === 'flour') {
+        flourWeight = scaleVal;
+      } else {
+        /* Reverse-scale: total dough = flourWeight x (sumPct / 100)
+           Therefore: flourWeight = targetDough x 100 / sumPct           */
+        if (sumPct > 0) flourWeight = (scaleVal * 100) / sumPct;
+      }
+
+      const weights = {};
+      ings.forEach(ing => {
+        /* Baker's percentage rule: weight = flourWeight x (pct / 100)
+           The flour base is the reference point for EVERY ingredient,
+           including non-flour types.                                    */
+        weights[ing.id] = flourWeight * (ing.pct || 0) / 100;
+      });
+
+      return { flourWeight, weights };
+    }
+
+    /* ================================================================
+       TRUE HYDRATION
+       Accounts for the flour and water hidden inside sourdough starter.
+       Formula: trueHydration = trueLiquid / trueFlour x 100
+       where:
+         trueFlour  = sum(Flour weights) + sum(starter flour portions)
+         trueLiquid = sum(Liquid weights) + sum(starter water portions)
+    ================================================================ */
+    function computeTrueHydration(weights) {
+      let trueFlour  = 0;
+      let trueLiquid = 0;
+
+      ings.forEach(ing => {
+        const w = weights[ing.id] || 0;
+        if (ing.type === 'Flour') {
+          trueFlour += w;
+        } else if (ing.type === 'Liquid') {
+          trueLiquid += w;
+        } else if (ing.type === 'Starter') {
+          /* Decompose starter:
+             If starter hydration = H% then for weight W:
+               starterFlour = W / (1 + H/100)
+               starterWater = W - starterFlour
+          */
+          const h = (typeof ing.starterHydration === 'number' ? ing.starterHydration : 100) / 100;
+          const starterFlour = w / (1 + h);
+          const starterWater = w - starterFlour;
+          trueFlour  += starterFlour;
+          trueLiquid += starterWater;
+
+          /* Update the starter decomposition note */
+          const noteEl = document.getElementById('sh-note-' + ing.id);
+          if (noteEl && w > 0) {
+            noteEl.textContent =
+              '(' + fmt(starterFlour) + ' ' + unit + ' flour + ' + fmt(starterWater) + ' ' + unit + ' water)';
+          } else if (noteEl) {
+            noteEl.textContent = '';
+          }
+        }
+      });
+
+      if (trueFlour <= 0) return null;
+      return (trueLiquid / trueFlour) * 100;
+    }
+
+    /* ================================================================
+       MAIN RECALCULATE
+    ================================================================ */
+    function recalc() {
+      const { weights } = computeWeights();
+      const trueHyd = computeTrueHydration(weights);
+
+      /* Update hydration readout */
+      const hydNum  = document.getElementById('hyd-num');
+      const hydNote = document.getElementById('hyd-note');
+      if (trueHyd !== null && isFinite(trueHyd)) {
+        hydNum.textContent  = trueHyd.toFixed(1) + '%';
+        hydNote.textContent = 'total water / total flour (starter decomposed)';
+      } else {
+        hydNum.textContent  = '--';
+        hydNote.textContent = 'Add flour and liquid ingredients to calculate';
+      }
+
+      /* Update weight fields (only if not actively focused) */
+      ings.forEach(ing => {
+        const wtEl = document.getElementById('wt-' + ing.id);
+        if (wtEl && document.activeElement !== wtEl) {
+          const w = weights[ing.id];
+          wtEl.value = (w !== undefined && !isNaN(w)) ? fmt(w) : '';
+        }
+      });
+
+      renderRecipe(weights);
+    }
+
+    /* ================================================================
+       FORMAT WEIGHT VALUE
+    ================================================================ */
+    function fmt(w) {
+      if (!isFinite(w) || isNaN(w)) return '';
+      if (w === 0) return '0';
+      if (w < 1)   return w.toFixed(3);
+      if (w < 10)  return w.toFixed(2);
+      if (w < 100) return w.toFixed(1);
+      return w.toFixed(0);
+    }
+
+    /* ================================================================
+       EVENT: USER EDITS PERCENTAGE
+    ================================================================ */
+    function onPctChange(id) {
+      const el  = document.getElementById('pct-' + id);
+      const val = parseFloat(el.value);
+      const ing = ings.find(i => i.id === id);
+      if (ing && !isNaN(val) && val >= 0) {
+        ing.pct = val;
+      }
+      recalc();
+    }
+
+    /* ================================================================
+       EVENT: USER EDITS WEIGHT (back-calculate percentage)
+    ================================================================ */
+    function onWtChange(id) {
+      const wtEl = document.getElementById('wt-' + id);
+      const wVal = parseFloat(wtEl.value);
+      if (isNaN(wVal) || wVal < 0) return;
+
+      const scaleVal = parseFloat(document.getElementById('scale-val').value) || 0;
+      if (scaleVal <= 0) return;
+
+      let flourWeight = 0;
+      if (scaleMode === 'flour') {
+        flourWeight = scaleVal;
+      } else {
+        const sumPct = ings.reduce((s, i) => s + (i.pct || 0), 0);
+        if (sumPct > 0) flourWeight = (scaleVal * 100) / sumPct;
+      }
+      if (flourWeight <= 0) return;
+
+      const ing = ings.find(i => i.id === id);
+      if (!ing) return;
+      const newPct = (wVal / flourWeight) * 100;
+      ing.pct = Math.round(newPct * 1000) / 1000;
+
+      const pctEl = document.getElementById('pct-' + id);
+      if (pctEl && document.activeElement !== pctEl) {
+        pctEl.value = ing.pct.toFixed(1);
+      }
+      recalc();
+    }
+
+    /* ================================================================
+       EVENT: USER EDITS STARTER HYDRATION
+    ================================================================ */
+    function onShChange(id) {
+      const el  = document.getElementById('sh-' + id);
+      const val = parseFloat(el.value);
+      const ing = ings.find(i => i.id === id);
+      if (ing && !isNaN(val) && val > 0) {
+        ing.starterHydration = val;
+      }
+      recalc();
+    }
+
+    /* ================================================================
+       EVENT: USER EDITS INGREDIENT NAME
+    ================================================================ */
+    function onNameChange(id) {
+      const el  = document.getElementById('name-' + id);
+      const ing = ings.find(i => i.id === id);
+      if (ing) {
+        ing.name = el.value;
+        renderRecipe(computeWeights().weights);
+      }
+    }
+
+    /* ================================================================
+       ADD INGREDIENT
+    ================================================================ */
+    const defaultNames = {
+      Flour:   'New Flour',
+      Liquid:  'Water',
+      Salt:    'Salt',
+      Yeast:   'Yeast',
+      Fat:     'Oil',
+      Sugar:   'Sugar',
+      Starter: 'Sourdough Starter',
+      Other:   'Ingredient',
+    };
+
+    function addIngredient() {
+      const type = document.getElementById('add-type').value;
+      const ing = { id: nextId++, name: defaultNames[type] || 'Ingredient', type, pct: 0 };
+      if (type === 'Starter') ing.starterHydration = 100;
+      ings.push(ing);
+      renderRows();
+      recalc();
+
+      /* Focus the new name field */
+      setTimeout(() => {
+        const el = document.getElementById('name-' + ing.id);
+        if (el) { el.focus(); el.select(); }
+      }, 50);
+    }
+
+    /* ================================================================
+       REMOVE INGREDIENT
+    ================================================================ */
+    function removeIng(id) {
+      ings = ings.filter(i => i.id !== id);
+      renderRows();
+      recalc();
+    }
+
+    /* ================================================================
+       RENDER INGREDIENT ROWS
+    ================================================================ */
+    function renderRows() {
+      const list = document.getElementById('ing-list');
+      list.innerHTML = '';
+
+      ings.forEach(ing => {
+        /* Main row */
+        const row = document.createElement('div');
+        row.className = 'ing-row';
+        row.setAttribute('role', 'listitem');
+
+        /* Name */
+        const nameEl = document.createElement('input');
+        nameEl.type        = 'text';
+        nameEl.id          = 'name-' + ing.id;
+        nameEl.value       = ing.name;
+        nameEl.placeholder = 'Ingredient name';
+        nameEl.setAttribute('aria-label', 'Ingredient name');
+        nameEl.oninput = () => onNameChange(ing.id);
+
+        /* Percentage */
+        const pctEl = document.createElement('input');
+        pctEl.type  = 'number';
+        pctEl.id    = 'pct-' + ing.id;
+        pctEl.value = ing.pct;
+        pctEl.min   = '0';
+        pctEl.step  = '0.1';
+        pctEl.setAttribute('aria-label', ing.name + ' baker\'s percentage');
+        pctEl.oninput = () => onPctChange(ing.id);
+
+        /* Weight */
+        const wtEl = document.createElement('input');
+        wtEl.type  = 'number';
+        wtEl.id    = 'wt-' + ing.id;
+        wtEl.min   = '0';
+        wtEl.step  = '0.1';
+        wtEl.setAttribute('aria-label', ing.name + ' weight');
+        wtEl.oninput = () => onWtChange(ing.id);
+
+        /* Delete */
+        const delEl = document.createElement('button');
+        delEl.className = 'del-btn';
+        delEl.innerHTML = '&#x2715;';
+        delEl.setAttribute('aria-label', 'Remove ' + ing.name);
+        delEl.onclick = () => removeIng(ing.id);
+
+        row.appendChild(nameEl);
+        row.appendChild(pctEl);
+        row.appendChild(wtEl);
+        row.appendChild(delEl);
+        list.appendChild(row);
+
+        /* Starter hydration sub-row */
+        if (ing.type === 'Starter') {
+          const sub = document.createElement('div');
+          sub.className = 'ing-row starter-sub';
+          sub.innerHTML =
+            '<span>Starter hydration:</span>' +
+            '<input type="number" id="sh-' + ing.id + '" value="' + (ing.starterHydration || 100) +
+            '" min="1" max="500" step="1" aria-label="Starter hydration percentage" ' +
+            'oninput="onShChange(' + ing.id + ')" />' +
+            '<span>%</span>' +
+            '<span class="starter-decomp" id="sh-note-' + ing.id + '"></span>';
+          list.appendChild(sub);
+        }
+      });
+    }
+
+    /* ================================================================
+       RENDER RECIPE OUTPUT CARD
+    ================================================================ */
+    const typeOrder = { Flour: 0, Liquid: 1, Starter: 2, Salt: 3, Yeast: 4, Fat: 5, Sugar: 6, Other: 7 };
+
+    function renderRecipe(weights) {
+      const out = document.getElementById('recipe-out');
+      if (!ings.length) {
+        out.innerHTML = '<div class="recipe-empty">Fill out the Formula Builder to see the sorted recipe card here.</div>';
+        return;
+      }
+
+      const sorted = [...ings].sort((a, b) =>
+        (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9)
+      );
+
+      let html        = '';
+      let prevType    = null;
+      let totalWeight = 0;
+
+      sorted.forEach(ing => {
+        const w = weights[ing.id] || 0;
+        totalWeight += w;
+
+        /* Category divider */
+        if (prevType !== null && (typeOrder[ing.type] ?? 9) !== (typeOrder[prevType] ?? 9)) {
+          html += '<div class="recipe-divider" aria-hidden="true"></div>';
+        }
+        prevType = ing.type;
+
+        html +=
+          '<div class="recipe-item" role="listitem">' +
+            '<span class="ri-name">' + esc(ing.name) + '</span>' +
+            '<span class="ri-pct">'  + (ing.pct || 0).toFixed(1) + '%</span>' +
+            '<span class="ri-wt">'   + (fmt(w) || '0') + ' ' + unit + '</span>' +
+          '</div>';
+      });
+
+      html +=
+        '<div class="recipe-total">' +
+          '<span>Total Dough Weight</span>' +
+          '<span class="rt-wt">' + (fmt(totalWeight) || '0') + ' ' + unit + '</span>' +
+        '</div>';
+
+      out.innerHTML = html;
+    }
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* ================================================================
+       COPY RECIPE TO CLIPBOARD
+    ================================================================ */
+    function copyRecipe() {
+      const { weights } = computeWeights();
+      const trueHyd = computeTrueHydration(weights);
+
+      const sorted = [...ings].sort((a, b) =>
+        (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9)
+      );
+
+      const lines = [
+        "Baker's Percentage Formula (from AxiomApe.com)",
+        '='.repeat(46),
+      ];
+
+      let prevType    = null;
+      let totalWeight = 0;
+
+      sorted.forEach(ing => {
+        if (prevType !== null && (typeOrder[ing.type] ?? 9) !== (typeOrder[prevType] ?? 9)) {
+          lines.push('');
+        }
+        prevType = ing.type;
+
+        const w = weights[ing.id] || 0;
+        totalWeight += w;
+        const nameCol = ing.name.padEnd(22).slice(0, 22);
+        const pctCol  = ((ing.pct || 0).toFixed(1) + '%').padStart(7);
+        const wtCol   = (fmt(w) + ' ' + unit).padStart(10);
+        lines.push(nameCol + '  ' + pctCol + '   ' + wtCol);
+      });
+
+      lines.push('-'.repeat(46));
+      lines.push('Total Dough Weight'.padEnd(22) + '           ' + (fmt(totalWeight) + ' ' + unit).padStart(10));
+
+      if (trueHyd !== null && isFinite(trueHyd)) {
+        lines.push('True Dough Hydration: ' + trueHyd.toFixed(1) + '%');
+      }
+
+      const text = lines.join('\n');
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(flashCopied).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); } catch (e) { /* silent */ }
+      document.body.removeChild(ta);
+      flashCopied();
+    }
+
+    function flashCopied() {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy Recipe';
+        btn.classList.remove('copied');
+      }, 2200);
+    }
+
+    /* ================================================================
+       FAQ ACCORDION
+    ================================================================ */
+    function toggleFaq(btn) {
+      const wasOpen = btn.classList.contains('open');
+      document.querySelectorAll('.faq-q.open').forEach(b => {
+        b.classList.remove('open');
+        b.setAttribute('aria-expanded', 'false');
+        const a = b.nextElementSibling;
+        if (a) a.classList.remove('open');
+      });
+      if (!wasOpen) {
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        const a = btn.nextElementSibling;
+        if (a) a.classList.add('open');
+      }
+    }
+
+    /* ================================================================
+       BOOT
+    ================================================================ */
+    init();
+  </script>
+
+</body>
+</html>

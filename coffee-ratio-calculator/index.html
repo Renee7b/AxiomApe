@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coffee Ratio Calculator: Isolate Brew Ratios and Estimate Final Yield | AxiomApe</title>
+  <meta name="description" content="Free Coffee-to-Water Ratio Calculator: dial in your brew ratio for pour over, espresso, French press, Aeropress, and cold brew. See your exact dose, pour water, and estimated final liquid yield after grounds absorption. 100% client-side." />
+  <meta name="keywords" content="coffee to water ratio, coffee ratio calculator, pour over ratio, espresso yield calculator, french press ratio, coffee brewing calculator, aeropress ratio, cold brew ratio, coffee dose calculator, brew ratio chart, coffee grounds water ratio, barista ratio calculator, coffee extraction calculator, liquid yield calculator, coffee brewing math, grams of coffee per cup" />
+  <link rel="canonical" href="https://axiomape.com/coffee-ratio-calculator/" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Coffee Ratio Calculator",
+        "description": "Free Coffee-to-Water Ratio Calculator: dial in your brew ratio for pour over, espresso, French press, Aeropress, and cold brew. See your exact dose, pour water, and estimated final liquid yield after grounds absorption. 100% client-side.",
+        "url": "https://axiomape.com/coffee-ratio-calculator/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the golden ratio for brewing coffee?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Specialty Coffee Association of America (SCAA) recommends a brewing ratio of 1:18 (one gram of coffee per 18 grams of water) as a starting benchmark for balanced filter coffee. Most home baristas find the sweet spot falls between 1:15 and 1:17. Pour over brewers typically use 1:15 to 1:16, while French press users often prefer 1:14 to 1:15 for a fuller body. The golden ratio is a starting point, not a rule - your grind size, water temperature, and personal taste should guide the final number."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a higher coffee-to-water ratio mean stronger coffee?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, in simple terms. A higher coffee-to-water ratio (for example 1:10 versus 1:17) means more coffee solids dissolved per milliliter of water, which produces a stronger, more concentrated cup. However, strength and extraction quality are different concepts. Increasing your dose without adjusting your grind, water temperature, or brew time can produce a cup that is simultaneously strong and under-extracted (sour or grassy). The goal is a high dose with complete, even extraction."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is my final cup of coffee smaller than the amount of water I poured?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Coffee grounds absorb approximately 2 times their own weight in water during brewing. This absorbed water stays locked in the spent grounds and never makes it into your cup. For example, if you brew with 20 grams of coffee and 300 grams of water, roughly 40 grams (2 x 20g) is absorbed and lost, leaving you with approximately 260 grams of liquid in your cup. This liquid retention effect is more noticeable in immersion methods like French press and less pronounced in slow-drip methods where additional pouring can compensate."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the brew ratio differ between espresso and French press?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Espresso uses a very concentrated ratio, typically 1:2 (one gram of coffee to two grams of water by weight). A standard double shot uses 18 to 20 grams of coffee and produces 36 to 40 grams of espresso liquid. French press uses a much more diluted ratio, commonly between 1:12 and 1:15, resulting in a full-bodied but less concentrated beverage. The difference reflects the brewing physics: espresso forces water through tightly packed grounds under high pressure in 25 to 30 seconds, while French press steeps coarsely ground coffee for 4 minutes at atmospheric pressure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Should I measure coffee by volume (scoops) or by weight (grams)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Weight in grams is significantly more accurate and reproducible. Coffee bean density varies widely by roast level - a standard scoop of light roast can weigh up to 20 percent more than a scoop of dark roast because dark roasting expands and lightens the beans. A digital kitchen scale accurate to 0.1 grams removes this variable entirely and lets you dial in your recipe with precision. Most specialty coffee professionals switched to weight-based measurement as soon as affordable scales became available."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ---- Reset and base ---------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f172a;
+      --surface:      #1e293b;
+      --surface-2:    #263245;
+      --border:       #334155;
+      --text:         #f1f5f9;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+
+      /* Cafe palette */
+      --brown:        #78350f;
+      --brown-mid:    #92400e;
+      --brown-light:  #b45309;
+      --gold:         #d97706;
+      --gold-light:   #f59e0b;
+      --crema:        #fef3c7;
+
+      --radius:       14px;
+      --radius-sm:    8px;
+      --shadow:       0 4px 24px rgba(0,0,0,.4);
+      --shadow-sm:    0 2px 8px rgba(0,0,0,.25);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ---- Container -------------------------------------------- */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ---- Page header ------------------------------------------ */
+    .page-header {
+      background: linear-gradient(135deg, #3b1507 0%, #78350f 50%, #92400e 100%);
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: #fef3c7;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .page-header .subtitle {
+      font-size: 1rem;
+      color: #fde68a;
+      max-width: 620px;
+      margin: 0 auto;
+      opacity: .9;
+    }
+
+    /* ---- Cards ------------------------------------------------ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 20px;
+    }
+
+    /* ---- Main tool wrapper ------------------------------------ */
+    .tool-wrapper {
+      padding: 28px 0;
+    }
+
+    /* ---- Three-panel layout ----------------------------------- */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 700px) {
+      .panels { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Panel 1: Brew Profile -------------------------------- */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .panel-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    /* Method buttons */
+    .method-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .method-btn {
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: .8rem;
+      font-weight: 600;
+      padding: 9px 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .18s;
+      line-height: 1.2;
+    }
+    .method-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+    .method-btn.active {
+      background: var(--brown);
+      border-color: var(--gold);
+      color: var(--crema);
+    }
+    .method-btn .ratio-tag {
+      display: block;
+      font-size: .68rem;
+      font-weight: 400;
+      color: var(--gold-light);
+      opacity: .85;
+      margin-top: 2px;
+    }
+    .method-btn.active .ratio-tag { color: #fde68a; opacity: 1; }
+
+    /* Custom ratio slider */
+    .custom-slider-wrap {
+      display: none;
+      margin-bottom: 16px;
+    }
+    .custom-slider-wrap.visible { display: block; }
+    .custom-slider-wrap label {
+      font-size: .8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .custom-slider-wrap label span {
+      color: var(--gold-light);
+      font-weight: 700;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* Unit toggle */
+    .unit-toggle {
+      display: flex;
+      gap: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px;
+    }
+    .unit-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: .82rem;
+      font-weight: 600;
+      padding: 7px 10px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .unit-btn.active {
+      background: var(--brown);
+      color: var(--crema);
+    }
+    .unit-label {
+      font-size: .75rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    /* ---- Panel 2: Digital Scale ------------------------------- */
+    .scale-display {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .scale-field {
+      background: #0d1829;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px 12px;
+      transition: border-color .18s;
+    }
+    .scale-field:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(217,119,6,.15);
+    }
+    .scale-field label {
+      display: block;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .scale-field input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--gold-light);
+      caret-color: var(--gold);
+    }
+    .scale-field input::placeholder { color: var(--text-dim); opacity: .5; }
+    .scale-field .unit-suffix {
+      font-size: .85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .scale-divider {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--text-dim);
+      letter-spacing: .1em;
+    }
+
+    /* ---- Panel 3: Extraction Output --------------------------- */
+    .output-card {
+      background: linear-gradient(160deg, #1a0d03 0%, #1e1108 100%);
+      border: 1px solid var(--brown-mid);
+    }
+    .output-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(120,53,15,.35);
+    }
+    .output-row:last-of-type { border-bottom: none; }
+    .output-label {
+      font-size: .8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .output-value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--gold-light);
+    }
+    .output-value.yield-val { color: #86efac; }
+    .output-value.ratio-val { color: #c4b5fd; font-size: .95rem; }
+
+    .copy-btn {
+      width: 100%;
+      margin-top: 16px;
+      background: var(--brown);
+      border: 1px solid var(--gold);
+      border-radius: var(--radius-sm);
+      color: var(--crema);
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: 11px;
+      cursor: pointer;
+      transition: background .18s;
+    }
+    .copy-btn:hover { background: var(--brown-mid); }
+    .copy-btn.copied { background: #166534; border-color: #4ade80; color: #bbf7d0; }
+
+    .yield-note {
+      font-size: .72rem;
+      color: var(--text-dim);
+      margin-top: 10px;
+      line-height: 1.45;
+    }
+
+    /* ---- Ad placements (site-chrome handles visibility) ------- */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--text-dim);
+      font-size: .75rem;
+      min-height: 50px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--text-dim);
+      font-size: .75rem;
+    }
+
+    /* ---- Glossary -------------------------------------------- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item { }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--gold);
+      font-size: .85rem;
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: .82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ---- Educational section ---------------------------------- */
+    .edu-section {
+      color: var(--text-muted);
+    }
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      margin: 20px 0 8px;
+    }
+    .section-intro {
+      font-size: .95rem;
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+    .edu-section p {
+      font-size: .9rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* ---- FAQ accordion --------------------------------------- */
+    .faq-list { margin-top: 16px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--surface-2);
+      padding: 14px 18px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+      transition: background .15s;
+    }
+    .faq-q:hover { background: #2d3f58; }
+    .faq-q .faq-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: var(--brown);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9rem;
+      color: var(--crema);
+      font-weight: 700;
+      transition: transform .2s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: #161e2e;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ---- Disclaimer ------------------------------------------ */
+    .tool-disclaimer {
+      font-size: .78rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 20px;
+      background: var(--surface-2);
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Coffee Ratio Calculator</h1>
+    <p class="subtitle">Isolate coffee-to-water ratios for any extraction profile. Dial in your dose, pour weight, and estimated liquid yield - all in real time, no submit button needed.</p>
+  </header>
+
+  <div class="tool-wrapper">
+    <div class="container">
+
+      <!-- Three-Panel Dashboard -->
+      <div class="panels">
+
+        <!-- Panel 1: Brew Profile Settings -->
+        <div class="panel">
+          <div class="panel-title">Brew Profile</div>
+
+          <div class="method-grid">
+            <button class="method-btn active" data-ratio="16" onclick="setMethod(this)">
+              Pour Over
+              <span class="ratio-tag">1:16</span>
+            </button>
+            <button class="method-btn" data-ratio="15" onclick="setMethod(this)">
+              French Press
+              <span class="ratio-tag">1:15</span>
+            </button>
+            <button class="method-btn" data-ratio="2" onclick="setMethod(this)">
+              Espresso
+              <span class="ratio-tag">1:2</span>
+            </button>
+            <button class="method-btn" data-ratio="11" onclick="setMethod(this)">
+              Aeropress
+              <span class="ratio-tag">1:11</span>
+            </button>
+            <button class="method-btn" data-ratio="8" onclick="setMethod(this)">
+              Cold Brew
+              <span class="ratio-tag">1:8</span>
+            </button>
+            <button class="method-btn" data-ratio="custom" onclick="setMethod(this)">
+              Custom
+              <span class="ratio-tag">1:1 - 1:20</span>
+            </button>
+          </div>
+
+          <div class="custom-slider-wrap" id="sliderWrap">
+            <label>
+              Custom Ratio
+              <span id="sliderLabel">1:10</span>
+            </label>
+            <input type="range" id="ratioSlider" min="1" max="20" value="10"
+                   oninput="onSliderChange(this.value)" />
+          </div>
+
+          <div class="unit-label">Units</div>
+          <div class="unit-toggle">
+            <button class="unit-btn active" id="btnG" onclick="setUnit('g')">Grams / mL</button>
+            <button class="unit-btn" id="btnOz" onclick="setUnit('oz')">Ounces</button>
+          </div>
+        </div>
+
+        <!-- Panel 2: Digital Scale Inputs -->
+        <div class="panel">
+          <div class="panel-title">Digital Scale</div>
+          <div class="scale-display">
+
+            <div class="scale-field">
+              <label for="inputDose">Coffee Grounds (Dose)</label>
+              <input type="number" id="inputDose" placeholder="20"
+                     min="0" step="0.1"
+                     oninput="calcFromDose()" />
+              <div class="unit-suffix" id="doseSuffix">grams</div>
+            </div>
+
+            <div class="scale-divider">+ water at ratio below</div>
+
+            <div class="scale-field">
+              <label for="inputWater">Target Pour Water</label>
+              <input type="number" id="inputWater" placeholder="320"
+                     min="0" step="0.1"
+                     oninput="calcFromWater()" />
+              <div class="unit-suffix" id="waterSuffix">grams / mL</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel 3: Extraction Output Card -->
+        <div class="panel output-card">
+          <div class="panel-title">Extraction Output</div>
+
+          <div class="output-row">
+            <span class="output-label">Brew Ratio</span>
+            <span class="output-value ratio-val" id="outRatio">1:16</span>
+          </div>
+          <div class="output-row">
+            <span class="output-label">Coffee Dose</span>
+            <span class="output-value" id="outDose">-- g</span>
+          </div>
+          <div class="output-row">
+            <span class="output-label">Total Pour Water</span>
+            <span class="output-value" id="outWater">-- g</span>
+          </div>
+          <div class="output-row">
+            <span class="output-label">Estimated Liquid Yield</span>
+            <span class="output-value yield-val" id="outYield">-- g</span>
+          </div>
+
+          <div class="yield-note" id="yieldNote"></div>
+
+          <button class="copy-btn" id="copyBtn" onclick="copyRecipe()">Copy Recipe to Clipboard</button>
+        </div>
+
+      </div>
+      <!-- End three-panel dashboard -->
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- Educational Content -->
+  <div class="container" style="padding-bottom:48px;">
+
+    <!-- Glossary -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Brew Ratio</div>
+          <div class="glossary-def">The proportion of coffee grounds to water by weight, expressed as 1:X. A 1:15 ratio means 1 gram of coffee for every 15 grams of water.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Dose</div>
+          <div class="glossary-def">The weight of dry coffee grounds used in a single brew, measured in grams. The dose is your primary lever for controlling strength.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Yield</div>
+          <div class="glossary-def">The volume of brewed liquid that actually makes it into your cup after accounting for water absorbed and retained by the spent coffee grounds.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Extraction</div>
+          <div class="glossary-def">The process by which water dissolves soluble compounds (acids, sugars, lipids, caffeine) from coffee grounds. Under-extraction tastes sour; over-extraction tastes bitter.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Total Dissolved Solids (TDS)</div>
+          <div class="glossary-def">A measurement of the concentration of dissolved coffee compounds in your finished brew, expressed as a percentage. Specialty coffee targets roughly 1.15 to 1.45 percent TDS for filter coffee.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Bloom</div>
+          <div class="glossary-def">A pre-infusion pour of hot water (roughly 2 to 3 times the coffee dose) that degasses fresh grounds before the main pour, allowing CO2 to escape and improving even extraction.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Bypass Water</div>
+          <div class="glossary-def">Water added to a finished brew after extraction to dilute concentration without changing extraction percentage. Common in high-concentration brewing methods like Aeropress recipes.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Liquid Retention</div>
+          <div class="glossary-def">The water absorbed by coffee grounds during brewing and lost in the spent puck or filter bed. Ground coffee absorbs approximately 2 times its own weight in water during extraction.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational Section -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Coffee-to-Water Ratios</h2>
+
+      <p class="section-intro">If your coffee tastes too weak, too bitter, or nothing like what you ordered at your favorite cafe, the brew ratio is almost certainly the first thing to examine. Understanding the ratio between coffee and water - and learning to adjust it deliberately - is the single highest-leverage skill in home brewing.</p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>Choose your brew method from the six presets (or select Custom to dial in any ratio from 1:1 to 1:20). Type your coffee dose in grams into the Digital Scale panel and the water weight calculates instantly. Alternatively, type the amount of water you want to use and the required dose calculates automatically. The Extraction Output panel shows your active ratio, exact dose and water weights, and the estimated liquid yield in your cup after accounting for absorption.</p>
+
+      <p>Toggle between grams and ounces using the unit switch. All values recalculate in real time without any submit button. Use the Copy Recipe button to paste your recipe into a notes app or messaging app.</p>
+
+      <h3>Why Brew Ratios Matter More Than Grind Size</h3>
+      <p>Grind size controls extraction rate - how fast flavors dissolve. Brew ratio controls extraction concentration - how many dissolved flavors end up per milliliter of water. You can have a perfectly even extraction at any ratio; the difference is how strong or diluted the result tastes. Most brewing problems that seem like grind problems are actually ratio problems. If you increase your dose by just 10 percent and keep everything else constant, you will taste a noticeable increase in body and perceived strength even without touching your grinder.</p>
+
+      <h3>Standard Ratios by Brew Method</h3>
+      <p>Pour over methods (Hario V60, Chemex, Kalita Wave) perform well at 1:15 to 1:17, with 1:16 as a reliable starting point. French press typically uses 1:12 to 1:15 because immersion brewing extracts more efficiently than drip and a slightly lower ratio prevents over-concentration during the steep. Espresso is radically different: a classic Italian ratio is 1:2 (18 grams in, 36 grams out in roughly 25 to 30 seconds), while modern specialty espresso often uses 1:2.5 to 1:3 for brighter, more transparent flavor. Aeropress recipes vary enormously - the 1:11 preset here reflects a common standard recipe, but concentrated Aeropress recipes at 1:5 with bypass water are equally valid. Cold brew uses 1:8 because the long steep time (12 to 24 hours) extracts more total solids, and the resulting concentrate is typically diluted 1:1 with water or milk before serving.</p>
+
+      <h3>The Liquid Retention Calculation</h3>
+      <p>Most beginners are surprised to find less liquid in their cup than the water they poured. Coffee grounds act like a sponge: each gram absorbs roughly 2 grams of water during brewing. This tool calculates your estimated liquid yield using the formula: Yield = Total Pour Water - (Coffee Dose x 2). For a 20g dose with 320g of water, that means approximately 40g is absorbed by the grounds, leaving roughly 280g of coffee in your cup. The precise absorption rate varies slightly by grind coarseness, roast level, and freshness, so treat the yield estimate as a close approximation rather than an exact measurement.</p>
+
+      <h3>Measuring by Weight vs. Volume</h3>
+      <p>A standard tablespoon of coffee weighs approximately 5 to 7 grams depending on grind coarseness and bean density - a range significant enough to completely throw off a recipe. Dark roasts weigh noticeably less per unit volume than light roasts because the roasting process expands the beans and drives off mass as CO2 and moisture. A kitchen scale accurate to 0.1 grams eliminates this variable and costs under $15. Every serious home brewer and professional barista measures both coffee and water by weight.</p>
+
+      <!-- FAQ Accordion -->
+      <h3 style="margin-top:28px;">Frequently Asked Questions</h3>
+      <div class="faq-list">
+
+        <div class="faq-item" id="faq-0">
+          <div class="faq-q" onclick="toggleFaq(0)">
+            What is the golden ratio for brewing coffee?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            The Specialty Coffee Association of America recommends a brewing ratio of 1:18 as a starting benchmark for balanced filter coffee. Most home baristas find the sweet spot falls between 1:15 and 1:17. Pour over brewers typically use 1:15 to 1:16, while French press users often prefer 1:14 to 1:15 for a fuller body. The golden ratio is a starting point, not a rule - your grind size, water temperature, and personal taste should guide the final number.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-1">
+          <div class="faq-q" onclick="toggleFaq(1)">
+            Does a higher coffee-to-water ratio mean stronger coffee?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Yes, in simple terms. A higher ratio (for example 1:10 versus 1:17) means more coffee solids dissolved per milliliter of water, which produces a stronger, more concentrated cup. However, strength and extraction quality are different concepts. Increasing your dose without adjusting your grind, water temperature, or brew time can produce a cup that is simultaneously strong and under-extracted (sour or grassy). The goal is a high dose with complete, even extraction.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-2">
+          <div class="faq-q" onclick="toggleFaq(2)">
+            Why is my final cup of coffee smaller than the amount of water I poured?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Coffee grounds absorb approximately 2 times their own weight in water during brewing. This absorbed water stays locked in the spent grounds and never makes it into your cup. For example, if you brew with 20 grams of coffee and 300 grams of water, roughly 40 grams (2 x 20g) is absorbed and lost, leaving you with approximately 260 grams of liquid. This liquid retention effect is more noticeable in immersion methods like French press and less pronounced in slow-drip methods where additional pouring can compensate.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-3">
+          <div class="faq-q" onclick="toggleFaq(3)">
+            How does the brew ratio differ between espresso and French press?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Espresso uses a very concentrated ratio, typically 1:2 (one gram of coffee to two grams of water by weight). A standard double shot uses 18 to 20 grams of coffee and produces 36 to 40 grams of espresso liquid. French press uses a much more diluted ratio, commonly between 1:12 and 1:15, resulting in a full-bodied but less concentrated beverage. The difference reflects the brewing physics: espresso forces water through tightly packed grounds under high pressure in 25 to 30 seconds, while French press steeps coarsely ground coffee for 4 minutes at atmospheric pressure.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-4">
+          <div class="faq-q" onclick="toggleFaq(4)">
+            Should I measure coffee by volume (scoops) or by weight (grams)?
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-a">
+            Weight in grams is significantly more accurate and reproducible. Coffee bean density varies widely by roast level - a standard scoop of light roast can weigh up to 20 percent more than a scoop of dark roast because dark roasting expands and lightens the beans. A digital kitchen scale accurate to 0.1 grams removes this variable entirely and lets you dial in your recipe with precision. Most specialty coffee professionals switched to weight-based measurement as soon as affordable scales became available.
+          </div>
+        </div>
+
+      </div>
+      <!-- End FAQ -->
+
+      <div class="tool-disclaimer">
+        Brew ratio estimates and liquid yield calculations are provided for informational and recipe-planning purposes only. Actual yield varies by grind coarseness, roast freshness, filter type, and brewing technique. Liquid retention absorption rates are approximated at 2x the coffee dose and may differ for individual coffees or brew methods.
+      </div>
+
+    </div>
+    <!-- End educational section -->
+
+  </div>
+  <!-- End container -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ============================================================
+     STATE
+  ============================================================ */
+  var currentRatio = 16;    // water multiplier (coffee x ratio = water)
+  var currentUnit  = 'g';   // 'g' or 'oz'
+  var isCustom     = false;
+
+  var OZ_PER_G     = 0.0352739619;
+
+  /* ============================================================
+     METHOD SELECTOR
+  ============================================================ */
+  function setMethod(btn) {
+    document.querySelectorAll('.method-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+
+    var rVal = btn.getAttribute('data-ratio');
+    if (rVal === 'custom') {
+      isCustom = true;
+      currentRatio = parseInt(document.getElementById('ratioSlider').value, 10);
+      document.getElementById('sliderWrap').classList.add('visible');
+    } else {
+      isCustom = false;
+      currentRatio = parseFloat(rVal);
+      document.getElementById('sliderWrap').classList.remove('visible');
+    }
+
+    updateRatioLabel();
+    recalc();
+  }
+
+  /* ============================================================
+     CUSTOM SLIDER
+  ============================================================ */
+  function onSliderChange(val) {
+    currentRatio = parseInt(val, 10);
+    updateRatioLabel();
+    recalc();
+  }
+
+  function updateRatioLabel() {
+    document.getElementById('sliderLabel').textContent = '1:' + currentRatio;
+    document.getElementById('outRatio').textContent = '1:' + currentRatio;
+  }
+
+  /* ============================================================
+     UNIT TOGGLE
+  ============================================================ */
+  function setUnit(u) {
+    currentUnit = u;
+    document.getElementById('btnG').classList.toggle('active', u === 'g');
+    document.getElementById('btnOz').classList.toggle('active', u === 'oz');
+
+    if (u === 'g') {
+      document.getElementById('doseSuffix').textContent  = 'grams';
+      document.getElementById('waterSuffix').textContent = 'grams / mL';
+    } else {
+      document.getElementById('doseSuffix').textContent  = 'ounces';
+      document.getElementById('waterSuffix').textContent = 'fluid ounces';
+    }
+
+    // Convert displayed values on switch
+    var doseEl  = document.getElementById('inputDose');
+    var waterEl = document.getElementById('inputWater');
+    if (doseEl.value !== '') {
+      var gVal = (u === 'oz')
+        ? parseFloat(doseEl.value) / OZ_PER_G
+        : parseFloat(doseEl.value) * OZ_PER_G;
+      doseEl.value = round1(gVal);
+    }
+    if (waterEl.value !== '') {
+      var gValW = (u === 'oz')
+        ? parseFloat(waterEl.value) / OZ_PER_G
+        : parseFloat(waterEl.value) * OZ_PER_G;
+      waterEl.value = round1(gValW);
+    }
+    recalc();
+  }
+
+  /* ============================================================
+     CALCULATION CORE (internal values always in grams)
+  ============================================================ */
+  function round1(n) {
+    return Math.round(n * 10) / 10;
+  }
+
+  function toGrams(val) {
+    if (currentUnit === 'oz') return val / OZ_PER_G;
+    return val;
+  }
+
+  function fromGrams(g) {
+    if (currentUnit === 'oz') return g * OZ_PER_G;
+    return g;
+  }
+
+  function unitLabel() {
+    return currentUnit === 'oz' ? 'oz' : 'g';
+  }
+
+  function calcFromDose() {
+    var raw = parseFloat(document.getElementById('inputDose').value);
+    if (isNaN(raw) || raw < 0) { clearOutputs(); return; }
+    var doseG  = toGrams(raw);
+    var waterG = doseG * currentRatio;
+    // Update water field silently (no event loop)
+    document.getElementById('inputWater').value = round1(fromGrams(waterG));
+    renderOutputs(doseG, waterG);
+  }
+
+  function calcFromWater() {
+    var raw = parseFloat(document.getElementById('inputWater').value);
+    if (isNaN(raw) || raw < 0) { clearOutputs(); return; }
+    var waterG = toGrams(raw);
+    var doseG  = waterG / currentRatio;
+    // Update dose field silently
+    document.getElementById('inputDose').value = round1(fromGrams(doseG));
+    renderOutputs(doseG, waterG);
+  }
+
+  function recalc() {
+    // Prefer dose field if non-empty
+    var doseRaw  = parseFloat(document.getElementById('inputDose').value);
+    var waterRaw = parseFloat(document.getElementById('inputWater').value);
+    if (!isNaN(doseRaw) && doseRaw >= 0) {
+      calcFromDose();
+    } else if (!isNaN(waterRaw) && waterRaw >= 0) {
+      calcFromWater();
+    } else {
+      clearOutputs();
+    }
+  }
+
+  function renderOutputs(doseG, waterG) {
+    var yieldG = waterG - (doseG * 2);
+    var ul     = unitLabel();
+
+    document.getElementById('outRatio').textContent  = '1:' + currentRatio;
+    document.getElementById('outDose').textContent   = round1(fromGrams(doseG))  + ' ' + ul;
+    document.getElementById('outWater').textContent  = round1(fromGrams(waterG)) + ' ' + ul;
+
+    if (yieldG >= 0) {
+      document.getElementById('outYield').textContent  = round1(fromGrams(yieldG)) + ' ' + ul;
+      document.getElementById('yieldNote').textContent =
+        'Grounds absorb approx. ' + round1(fromGrams(doseG * 2)) + ' ' + ul +
+        ' of water during brewing (2x dose). Actual yield may vary.';
+    } else {
+      document.getElementById('outYield').textContent  = 'n/a';
+      document.getElementById('yieldNote').textContent =
+        'At this ratio the absorption estimate exceeds the water volume. ' +
+        'Consider a higher water-to-coffee ratio for a measurable cup yield.';
+    }
+  }
+
+  function clearOutputs() {
+    document.getElementById('outDose').textContent   = '-- ' + unitLabel();
+    document.getElementById('outWater').textContent  = '-- ' + unitLabel();
+    document.getElementById('outYield').textContent  = '-- ' + unitLabel();
+    document.getElementById('yieldNote').textContent = '';
+  }
+
+  /* ============================================================
+     COPY RECIPE
+  ============================================================ */
+  function copyRecipe() {
+    var doseEl  = document.getElementById('inputDose').value;
+    var waterEl = document.getElementById('inputWater').value;
+    var yield_  = document.getElementById('outYield').textContent;
+    var ul      = unitLabel();
+
+    if (!doseEl || !waterEl) {
+      alert('Enter a dose or water amount to generate a recipe first.');
+      return;
+    }
+
+    var lines = [
+      'Coffee Brew Recipe (from AxiomApe Coffee Ratio Calculator)',
+      'Brew Ratio:      1:' + currentRatio,
+      'Coffee Dose:     ' + doseEl + ' ' + ul,
+      'Pour Water:      ' + waterEl + ' ' + ul,
+      'Estimated Yield: ' + yield_,
+      '',
+      'Generated at axiomape.com/coffee-ratio-calculator/'
+    ];
+
+    navigator.clipboard.writeText(lines.join('\n')).then(function() {
+      var btn = document.getElementById('copyBtn');
+      btn.textContent = 'Recipe Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = 'Copy Recipe to Clipboard';
+        btn.classList.remove('copied');
+      }, 2200);
+    }).catch(function() {
+      alert('Copy failed. Please select and copy the recipe manually.');
+    });
+  }
+
+  /* ============================================================
+     INIT - set display ratio label on load
+  ============================================================ */
+  document.getElementById('outRatio').textContent = '1:' + currentRatio;
+</script>
+
+</body>
+</html>

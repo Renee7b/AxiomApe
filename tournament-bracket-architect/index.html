@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tournament Bracket Tree Layout Architect: Generate Single Elimination Brackets for Any Player Count | AxiomApe</title>
+  <meta name="description" content="Free single elimination tournament bracket generator. Enter 2 to 64 players, apply snake seeding, handle bye rounds automatically, and click to advance winners round by round. 100% client-side." />
+  <meta name="keywords" content="tournament bracket generator, single elimination bracket maker, bracket creator, seeded tournament bracket, bye round calculator, snake seeding bracket, competitive bracket maker, esports bracket tool, sports tournament bracket, online bracket maker free, 8 player bracket, 16 player bracket, 32 player bracket, bracket generator any player count, gaming tournament planner" />
+  <link rel="canonical" href="https://axiomape.com/tournament-bracket-architect/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Tournament Bracket Tree Layout Architect",
+        "description": "Free single elimination tournament bracket generator. Enter 2 to 64 players, apply snake seeding, handle bye rounds automatically, and click to advance winners round by round. 100% client-side.",
+        "url": "https://axiomape.com/tournament-bracket-architect/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does a single elimination bracket determine the champion?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In a single elimination bracket, every participant is placed into a tree structure where two players or teams compete in each matchup. The loser is immediately eliminated, while the winner advances to the next round. This continues until only one player remains undefeated and is crowned champion. The bracket is structured so that the two strongest seeds can only meet in the final, assuming they win every earlier matchup."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why are Byes necessary in non-power-of-two tournaments?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A single elimination bracket requires a number of participants equal to a power of two (2, 4, 8, 16, 32, 64) to fill perfectly. When the player count does not match a power of two, the bracket is padded to the next power of two and the empty slots become Byes. A player assigned a Bye automatically advances without playing. Byes go to the top seeds so the strongest competitors get a first-round advantage. For example, a 6-player tournament uses an 8-player structure, giving seeds 1 and 2 first-round Byes while seeds 3 through 6 compete."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is snake seeding and why is it used to balance competition?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Snake seeding is a bracket placement algorithm that arranges seeds so the top two competitors can only meet in the championship final. Seed 1 is placed on the opposite side of the bracket from Seed 2, so they cannot face each other before the finals. Seeds 3 and 4 are distributed so they can only meet in the semifinals. In an 8-player bracket the first-round matchups are: Seed 1 vs 8, Seed 4 vs 5, Seed 2 vs 7, and Seed 3 vs 6. This rewards higher seeds with easier early matches while creating competitive late-round contests."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I expand this bracket for a double elimination tournament?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A double elimination tournament requires two separate brackets: a Winners Bracket (identical to a standard single elimination bracket) and a Losers Bracket. Every time a player loses in the Winners Bracket they drop to the Losers Bracket and get one more chance to advance. A player is only fully eliminated after losing twice. The Losers Bracket winner faces the Winners Bracket winner in a Grand Final. To build this, create the main Winners Bracket first using this tool, then design a Losers Bracket of the same size fed by first-round and second-round losers from the Winners side."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the best way to print a large bracket for a live event?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use the Print/PDF Export button in the Telemetry panel. The tool triggers your browser print dialog with a layout optimized for landscape orientation. For brackets larger than 16 players, select landscape mode and scale to fit page. For 32-player brackets, legal size paper (8.5 x 14 inches) in landscape provides the clearest legibility without shrinking fonts below 9 points. For 64-player brackets, use 11 x 17 tabloid paper or export to PDF and have it printed at a copy shop."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0f172a;
+      --navy-mid:   #1e293b;
+      --navy-card:  #1a2744;
+      --blue:       #2563EB;
+      --blue-dim:   #1d4ed8;
+      --blue-glow:  rgba(37,99,235,0.25);
+      --gold:       #CA8A04;
+      --gold-light: #FDE68A;
+      --gold-glow:  rgba(202,138,4,0.25);
+      --text:       #e2e8f0;
+      --muted:      #94a3b8;
+      --border:     #334155;
+      --red:        #EF4444;
+      --green:      #22C55E;
+      --bg:         #0a1628;
+      --radius:     8px;
+      --shadow:     0 4px 24px rgba(0,0,0,0.45);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* PAGE HEADER */
+    .page-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f2040 100%);
+      border-bottom: 1px solid var(--blue);
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    /* MAIN */
+    .page-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* DASHBOARD */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 250px 1fr 210px;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 960px) {
+      .dashboard { grid-template-columns: 1fr 1fr; }
+      .panel-bracket { grid-column: 1 / -1; order: -1; }
+    }
+    @media (max-width: 600px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .panel-bracket { order: 0; }
+    }
+
+    /* PANEL */
+    .panel {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .panel-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--blue);
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* CONFIG PANEL */
+    .field-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .count-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+    .count-badge {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      min-width: 40px;
+      text-align: center;
+      border-radius: 6px;
+      padding: 2px 8px;
+    }
+
+    /* SEEDING TOGGLE */
+    .seg-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .seg-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 6px 4px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      text-align: center;
+    }
+    .seg-btn.active {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* PLAYER NAME INPUTS */
+    .names-scroll {
+      max-height: 340px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-right: 2px;
+    }
+    .names-scroll::-webkit-scrollbar { width: 4px; }
+    .names-scroll::-webkit-scrollbar-track { background: transparent; }
+    .names-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .seed-chip {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--gold);
+      min-width: 22px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .name-input {
+      flex: 1;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 0.8rem;
+      transition: border-color 0.15s;
+    }
+    .name-input:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--muted);
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--blue); color: var(--text); }
+
+    /* BRACKET PANEL */
+    .panel-bracket {
+      min-height: 300px;
+    }
+    .bracket-hint {
+      font-size: 0.73rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px 0;
+    }
+    .bracket-scroll {
+      overflow: auto;
+      border-radius: 5px;
+      background: #0a1422;
+      cursor: crosshair;
+      flex: 1;
+    }
+    #bracketCanvas {
+      display: block;
+    }
+
+    .bye-note {
+      font-size: 0.72rem;
+      color: var(--gold);
+      text-align: center;
+    }
+
+    /* TELEMETRY PANEL */
+    .tele-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .tele-card {
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .tele-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 2px;
+    }
+    .tele-val {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--blue);
+    }
+    .tele-val.gold { color: var(--gold); }
+    .tele-val.green { color: var(--green); }
+
+    .tele-full {
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .tele-full .tele-val {
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+
+    .champion-box {
+      background: linear-gradient(135deg, var(--gold-glow), rgba(202,138,4,0.1));
+      border: 1px solid var(--gold);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      display: none;
+    }
+    .champion-box.visible { display: block; }
+    .champion-label { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; }
+    .champion-name { font-size: 1.1rem; font-weight: 800; color: var(--gold-light); margin-top: 4px; }
+    .champion-icon { font-size: 1.6rem; margin-bottom: 4px; }
+
+    .panel-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2px 0;
+    }
+
+    .btn-blue {
+      background: var(--blue);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      padding: 9px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+      text-align: center;
+    }
+    .btn-blue:hover { background: var(--blue-dim); }
+
+    .btn-gold {
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      padding: 9px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+      text-align: center;
+    }
+    .btn-gold:hover { background: #b27a03; }
+
+    .copy-confirm {
+      font-size: 0.72rem;
+      color: var(--green);
+      text-align: center;
+      min-height: 16px;
+      transition: opacity 0.3s;
+    }
+
+    /* AD PLACEMENTS */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 12px 0;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* EDUCATIONAL SECTION */
+    .edu-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 8px;
+    }
+
+    .card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 16px;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--navy);
+      border-left: 3px solid var(--blue);
+      border-radius: 4px;
+      padding: 10px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--gold-light);
+      font-size: 0.88rem;
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 0.92rem;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 18px 0 8px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 10px;
+      line-height: 1.65;
+    }
+
+    /* FAQ ACCORDION */
+    .faq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      background: var(--navy);
+      border: none;
+      color: var(--text);
+      padding: 13px 16px;
+      text-align: left;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: #1e2a3a; }
+    .faq-arrow {
+      color: var(--blue);
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 13px 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.65;
+      background: var(--navy-mid);
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    @media print {
+      .page-header { background: #fff !important; color: #000 !important; }
+      .panel-config, .panel-tele, .edu-wrap, .axiom-ad-leaderboard,
+      .axiom-ad-mobile-anchor, header, footer { display: none !important; }
+      .dashboard { grid-template-columns: 1fr !important; }
+      .panel-bracket { border: none !important; background: transparent !important; }
+      .bracket-scroll { overflow: visible !important; }
+      body { background: #fff !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Tournament Bracket Tree Layout Architect</h1>
+      <p>Map competitive brackets across custom player counts. Single elimination seeding with automatic bye calculation.</p>
+    </header>
+
+    <!-- THREE-PANEL DASHBOARD -->
+    <div class="dashboard">
+
+      <!-- PANEL 1: BRACKET CONFIGURATION -->
+      <div class="panel panel-config">
+        <div class="panel-title">Bracket Configuration</div>
+
+        <div>
+          <label class="field-label">Total Participants</label>
+          <div class="count-row">
+            <input type="range" id="playerCount" min="2" max="64" value="8"
+              oninput="onCountChange(this.value)" />
+            <span class="count-badge" id="countDisplay">8</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">Seeding Mode</label>
+          <div class="seg-toggle">
+            <button class="seg-btn active" id="btn-standard" onclick="setSeedMode('standard')">Standard Order</button>
+            <button class="seg-btn" id="btn-random" onclick="setSeedMode('random')">Randomize Seeding</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">Participant Names <span style="color:var(--gold)" id="byeTag"></span></label>
+          <div class="names-scroll" id="namesContainer"></div>
+        </div>
+
+        <button class="btn-ghost" onclick="loadSampleNames()">Load Sample Players</button>
+        <button class="btn-ghost" onclick="clearAllNames()">Clear All Names</button>
+      </div>
+
+      <!-- PANEL 2: BRACKET VISUALIZATION -->
+      <div class="panel panel-bracket">
+        <div class="panel-title">Bracket Visualization</div>
+        <p class="bracket-hint">Click a player's name inside the bracket to advance them as the winner of that match.</p>
+        <div class="bracket-scroll" id="bracketScroll">
+          <canvas id="bracketCanvas"></canvas>
+        </div>
+        <p class="bracket-hint" id="byeNote" style="color:var(--gold);display:none;"></p>
+      </div>
+
+      <!-- PANEL 3: TELEMETRY AND EXPORT -->
+      <div class="panel panel-tele">
+        <div class="panel-title">Telemetry &amp; Export</div>
+
+        <div class="champion-box" id="championBox">
+          <div class="champion-icon">🏆</div>
+          <div class="champion-label">Champion</div>
+          <div class="champion-name" id="championName"></div>
+        </div>
+
+        <div class="tele-grid">
+          <div class="tele-card">
+            <div class="tele-label">Matches Remaining</div>
+            <div class="tele-val" id="tMatchesLeft">7</div>
+          </div>
+          <div class="tele-card">
+            <div class="tele-label">Bye Slots</div>
+            <div class="tele-val gold" id="tByes">0</div>
+          </div>
+        </div>
+
+        <div class="tele-full">
+          <div class="tele-label">Next Round Stage</div>
+          <div class="tele-val" id="tNextStage" style="font-size:0.88rem">Round 1</div>
+        </div>
+
+        <div class="tele-full">
+          <div class="tele-label">Bracket Complexity Score</div>
+          <div class="tele-val green" id="tComplexity">24</div>
+        </div>
+
+        <div class="tele-full">
+          <div class="tele-label">Total Match Slots</div>
+          <div class="tele-val" id="tTotalSlots">7</div>
+        </div>
+
+        <hr class="panel-divider" />
+
+        <button class="btn-blue" onclick="copyBracketCode()">Copy Bracket Code</button>
+        <div class="copy-confirm" id="copyConfirm">&nbsp;</div>
+
+        <button class="btn-gold" onclick="printBracket()">Print / PDF Export</button>
+      </div>
+
+    </div>
+    <!-- END DASHBOARD -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <div class="edu-wrap">
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Single Elimination</div>
+            <div class="glossary-def">A tournament format where one loss ends a competitor's run. Every match is win-or-go-home, producing the fastest path to a champion from any field size.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Seed</div>
+            <div class="glossary-def">A ranking number assigned to each participant before the tournament begins. Seed 1 is the top-ranked competitor. Seeds determine bracket placement so stronger players are kept apart in early rounds.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Bye</div>
+            <div class="glossary-def">An automatic first-round advancement awarded when the player count is not a power of two. The player with a Bye skips the first round entirely and moves directly into Round 2 without playing a match.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Bracket</div>
+            <div class="glossary-def">The tree-shaped diagram that maps every possible matchup in a tournament from the first round through the final. Each branch represents a potential path to the championship.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Quarterfinals</div>
+            <div class="glossary-def">The round containing eight remaining competitors. Winning the quarterfinal advances a player to the top four (Semifinals). Quarterfinals occur in brackets with 8 or more players.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Semifinals</div>
+            <div class="glossary-def">The round containing four remaining competitors. Two matches take place, and the two winners advance to the championship final. Semifinals exist in any bracket with 4 or more players.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Finals</div>
+            <div class="glossary-def">The last match of the tournament, contested between the two remaining undefeated competitors. The winner of the Final is the tournament champion.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Matchup</div>
+            <div class="glossary-def">A single scheduled contest between two participants within a bracket. Each matchup produces exactly one winner who advances and one loser who is eliminated (in single elimination format).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Tournament Brackets and Single Elimination Seeding</h2>
+
+        <p class="section-intro">
+          Whether you are organizing a gaming tournament, a sports league, an office ping pong challenge, or any competitive event, a single elimination bracket is the fastest and clearest way to crown a champion. This guide explains the math behind bracket sizing, why byes matter, how snake seeding protects competitive integrity, and how to use this tool to build a professional bracket in seconds.
+        </p>
+
+        <h3>How to Use This Tool</h3>
+        <p>
+          Start in Panel 1 (Bracket Configuration) by dragging the participant slider to set your total player or team count. The bracket will automatically recalculate the bracket size and any required Bye slots. Enter each participant's name in the numbered fields, with Seed 1 at the top representing your top-ranked competitor. Choose Standard Order to honor your seeding or Randomize Seeding to draw randomly. The bracket visualization in Panel 2 updates instantly as you type. Once names are set, click any participant's name inside the bracket to advance them as the winner of that matchup. Winners propagate automatically to the next round. Panel 3 tracks how many matches remain, what the next stage is called, and your bracket complexity score.
+        </p>
+
+        <h3>The Mathematics of Bracket Sizing and Byes</h3>
+        <p>
+          A single elimination bracket requires exactly a power-of-two participant count (2, 4, 8, 16, 32, or 64) to fill symmetrically. When your event has a non-power-of-two entry count, such as 12 or 20 players, the bracket engine calculates the minimum number of Byes needed using the formula: Byes = (next power of two above N) minus N. For 12 players, the next power of two is 16, so 4 Bye slots are required. Those Byes are awarded to the top 4 seeds so the highest-ranked players get an automatic first-round advance. The total number of real matches needed to determine a champion in any single elimination bracket is always exactly N minus 1, regardless of bracket size.
+        </p>
+
+        <h3>Snake Seeding: Protecting Your Top Competitors</h3>
+        <p>
+          The snake seeding algorithm ensures the bracket is perfectly balanced so that higher seeds face lighter opposition in early rounds. The placement rule is recursive: in a bracket of size P, Seed 1 is always on the opposite side from Seed 2. Seed 1 and Seed 2 can only meet in the final. Seed 3 and Seed 4 are distributed so they can only meet in the semifinals. This pattern continues recursively for all seeds. In an 8-person bracket, the resulting first-round matchups are Seed 1 vs Seed 8, Seed 4 vs Seed 5, Seed 2 vs Seed 7, and Seed 3 vs Seed 6. This construction is the international standard used in esports, tennis Grand Slams, FIFA World Cup knockout stages, and NCAA tournament play.
+        </p>
+
+        <h3>Round Naming and Stage Labels</h3>
+        <p>
+          This tool automatically assigns round labels based on how many participants remain. The terminology is consistent with major competitive events worldwide. The final two players compete in the Championship (or Grand Final). The round of four is the Semifinals. The round of eight is the Quarterfinals. Earlier rounds are labeled Round 1, Round 2, and so on. For large brackets (32 or 64 players), the early rounds may be called Round of 64, Round of 32, or Play-In rounds depending on the event format.
+        </p>
+
+        <h3>Exporting and Sharing Your Bracket</h3>
+        <p>
+          Use the Copy Bracket Code button to generate a plain-text representation of your bracket, including all player placements, current winners, and remaining matchups. Paste this into any messaging app, email, or document to share the current bracket state. For live events or physical posting, use the Print button to generate a printer-optimized layout. The tool hides all configuration panels during print and formats the bracket canvas for landscape paper output. For large brackets, select landscape orientation and scale-to-fit in your printer dialog.
+        </p>
+
+        <!-- FAQ ACCORDION -->
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">
+              How does a single elimination bracket determine the champion?
+              <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-a">
+              In a single elimination bracket, every participant is placed into a tree structure where two players or teams compete in each matchup. The loser is immediately eliminated from the tournament, while the winner advances to the next round. This continues until only one player remains undefeated, who is crowned the champion. The bracket is structured so that the two strongest seeds can only meet in the final round, assuming they win every preceding matchup. A single elimination tournament with N players always requires exactly N minus 1 total matches.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">
+              Why are Byes necessary in non-power-of-two tournaments?
+              <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-a">
+              A single elimination bracket requires a number of participants equal to a power of two (2, 4, 8, 16, 32, 64) to fill perfectly without any gaps. When the player count does not match a power of two, the bracket is padded up to the next power of two, and the empty slots become Byes. A player assigned a Bye automatically advances to the next round without playing. Byes are awarded to the top seeds so the strongest competitors get a first-round advantage over lower-ranked opponents who must play extra matches. For example, a 6-player tournament uses an 8-player bracket structure, giving seeds 1 and 2 automatic first-round advancement while seeds 3 through 6 compete in two real first-round matches.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">
+              What is snake seeding and why is it used to balance competition?
+              <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-a">
+              Snake seeding is a bracket placement algorithm that arranges competitor seeds so the two top competitors can only meet in the championship final. Seed 1 is placed on the opposite side of the bracket from Seed 2, so they cannot play each other before the final. Seeds 3 and 4 are distributed to ensure they can only meet in the semifinals. This mirrors how the bracket folds: in an 8-player bracket the first-round matchups become Seed 1 vs 8, Seed 4 vs 5, Seed 2 vs 7, and Seed 3 vs 6. The result rewards higher seeds with easier early matches while preserving competitive quality in late-round matchups. Snake seeding is the standard used in most professional esports, tennis slams, and NCAA tournaments.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">
+              How can I expand this bracket for a double elimination tournament?
+              <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-a">
+              A double elimination tournament requires two separate brackets running simultaneously: a Winners Bracket (identical in structure to the standard single elimination bracket this tool generates) and a Losers Bracket. Every time a player loses in the Winners Bracket they drop to the Losers Bracket and get one more chance to advance. A player is only fully eliminated after losing twice (once in each bracket). The Losers Bracket winner faces the Winners Bracket winner in a Grand Final. Depending on the ruleset, the Winners Bracket finalist may enter the Grand Final with a one-loss advantage. To build this format, generate the Winners Bracket first in this tool, then design an identically sized Losers Bracket fed by first-round and second-round losers from the Winners side.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)">
+              What is the best way to print a large bracket for a live event?
+              <span class="faq-arrow">&#9660;</span>
+            </button>
+            <div class="faq-a">
+              Use the Print/PDF Export button in the Telemetry panel. The bracket layout is optimized for landscape orientation on standard paper sizes. For brackets larger than 16 players, select landscape mode in your printer dialog and set scaling to "fit page." For a 32-player bracket, legal size paper (8.5 by 14 inches) in landscape orientation provides the clearest legibility without fonts falling below 9 points. For 64-player brackets, consider printing on 11 by 17 tabloid paper or exporting to PDF and having it professionally printed at a copy shop. Posting the bracket on a wall or whiteboard is standard practice for in-person gaming events, LAN parties, and office tournaments.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <!-- END EDU WRAP -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+  /* =====================================================
+     STATE
+  ===================================================== */
+  const S = {
+    playerCount: 8,
+    seedMode: 'standard',
+    names: [],
+    rounds: [],
+    bracketSize: 8,
+    totalRounds: 3,
+    hitBoxes: [],
+    champion: null
+  };
+
+  let rebuildTimer = null;
+
+  /* =====================================================
+     MATH HELPERS
+  ===================================================== */
+  function nextPow2(n) {
+    let p = 1;
+    while (p < n) p <<= 1;
+    return p;
+  }
+
+  function buildSeedOrder(size) {
+    if (size === 2) return [1, 2];
+    const half = buildSeedOrder(size / 2);
+    const result = [];
+    for (const s of half) {
+      result.push(s);
+      result.push(size + 1 - s);
+    }
+    return result;
+  }
+
+  function getRoundLabel(roundIdx, totalRounds) {
+    const fromEnd = totalRounds - roundIdx;
+    if (fromEnd === 1) return 'Championship';
+    if (fromEnd === 2) return 'Semifinals';
+    if (fromEnd === 3) return 'Quarterfinals';
+    return 'Round ' + (roundIdx + 1);
+  }
+
+  /* =====================================================
+     NAME INPUT MANAGEMENT
+  ===================================================== */
+  function getNames() {
+    const names = [];
+    for (let i = 0; i < S.playerCount; i++) {
+      const inp = document.getElementById('p-' + i);
+      names.push(inp ? inp.value.trim() || ('Player ' + (i + 1)) : ('Player ' + (i + 1)));
+    }
+    return names;
+  }
+
+  function buildNameInputs() {
+    const container = document.getElementById('namesContainer');
+    container.innerHTML = '';
+    for (let i = 0; i < S.playerCount; i++) {
+      const row = document.createElement('div');
+      row.className = 'name-row';
+      row.innerHTML =
+        '<span class="seed-chip">#' + (i + 1) + '</span>' +
+        '<input class="name-input" id="p-' + i + '" type="text" ' +
+        'placeholder="' + (S.names[i] || 'Player ' + (i + 1)) + '" ' +
+        'value="' + (S.names[i] || '') + '" ' +
+        'oninput="scheduleBuild()" maxlength="24" autocomplete="off" />';
+      container.appendChild(row);
+    }
+  }
+
+  function scheduleBuild() {
+    clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(() => {
+      S.names = getNames();
+      buildBracket();
+      drawBracket();
+      updateTelemetry();
+    }, 400);
+  }
+
+  /* =====================================================
+     BRACKET CONSTRUCTION
+  ===================================================== */
+  function buildBracket() {
+    const N = S.playerCount;
+    const P = nextPow2(Math.max(N, 2));
+    S.bracketSize = P;
+    S.totalRounds = Math.log2(P);
+
+    const seedOrder = buildSeedOrder(P); // 1-indexed seed numbers
+    const names = S.names.length >= N ? S.names : getNames();
+
+    let ordered;
+    if (S.seedMode === 'random') {
+      ordered = [...names.slice(0, N)].sort(() => Math.random() - 0.5);
+    } else {
+      ordered = names.slice(0, N);
+    }
+
+    // Build first round: pair seeds using snake order
+    const firstRound = [];
+    for (let i = 0; i < seedOrder.length; i += 2) {
+      const s1 = seedOrder[i] - 1;      // 0-indexed
+      const s2 = seedOrder[i + 1] - 1;
+      const p1 = s1 < N ? ordered[s1] : null;
+      const p2 = s2 < N ? ordered[s2] : null;
+      const isBye = p1 === null || p2 === null;
+      const autoWin = p1 === null ? p2 : (p2 === null ? p1 : null);
+      firstRound.push({
+        p1: p1 !== null ? p1 : 'BYE',
+        p2: p2 !== null ? p2 : 'BYE',
+        winner: isBye ? autoWin : null,
+        bye: isBye,
+        winSlot: isBye ? (p1 === null ? 1 : 0) : null
+      });
+    }
+
+    // Build subsequent rounds
+    S.rounds = [firstRound];
+    for (let r = 1; r < S.totalRounds; r++) {
+      const prev = S.rounds[r - 1];
+      const round = [];
+      for (let i = 0; i < prev.length; i += 2) {
+        round.push({
+          p1: prev[i] ? prev[i].winner : null,
+          p2: prev[i + 1] ? prev[i + 1].winner : null,
+          winner: null,
+          bye: false,
+          winSlot: null
+        });
+      }
+      S.rounds.push(round);
+    }
+
+    // Detect champion
+    const last = S.rounds[S.totalRounds - 1];
+    S.champion = (last && last.length === 1 && last[0].winner) ? last[0].winner : null;
+
+    // Update bye note
+    const byes = P - N;
+    const byeNote = document.getElementById('byeNote');
+    const byeTag = document.getElementById('byeTag');
+    if (byes > 0) {
+      const msg = byes + ' Bye' + (byes > 1 ? 's' : '') + ' awarded to top seed' + (byes > 1 ? 's' : '') + ' (auto-advance)';
+      byeNote.textContent = msg;
+      byeNote.style.display = 'block';
+      byeTag.textContent = '(Byes: ' + byes + ')';
+    } else {
+      byeNote.style.display = 'none';
+      byeTag.textContent = '';
+    }
+  }
+
+  function propagate() {
+    for (let r = 1; r < S.rounds.length; r++) {
+      const prev = S.rounds[r - 1];
+      const cur = S.rounds[r];
+      for (let m = 0; m < cur.length; m++) {
+        const src1 = prev[m * 2];
+        const src2 = prev[m * 2 + 1];
+        const newP1 = src1 ? src1.winner : null;
+        const newP2 = src2 ? src2.winner : null;
+        if (cur[m].p1 !== newP1 || cur[m].p2 !== newP2) {
+          cur[m].p1 = newP1;
+          cur[m].p2 = newP2;
+          cur[m].winner = null;
+          cur[m].winSlot = null;
+        }
+      }
+    }
+    const last = S.rounds[S.totalRounds - 1];
+    S.champion = (last && last.length === 1 && last[0].winner) ? last[0].winner : null;
+  }
+
+  function selectWinner(roundIdx, matchIdx, slot) {
+    const match = S.rounds[roundIdx][matchIdx];
+    if (!match) return;
+    if (match.bye) return;
+
+    const player = slot === 0 ? match.p1 : match.p2;
+    if (!player) return;
+
+    if (match.winSlot === slot) {
+      match.winner = null;
+      match.winSlot = null;
+    } else {
+      match.winner = player;
+      match.winSlot = slot;
+    }
+
+    propagate();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  /* =====================================================
+     CANVAS DRAWING
+  ===================================================== */
+  const SLOT_H    = 28;
+  const MATCH_H   = SLOT_H * 2 + 1;
+  const MATCH_GAP = 18;
+  const CELL_H    = MATCH_H + MATCH_GAP;
+  const ROUND_W   = 175;
+  const BOX_W     = 138;
+  const H_PAD     = 14;
+  const V_PAD     = 40;
+
+  function matchCenterY(roundIdx, matchIdx) {
+    const span = Math.pow(2, roundIdx);
+    const baseCell = matchIdx * span;
+    return V_PAD + baseCell * CELL_H + ((span * CELL_H - MATCH_GAP) / 2);
+  }
+
+  function drawBracket() {
+    const canvas = document.getElementById('bracketCanvas');
+    if (!canvas || !S.rounds.length) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const totalRounds = S.totalRounds;
+    const firstCount = S.rounds[0].length;
+
+    const cW = H_PAD * 2 + totalRounds * ROUND_W;
+    const cH = V_PAD + firstCount * CELL_H - MATCH_GAP + 30;
+
+    canvas.style.width  = cW + 'px';
+    canvas.style.height = cH + 'px';
+    canvas.width  = Math.round(cW * dpr);
+    canvas.height = Math.round(cH * dpr);
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // Background
+    ctx.fillStyle = '#0a1422';
+    ctx.fillRect(0, 0, cW, cH);
+
+    S.hitBoxes = [];
+
+    for (let r = 0; r < totalRounds; r++) {
+      const round = S.rounds[r];
+      const label = getRoundLabel(r, totalRounds);
+      const rx = H_PAD + r * ROUND_W;
+
+      // Round label
+      ctx.fillStyle = r === totalRounds - 1 ? '#CA8A04' : '#94a3b8';
+      ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label.toUpperCase(), rx + BOX_W / 2, V_PAD - 14);
+
+      for (let m = 0; m < round.length; m++) {
+        const match  = round[m];
+        const cy     = matchCenterY(r, m);
+        const my     = cy - MATCH_H / 2;
+        const p1Won  = match.winSlot === 0;
+        const p2Won  = match.winSlot === 1;
+        const done   = match.winner !== null;
+
+        // Outer box
+        ctx.fillStyle = '#111827';
+        ctx.strokeStyle = done ? '#CA8A04' : (r === totalRounds - 1 ? '#2563EB88' : '#2563EB55');
+        ctx.lineWidth = done ? 1.5 : 1;
+        rrect(ctx, rx, my, BOX_W, MATCH_H, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        // Slot 0 highlight
+        if (p1Won) {
+          ctx.fillStyle = '#CA8A04';
+          rrect(ctx, rx + 1, my + 1, BOX_W - 2, SLOT_H - 1, [4, 4, 0, 0]);
+          ctx.fill();
+        }
+
+        // Slot 1 highlight
+        if (p2Won) {
+          ctx.fillStyle = '#CA8A04';
+          rrect(ctx, rx + 1, my + SLOT_H + 1, BOX_W - 2, SLOT_H - 1, [0, 0, 4, 4]);
+          ctx.fill();
+        }
+
+        // Divider
+        ctx.strokeStyle = '#1e3a5f';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(rx + 6, my + SLOT_H);
+        ctx.lineTo(rx + BOX_W - 6, my + SLOT_H);
+        ctx.stroke();
+
+        // Slot text helper
+        const slotText = (txt, sy, isWin, isTbd) => {
+          ctx.font = (isWin ? 'bold ' : '') + '11px system-ui, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillStyle = isTbd ? '#374151' : (isWin ? '#fff' : (match.bye ? '#4b5563' : '#cbd5e1'));
+          const display = txt ? (txt.length > 17 ? txt.substring(0, 15) + '..' : txt) : '---';
+          ctx.fillText(display, rx + 7, sy + SLOT_H / 2 + 4);
+        };
+
+        const p1Tbd = !match.p1;
+        const p2Tbd = !match.p2;
+        slotText(match.p1, my, p1Won, p1Tbd);
+        slotText(match.p2, my + SLOT_H, p2Won, p2Tbd);
+
+        // Seed numbers for round 0
+        if (r === 0 && !match.bye) {
+          ctx.font = '9px system-ui, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#2563EB88';
+          // We don't have seed numbers in match state, skip for cleanliness
+        }
+
+        // BYE badge
+        if (match.bye) {
+          ctx.fillStyle = '#CA8A0466';
+          ctx.font = 'bold 9px system-ui, sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('BYE', rx + BOX_W - 6, my + MATCH_H / 2 + 3);
+        }
+
+        // Click hit boxes (both slots)
+        if (!match.bye) {
+          S.hitBoxes.push({ x: rx, y: my,          w: BOX_W, h: SLOT_H, r, m, slot: 0 });
+          S.hitBoxes.push({ x: rx, y: my + SLOT_H, w: BOX_W, h: SLOT_H, r, m, slot: 1 });
+        }
+
+        // Connector lines to next round
+        if (r < totalRounds - 1) {
+          const nextMatchIdx = Math.floor(m / 2);
+          const nextCY = matchCenterY(r + 1, nextMatchIdx);
+          const connX  = rx + BOX_W;
+          const midX   = rx + ROUND_W - 8;
+
+          ctx.strokeStyle = done ? '#CA8A0488' : '#2563EB44';
+          ctx.lineWidth = 1.5;
+
+          // Horizontal from match right to junction
+          ctx.beginPath();
+          ctx.moveTo(connX, cy);
+          ctx.lineTo(midX, cy);
+          ctx.stroke();
+
+          // Vertical and horizontal to next round (only for even m)
+          if (m % 2 === 0) {
+            const sibling = round[m + 1];
+            const sibCY = sibling ? matchCenterY(r, m + 1) : cy;
+            const connColor = (done && sibling && sibling.winner) ? '#CA8A0488' : '#2563EB44';
+
+            ctx.strokeStyle = '#2563EB44';
+            ctx.beginPath();
+            ctx.moveTo(midX, cy);
+            ctx.lineTo(midX, sibCY);
+            ctx.stroke();
+
+            ctx.strokeStyle = connColor;
+            ctx.beginPath();
+            ctx.moveTo(midX, nextCY);
+            ctx.lineTo(rx + ROUND_W, nextCY);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Champion trophy display (right of final match)
+    if (S.champion) {
+      const cx = H_PAD + (totalRounds - 1) * ROUND_W + BOX_W + 14;
+      const cy = matchCenterY(totalRounds - 1, 0);
+      ctx.fillStyle = '#CA8A04';
+      ctx.font = 'bold 14px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('CHAMPION', cx, cy - 8);
+      ctx.fillStyle = '#FDE68A';
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      const n = S.champion.length > 14 ? S.champion.substring(0, 12) + '..' : S.champion;
+      ctx.fillText(n, cx, cy + 10);
+    }
+  }
+
+  // Rounded rectangle helper (compatible with older browsers)
+  function rrect(ctx, x, y, w, h, r) {
+    const rad = typeof r === 'number' ? [r, r, r, r] : r;
+    ctx.beginPath();
+    ctx.moveTo(x + rad[0], y);
+    ctx.lineTo(x + w - rad[1], y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rad[1]);
+    ctx.lineTo(x + w, y + h - rad[2]);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rad[2], y + h);
+    ctx.lineTo(x + rad[3], y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rad[3]);
+    ctx.lineTo(x, y + rad[0]);
+    ctx.quadraticCurveTo(x, y, x + rad[0], y);
+    ctx.closePath();
+  }
+
+  /* =====================================================
+     CLICK DETECTION
+  ===================================================== */
+  function setupCanvasClick() {
+    const canvas = document.getElementById('bracketCanvas');
+    canvas.addEventListener('click', function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      for (const hb of S.hitBoxes) {
+        if (cx >= hb.x && cx <= hb.x + hb.w && cy >= hb.y && cy <= hb.y + hb.h) {
+          selectWinner(hb.r, hb.m, hb.slot);
+          break;
+        }
+      }
+    });
+
+    // Touch support
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      const cx = touch.clientX - rect.left;
+      const cy = touch.clientY - rect.top;
+      for (const hb of S.hitBoxes) {
+        if (cx >= hb.x && cx <= hb.x + hb.w && cy >= hb.y && cy <= hb.y + hb.h) {
+          selectWinner(hb.r, hb.m, hb.slot);
+          break;
+        }
+      }
+    });
+  }
+
+  /* =====================================================
+     TELEMETRY
+  ===================================================== */
+  function updateTelemetry() {
+    // Matches remaining (real matches without a winner)
+    let remaining = 0;
+    let nextStage = '';
+    const byes = S.bracketSize - S.playerCount;
+
+    for (let r = 0; r < S.rounds.length; r++) {
+      for (const m of S.rounds[r]) {
+        if (!m.bye && m.winner === null) {
+          remaining++;
+          if (!nextStage) nextStage = getRoundLabel(r, S.totalRounds);
+        }
+      }
+    }
+
+    // Complexity score: total match slots in the bracket
+    const complexity = S.bracketSize - 1;
+
+    document.getElementById('tMatchesLeft').textContent = remaining;
+    document.getElementById('tByes').textContent = byes;
+    document.getElementById('tNextStage').textContent = remaining === 0 ? 'Complete!' : nextStage;
+    document.getElementById('tComplexity').textContent = complexity;
+    document.getElementById('tTotalSlots').textContent = complexity + ' total / ' + (S.playerCount - 1) + ' real';
+
+    // Champion display
+    const champBox  = document.getElementById('championBox');
+    const champName = document.getElementById('championName');
+    if (S.champion) {
+      champBox.classList.add('visible');
+      champName.textContent = S.champion;
+    } else {
+      champBox.classList.remove('visible');
+    }
+  }
+
+  /* =====================================================
+     EXPORT FUNCTIONS
+  ===================================================== */
+  function copyBracketCode() {
+    const lines = ['TOURNAMENT BRACKET', '==================', 'Participants: ' + S.playerCount + '  |  Byes: ' + (S.bracketSize - S.playerCount), ''];
+
+    for (let r = 0; r < S.rounds.length; r++) {
+      lines.push(getRoundLabel(r, S.totalRounds).toUpperCase());
+      const round = S.rounds[r];
+      for (let m = 0; m < round.length; m++) {
+        const match = round[m];
+        const p1 = match.p1 || 'TBD';
+        const p2 = match.p2 || 'TBD';
+        const result = match.winner ? ('-> ' + match.winner) : '-> TBD';
+        const byeStr = match.bye ? ' [BYE]' : '';
+        lines.push('  Match ' + (m + 1) + ': ' + p1 + ' vs ' + p2 + byeStr + '  ' + result);
+      }
+      lines.push('');
+    }
+
+    if (S.champion) {
+      lines.push('CHAMPION: ' + S.champion);
+    } else {
+      lines.push('CHAMPION: TBD');
+    }
+
+    const text = lines.join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => showCopyConfirm());
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopyConfirm();
+    }
+  }
+
+  function showCopyConfirm() {
+    const el = document.getElementById('copyConfirm');
+    el.textContent = 'Copied to clipboard!';
+    setTimeout(() => { el.textContent = ' '; }, 2500);
+  }
+
+  function printBracket() {
+    window.print();
+  }
+
+  /* =====================================================
+     CONTROL HANDLERS
+  ===================================================== */
+  function onCountChange(val) {
+    const n = parseInt(val, 10);
+    S.playerCount = n;
+    document.getElementById('countDisplay').textContent = n;
+    S.names = getNames().slice(0, n);
+    buildNameInputs();
+    buildBracket();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  function setSeedMode(mode) {
+    S.seedMode = mode;
+    document.getElementById('btn-standard').classList.toggle('active', mode === 'standard');
+    document.getElementById('btn-random').classList.toggle('active', mode === 'random');
+    S.names = getNames();
+    buildBracket();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  function loadSampleNames() {
+    const samples = [
+      'DragonStrike', 'ShadowBolt', 'IronFist', 'ThunderClap',
+      'VoidRacer', 'NeonSlash', 'PhoenixRise', 'StormBreaker',
+      'CryptoKing', 'BladeRunner', 'ZeroCool', 'MaestroX',
+      'Ripley', 'EchoWave', 'TitanPulse', 'OmegaForce',
+      'NightWolf', 'SolarFlare', 'GhostPing', 'ApexRider',
+      'CobaltStrike', 'RocketFuel', 'DuskRaider', 'LunaEdge',
+      'CrystalFang', 'VoltSpike', 'FrostBite', 'EmberGlow',
+      'QuickDraw', 'SerpentKing', 'TurboLancer', 'GrandMaster'
+    ];
+    const inputs = document.querySelectorAll('.name-input');
+    inputs.forEach((inp, i) => {
+      inp.value = samples[i] || ('Player ' + (i + 1));
+    });
+    S.names = getNames();
+    buildBracket();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  function clearAllNames() {
+    const inputs = document.querySelectorAll('.name-input');
+    inputs.forEach(inp => { inp.value = ''; });
+    S.names = getNames();
+    buildBracket();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  /* =====================================================
+     FAQ ACCORDION
+  ===================================================== */
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    item.classList.toggle('open');
+  }
+
+  /* =====================================================
+     INIT
+  ===================================================== */
+  function init() {
+    S.playerCount = 8;
+    S.names = [];
+    for (let i = 0; i < S.playerCount; i++) S.names.push('Player ' + (i + 1));
+    buildNameInputs();
+    buildBracket();
+    setupCanvasClick();
+    drawBracket();
+    updateTelemetry();
+  }
+
+  window.addEventListener('load', init);
+  window.addEventListener('resize', () => { drawBracket(); });
+  </script>
+
+</body>
+</html>

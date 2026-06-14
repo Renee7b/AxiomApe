@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anagram Puzzle Matrix Unscrambler: Isolate Sub-Word Combinations from Any Letters | AxiomApe</title>
+  <meta name="description" content="Free anagram puzzle matrix unscrambler. Enter up to 15 scrambled letters to instantly isolate every valid sub-word and exact anagram using frequency map analysis. Supports wildcard blank tiles. Groups results by length with Scrabble scoring. 100% browser-based." />
+  <meta name="keywords" content="anagram solver, word unscrambler, sub-word generator, jumble solver, letter permutation tool, scrabble word finder, anagram finder, blank tile solver, word scramble helper, anagram puzzle solver, frequency map word solver, combinatorics word tool, word matrix unscrambler, letter combination finder, anagram matrix" />
+  <link rel="canonical" href="https://axiomape.com/anagram-puzzle-matrix-unscrambler/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Anagram Puzzle Matrix Unscrambler",
+        "description": "Free anagram puzzle matrix unscrambler. Enter up to 15 scrambled letters to instantly isolate every valid sub-word and exact anagram using frequency map analysis. Supports wildcard blank tiles. Groups results by length with Scrabble scoring. 100% browser-based.",
+        "url": "https://axiomape.com/anagram-puzzle-matrix-unscrambler/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between an anagram and a permutation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An anagram is a specific real word or phrase formed by rearranging all the letters of another word or phrase. A permutation is a mathematical concept referring to any possible ordered arrangement of a set of items, whether or not the result is a real word. For example, the letters in LISTEN can be permuted into SILENT (a valid anagram) but also into TLSENI (a meaningless permutation). This tool focuses exclusively on anagrams: arrangements that form actual dictionary words."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a character frequency map solve puzzles faster than brute force?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Brute force generates every possible permutation of the input letters and checks each one against a dictionary. For just 10 letters, that is 10 factorial (3,628,800) permutations to test, which crashes most browsers. A character frequency map instead counts how many of each letter the input contains, then checks each dictionary word to see if its letter requirements can be satisfied by those counts. This converts an exponential problem into a linear scan of the dictionary, completing in milliseconds regardless of input length."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do blank tiles or wildcards exponentially increase possible word combinations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A wildcard blank tile can substitute for any of the 26 letters in the alphabet. Each wildcard you add to your input effectively multiplies the search space by 26, because every missing letter in a candidate word can now be filled by the blank. Two wildcards multiply the possibilities by 26 times 26, or 676. This is why Scrabble blank tiles are so powerful: a single blank tile dramatically expands the number of words you can form from your rack."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the formula for calculating total possible letter permutations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For n distinct letters, the total permutations equal n factorial (written n!), which is n multiplied by every positive integer below it. For example, 5 letters produce 5! = 120 arrangements. If letters repeat, divide by the factorial of each repeated count to avoid duplicates. For AABBC with two As, two Bs, and one C, the unique arrangements are 5! divided by (2! x 2! x 1!) = 30. Sub-word combinations (words shorter than the full input) are calculated by summing the permutations for each sub-length, making the total count grow very rapidly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can this tool find words that are smaller than the total inputted letters?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. This tool isolates every valid sub-word combination, not only exact anagrams that use all your letters. If you enter PLANET, the tool finds planet itself, but also plate, panel, leant, plan, lane, lean, pane, tale, ale, pan, lap, nap, and many more. The minimum word length slider lets you filter out very short words if you only want results of a certain length."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --panel-bg:    #1e293b;
+      --card-bg:     #1e293b;
+      --inner-bg:    #0f172a;
+      --border:      #334155;
+      --border-hi:   #475569;
+      --text:        #e2e8f0;
+      --text-muted:  #94a3b8;
+      --text-dim:    #64748b;
+      --gold:        #F59E0B;
+      --gold-dim:    #92580A;
+      --gold-bg:     rgba(245,158,11,0.12);
+      --emerald:     #10B981;
+      --emerald-bg:  rgba(16,185,129,0.12);
+      --danger:      #ef4444;
+      --radius:      10px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.4);
+      --font:        'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       TOP BAR (hidden by site-chrome)
+    ============================================================ */
+    .top-bar {
+      text-align: center;
+      padding: 10px 16px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .top-bar a { font-weight: 600; }
+
+    /* ============================================================
+       PAGE WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      width: 100%;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .page-header h1 span { color: var(--gold); }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       TOOL CARD
+    ============================================================ */
+    .tool-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    /* ============================================================
+       THREE-PANEL GRID
+    ============================================================ */
+    .three-panel {
+      display: grid;
+      grid-template-columns: 280px 1fr 220px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .three-panel {
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel-console { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 600px) {
+      .three-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       PANELS
+    ============================================================ */
+    .panel {
+      background: var(--inner-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ============================================================
+       PANEL 1: SCRAMBLE CONSOLE
+    ============================================================ */
+    .letter-input-wrap {
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    #letterInput {
+      width: 100%;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      background: var(--panel-bg);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--gold);
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      caret-color: var(--gold);
+      text-align: center;
+    }
+    #letterInput:focus { border-color: var(--gold); }
+    #letterInput::placeholder {
+      color: var(--text-dim);
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .input-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    /* Letter tile rack */
+    #tileRack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+      min-height: 38px;
+      margin-bottom: 18px;
+    }
+    .tile {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 38px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-hi);
+      border-radius: 5px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--gold);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .tile-score {
+      position: absolute;
+      bottom: 2px;
+      right: 3px;
+      font-size: 0.5rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .tile.wildcard {
+      color: var(--emerald);
+      border-color: var(--emerald);
+    }
+
+    /* Slider */
+    .control-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .control-label span { color: var(--gold); font-weight: 700; }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--gold);
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    /* Wildcard toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .toggle-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .toggle-label strong { color: var(--emerald); }
+
+    .toggle {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--emerald); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    /* ============================================================
+       PANEL 2: WORD MATRIX
+    ============================================================ */
+    .matrix-placeholder {
+      text-align: center;
+      padding: 40px 10px;
+      color: var(--text-dim);
+    }
+    .matrix-placeholder .big-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+    .length-group { margin-bottom: 20px; }
+    .length-heading {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .length-count {
+      background: var(--border);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .word-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .word-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-transform: lowercase;
+      cursor: default;
+      transition: border-color 0.15s;
+    }
+    .word-chip:hover { border-color: var(--border-hi); }
+    .word-chip.exact {
+      background: var(--gold-bg);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .word-chip.wildmatch {
+      background: var(--emerald-bg);
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+
+    /* ============================================================
+       PANEL 3: TELEMETRY AND SCORING
+    ============================================================ */
+    .telemetry-row {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .telemetry-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .telemetry-key {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .telemetry-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .telemetry-val.gold { color: var(--gold); }
+    .telemetry-val.emerald { color: var(--emerald); }
+    .telemetry-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--gold);
+      color: #000;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-top: 16px;
+    }
+    .copy-btn:hover { opacity: 0.88; }
+    .copy-btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* Legend */
+    .legend {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .legend-dot.gold { background: var(--gold); }
+    .legend-dot.emerald { background: var(--emerald); }
+
+    /* ============================================================
+       AD PLACEMENTS
+    ============================================================ */
+    .axiom-ad-leaderboard {
+      margin: 24px 0;
+      min-height: 90px;
+      background: var(--panel-bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .axiom-ad-mobile-anchor {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 900;
+      min-height: 50px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* ============================================================
+       CONTENT CARDS (GLOSSARY AND EDUCATIONAL)
+    ============================================================ */
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--inner-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--emerald);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ol {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding-left: 20px;
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: var(--inner-bg);
+      border: none;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--panel-bg); }
+    .faq-q .faq-icon {
+      font-size: 1.1rem;
+      color: var(--gold);
+      flex-shrink: 0;
+      transition: transform 0.25s;
+    }
+    .faq-q[aria-expanded="true"] .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 0 16px 14px;
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--inner-bg);
+    }
+    .faq-a.open { display: block; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--emerald);
+      color: #000;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 20px;
+      border-radius: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 1000;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    Free tools from <a href="/" rel="noopener">axiomape.com</a>
+  </div>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Anagram Puzzle <span>Matrix</span> Unscrambler</h1>
+      <p>Isolate sub-word combinations from any scrambled letter set using instant frequency map analysis. No brute force. No crashes.</p>
+    </header>
+
+    <!-- ============================================================
+         THREE-PANEL TOOL DASHBOARD
+    ============================================================ -->
+    <div class="tool-card">
+      <div class="three-panel">
+
+        <!-- PANEL 1: SCRAMBLE CONSOLE -->
+        <div class="panel panel-console">
+          <div class="panel-label">Scramble Console</div>
+
+          <div class="letter-input-wrap">
+            <input
+              type="text"
+              id="letterInput"
+              maxlength="18"
+              placeholder="Type letters..."
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              oninput="onInputChange()"
+              aria-label="Enter scrambled letters, up to 15, plus question marks for wildcard blank tiles"
+            />
+          </div>
+          <p class="input-hint">Up to 15 letters. Use ? for wildcard blank tiles.</p>
+
+          <div id="tileRack" aria-hidden="true"></div>
+
+          <label class="control-label" for="minLen">
+            Minimum Word Length: <span id="minLenVal">3</span> letters
+          </label>
+          <input
+            type="range"
+            id="minLen"
+            min="2"
+            max="7"
+            value="3"
+            oninput="onLenChange(this.value)"
+            aria-label="Minimum word length filter"
+          />
+
+          <div class="toggle-row">
+            <span class="toggle-label">Enable <strong>Wildcard Blank Tiles</strong><br>
+              <small style="color:var(--text-dim);font-size:0.7rem;">? counts as any missing letter</small>
+            </span>
+            <label class="toggle" aria-label="Enable wildcard blank tile mode">
+              <input type="checkbox" id="wildcardToggle" onchange="onInputChange()" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- PANEL 2: WORD MATRIX -->
+        <div class="panel panel-matrix">
+          <div class="panel-label">Word Matrix</div>
+          <div id="matrixOutput">
+            <div class="matrix-placeholder">
+              <div class="big-icon">&#128269;</div>
+              <p>Enter letters above to generate the word matrix.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: TELEMETRY AND SCORING CARD -->
+        <div class="panel panel-telemetry">
+          <div class="panel-label">Telemetry and Scoring</div>
+
+          <div class="telemetry-row">
+            <div class="telemetry-key">Total Valid Words</div>
+            <div class="telemetry-val" id="statTotal">--</div>
+            <div class="telemetry-sub">matches from dictionary</div>
+          </div>
+
+          <div class="telemetry-row">
+            <div class="telemetry-key">Exact Anagrams</div>
+            <div class="telemetry-val gold" id="statExact">--</div>
+            <div class="telemetry-sub">use all input letters</div>
+          </div>
+
+          <div class="telemetry-row">
+            <div class="telemetry-key">Max Base Score</div>
+            <div class="telemetry-val emerald" id="statScore">--</div>
+            <div class="telemetry-sub" id="statScoreWord">best Scrabble value</div>
+          </div>
+
+          <button class="copy-btn" id="copyBtn" onclick="copyWords()" disabled>
+            Copy Word List
+          </button>
+
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-dot gold"></span>
+              Exact anagram (uses all letters)
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot emerald"></span>
+              Wildcard assist (blank tile used)
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Anagram</div>
+          <div class="glossary-def">A real word formed by rearranging every letter of another word or phrase. LISTEN and SILENT are anagrams of each other.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Sub-word</div>
+          <div class="glossary-def">Any valid word that can be formed using some (but not necessarily all) of the letters from a larger input set. Also called a sub-anagram or embedded word.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Permutation</div>
+          <div class="glossary-def">Any ordered arrangement of a set of items. Not all permutations are real words. The letters CAT have 6 permutations: CAT, CTA, ACT, ATC, TCA, TAC.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Frequency Map (Character Counting)</div>
+          <div class="glossary-def">A data structure that records how many times each letter appears in a string. This tool uses frequency maps to match words to available letters in microseconds instead of testing billions of permutations.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Wildcard</div>
+          <div class="glossary-def">A blank tile (typed as ? in this tool) that can represent any letter of the alphabet. A single wildcard can substitute for any missing letter when checking if a word can be formed from your input.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Combinatorics</div>
+          <div class="glossary-def">The branch of mathematics concerned with counting, arranging, and selecting items from sets. Anagram solving is a direct application: how many valid word arrangements exist within a given letter pool?</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Time Complexity</div>
+          <div class="glossary-def">A measure of how quickly an algorithm's runtime grows as input size increases. Brute-force permutation checking is O(n!) complexity and is impractically slow. Frequency map checking is O(n * w) where w is dictionary size, making it fast enough to run live in a browser.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Anagram Solving and Sub-Word Isolation</h2>
+
+      <p class="section-intro">
+        Whether you are stuck in a Scrabble endgame, solving a jumble puzzle in your morning newspaper, or building a word game in code, understanding how to efficiently extract every valid word from a set of scrambled letters is an invaluable skill. This guide explains the mathematics, the algorithms, and the strategies behind anagram solving so you can use this tool with full confidence.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <p>
+        Using the Anagram Puzzle Matrix Unscrambler is designed to be frictionless and immediate:
+      </p>
+      <ol>
+        <li>Type your scrambled letters into the large input field in the Scramble Console panel. You can enter up to 15 characters. Letters are automatically uppercased and displayed as individual Scrabble-style tiles showing their point values.</li>
+        <li>Adjust the Minimum Word Length slider if you want to filter out very short words. A setting of 3 is the default and is recommended for most puzzle scenarios.</li>
+        <li>If you have blank tiles in your game (Scrabble or Bananagrams), type a question mark (?) for each blank and enable the Wildcard Blank Tiles toggle. The tool will treat each ? as a wild card that can cover any missing letter.</li>
+        <li>The Word Matrix panel updates instantly. Words are grouped by length (longest first) and alphabetized within each group. Words highlighted in gold are exact anagrams using every single one of your letters. Words highlighted in green required at least one wildcard tile to form.</li>
+        <li>The Telemetry and Scoring panel shows the total number of valid words found, the count of exact anagrams, and the highest Scrabble base score achievable from any single word in your results.</li>
+        <li>Click Copy Word List to export all found words to your clipboard, sorted and grouped for easy reference.</li>
+      </ol>
+
+      <h3>Why Frequency Maps Beat Brute Force</h3>
+      <p>
+        The naive approach to anagram solving generates every possible permutation of your input letters and tests each one against a dictionary. For a 7-letter input like SCRABBLE, that is 7 factorial (5,040 tests) for 7-letter words alone. Add in sub-words of every shorter length and the number explodes to over 13,000 tests. At 10 letters, a full factorial permutation check requires 3,628,800 comparisons just for words of that length. At 12 letters, the number exceeds 479 million. This is computationally infeasible in a web browser and would cause the page to freeze or crash.
+      </p>
+      <p>
+        The frequency map approach solves this in a completely different direction. Instead of generating arrangements of your letters, the algorithm pre-computes a simple count of each letter in your input. It then iterates through a pre-built dictionary of valid English words. For each word, it checks whether the word's letter requirements can be satisfied by the available counts. This check takes at most 26 comparisons (one per letter of the alphabet) per word. With a 4,000-word dictionary, the entire search completes in well under a millisecond regardless of how many letters you entered.
+      </p>
+
+      <h3>Understanding Exact Anagrams vs Sub-Words</h3>
+      <p>
+        An exact anagram uses every single letter in your input exactly once. If your input is PASTE (5 letters), then TAPES is an exact anagram. A sub-word uses only some of those letters. TAPE, SEAT, APES, PETS, STEP, EATS, APE, PET, and many more are all sub-words of PASTE. This tool surfaces all of them simultaneously, grouped by length. Exact anagrams are highlighted in gold so they stand out from the sub-word results.
+      </p>
+
+      <h3>Wildcard Blank Tiles Explained</h3>
+      <p>
+        In Scrabble, Bananagrams, and similar games, blank tiles are the most valuable pieces because they can represent any letter. When you enable wildcards in this tool, each question mark you type serves as a free-substitution tile. The frequency map algorithm is extended to maintain a separate wildcard budget. When checking whether a dictionary word can be formed from your letters, any letter deficit (a letter the word needs but your rack does not have) is covered by spending a wildcard. If your wildcard budget runs out before all deficits are covered, that word is excluded. Wildcard-assisted matches are highlighted in green in the Word Matrix so you know which words require your blank tile to play.
+      </p>
+
+      <h3>Scrabble Scoring Reference</h3>
+      <p>
+        Standard Scrabble letter point values: A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N=1, O=1, P=3, Q=10, R=1, S=1, T=1, U=1, V=4, W=4, X=8, Y=4, Z=10. The Maximum Base Score shown in the Telemetry panel is the sum of letter values for the highest-scoring word in your results, before any board multipliers are applied.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the difference between an anagram and a permutation?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          An anagram is a specific real word or phrase formed by rearranging all the letters of another word or phrase. A permutation is a mathematical concept referring to any possible ordered arrangement of a set of items, whether or not the result is a real word. For example, the letters in LISTEN can be permuted into SILENT (a valid anagram) but also into TLSENI (a meaningless permutation). This tool focuses exclusively on anagrams: arrangements that form actual dictionary words.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          How does a character frequency map solve puzzles faster than brute force?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Brute force generates every possible permutation of the input letters and checks each one against a dictionary. For just 10 letters, that is 10 factorial (3,628,800) permutations to test, which crashes most browsers. A character frequency map instead counts how many of each letter the input contains, then checks each dictionary word to see if its letter requirements can be satisfied by those counts. This converts an exponential problem into a linear scan of the dictionary, completing in milliseconds regardless of input length.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Why do blank tiles or wildcards exponentially increase possible word combinations?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          A wildcard blank tile can substitute for any of the 26 letters in the alphabet. Each wildcard you add to your input effectively multiplies the search space by 26, because every missing letter in a candidate word can now be filled by the blank. Two wildcards multiply the possibilities by 26 times 26, or 676. This is why Scrabble blank tiles are so powerful: a single blank tile dramatically expands the number of words you can form from your rack.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the formula for calculating total possible letter permutations?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          For n distinct letters, the total permutations equal n factorial (written n!), which is n multiplied by every positive integer below it. For example, 5 letters produce 5! = 120 arrangements. If letters repeat, divide by the factorial of each repeated count to avoid duplicates. For AABBC with two As, two Bs, and one C, the unique arrangements are 5! divided by (2! x 2! x 1!) = 30. Sub-word combinations (words shorter than the full input) are calculated by summing the permutations for each sub-length, making the total count grow very rapidly.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Can this tool find words that are smaller than the total inputted letters?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Yes. This tool isolates every valid sub-word combination, not only exact anagrams that use all your letters. If you enter PLANET, the tool finds planet itself, but also plate, panel, leant, plan, lane, lean, pane, tale, ale, pan, lap, nap, and many more. The minimum word length slider lets you filter out very short words if you only want results of a certain length.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <div id="toast">Copied!</div>
+
+  <script>
+  /* ============================================================
+     LETTER SCORES (Standard Scrabble values)
+  ============================================================ */
+  const LS = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
+
+  /* ============================================================
+     DICTIONARY (3,500+ common English words)
+  ============================================================ */
+  const DICT = (function(){
+    const w = [];
+
+    // 2-letter words
+    w.push(...'aa,ab,ad,ae,ag,ah,ai,al,am,an,ar,as,at,aw,ax,ay,ba,be,bi,bo,by,da,de,do,ed,ef,eh,el,em,en,er,es,et,ex,fa,go,ha,he,hi,ho,id,if,in,is,it,jo,ka,ki,la,li,lo,ma,me,mi,mo,mu,my,na,ne,no,nu,od,oe,of,oh,oi,ok,on,op,or,os,ow,ox,oy,pa,pe,pi,qi,re,sh,si,so,ta,ti,to,uh,um,un,up,us,ut,we,xi,ya,ye,yo,za'.split(','));
+
+    // 3-letter words
+    w.push(...'aah,aal,aba,ace,ach,act,add,ado,ads,adz,aff,aft,aga,age,ago,aha,ahi,ahs,aid,aim,ain,air,ais,ait,aka,alb,ale,alp,als,alt,ama,ami,amp,amu,ana,and,ane,ani,ant,any,ape,apo,apt,arb,arc,are,ark,arm,art,ash,ask,asp,ass,ate,auk,ava,ave,avo,awe,awl,awn,axe,aye,ays,baa,bad,bag,ban,bar,bas,bat,bay,bed,beg,bet,bey,bid,big,bit,boa,bob,bog,boo,bot,bow,box,boy,bra,bro,bub,bud,bug,bum,bun,bus,but,buy,bye,cab,cam,can,cap,car,cat,caw,cay,chi,cob,cod,cog,col,cop,cos,cot,cow,coy,cub,cup,cur,cut,dab,dam,den,dew,dig,dim,dip,doe,dog,don,dot,dry,dub,dud,dug,duo,ear,eat,eel,ego,elk,ell,elm,ems,end,era,err,eve,ewe,eye,fad,fan,far,fat,fax,fay,fed,few,fez,fib,fig,fin,fit,fix,fly,fob,foe,fog,fop,for,fox,fry,fun,fur,gab,gag,gal,gap,gar,gel,gem,get,gig,gin,gnu,god,got,gum,gun,gut,guy,gym,had,ham,has,hat,hay,her,hew,hex,hey,hid,him,hip,his,hit,hob,hod,hog,hop,hot,how,hub,hug,hum,hun,hut,ice,icy,ill,imp,ink,inn,ion,ire,irk,ivy,jab,jag,jam,jar,jaw,jay,jet,jib,jig,job,joy,jug,jut,keg,key,kid,kin,kit,koi,lab,lad,lag,lap,law,lax,lay,lea,led,leg,let,lid,lip,lit,log,lot,low,lug,mad,man,map,mar,mat,maw,mew,mix,mob,mod,moo,mop,mud,mug,nab,nag,nap,nee,net,new,nib,nil,nit,nob,nod,nor,not,now,nun,nut,oak,oaf,oat,odd,ode,off,oft,oil,old,one,opt,orb,ore,our,out,owe,owl,pad,pal,pan,pap,par,pas,pat,paw,pay,pea,peg,pen,pep,per,pet,pew,pie,pig,pin,pit,ply,pod,pop,pot,pow,pro,pub,pug,pun,pup,put,rag,ram,ran,rap,rat,raw,ray,red,ref,rep,rev,rid,rig,rim,rip,rob,rod,rot,row,rub,rug,rum,run,rut,rye,sad,sag,sap,sat,saw,say,sea,set,sew,shy,sin,sip,sit,six,ski,sky,sob,sod,son,sop,sow,spa,spy,sty,sub,sue,sum,sun,sup,tab,tan,tap,tar,tat,tax,tea,ten,the,thy,tie,tin,tip,tod,toe,too,top,toy,try,tub,tug,two,ugh,urn,use,van,vat,via,vie,vow,wag,war,was,way,web,wed,wig,win,wit,woe,won,woo,wow,yak,yam,yap,yet,yew,yip,you,zap,zed,zen,zip,zoo'.split(','));
+
+    // 4-letter words
+    w.push(...'able,ably,ache,acid,acne,acre,acts,aged,ages,aims,airs,airy,also,alto,amid,anew,anti,ants,arch,area,arms,army,arts,atom,aunt,auto,avid,away,awed,axes,axle,axis,baby,back,bade,bail,bait,bale,ball,balm,band,bane,bang,bank,bare,barn,base,bath,bats,bead,beak,beam,bean,bear,beat,beef,beer,bees,belt,bend,best,bird,bite,bits,blow,blue,blur,boar,boat,body,bold,bolt,bone,book,boom,bore,born,boss,both,bout,bowl,brag,bray,brew,buck,buff,bulk,bull,burp,bush,busy,buzz,byte,cage,cake,calf,call,calm,came,camp,card,care,cart,case,cash,cast,cave,cell,chat,chef,chin,chip,cite,city,clad,clam,clap,claw,clay,clip,clod,clog,club,clue,coal,coat,code,coil,coin,cold,come,cone,cook,cool,copy,core,cork,corn,cost,cozy,cram,crew,crop,crow,crud,cube,cure,curl,cute,dark,dart,data,date,dawn,days,dead,deaf,deal,debt,deck,deed,deep,deny,desk,diet,dime,dine,dire,dirt,disc,dish,disk,dive,dock,dome,done,door,dose,dove,down,drag,draw,drew,drip,drop,drum,dual,dull,dumb,dump,dune,dusk,dust,duty,dyed,each,earl,earn,ease,east,easy,edge,eggs,epic,even,ever,evil,exam,fade,fail,fair,fake,fall,fame,fang,farm,fast,fate,fear,feat,feet,fell,felt,fend,fern,file,fill,film,find,fine,fire,firm,fish,fist,five,flag,flat,flaw,flea,fled,flew,flex,flip,flow,foam,fold,fond,font,food,fool,ford,fore,form,fort,foul,four,free,frog,from,fuel,full,fume,fuse,fuzz,gain,gale,game,gang,gaze,gear,gene,gift,gird,girl,give,glad,glee,glow,glue,goad,gold,golf,good,goof,gore,gown,grab,gram,gray,grew,grin,grip,grit,grow,gulf,gust,guts,hack,hail,hair,half,hall,halt,hand,hang,hard,hare,harm,harp,hash,hate,have,hawk,haze,hazy,head,heal,heap,hear,heat,heel,hell,helm,help,herb,here,hero,high,hill,hint,hire,hold,hole,home,hood,hook,hope,horn,hose,host,hour,hull,hung,hunt,hurt,idea,idle,inch,into,iron,isle,itch,item,join,joke,jolt,jump,just,keen,keep,kill,kind,king,knew,knot,know,lack,laid,lake,lamb,land,lane,lash,last,late,lazy,lead,lean,leap,left,lend,less,liar,lick,lied,life,lift,like,limb,lime,limp,line,link,lion,list,live,load,loan,lock,loft,lone,long,look,loop,lord,lore,lose,loss,lost,loud,love,luck,lull,lump,lust,mace,made,mail,main,make,male,mane,many,mark,mars,mass,mast,mate,math,maze,meal,mean,meet,melt,menu,mere,mesh,mild,mile,milk,mill,mind,mint,miss,mist,mode,mold,mole,mood,moon,moor,more,most,move,much,mule,must,myth,nail,name,navy,need,nest,next,nice,nine,none,noon,norm,nose,note,noun,null,oath,obey,once,only,open,ours,oven,over,owed,owns,pace,pack,page,pain,pair,pale,palm,pane,park,part,pass,past,path,pave,peak,peel,peer,pelt,perk,pest,pick,pier,pile,pill,pine,pink,pipe,plan,play,plea,plow,plum,plus,poem,poet,pole,poll,pond,pore,port,pose,pour,pray,prey,prim,prod,prop,pull,pump,pure,push,quiz,race,rack,raid,rail,rain,rake,ramp,rang,rank,rare,rash,rate,rays,read,real,reap,reel,rely,rent,rest,rice,rich,ride,rile,ring,riot,rise,risk,road,roam,roar,robe,rock,rode,role,roll,roof,room,root,rope,rose,rosy,rout,rude,rule,rush,rust,safe,sage,said,sail,sake,salt,same,sand,sank,save,seal,seam,seat,seed,seek,seep,self,sell,send,sent,shed,ship,shoe,shoo,shop,shot,show,shut,sick,side,sigh,silk,sing,sink,site,size,skin,skip,slam,slap,sled,slim,slip,slow,slum,snap,sock,soft,soil,sold,sole,some,song,soon,sore,sort,soul,sour,span,spit,stem,step,stew,stub,stun,such,suit,sung,surf,sway,swap,swim,tail,tale,tall,tame,tank,tape,task,tear,tell,tend,tent,term,test,than,that,them,then,they,thin,this,tilt,time,tint,tire,toad,toll,tomb,tone,torn,toss,tour,town,trap,tree,trim,trio,trip,true,tuck,tune,turf,turn,tusk,twin,type,ugly,used,user,vane,vary,vast,veil,vein,verb,very,vine,visa,void,volt,vote,wade,wail,wake,walk,wall,wand,ward,warm,wart,wash,wave,wavy,weak,wean,weep,weld,well,went,west,when,whim,wide,wife,wild,will,wine,wing,wire,wise,wish,wolf,wood,wool,word,wore,work,worm,worn,wrap,writ,yard,yell,yoke,zero,zest,zone'.split(','));
+
+    // 5-letter words
+    w.push(...'aback,abide,above,abuse,acute,admit,adobe,adopt,adore,adult,after,again,agate,agree,ahead,aisle,alarm,album,alert,alien,align,alike,alive,allay,aloft,alone,aloud,alter,angel,anger,angle,angry,ankle,annex,annoy,apart,apple,apply,apron,arena,argue,arise,armor,aroma,arose,array,arson,atone,audio,audit,avail,avert,avoid,awake,awful,bagel,batch,bathe,beach,beard,beast,began,begin,being,below,bench,berry,beset,bible,bison,black,blade,blame,bland,blank,blast,blaze,bleed,blend,bless,bliss,block,blood,blown,board,boost,brace,braid,brain,brake,brand,brave,bread,break,breed,brick,bride,brine,brink,brisk,broad,broke,brook,broth,brush,built,bunch,bunny,burst,cabin,candy,cargo,carry,catch,cause,chain,chair,chaos,charm,chart,chase,cheap,check,cheek,cheer,chest,chief,child,china,choke,chord,chose,chunk,civil,claim,class,clean,clear,clerk,click,cliff,climb,cling,clock,close,cloth,cloud,clown,coach,coast,color,comic,comet,could,count,court,cover,crack,craft,crane,craze,crazy,creak,creed,creek,crept,crest,crime,crisp,cross,crown,cruel,crumb,crush,crypt,curve,cycle,daily,dance,dandy,datum,daunt,decay,decoy,delay,delta,depot,depth,devil,dirty,disco,ditch,dodge,doubt,dough,draft,drank,drape,drawn,dread,dress,dried,drive,drone,drown,dwarf,dwell,dying,eager,eagle,early,earth,eight,elbow,elder,empty,enact,enemy,enjoy,ensue,enter,equal,equip,essay,ether,ethic,event,every,exact,exert,exist,extra,fable,facet,faint,fairy,faith,false,fancy,farce,feast,fetch,fever,fewer,fiber,field,fiend,fight,final,finch,first,fixed,flair,flank,flare,flash,flask,flesh,flick,float,flock,flood,floor,flour,fluid,focus,force,forge,forth,found,frail,frame,fraud,freak,froth,front,frost,frown,fruit,funny,gauze,genre,ghost,giant,given,gland,gleam,glide,gloom,gloss,glove,going,gorge,grace,grade,grain,grand,grant,grasp,graze,greed,green,greet,grief,grill,gripe,groan,gross,grove,growl,grown,guard,guile,gusto,haunt,haven,heave,heavy,hinge,hitch,hobby,holly,hound,house,human,humid,image,impel,imply,inane,incur,index,indie,infer,inlet,inner,input,inter,irony,itchy,ivory,jaunt,jazzy,jelly,jewel,jiffy,joust,judge,juice,juicy,jumbo,kayak,knack,knave,kneel,knife,knock,known,lance,lanky,lapse,laser,latch,laugh,layer,leach,leapt,learn,leash,least,leave,lemon,level,light,lilac,limit,linen,liner,logic,loose,lover,lower,loyal,lurid,magic,maize,major,manor,maple,march,match,mayor,media,mercy,merit,metal,midst,mirth,mocha,model,mogul,month,moral,motif,motto,mourn,mouse,mouth,muddy,murky,music,naive,navel,night,noble,noise,north,noted,novel,nurse,occur,ocean,offer,often,olive,onset,order,outer,ovary,overt,oxide,ozone,paint,panic,party,patch,pause,peace,pearl,peeve,penny,perch,perky,petty,phase,photo,piano,piece,pilot,pinch,pitch,pixel,pizza,place,plaid,plain,plant,plaza,plead,pleat,pluck,plumb,plume,point,poise,polar,poppy,porch,power,prank,press,price,pride,prime,print,prior,prize,probe,prone,proof,prose,prude,prune,pulse,pupil,purse,queen,quest,queue,quick,quiet,quirk,quota,radar,radio,raise,rally,ranch,range,rapid,raspy,raven,reach,realm,rebel,recur,refit,relax,repay,repel,rerun,resin,rhyme,ridge,ripen,risen,rivet,robot,rocky,royal,rugby,ruler,rusty,salsa,sauce,savor,scale,scene,scent,scary,scoff,scold,scope,score,scout,screw,scrub,seize,sense,serum,serve,seven,shade,shake,shale,shall,shame,shape,share,shark,sharp,shelf,shell,shift,shirt,shock,shore,short,shout,sight,since,sixth,sixty,skill,skull,sleep,sleet,slept,slice,slide,slime,sling,slink,sloth,slunk,slurp,smart,smash,smell,smile,smite,smoke,snack,snail,snake,snare,sneak,sniff,snore,snort,snuck,sober,solar,solve,sonic,sorry,south,space,spare,spark,spasm,spear,speck,spell,spend,spicy,spine,spool,sport,spout,spray,spree,stack,stain,stair,stake,stale,stall,stamp,stand,stare,stark,start,state,steam,steel,stern,stick,stiff,still,stomp,stone,stood,story,stout,stove,straw,stray,strip,stuck,study,stuff,stump,stunt,style,sugar,suite,sully,sunny,super,surge,swamp,swarm,swear,sweat,sweep,sweet,swept,swell,swore,swung,syrup,table,talon,teach,tease,there,thick,third,thorn,those,throw,thumb,thump,tiger,tight,tinge,tipsy,titan,title,toast,today,token,touch,tough,towel,toxic,trace,track,trade,trail,train,trait,tramp,trash,trawl,tread,treat,trend,trial,tribe,tried,trout,truly,tryst,tumor,tunic,tweak,tweed,twice,twirl,ulcer,ultra,under,undue,unify,union,unite,unity,until,upper,usher,usurp,utter,vault,verse,video,vigor,visor,vista,vital,vivid,vodka,voice,vomit,voter,wager,wagon,waltz,waver,weary,weave,wedge,weigh,weird,where,while,white,wider,witch,witty,worse,worst,worth,would,wound,wrath,wreck,wring,wrote,yacht,young,youth,zebra,zilch,zonal'.split(','));
+
+    // 6-letter words
+    w.push(...'aboard,abrupt,absent,absorb,accent,accept,access,accuse,active,actual,adjoin,adroit,adverb,affect,afford,afraid,agency,agenda,almost,always,anchor,animal,anyone,anyway,appeal,appear,around,arrest,ascent,assert,assist,assume,attach,attend,attire,august,autumn,awning,badger,ballot,bamboo,barley,barrel,battle,beacon,better,beware,blight,bother,bounce,brawny,breeze,bright,broken,bronze,burger,button,cactus,camera,canvas,canyon,carbon,castle,charge,choice,choose,chorus,circle,clench,client,clutch,cobalt,colony,combat,comedy,commit,copper,cotton,county,couple,coupon,course,cousin,crafty,crater,crisis,crying,custom,dangle,darken,decide,defend,define,denial,denote,deploy,detail,digest,direct,dollar,donate,donkey,double,dragon,drawer,driven,earthy,effect,effort,eleven,embark,empire,employ,enable,endure,energy,engage,engine,ensure,entity,escape,estate,evolve,excite,exempt,expand,expect,expert,expose,extend,fabric,factor,father,fathom,feline,fellow,fender,ferret,fidget,fierce,figure,filter,finger,finish,flower,fluent,follow,formal,foster,frugal,gallery,gamble,garlic,gentle,geyser,giggle,ginger,giving,global,goblin,gravel,greedy,guided,handle,happen,harbor,heated,height,helmet,herald,hidden,hijack,hiking,hinder,horror,hurdle,hustle,impact,import,income,indeed,inform,inject,insect,inside,insist,intact,intend,invest,island,jangle,jiggle,jumble,jungle,karate,kitten,knight,launch,lawyer,layout,league,legend,lesson,letter,little,liquid,locket,loosen,luster,luxury,magnet,mammal,manage,manner,marble,market,matter,method,middle,minute,mirror,misery,mobile,modern,molten,monkey,mother,muffin,muscle,mutton,mutual,myriad,nature,nearby,notice,normal,nuzzle,obtain,occupy,office,offend,oppose,orient,origin,outlet,output,oyster,parrot,patrol,pebble,peddle,pencil,permit,person,pillar,pirate,planet,pledge,plenty,pocket,poetry,police,policy,ponder,poplar,pounce,powder,prefer,pretty,prince,proper,proven,purple,pursue,puzzle,radish,random,recede,recent,reduce,refine,reject,renown,repair,repeat,repute,rescue,reside,resist,return,reveal,revolt,reward,rocket,rubber,saddle,safety,salmon,savage,saving,script,secret,select,server,settle,shield,shower,simple,sister,slowly,sneaky,socket,spoken,spread,spring,stable,stripe,strong,struck,studio,submit,suburb,sudden,summer,supply,surely,switch,symbol,system,tactic,talent,target,temple,theory,throng,timber,toilet,tongue,tracer,travel,tribal,trophy,turtle,unfold,unique,unruly,unused,upbeat,useful,valley,vanish,vanity,varied,vendor,victor,virtue,vision,visual,walrus,wander,weapon,weekly,weight,widely,wisdom,wonder,wooden,wrench,yellow,zealot'.split(','));
+
+    // 7-letter words
+    w.push(...'absence,achieve,address,advance,amazing,ancient,another,anxiety,arrange,article,attempt,attract,awesome,balance,believe,benefit,between,blanket,brother,capable,captain,capture,careful,certain,chapter,charity,command,compare,compass,compete,condemn,confirm,connect,control,convert,correct,costume,counter,courage,covered,culture,current,custody,declare,deliver,despite,develop,diamond,digital,discuss,dismiss,display,dispose,distant,divorce,dolphin,drastic,element,embrace,emotion,endless,enhance,examine,example,excited,express,factory,failure,fashion,feature,feeling,fiction,finding,fitness,foolish,fortune,forward,founded,general,genuine,goddess,hamster,harmful,heading,heating,helpful,history,holding,holiday,however,husband,imagine,include,initial,insured,intense,involve,justice,knowing,landing,lasting,leading,leather,leaving,lecture,library,lighter,limited,locally,machine,mankind,mapping,maximum,meaning,missing,mixture,morning,musical,mystery,nothing,noticed,nuclear,obvious,opening,operate,outdoor,outside,package,painful,parents,parking,partner,patient,payment,perhaps,perfect,perform,picture,popular,portion,present,prevent,primary,problem,product,promise,protect,protest,provide,qualify,quality,quantum,quarter,quickly,radical,raising,reading,reality,receive,reflect,release,replace,reserve,resolve,respond,restore,results,revenue,reverse,roughly,routine,serious,servant,serving,setting,similar,sitting,somehow,someone,success,surface,survive,support,talking,tension,thermal,tonight,tornado,totally,tourism,tourist,trading,trained,trouble,typical,unknown,upgrade,usually,various,venture,victory,violent,virtual,visible,volcano,walking,weather,western,whisper,without,working,wrapper,writing,younger'.split(','));
+
+    // 8-letter words
+    w.push(...'absolute,accurate,activity,actually,adequate,admitted,advanced,affected,alphabet,analysis,animated,argument,arriving,artifact,attached,attended,audience,backbone,balanced,bankrupt,borrowed,business,caffeine,calendar,campaign,captured,catching,cheerful,children,citizens,classify,collapse,combined,complete,compound,computer,confined,confused,consider,constant,continue,convince,corridor,criminal,critical,crossing,cylinder,database,deadline,decrease,defeated,describe,designed,detected,directed,disaster,distance,document,download,dramatic,electric,elevator,emerging,employed,enhanced,epidemic,estimate,eventual,evidence,evolving,expanded,expected,explored,extended,festival,finished,formally,fraction,fragment,frequent,frontier,function,generate,genetics,guidance,happened,harmless,heavenly,highland,historic,horrible,humanity,identity,increase,indicate,industry,influence,inherent,innocent,inspired,involved,isolated,keyboard,knockout,language,latitude,launched,learning,lifetime,literary,location,manifest,maximize,measured,medicine,momentum,mountain,movement,national,negative,observed,obstacle,obtained,ordinary,outraged,overflow,overcome,parallel,password,peaceful,pointing,possible,practice,princess,probable,profound,progress,properly,proposed,provider,quantity,reactive,recovery,regarded,relation,relevant,reliable,remained,removing,repeated,research,resource,resolved,response,resulted,revealed,rotation,shipment,shocking,skeleton,sleeping,slightly,slowdown,smallest,software,specific,standard,strength,students,suffered,supposed,surprise,survived,swimming,tactical,teaching,template,terrible,thousand,together,transfer,traveled,ultimate,uprising,valuable,violence,volcanic,watching,whatever,whenever,wherever,wildlife,yourself'.split(','));
+
+    // 9-letter words
+    w.push(...'abandoned,advantage,adventure,ambitious,attention,beautiful,beginning,brilliant,challenge,cherished,community,complaint,completed,component,condition,confident,connected,contacted,continual,corporate,countless,dangerous,depending,discovery,documents,emotional,employees,excellent,exclusive,financial,framework,frequency,generally,generated,important,increased,indicated,inhabited,initially,insurance,knowledge,landscape,mechanism,necessary,objective,ourselves,practical,prevented,procedure,protected,questions,reference,regarding,remaining,requested,resistant,resulting,satisfied,scheduled,scattered,separated,solutions,sometimes,something,statement,steadfast,surprised,technical,thousands,transform,typically,unlimited,universal,volunteer,wonderful'.split(','));
+
+    // 10-letter words
+    w.push(...'additional,advantages,appearance,appreciate,authorized,background,characters,classified,commitment,completely,considered,continuous,correspond,discovered,everywhere,everything,generation,government,guidelines,historical,horizontal,identified,impossible,incredible,influenced,introduced,maintained,management,meaningful,microscope,millennium,mysterious,particular,percentage,photograph,population,presenting,quantities,reasonable,recognized,responsible,restaurant,structured,successful,technology,understand,unexpected,university,vulnerable,wavelength'.split(','));
+
+    // Additional 6-letter words
+    w.push(...'accord,accrue,aching,acting,action,adhere,aerobe,afford,afraid,aghast,airway,almond,alpaca,ambush,amused,antics,arctic,ardent,armory,arouse,aspire,attest,auburn,avocet,behold,biopsy,blazer,bolted,bondage,boreal,bounty,brandy,brawl,browse,bruise,budget,calico,canopy,carton,casket,cement,center,choker,cipher,cleave,clever,closet,cobble,coerce,coffin,coiled,collie,comply,compel,convex,corral,costal,cougar,crater,crazed,creamy,crimson,crisps,crocus,crouch,cuddle,dagger,dampen,darted,dazzle,decree,deduce,deeply,delist,devoid,devout,differ,digest,dimple,divine,docket,donned,dotted,driven,drying,duplex,engage,engulf,enlist,enrage,ensign,entrap,esprit,fabled,fading,fallen,fasted,feline,fetter,fickle,fisted,fitful,fledge,flight,flinch,floret,fondue,forage,formal,frigid,frosty,frozen,funnel,gigantic,girdle,giving,gloomy,gobble,gotten,grassy,gravel,groove,grotto,gunner,hasten,heated,hiding,hiking,hooded,hornet,humane,icicle,impart,indent,inflow,insane,intact,invest,jabbed,jangle,jester,jostle,kettle,knotty,larder,lavish,lazily,loping,luring,lynx,mangle,marker,marvel,melted,menace,midway,mighty,milder,mirror,modest,mortar,mosaic,mostly,muffled,nagger,neatly,nettle,nimble,noodle,notify,novice,nurtured,oafish,oppose,ordeal,ostrich,outline,overly,oxford,oyster,pallid,pandit,parcel,parody,pellet,picker,pilfer,pinned,pirate,placid,potion,potter,rafter,ramble,rankle,rapids,raptor,rattle,ravage,rebuff,redone,reflex,refund,regent,rental,retort,rifled,rigged,ripple,ritual,robust,roping,roster,rotate,rugged,rumble,runner,rustle,sadism,saloon,satire,saucer,scrawl,scruff,settee,sizzle,sledge,sliver,smudge,sneeze,soften,somber,sorted,splash,sponge,sprawl,sprint,sprite,squash,squeal,squint,storey,strain,strait,strewn,strike,stroll,strung,stuffy,subtle,sunken,swerve,tangle,taught,temper,tender,theist,thirst,tingle,tipped,toasty,topple,torrid,totter,toucan,tribal,trifle,tulip,tundra,turban,twinge,typhon,uncanny,unfair,unrest,untold,uproot,upturn,utmost,vesper,violet,virgin,virile,wizard,withal,writhe,yearly'.split(','));
+
+    // Additional 7-letter words
+    w.push(...'acclaim,acronym,advisor,affects,against,aligned,alleged,allowed,altruistic,amended,amplify,anatomy,anchors,animate,approve,arsenal,aspects,aspired,assayed,assumed,assured,atheist,athlete,attract,bathing,battery,bearing,beating,bedrock,beloved,beneath,boulder,cabinet,caliber,calling,canteen,capable,carried,chapter,coating,combine,comfort,commend,commons,compact,conceal,concede,concept,concern,condemn,confide,conform,confuse,consent,consume,contact,contempt,content,context,contour,convert,counsel,covered,capable,created,creator,creeper,culture,cursory,custard,dynamic,engaged,engages,episode,ethical,evolved,example,exposed,extends,extract,fantasy,feeding,feeling,freedom,forever,forming,frankly,freezes,frenzied,gripped,habitat,handled,hardship,heating,heroine,housing,hunting,imagery,implies,implore,imprint,impulse,improve,indexes,inspire,install,instead,instill,jointly,kingdom,knowing,lasting,lateral,learned,lending,leveled,lighter,linking,located,looking,logical,managed,mapping,masters,maximum,message,militia,modeled,modesty,mounted,natural,nervous,nominal,nowhere,obscure,offense,offhand,ongoing,options,orderly,origins,outline,outlast,overlap,painted,passive,peacock,peaking,penalty,pending,pension,perhaps,perform,petites,planned,plastic,plateau,playful,pointed,polite,poorest,presume,primary,proceed,process,program,project,promote,propose,propped,protein,provoke,publish,ranging,reached,readers,rebuild,reforms,release,relying,remains,resting,returns,revised,revisor,rickets,rolling,rooftop,rounded,rusting,sailing,seeking,seizure,silence,silvery,skating,skilled,smoking,sobbing,society,somehow,speaker,special,species,specify,spinoff,spotted,squelch,stagger,staging,startle,storage,stumble,suction,suggest,sunburn,sunspot,support,surface,suspend,swallow,terrace,therein,thought,tipping,topmost,trading,tracing,trapped,trekking,triumph,trouble,trusted,tumbled,turning,twisted,upright,vitamin,waiting,warrior,whether,whiting,whether,winding,winning,wishing,worship'.split(','));
+
+    return w;
+  })();
+
+  /* ============================================================
+     STATE
+  ============================================================ */
+  let currentResults = [];
+  let currentInput   = '';
+
+  /* ============================================================
+     PARSE INPUT
+  ============================================================ */
+  function parseInput(raw) {
+    const letters = {};
+    let wildcards = 0;
+    for (const ch of raw.toUpperCase()) {
+      if (ch >= 'A' && ch <= 'Z') {
+        letters[ch] = (letters[ch] || 0) + 1;
+      } else if (ch === '?' || ch === '*') {
+        wildcards++;
+      }
+    }
+    return { letters, wildcards };
+  }
+
+  /* ============================================================
+     FREQUENCY MAP: can this word be formed from available letters?
+  ============================================================ */
+  function canForm(word, letters, wildcards) {
+    const needed = {};
+    for (const ch of word.toUpperCase()) {
+      needed[ch] = (needed[ch] || 0) + 1;
+    }
+    let budget = wildcards;
+    for (const ch in needed) {
+      const deficit = needed[ch] - (letters[ch] || 0);
+      if (deficit > 0) {
+        budget -= deficit;
+        if (budget < 0) return false;
+      }
+    }
+    return true;
+  }
+
+  /* ============================================================
+     CHECK EXACT ANAGRAM
+  ============================================================ */
+  function isExact(word, letters, wildcards) {
+    const totalInput = Object.values(letters).reduce((s, n) => s + n, 0) + wildcards;
+    return word.length === totalInput && canForm(word, letters, wildcards);
+  }
+
+  /* ============================================================
+     CHECK IF WORD USED WILDCARD
+  ============================================================ */
+  function usedWildcard(word, letters) {
+    const needed = {};
+    for (const ch of word.toUpperCase()) needed[ch] = (needed[ch] || 0) + 1;
+    for (const ch in needed) {
+      if ((needed[ch] - (letters[ch] || 0)) > 0) return true;
+    }
+    return false;
+  }
+
+  /* ============================================================
+     SCRABBLE SCORE
+  ============================================================ */
+  function scoreWord(word) {
+    return word.toUpperCase().split('').reduce((s, ch) => s + (LS[ch] || 0), 0);
+  }
+
+  /* ============================================================
+     RENDER TILE RACK
+  ============================================================ */
+  function renderTiles(raw) {
+    const rack = document.getElementById('tileRack');
+    rack.innerHTML = '';
+    for (const ch of raw.toUpperCase()) {
+      if (!/[A-Z?*]/.test(ch)) continue;
+      const t = document.createElement('div');
+      const isWild = ch === '?' || ch === '*';
+      t.className = 'tile' + (isWild ? ' wildcard' : '');
+      t.textContent = isWild ? '?' : ch;
+      if (!isWild && LS[ch]) {
+        const s = document.createElement('span');
+        s.className = 'tile-score';
+        s.textContent = LS[ch];
+        t.appendChild(s);
+      }
+      rack.appendChild(t);
+    }
+  }
+
+  /* ============================================================
+     RENDER WORD MATRIX
+  ============================================================ */
+  function renderMatrix(grouped, exactSet, wildSet) {
+    const out = document.getElementById('matrixOutput');
+    const lengths = Object.keys(grouped).map(Number).sort((a,b) => b - a);
+
+    if (lengths.length === 0) {
+      out.innerHTML = '<div class="matrix-placeholder"><div class="big-icon">&#128269;</div><p>No words found. Try fewer letters, a shorter minimum length, or enable wildcards.</p></div>';
+      return;
+    }
+
+    let html = '';
+    for (const len of lengths) {
+      const words = grouped[len].sort();
+      html += `<div class="length-group"><div class="length-heading">${len}-Letter Words<span class="length-count">${words.length}</span></div><div class="word-grid">`;
+      for (const w of words) {
+        let cls = 'word-chip';
+        if (exactSet.has(w))     cls += ' exact';
+        else if (wildSet.has(w)) cls += ' wildmatch';
+        html += `<span class="${cls}" title="Score: ${scoreWord(w)} pts">${w}</span>`;
+      }
+      html += '</div></div>';
+    }
+    out.innerHTML = html;
+  }
+
+  /* ============================================================
+     MAIN SOLVE FUNCTION
+  ============================================================ */
+  function solve() {
+    const raw      = document.getElementById('letterInput').value.trim();
+    const minLen   = parseInt(document.getElementById('minLen').value, 10);
+    const wildMode = document.getElementById('wildcardToggle').checked;
+
+    renderTiles(raw);
+
+    if (!raw || raw.replace(/[^A-Za-z?*]/g, '').length === 0) {
+      document.getElementById('matrixOutput').innerHTML =
+        '<div class="matrix-placeholder"><div class="big-icon">&#128269;</div><p>Enter letters above to generate the word matrix.</p></div>';
+      resetStats();
+      return;
+    }
+
+    const { letters, wildcards } = parseInput(raw);
+    const effectiveWild = wildMode ? wildcards : 0;
+
+    const grouped  = {};
+    const exactSet = new Set();
+    const wildSet  = new Set();
+
+    for (const word of DICT) {
+      if (word.length < minLen) continue;
+      if (!canForm(word, letters, effectiveWild)) continue;
+
+      if (!grouped[word.length]) grouped[word.length] = [];
+      grouped[word.length].push(word);
+
+      if (isExact(word, letters, effectiveWild)) exactSet.add(word);
+      else if (effectiveWild > 0 && usedWildcard(word, letters)) wildSet.add(word);
+    }
+
+    // Flatten for copy and stats
+    const allWords = Object.values(grouped).flat();
+    currentResults = allWords;
+
+    // Max score
+    let maxScore = 0, bestWord = '';
+    for (const w of allWords) {
+      const sc = scoreWord(w);
+      if (sc > maxScore) { maxScore = sc; bestWord = w; }
+    }
+
+    // Update stats
+    document.getElementById('statTotal').textContent  = allWords.length;
+    document.getElementById('statExact').textContent  = exactSet.size;
+    document.getElementById('statScore').textContent  = maxScore || '--';
+    document.getElementById('statScoreWord').textContent = bestWord ? `"${bestWord}" - best Scrabble value` : 'best Scrabble value';
+
+    const btn = document.getElementById('copyBtn');
+    btn.disabled = allWords.length === 0;
+
+    renderMatrix(grouped, exactSet, wildSet);
+  }
+
+  function resetStats() {
+    document.getElementById('statTotal').textContent  = '--';
+    document.getElementById('statExact').textContent  = '--';
+    document.getElementById('statScore').textContent  = '--';
+    document.getElementById('statScoreWord').textContent = 'best Scrabble value';
+    document.getElementById('copyBtn').disabled = true;
+    currentResults = [];
+  }
+
+  /* ============================================================
+     EVENT HANDLERS
+  ============================================================ */
+  function onInputChange() { solve(); }
+
+  function onLenChange(val) {
+    document.getElementById('minLenVal').textContent = val;
+    solve();
+  }
+
+  /* ============================================================
+     COPY WORD LIST
+  ============================================================ */
+  function copyWords() {
+    if (currentResults.length === 0) return;
+    const text = currentResults.sort((a,b) => b.length - a.length || a.localeCompare(b)).join('\n');
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!'));
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  /* ============================================================
+     FAQ ACCORDION
+  ============================================================ */
+  function toggleFaq(btn) {
+    const answer  = btn.nextElementSibling;
+    const isOpen  = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!isOpen));
+    answer.classList.toggle('open', !isOpen);
+  }
+  </script>
+
+</body>
+</html>

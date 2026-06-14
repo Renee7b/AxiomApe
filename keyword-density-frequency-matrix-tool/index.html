@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keyword Density Matrix Tool: Text Substring Frequency Analyzer and N-Gram Phrase Counter | AxiomApe</title>
+  <meta name="description" content="Free keyword density matrix tool. Paste any document to instantly map repetitive phrases, count word frequency, and calculate density percentages. Supports 1-word, 2-word, and 3-word N-gram analysis with stop word filtering. 100% browser-based, nothing sent to a server." />
+  <meta name="keywords" content="keyword density calculator, text frequency analyzer, n-gram phrase counter, word frequency matrix, phrase repetition counter, keyword density checker, text analysis tool, SEO keyword mapping, bigram trigram counter, stop word filter, keyword stuffing checker, content frequency tool, word occurrence counter, document phrase analyzer, text substring frequency" />
+  <link rel="canonical" href="https://axiomape.com/keyword-density-frequency-matrix-tool/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Keyword Density Matrix Tool",
+        "description": "Free keyword density matrix tool. Paste any document to instantly map repetitive phrases, count word frequency, and calculate density percentages. Supports 1-word, 2-word, and 3-word N-gram analysis with stop word filtering. 100% browser-based, nothing sent to a server.",
+        "url": "https://axiomape.com/keyword-density-frequency-matrix-tool/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is an ideal keyword density for SEO?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Most SEO professionals consider a keyword density of 1% to 2% healthy for a primary target keyword. A density above 3% to 4% starts to look unnatural and may trigger keyword stuffing penalties. For supporting or secondary keywords, keeping density below 1% is generally safe. The most important factor is that the content reads naturally to a human reader."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are stop words and why should I filter them out of my analysis?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Stop words are extremely common functional words in a language, such as 'the', 'and', 'is', 'of', and 'to'. Because they appear in almost every sentence, they always dominate a raw frequency list without providing any meaningful signal about a document's topic. Filtering them out lets you isolate semantically meaningful keywords and phrases that actually describe the subject matter of your content."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How are 2-word and 3-word phrases (N-grams) calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An N-gram is a contiguous sequence of N words taken from a tokenized text. To find 2-word phrases (bigrams), the tool slides a window of two words across the entire word array and records each unique pair and how often it appears. For 3-word phrases (trigrams), the window size is three. Density is then calculated as: (phrase count divided by total word count) multiplied by 100, rounded to two decimal places."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is keyword stuffing and how does it hurt search rankings?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Keyword stuffing is the practice of excessively repeating a keyword or phrase in a page with the intent of manipulating search engine rankings rather than serving the reader. Google's algorithms detect unnatural density patterns and can apply a manual or algorithmic penalty, resulting in lower rankings or de-indexing. This tool helps you audit your content density before publishing so you can catch over-optimization early."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does capitalization or punctuation affect the frequency count?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This tool normalizes all text to lowercase before tokenizing, so 'SEO', 'Seo', and 'seo' are all counted as the same token. Punctuation marks such as commas, periods, quotation marks, and hyphens are stripped during the tokenization step, so 'self-serve' and 'self serve' are counted separately as individual tokens after the hyphen is replaced with a space."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET AND BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:        #1a3a5c;
+      --navy-dark:   #112540;
+      --navy-light:  #2a5080;
+      --bg:          #f0f2f5;
+      --card:        #ffffff;
+      --border:      #dde3ea;
+      --text:        #1c2b3a;
+      --muted:       #6b7c8d;
+      --shadow:      0 4px 24px rgba(26,58,92,0.09);
+      --radius:      12px;
+
+      /* Tool accent palette */
+      --cyan:        #06B6D4;
+      --cyan-dark:   #0891b2;
+      --cyan-glow:   rgba(6,182,212,0.18);
+      --yellow:      #EAB308;
+      --yellow-dark: #ca9a06;
+      --yellow-glow: rgba(234,179,8,0.18);
+
+      /* Dark dashboard surface */
+      --dash-bg:     #0d1b2a;
+      --dash-card:   #152133;
+      --dash-border: #1e3250;
+      --dash-text:   #e2eaf4;
+      --dash-muted:  #7a9ab8;
+      --dash-row:    #1a2d45;
+      --dash-row2:   #152133;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--navy); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--navy-dark); }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy-light) 100%);
+      color: #fff;
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 820px;
+      margin: 0 auto 14px;
+      letter-spacing: -0.01em;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: #b8d0ea;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .page-header .header-tags {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .header-tag {
+      background: rgba(6,182,212,0.2);
+      border: 1px solid rgba(6,182,212,0.4);
+      color: var(--cyan);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARDS
+    =================================================== */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy-dark);
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    /* ===================================================
+       DASHBOARD CARD (dark theme)
+    =================================================== */
+    .dashboard-card {
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    /* ===================================================
+       THREE-PANEL GRID
+    =================================================== */
+    .three-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 20px;
+    }
+    .panel-input {
+      grid-column: 1 / 2;
+      grid-row: 1 / 3;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .panel-matrix {
+      grid-column: 2 / 3;
+      grid-row: 1 / 2;
+    }
+    .panel-telemetry {
+      grid-column: 2 / 3;
+      grid-row: 2 / 3;
+    }
+
+    @media (max-width: 768px) {
+      .three-panel {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .panel-input, .panel-matrix, .panel-telemetry {
+        grid-column: 1 / 2;
+        grid-row: auto;
+      }
+    }
+
+    /* ===================================================
+       PANEL LABELS
+    =================================================== */
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel-label::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+    }
+
+    /* ===================================================
+       TEXTAREA
+    =================================================== */
+    .text-input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+    #textInput {
+      width: 100%;
+      min-height: 280px;
+      background: var(--dash-card);
+      border: 2px solid var(--dash-border);
+      border-radius: 8px;
+      color: var(--dash-text);
+      font-family: inherit;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      padding: 14px 16px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    #textInput:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-glow);
+    }
+    #textInput::placeholder {
+      color: var(--dash-muted);
+    }
+
+    /* ===================================================
+       CONTROL PANEL
+    =================================================== */
+    .control-panel {
+      background: var(--dash-card);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .control-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--dash-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Toggle */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--dash-border);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--cyan);
+    }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+    .toggle-label-text {
+      font-size: 0.88rem;
+      color: var(--dash-text);
+      font-weight: 500;
+    }
+
+    /* Segmented control */
+    .segmented {
+      display: flex;
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .ngram-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--dash-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .ngram-btn.active {
+      background: var(--cyan);
+      color: #fff;
+    }
+    .ngram-btn:hover:not(.active) {
+      background: var(--dash-row);
+      color: var(--dash-text);
+    }
+
+    /* Results limit */
+    .limit-select {
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      border-radius: 6px;
+      color: var(--dash-text);
+      font-size: 0.85rem;
+      padding: 5px 10px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* ===================================================
+       DENSITY MATRIX TABLE
+    =================================================== */
+    .matrix-wrapper {
+      background: var(--dash-card);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .matrix-wrapper::-webkit-scrollbar {
+      width: 5px;
+    }
+    .matrix-wrapper::-webkit-scrollbar-track {
+      background: var(--dash-bg);
+    }
+    .matrix-wrapper::-webkit-scrollbar-thumb {
+      background: var(--dash-border);
+      border-radius: 4px;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .matrix-table thead th {
+      background: var(--dash-bg);
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--dash-border);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .matrix-table thead th.col-density {
+      color: var(--yellow);
+    }
+    .matrix-table tbody tr {
+      border-bottom: 1px solid var(--dash-border);
+      transition: background 0.1s;
+    }
+    .matrix-table tbody tr:nth-child(even) {
+      background: var(--dash-row2);
+    }
+    .matrix-table tbody tr:nth-child(odd) {
+      background: var(--dash-row);
+    }
+    .matrix-table tbody tr:hover {
+      background: rgba(6,182,212,0.08);
+    }
+    .matrix-table td {
+      padding: 9px 14px;
+      color: var(--dash-text);
+      vertical-align: middle;
+    }
+    .td-rank {
+      color: var(--dash-muted);
+      font-size: 0.78rem;
+      width: 32px;
+      text-align: center;
+    }
+    .td-phrase {
+      font-weight: 500;
+      word-break: break-word;
+    }
+    .td-count {
+      font-weight: 700;
+      color: var(--cyan);
+      text-align: right;
+    }
+    .td-density {
+      font-weight: 700;
+      color: var(--yellow);
+      text-align: right;
+    }
+    .td-bar-cell {
+      width: 80px;
+    }
+    .density-bar-track {
+      background: var(--dash-bg);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .density-bar-fill {
+      background: linear-gradient(90deg, var(--cyan), var(--yellow));
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    /* Empty state */
+    .matrix-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--dash-muted);
+    }
+    .matrix-empty .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .matrix-empty p {
+      font-size: 0.88rem;
+    }
+
+    /* ===================================================
+       TELEMETRY PANEL
+    =================================================== */
+    .telemetry-card {
+      background: var(--dash-card);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 480px) {
+      .telemetry-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .telemetry-stat {
+      background: var(--dash-bg);
+      border: 1px solid var(--dash-border);
+      border-radius: 8px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--cyan);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--dash-muted);
+    }
+    .stat-value.yellow { color: var(--yellow); }
+
+    /* ===================================================
+       COPY BUTTON
+    =================================================== */
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 18px;
+      background: var(--yellow);
+      border: none;
+      border-radius: 8px;
+      color: #111;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .copy-btn:hover {
+      background: var(--yellow-dark);
+    }
+    .copy-btn:active {
+      transform: scale(0.98);
+    }
+    .copy-btn.copied {
+      background: #22c55e;
+      color: #fff;
+    }
+
+    /* ===================================================
+       AD PLACEMENTS (styled by site-chrome.js)
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px;
+      background: #e8ecf0;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 24px;
+    }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .section-intro {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--navy-dark);
+      margin-bottom: 8px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+    .edu-section ol {
+      padding-left: 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: #f7f9fb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: #f7f9fb;
+      border: none;
+      padding: 14px 18px;
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--navy-dark);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: #eef2f7; }
+    .faq-question .faq-icon {
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-question.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.7;
+      background: #fff;
+      border-top: 1px solid var(--border);
+    }
+    .faq-answer.open { display: block; }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Keyword Density Matrix Tool: Text Substring Frequency Analyzer and N-Gram Phrase Counter</h1>
+    <p>Paste any document or article to instantly map repetitive phrases, measure keyword density percentages, and extract 1-word, 2-word, and 3-word N-gram patterns. Real-time, 100% private.</p>
+    <div class="header-tags">
+      <span class="header-tag">Keyword Density</span>
+      <span class="header-tag">N-Gram Analysis</span>
+      <span class="header-tag">Stop Word Filter</span>
+      <span class="header-tag">SEO Audit</span>
+      <span class="header-tag">Phrase Frequency</span>
+    </div>
+  </header>
+
+  <!-- ===================================================
+       DASHBOARD TOOL CARD
+  =================================================== -->
+  <div class="dashboard-card">
+    <div class="three-panel">
+
+      <!-- PANEL 1: Data Input and Controls -->
+      <div class="panel-input">
+        <div class="panel-label">Panel 1 - Document Input and Controls</div>
+
+        <div class="text-input-wrapper">
+          <textarea
+            id="textInput"
+            placeholder="Paste your article, blog post, landing page copy, or any document here. The frequency matrix updates instantly as you type or paste text..."
+            oninput="analyze()"
+            spellcheck="false"
+            aria-label="Document text input for keyword density analysis"
+          ></textarea>
+        </div>
+
+        <div class="control-panel">
+          <!-- Stop Word Filter -->
+          <div class="control-row">
+            <span class="control-label">Filter Common Stop Words</span>
+            <div class="toggle-wrapper">
+              <label class="toggle-switch" title="Toggle stop word filtering">
+                <input type="checkbox" id="stopWordToggle" onchange="analyze()" checked />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label-text" id="stopWordLabel">On</span>
+            </div>
+          </div>
+
+          <!-- N-Gram Selector -->
+          <div class="control-row">
+            <span class="control-label">Word Length (N-Gram)</span>
+            <div class="segmented" role="group" aria-label="Select N-gram phrase length">
+              <button class="ngram-btn active" data-n="1" onclick="setNgram(1)" aria-pressed="true">1-Word</button>
+              <button class="ngram-btn" data-n="2" onclick="setNgram(2)" aria-pressed="false">2-Word Phrases</button>
+              <button class="ngram-btn" data-n="3" onclick="setNgram(3)" aria-pressed="false">3-Word Phrases</button>
+            </div>
+          </div>
+
+          <!-- Results Limit -->
+          <div class="control-row">
+            <span class="control-label">Show Top Results</span>
+            <select class="limit-select" id="limitSelect" onchange="analyze()" aria-label="Number of top results to display">
+              <option value="20">Top 20</option>
+              <option value="50" selected>Top 50</option>
+              <option value="100">Top 100</option>
+              <option value="0">All Results</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: The Density Matrix -->
+      <div class="panel-matrix">
+        <div class="panel-label">Panel 2 - Keyword Density Frequency Matrix</div>
+        <div class="matrix-wrapper" id="matrixWrapper">
+          <div class="matrix-empty" id="matrixEmpty">
+            <span class="empty-icon">📊</span>
+            <p>Paste text in Panel 1 to generate the keyword density frequency matrix.</p>
+          </div>
+          <table class="matrix-table" id="matrixTable" style="display:none;" aria-label="Keyword frequency and density matrix">
+            <thead>
+              <tr>
+                <th class="td-rank">#</th>
+                <th>Keyword / Phrase</th>
+                <th style="text-align:right;">Count</th>
+                <th class="col-density" style="text-align:right;">Density %</th>
+                <th class="td-bar-cell">Frequency Bar</th>
+              </tr>
+            </thead>
+            <tbody id="matrixBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Document Telemetry -->
+      <div class="panel-telemetry">
+        <div class="panel-label">Panel 3 - Document Telemetry</div>
+        <div class="telemetry-card">
+          <div class="telemetry-grid">
+            <div class="telemetry-stat">
+              <div class="stat-value" id="statTotalWords">0</div>
+              <div class="stat-label">Total Words</div>
+            </div>
+            <div class="telemetry-stat">
+              <div class="stat-value yellow" id="statUniqueWords">0</div>
+              <div class="stat-label">Unique Words</div>
+            </div>
+            <div class="telemetry-stat">
+              <div class="stat-value" id="statReadTime" style="color:#a78bfa;">0 min</div>
+              <div class="stat-label">Reading Time</div>
+            </div>
+          </div>
+          <button class="copy-btn" id="copyBtn" onclick="copyMatrix()" aria-label="Copy density matrix data to clipboard">
+            <span>&#128203;</span> Copy Matrix Data (CSV)
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /three-panel -->
+  </div><!-- /dashboard-card -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ===================================================
+       GLOSSARY CARD
+  =================================================== -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained: Keyword Density, N-Grams, and Text Analysis</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Keyword Density</div>
+        <div class="glossary-def">The percentage of times a specific keyword or phrase appears in a document relative to the total word count. Calculated as: (occurrences / total words) x 100. Used by SEO professionals to gauge whether a target term appears naturally.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">N-Gram</div>
+        <div class="glossary-def">A contiguous sequence of N items (words) extracted from a text. A 1-gram is a single word (unigram), a 2-gram is a two-word phrase (bigram), and a 3-gram is a three-word phrase (trigram). N-gram analysis reveals repetitive phrase patterns invisible to single-word counts.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Stop Word</div>
+        <div class="glossary-def">A high-frequency functional word in a language, such as "the," "and," "is," or "of." Stop words carry little semantic meaning on their own and are typically filtered out of text analysis results so that meaningful content words dominate the output.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Tokenization</div>
+        <div class="glossary-def">The process of splitting raw text into a structured array of individual word units (tokens). This tool tokenizes by converting text to lowercase, stripping punctuation and special characters, and splitting on whitespace to produce a clean word array for analysis.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Keyword Stuffing</div>
+        <div class="glossary-def">The manipulative practice of over-repeating a keyword in content to artificially inflate its density and influence search engine rankings. Google's algorithms detect unnaturally high keyword density and may penalize or de-rank pages that engage in this practice.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">TF-IDF (Term Frequency - Inverse Document Frequency)</div>
+        <div class="glossary-def">A statistical measure used in information retrieval and NLP. TF (term frequency) is similar to keyword density. IDF reduces the weight of terms that appear across many documents. TF-IDF together identifies words that are important to a specific document but not universally common.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Semantic SEO</div>
+        <div class="glossary-def">An approach to search optimization that focuses on the meaning and context of content rather than raw keyword repetition. Modern search engines use semantic analysis to understand topical relevance, making N-gram and phrase density mapping critical tools for semantic content audits.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Frequency Matrix</div>
+        <div class="glossary-def">A structured table mapping every unique term or phrase in a document to its occurrence count and relative density. In content and SEO work, a keyword frequency matrix exposes over-optimized phrases, underused target terms, and natural language distribution patterns.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       EDUCATIONAL SECTION
+  =================================================== -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Keyword Density Analysis, N-Gram Mapping, and SEO Phrase Auditing</h2>
+
+    <p class="section-intro">Whether you are auditing a blog post for keyword stuffing, mapping phrase repetition across a landing page, or building a competitive content brief, understanding how individual words and multi-word phrases distribute across your document is essential. This tool gives you a real-time frequency matrix to answer that question instantly and privately.</p>
+
+    <h3>How to Use the Keyword Density Frequency Matrix Tool</h3>
+    <p>Using this tool requires no account, no file upload, and no server connection. Here is the basic workflow:</p>
+    <ol>
+      <li>Paste or type your document into the text input area in Panel 1. The matrix updates instantly as you type.</li>
+      <li>Choose your N-gram size: 1-Word for single keyword density, 2-Word Phrases to find repeated bigrams, or 3-Word Phrases to surface repeated trigrams and long-tail phrase patterns.</li>
+      <li>Toggle "Filter Common Stop Words" on to remove filler words like "the," "and," and "is," revealing only semantically meaningful terms.</li>
+      <li>Review the Keyword Density Frequency Matrix in Panel 2. Results are sorted automatically from highest to lowest frequency. The density bar gives a visual sense of relative weight.</li>
+      <li>Check Panel 3 (Document Telemetry) for your total word count, unique word count, and estimated reading time.</li>
+      <li>Click "Copy Matrix Data (CSV)" to export the frequency table to your clipboard for use in spreadsheets or reports.</li>
+    </ol>
+
+    <h3>What Keyword Density Percentage Should You Aim For?</h3>
+    <p>The concept of an "ideal" keyword density has evolved significantly. In the early days of search engine optimization, practitioners often targeted a precise percentage, sometimes as high as 5% to 7%, to rank for specific terms. Modern search engines, particularly Google's neural ranking systems, have largely moved past raw density signals and instead evaluate topical authority, semantic coherence, and entity coverage.</p>
+    <p>That said, density analysis remains a practical content audit tool. A primary target keyword appearing at 1% to 2% density is generally considered natural. If your primary phrase appears at 4% or above, the writing may start to feel forced and could attract algorithmic scrutiny. For supporting or secondary keywords, keeping density below 0.5% to 1% is typical in naturally written content.</p>
+
+    <h3>Why N-Gram Phrase Analysis Matters More Than Single-Word Counts</h3>
+    <p>Single-word frequency analysis only reveals half the picture. A document might use the word "content" 15 times and "strategy" 12 times, but those counts say nothing about whether the 2-gram "content strategy" appears 10 times (which would be noteworthy). Bigram and trigram analysis surfaces repetitive phrase patterns that are invisible at the 1-gram level and are often more relevant to how search engines model topical relevance.</p>
+    <p>N-grams are also the backbone of natural language processing (NLP). Search engines use N-gram models internally to understand context, autocomplete queries, and assess whether content reads naturally. Running a trigram analysis on your own content before publishing lets you see your document the way a language model might see it.</p>
+
+    <h3>Frequently Asked Questions: Keyword Density Analysis and N-Gram Phrase Counting</h3>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+        What is an ideal keyword density for SEO?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        <p>Most SEO professionals consider a keyword density of 1% to 2% healthy for a primary target keyword. A density above 3% to 4% starts to look unnatural and may trigger keyword stuffing penalties. For supporting or secondary keywords, keeping density below 1% is generally safe. The most important factor is that the content reads naturally to a human reader, not that it hits a specific numerical target.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+        What are stop words and why should I filter them out of my analysis?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        <p>Stop words are extremely common functional words in a language, such as "the," "and," "is," "of," and "to." Because they appear in almost every sentence, they always dominate a raw frequency list without providing any meaningful signal about a document's topic. Filtering them out lets you isolate semantically meaningful keywords and phrases that actually describe the subject matter of your content. This tool includes over 100 stop words in its dictionary for English text.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+        How are 2-word and 3-word phrases (N-grams) calculated?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        <p>An N-gram is a contiguous sequence of N words taken from a tokenized text array. To find 2-word phrases (bigrams), the tool slides a window of two adjacent words across the entire word array, recording each unique pair and how many times it appears. For 3-word phrases (trigrams), the window size is three. Density is then calculated as: (phrase count / total word count) x 100, rounded to two decimal places. The density denominator is always the total word count of the original document, not the filtered token count.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+        What is keyword stuffing and how does it hurt search rankings?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        <p>Keyword stuffing is the practice of excessively repeating a keyword or phrase in a page with the intent of manipulating search engine rankings rather than serving the reader. It includes hiding keywords in white text, repeating terms in meta tags beyond reasonable limits, and inserting unnatural keyword variations throughout body copy. Google's algorithms detect unnatural density patterns and can apply a manual or algorithmic penalty, resulting in lower rankings or de-indexing. This tool helps you audit your content density before publishing so you can catch over-optimization early and keep density within natural ranges.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+        Does capitalization or punctuation affect the frequency count?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        <p>No. This tool normalizes all text to lowercase before tokenizing, so "SEO," "Seo," and "seo" are all counted as the same token and contribute to the same frequency entry. Punctuation marks such as commas, periods, quotation marks, exclamation points, and parentheses are stripped during the tokenization step and do not affect the count. Hyphens are replaced with a space, so "self-serve" becomes two separate tokens: "self" and "serve." Numbers are preserved as tokens and will appear in the matrix if they recur frequently.</p>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ===================================================
+     STOP WORDS DICTIONARY (100+ common English words)
+  =================================================== */
+  const STOP_WORDS = new Set([
+    'a','an','the','and','or','but','is','are','was','were','be','been','being',
+    'have','has','had','do','does','did','will','would','could','should','may',
+    'might','shall','can','cannot','of','in','to','for','on','at','by','from',
+    'with','about','into','through','during','before','after','above','below',
+    'that','this','these','those','it','its','not','no','nor','so','yet','both',
+    'either','each','if','as','than','because','while','since','until','unless',
+    'which','who','whom','when','where','how','what','all','any','some','more',
+    'most','other','such','up','out','over','under','again','then','once','here',
+    'there','why','few','very','just','me','my','we','our','you','your','he',
+    'she','they','their','him','her','them','i','am','also','only','own','same',
+    'too','now','one','two','three','much','many','well','even','also','back',
+    'new','first','last','long','great','little','own','right','big','old','high',
+    'between','among','within','without','against','along','across','around','near',
+    'off','per','upon','down','got','get','go','went','come','came','make','made',
+    'take','took','see','saw','know','knew','think','thought','say','said','us',
+    'its','been','yes','no','my','we','our','their','his','her','its','your',
+    'i','me','him','her','them','whom','whose','itself','himself','herself',
+    'themselves','yourself','ourselves','use','used','using','way','like','just'
+  ]);
+
+  /* ===================================================
+     STATE
+  =================================================== */
+  let currentNgram = 1;
+  let lastResults = [];
+  let lastTotalWords = 0;
+
+  /* ===================================================
+     N-GRAM SELECTOR
+  =================================================== */
+  function setNgram(n) {
+    currentNgram = n;
+    document.querySelectorAll('.ngram-btn').forEach(btn => {
+      const active = parseInt(btn.dataset.n) === n;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    analyze();
+  }
+
+  /* ===================================================
+     TOKENIZER: lowercase, strip punctuation, split
+  =================================================== */
+  function tokenize(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(function(t) { return t.length > 0; });
+  }
+
+  /* ===================================================
+     MAIN ANALYSIS ENGINE
+  =================================================== */
+  function analyze() {
+    var text = document.getElementById('textInput').value;
+    var filterStops = document.getElementById('stopWordToggle').checked;
+    var limit = parseInt(document.getElementById('limitSelect').value);
+
+    // Update stop word toggle label
+    document.getElementById('stopWordLabel').textContent = filterStops ? 'On' : 'Off';
+
+    var tokens = tokenize(text);
+    var totalWords = tokens.length;
+    lastTotalWords = totalWords;
+
+    if (totalWords === 0) {
+      renderEmpty();
+      updateTelemetry(0, 0, 0);
+      return;
+    }
+
+    // Unique word count (always from original tokens)
+    var uniqueSet = {};
+    for (var i = 0; i < tokens.length; i++) {
+      uniqueSet[tokens[i]] = 1;
+    }
+    var uniqueCount = Object.keys(uniqueSet).length;
+
+    // Build frequency map
+    var freqMap = {};
+
+    if (currentNgram === 1) {
+      for (var j = 0; j < tokens.length; j++) {
+        var word = tokens[j];
+        if (filterStops && STOP_WORDS.has(word)) continue;
+        if (word.length < 2) continue;
+        freqMap[word] = (freqMap[word] || 0) + 1;
+      }
+    } else {
+      // N-gram extraction: slide window across token array
+      var n = currentNgram;
+      var end = tokens.length - n;
+      for (var k = 0; k <= end; k++) {
+        var gram = tokens.slice(k, k + n);
+        if (filterStops) {
+          // Skip grams where every word is a stop word or single character
+          var allStop = true;
+          for (var m = 0; m < gram.length; m++) {
+            if (!STOP_WORDS.has(gram[m]) && gram[m].length >= 2) {
+              allStop = false;
+              break;
+            }
+          }
+          if (allStop) continue;
+        }
+        var key = gram.join(' ');
+        freqMap[key] = (freqMap[key] || 0) + 1;
+      }
+    }
+
+    // Sort by frequency descending
+    var sorted = Object.keys(freqMap).map(function(phrase) {
+      return { phrase: phrase, count: freqMap[phrase] };
+    });
+    sorted.sort(function(a, b) { return b.count - a.count; });
+
+    // Apply limit
+    if (limit > 0 && sorted.length > limit) {
+      sorted = sorted.slice(0, limit);
+    }
+
+    lastResults = sorted;
+
+    renderTable(sorted, totalWords);
+    updateTelemetry(totalWords, uniqueCount, totalWords);
+  }
+
+  /* ===================================================
+     RENDER: EMPTY STATE
+  =================================================== */
+  function renderEmpty() {
+    document.getElementById('matrixEmpty').style.display = 'block';
+    document.getElementById('matrixTable').style.display = 'none';
+    lastResults = [];
+  }
+
+  /* ===================================================
+     RENDER: DENSITY MATRIX TABLE
+  =================================================== */
+  function renderTable(results, totalWords) {
+    var empty = document.getElementById('matrixEmpty');
+    var table = document.getElementById('matrixTable');
+    var tbody = document.getElementById('matrixBody');
+
+    if (results.length === 0) {
+      empty.style.display = 'block';
+      table.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    table.style.display = 'table';
+
+    var maxCount = results[0].count;
+    var rows = [];
+    for (var i = 0; i < results.length; i++) {
+      var item = results[i];
+      var density = ((item.count / totalWords) * 100).toFixed(2);
+      var barPct = Math.round((item.count / maxCount) * 100);
+      rows.push(
+        '<tr>' +
+        '<td class="td-rank">' + (i + 1) + '</td>' +
+        '<td class="td-phrase">' + escapeHtml(item.phrase) + '</td>' +
+        '<td class="td-count">' + item.count + '</td>' +
+        '<td class="td-density">' + density + '%</td>' +
+        '<td class="td-bar-cell"><div class="density-bar-track"><div class="density-bar-fill" style="width:' + barPct + '%"></div></div></td>' +
+        '</tr>'
+      );
+    }
+    tbody.innerHTML = rows.join('');
+  }
+
+  /* ===================================================
+     RENDER: TELEMETRY PANEL
+  =================================================== */
+  function updateTelemetry(totalWords, uniqueWords, wordCountForTime) {
+    document.getElementById('statTotalWords').textContent = totalWords.toLocaleString();
+    document.getElementById('statUniqueWords').textContent = uniqueWords.toLocaleString();
+    var readMin = totalWords > 0 ? Math.max(1, Math.round(wordCountForTime / 238)) : 0;
+    document.getElementById('statReadTime').textContent = totalWords > 0 ? readMin + ' min' : '0 min';
+  }
+
+  /* ===================================================
+     COPY MATRIX TO CLIPBOARD (CSV)
+  =================================================== */
+  function copyMatrix() {
+    if (lastResults.length === 0) return;
+
+    var lines = ['Rank,Keyword / Phrase,Count,Density (%)'];
+    var totalWords = lastTotalWords;
+    for (var i = 0; i < lastResults.length; i++) {
+      var item = lastResults[i];
+      var density = ((item.count / totalWords) * 100).toFixed(2);
+      lines.push((i + 1) + ',"' + item.phrase.replace(/"/g, '""') + '",' + item.count + ',' + density + '%');
+    }
+
+    var csv = lines.join('\n');
+    try {
+      navigator.clipboard.writeText(csv).then(function() {
+        showCopied();
+      }).catch(function() {
+        fallbackCopy(csv);
+      });
+    } catch (e) {
+      fallbackCopy(csv);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+    showCopied();
+  }
+
+  function showCopied() {
+    var btn = document.getElementById('copyBtn');
+    btn.classList.add('copied');
+    btn.textContent = 'Copied to Clipboard!';
+    setTimeout(function() {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<span>&#128203;</span> Copy Matrix Data (CSV)';
+    }, 2000);
+  }
+
+  /* ===================================================
+     FAQ ACCORDION
+  =================================================== */
+  function toggleFaq(btn) {
+    var answer = btn.nextElementSibling;
+    var isOpen = answer.classList.contains('open');
+    btn.classList.toggle('open', !isOpen);
+    btn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+    answer.classList.toggle('open', !isOpen);
+  }
+
+  /* ===================================================
+     HTML ESCAPE UTILITY
+  =================================================== */
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSS Clip-Path Maker: Plot Custom Polygon Masks Visually | AxiomApe</title>
+  <meta name="description" content="Free visual CSS clip-path generator. Click to plot polygon vertices on a live canvas, drag nodes to reshape, and copy the exact clip-path: polygon() CSS code instantly. 100% browser-based." />
+  <meta name="keywords" content="css clip-path maker, clip-path generator, polygon clip path tool, css mask generator, visual clip path editor, css shape maker, polygon coordinates, clip path polygon percentage, css clipping path, responsive image mask, css custom shape, clip path percentage coordinates, polygon mask generator, web design clip path, css polygon shape plotter" />
+  <link rel="canonical" href="https://axiomape.com/css-clip-path-maker/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "CSS Clip-Path Maker",
+        "description": "Free visual CSS clip-path generator. Click to plot polygon vertices on a live canvas, drag nodes to reshape, and copy the exact clip-path: polygon() CSS code instantly. 100% browser-based.",
+        "url": "https://axiomape.com/css-clip-path-maker/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the CSS clip-path property?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The CSS clip-path property defines a clipping region that determines which parts of an element are visible. Everything inside the clipping shape is shown at full opacity; everything outside is hidden. It works on any HTML element including images, divs, and videos, and requires no image editing software or separate mask files."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the polygon() function calculate coordinates?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The polygon() function takes a list of vertex coordinate pairs, each written as an X and Y value separated by a space. The coordinate system starts at the top-left corner of the element's bounding box (0% 0%) and ends at the bottom-right (100% 100%). Each pair defines one corner of the polygon, and the browser draws straight lines between consecutive pairs to form the clipping boundary."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should I use percentages instead of pixels for my clip-path?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Percentage values make your clip-path fully responsive. When you write clip-path: polygon(50% 0%, 100% 100%, 0% 100%), the triangle scales perfectly with the element regardless of its rendered size. Pixel values are fixed, so a shape designed for a 400px-wide image will look distorted on a 200px thumbnail or a full-bleed hero section."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is CSS clip-path fully supported on mobile browsers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The clip-path property with polygon() is supported in all modern mobile and desktop browsers including Chrome, Safari, Firefox, and Edge. Global support is above 97% as of 2025. The -webkit-clip-path vendor prefix is still useful for older Safari versions prior to 13.1, which is why this tool outputs both declarations."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I animate a CSS clip-path polygon on hover?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, as long as both the start and end polygon() functions have the same number of vertices. Browsers interpolate the coordinate values frame by frame to produce smooth transitions. Add a CSS transition property such as transition: clip-path 0.4s ease to the element, then define a different polygon() value in a :hover or :focus selector. The vertex count must match exactly, or the animation will jump instantly rather than tween."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f13;
+      --surface:  #1a1a24;
+      --surface2: #22222f;
+      --border:   rgba(255,255,255,0.08);
+      --text:     #e8e8f0;
+      --muted:    #888899;
+      --accent:   #6c63ff;
+      --purple:   #A855F7;
+      --yellow:   #EAB308;
+      --radius:   12px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+      --ease:     0.2s ease;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .page-wrapper {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 16px 72px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #A855F7 0%, #6c63ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      line-height: 1.25;
+    }
+
+    .page-header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* ── Three-panel dashboard layout ── */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 250px 1fr 290px;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1080px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel-canvas {
+        grid-column: 1 / -1;
+        order: -1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Generic panel shell ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .panel-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 14px;
+    }
+
+    /* ── Control groups ── */
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color var(--ease), background var(--ease), color var(--ease);
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .btn:hover {
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+
+    .btn.active {
+      border-color: var(--purple);
+      background: rgba(168,85,247,0.18);
+      color: var(--purple);
+    }
+
+    .btn-full { width: 100%; }
+
+    .btn-primary {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #9333ea;
+      border-color: #9333ea;
+      color: #fff;
+    }
+
+    /* ── Button rows ── */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .toggle-row .btn {
+      flex: 1;
+      font-size: 12px;
+      padding: 7px 6px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-row .btn {
+      flex: 1;
+    }
+
+    /* File upload styled as button */
+    .upload-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 7px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color var(--ease), color var(--ease);
+      margin-top: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-label:hover {
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+
+    .upload-label input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      font-size: 0;
+    }
+
+    /* Color picker inline row */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .color-row label {
+      font-size: 12px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .color-row input[type="color"] {
+      width: 32px;
+      height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .node-count {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* ── Interaction guide ── */
+    .guide-list {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .guide-list span.key {
+      color: var(--yellow);
+      font-weight: 600;
+    }
+
+    /* ── Canvas Panel ── */
+    .panel-canvas {
+      padding: 12px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      background: #111118;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: crosshair;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .canvas-wrap.ratio-11  { aspect-ratio: 1 / 1; }
+    .canvas-wrap.ratio-169 { aspect-ratio: 16 / 9; }
+    .canvas-wrap.ratio-43  { aspect-ratio: 4 / 3; }
+
+    /* Dimmed background showing the unmasked area */
+    .bg-layer {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0.22;
+      transition: background var(--ease);
+    }
+
+    /* Clipped foreground showing the masked area at full opacity */
+    .clip-layer {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      transition: background var(--ease);
+    }
+
+    /* Purple polygon border overlay */
+    .canvas-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .poly-fill {
+      fill: rgba(168,85,247,0.10);
+      stroke: none;
+    }
+
+    .poly-stroke {
+      fill: none;
+      stroke: #A855F7;
+      stroke-width: 1.5;
+      stroke-linejoin: round;
+      stroke-dasharray: none;
+    }
+
+    /* Yellow draggable vertex handles */
+    .v-node {
+      fill: #EAB308;
+      stroke: #0d0d12;
+      stroke-width: 2;
+      pointer-events: all;
+      cursor: grab;
+      transition: r 0.12s ease;
+    }
+
+    .v-node:hover { r: 8; }
+    .v-node.dragging { cursor: grabbing; r: 9; }
+
+    /* Vertex index labels */
+    .v-label {
+      fill: #0d0d12;
+      font-size: 5px;
+      font-weight: 700;
+      font-family: sans-serif;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      gap: 6px;
+    }
+
+    .canvas-hint span {
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .canvas-hint .hint-icon {
+      font-size: 26px;
+    }
+
+    /* ── CSS Output Panel ── */
+    .css-block {
+      background: #0a0a10;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.75;
+      color: #cdd6f4;
+      min-height: 90px;
+      word-break: break-all;
+      white-space: pre-wrap;
+      margin-bottom: 8px;
+    }
+
+    .css-prop  { color: #89b4fa; }
+    .css-func  { color: #cba6f7; }
+    .css-val   { color: #a6e3a1; }
+    .css-punc  { color: #585b70; }
+    .css-empty { color: var(--muted); font-style: italic; font-family: sans-serif; }
+
+    .copy-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .copy-feedback {
+      font-size: 12px;
+      color: #a6e3a1;
+      text-align: center;
+      height: 16px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .copy-feedback.show { opacity: 1; }
+
+    /* Coordinate list */
+    .coord-section-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin: 14px 0 8px;
+    }
+
+    .coord-list {
+      max-height: 150px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .coord-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'Consolas', 'SF Mono', monospace;
+      background: var(--surface2);
+      color: var(--muted);
+    }
+
+    .coord-item.hl {
+      background: rgba(168,85,247,0.14);
+      color: var(--text);
+    }
+
+    .ci-idx {
+      color: var(--purple);
+      font-weight: 700;
+      min-width: 20px;
+      font-size: 11px;
+    }
+
+    /* ── Generic card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    /* ── Ad placeholders ── */
+    .axiom-ad-leaderboard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 90px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .axiom-ad-leaderboard { display: none; }
+    }
+
+    .axiom-ad-mobile-anchor {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      z-index: 100;
+    }
+
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor { display: flex; }
+    }
+
+    /* ── Glossary ── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .glossary-term {
+      font-weight: 700;
+      color: var(--purple);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ── */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--purple);
+      margin: 20px 0 7px;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .edu-section p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    /* ── FAQ accordion ── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 9px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13.5px;
+      background: var(--surface2);
+      user-select: none;
+    }
+
+    .faq-q:hover { background: rgba(168,85,247,0.1); }
+
+    .faq-icon {
+      font-size: 18px;
+      color: var(--purple);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+
+    .faq-a {
+      display: none;
+      padding: 13px 16px;
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.65;
+      background: var(--surface);
+    }
+
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── Tool disclaimer ── */
+    .tool-disclaimer {
+      background: rgba(108,99,255,0.07);
+      border: 1px solid rgba(108,99,255,0.18);
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 20px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+    code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'Consolas', 'SF Mono', monospace;
+      font-size: 0.88em;
+      color: #cba6f7;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>CSS Clip-Path Maker: Plot Custom Polygon Masks Visually</h1>
+    <p>Click to add vertices, drag to reposition, double-click to delete. Get the live <code>clip-path: polygon()</code> CSS code as you build.</p>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════
+       THREE-PANEL INTERACTIVE DASHBOARD
+  ════════════════════════════════════════════════════ -->
+  <div class="dashboard">
+
+    <!-- PANEL 1: Tool Controls and Presets -->
+    <div class="panel" id="panel-controls">
+      <div class="panel-label">Controls and Presets</div>
+
+      <div class="control-group">
+        <div class="group-label">Shape Presets</div>
+        <div class="preset-grid">
+          <button class="btn" onclick="loadPreset('triangle')"  title="Load a 3-point triangle">Triangle</button>
+          <button class="btn" onclick="loadPreset('hexagon')"   title="Load a 6-sided hexagon">Hexagon</button>
+          <button class="btn" onclick="loadPreset('star')"      title="Load a 5-point star">Star</button>
+          <button class="btn" onclick="loadPreset('chevron')"   title="Load a chevron arrow">Chevron</button>
+          <button class="btn" onclick="loadPreset('cross')"     title="Load a plus-sign cross">Cross</button>
+          <button class="btn" onclick="loadPreset('arrow')"     title="Load a right-pointing arrow">Arrow</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="group-label">Background Context</div>
+        <div class="toggle-row">
+          <button class="btn active" id="bg-solid-btn"  onclick="setBg('solid')">Color</button>
+          <button class="btn"        id="bg-sample-btn" onclick="setBg('sample')">Sample</button>
+        </div>
+        <label class="upload-label" title="Upload your own image to preview the clipping mask">
+          Upload Custom Image
+          <input type="file" accept="image/*" id="imgUpload" onchange="handleImageUpload(event)" />
+        </label>
+        <div class="color-row">
+          <label for="bgColorPicker">BG Color:</label>
+          <input type="color" id="bgColorPicker" value="#2d1f4e"
+            onchange="updateSolidColor(this.value)" title="Choose background color" />
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="group-label">Canvas Proportions</div>
+        <div class="toggle-row">
+          <button class="btn active" id="ratio-11-btn"  onclick="setRatio('11')">1:1</button>
+          <button class="btn"        id="ratio-169-btn" onclick="setRatio('169')">16:9</button>
+          <button class="btn"        id="ratio-43-btn"  onclick="setRatio('43')">4:3</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="group-label">Edit Polygon</div>
+        <div class="action-row">
+          <button class="btn" onclick="undoLast()" title="Remove the last vertex added">Undo</button>
+          <button class="btn" onclick="clearAll()" title="Remove all vertices">Clear</button>
+        </div>
+        <div class="node-count" id="nodeCount">0 vertices plotted</div>
+      </div>
+
+      <div class="control-group">
+        <div class="group-label">Interaction Guide</div>
+        <div class="guide-list">
+          <div><span class="key">Click</span> canvas to add a vertex</div>
+          <div><span class="key">Drag</span> a node to reposition it</div>
+          <div><span class="key">Double-click</span> a node to delete it</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2: Interactive Clipping Canvas -->
+    <div class="panel panel-canvas">
+      <div class="panel-label">Interactive Clipping Canvas</div>
+      <div class="canvas-wrap ratio-11" id="canvasWrap">
+        <div class="bg-layer"  id="bgLayer"></div>
+        <div class="clip-layer" id="clipLayer"></div>
+        <svg class="canvas-svg" id="canvasSvg"
+          viewBox="0 0 100 100" preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <polygon id="polyFill"   class="poly-fill"   points="" />
+          <polygon id="polyStroke" class="poly-stroke" points="" />
+        </svg>
+        <div class="canvas-hint" id="canvasHint">
+          <span class="hint-icon">+</span>
+          <span>Click anywhere to plot your first vertex</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 3: Compiled CSS Output -->
+    <div class="panel" id="panel-output">
+      <div class="panel-label">Compiled CSS Output</div>
+
+      <div class="css-block" id="cssOutput"><span class="css-empty">Plot at least 3 vertices to generate CSS output...</span></div>
+
+      <div class="copy-row">
+        <div class="copy-feedback" id="copyFeedback">Copied to clipboard!</div>
+        <button class="btn btn-primary btn-full" onclick="copyCss()">Copy CSS</button>
+      </div>
+
+      <div class="coord-section-label">Vertex Coordinates</div>
+      <div class="coord-list" id="coordList"></div>
+    </div>
+
+  </div><!-- /.dashboard -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       GLOSSARY
+  ════════════════════════════════════════════════════ -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Clip-Path</div>
+        <div class="glossary-def">A CSS property that hides parts of an element outside a defined geometric region, creating a custom visible area without removing the element from the document flow.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Polygon() Function</div>
+        <div class="glossary-def">A CSS shape value that defines a clipping region as a multi-sided polygon using a list of X and Y coordinate pairs. Each pair marks one vertex of the boundary.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Coordinate System</div>
+        <div class="glossary-def">The 2D reference grid used to locate positions inside an element. The origin (0% 0%) is the top-left corner of the bounding box; (100% 100%) is the bottom-right.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Vertex / Node</div>
+        <div class="glossary-def">A single corner point of a polygon. Each vertex is defined by one X and Y value. The browser connects all vertices in sequence to form the clipping boundary.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">CSS Masking</div>
+        <div class="glossary-def">The broad term for CSS techniques that control which parts of an element are visible. The two primary approaches in modern CSS are clip-path and mask-image.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Bounding Box</div>
+        <div class="glossary-def">The invisible rectangle that wraps an HTML element. CSS clip-path percentage coordinates are always relative to this box, not the page or the viewport.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Aspect Ratio</div>
+        <div class="glossary-def">The proportional width-to-height relationship of a container. Previewing your polygon mask at the correct aspect ratio ensures the shape scales correctly in production.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">SVG vs CSS Clipping</div>
+        <div class="glossary-def">CSS clip-path is quicker to author and fully responsive using percentages. SVG clipPath supports curved Bezier edges and can be reused across multiple elements via an id reference.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       EDUCATIONAL SECTION
+  ════════════════════════════════════════════════════ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to CSS Clip-Path Polygon Masking</h2>
+
+    <p class="section-intro">CSS clip-path lets you crop any HTML element into a custom polygon shape without touching an image editor or writing a separate SVG file. This guide covers how the percentage coordinate system works, why responsive units matter, how to animate polygon shapes on hover, and when to use SVG clipping instead.</p>
+
+    <h3>How to Use This Tool</h3>
+    <p>Start by clicking a preset button to load a starting shape, or click directly on the canvas to place your first vertex. Every additional click adds a new corner to your polygon. Once three or more vertices are plotted, the live preview splits the canvas into a dimmed unmasked area and a fully visible masked area so you can see exactly what your clip-path will look like. Drag any yellow node to fine-tune its position. Double-click a node to remove it. Use the ratio toggles to match your target layout (square, widescreen, or photo format), and upload your own image to preview the mask over real content.</p>
+
+    <h3>Understanding the CSS Coordinate Grid</h3>
+    <p>Every polygon coordinate is expressed as a percentage of the element's own bounding box width and height. The origin, 0% 0%, sits at the top-left corner. The point 100% 100% is the bottom-right corner. A vertex at 50% 0% is always the exact horizontal center of the top edge, regardless of whether the element is 200 pixels wide or 2000 pixels wide. This makes percentage-based clip-paths inherently fluid and responsive. Pixel values do not share this property - a shape authored for a 400px card breaks visually on a 200px thumbnail or a full-width hero image.</p>
+
+    <h3>Floating-Point Precision in the Polygon Output</h3>
+    <p>Dividing raw pixel positions by canvas dimensions often produces long floating-point decimals, such as 33.333333333336%. This tool clamps every output coordinate to two decimal places (e.g., 33.33%). Two decimal places provides sub-pixel precision on any realistic element size while keeping the generated CSS clean and readable in your stylesheet.</p>
+
+    <h3>Animating CSS Clip-Path Polygons on Hover</h3>
+    <p>Browsers can tween between two polygon() values as long as both shapes have the same number of vertices. The browser interpolates each coordinate pair independently on every animation frame. To create a hover reveal, apply a CSS transition on the base state and define a second polygon() value in a :hover rule. The vertex count must match exactly between states. If your resting shape has six points, your hover shape must also have six points, even if two of them are collapsed to the same position to simulate a simpler outline.</p>
+
+    <h3>SVG clipPath vs CSS clip-path</h3>
+    <p>CSS clip-path with polygon() is the right choice for most layout masking work. It lives entirely in your stylesheet, needs no extra markup, and supports smooth CSS transitions and animations. SVG clipPath is a better fit when you need curved edges (Bezier curves are natively supported in SVG path data but not in the polygon() function), when you want to define one mask and apply it to multiple elements by referencing a shared id, or when you need to clip SVG elements themselves. For curved clip shapes in pure CSS, use the <code>path()</code> function value rather than polygon().</p>
+
+    <h3>Browser Support and the Webkit Prefix</h3>
+    <p>The clip-path property with polygon() is supported in every modern browser. The -webkit-clip-path prefix targets Safari versions prior to 13.1 (released 2019). This tool outputs both declarations for maximum coverage across older devices. If you are targeting only evergreen browsers you can safely omit the -webkit- line. On mobile, support is complete across Chrome for Android, Safari for iOS, and Samsung Internet.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">What is the CSS clip-path property? <span class="faq-icon">+</span></div>
+      <div class="faq-a">The CSS clip-path property defines a clipping region that determines which parts of an element are visible. Everything inside the clipping shape is shown at full opacity; everything outside is hidden. It works on any HTML element including images, divs, and videos, and requires no image editing software or separate mask files.</div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">How does the polygon() function calculate coordinates? <span class="faq-icon">+</span></div>
+      <div class="faq-a">The polygon() function takes a list of vertex coordinate pairs, each written as an X and Y value separated by a space. The coordinate system starts at the top-left corner of the element's bounding box (0% 0%) and ends at the bottom-right (100% 100%). Each pair defines one corner of the polygon, and the browser draws straight lines between consecutive pairs to form the clipping boundary.</div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Why should I use percentages instead of pixels for my clip-path? <span class="faq-icon">+</span></div>
+      <div class="faq-a">Percentage values make your clip-path fully responsive. When you write clip-path: polygon(50% 0%, 100% 100%, 0% 100%), the triangle scales perfectly with the element regardless of its rendered size. Pixel values are fixed, so a shape designed for a 400px-wide image will look distorted on a 200px thumbnail or a full-bleed hero section.</div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Is CSS clip-path fully supported on mobile browsers? <span class="faq-icon">+</span></div>
+      <div class="faq-a">Yes. The clip-path property with polygon() is supported in all modern mobile and desktop browsers including Chrome, Safari, Firefox, and Edge. Global support is above 97% as of 2025. The -webkit-clip-path vendor prefix is still useful for older Safari versions prior to 13.1, which is why this tool outputs both declarations.</div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Can I animate a CSS clip-path polygon on hover? <span class="faq-icon">+</span></div>
+      <div class="faq-a">Yes, as long as both the start and end polygon() functions have the same number of vertices. Browsers interpolate the coordinate values frame by frame to produce smooth transitions. Add a CSS transition property such as transition: clip-path 0.4s ease to the element, then define a different polygon() value in a :hover or :focus selector. The vertex count must match exactly, or the animation will jump instantly rather than tween.</div>
+    </div>
+
+    <div class="tool-disclaimer">
+      This tool performs all coordinate calculations locally in your browser. No image data, vertex coordinates, or session information is ever sent to a server. Uploaded images are loaded using the browser-native URL.createObjectURL() API and are never transmitted externally. Your work stays entirely on your device.
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+// ================================================================
+//  STATE
+// ================================================================
+let vertices      = [];   // Array of {x: number, y: number} in percent
+let draggingIdx   = -1;
+let isDragging    = false;
+let bgMode        = 'solid';
+let solidColor    = '#2d1f4e';
+let customImgUrl  = null;
+
+// Inline SVG used as the built-in sample background (no external fetch)
+const SAMPLE_SVG  = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%234338ca'/%3E%3Cstop offset='50%25' stop-color='%23a855f7'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='600' fill='url(%23g)'/%3E%3Ccircle cx='180' cy='180' r='110' fill='rgba(255,255,255,0.09)'/%3E%3Ccircle cx='620' cy='420' r='75' fill='rgba(255,255,255,0.07)'/%3E%3Crect x='280' y='140' width='240' height='200' rx='18' fill='rgba(255,255,255,0.06)'/%3E%3Ctext x='400' y='330' text-anchor='middle' fill='rgba(255,255,255,0.45)' font-size='28' font-family='sans-serif'%3ESample Preview%3C/text%3E%3C/svg%3E";
+
+// ================================================================
+//  DOM REFS
+// ================================================================
+const canvasWrap  = document.getElementById('canvasWrap');
+const bgLayer     = document.getElementById('bgLayer');
+const clipLayer   = document.getElementById('clipLayer');
+const canvasSvg   = document.getElementById('canvasSvg');
+const polyFill    = document.getElementById('polyFill');
+const polyStroke  = document.getElementById('polyStroke');
+const cssOutput   = document.getElementById('cssOutput');
+const coordList   = document.getElementById('coordList');
+const nodeCount   = document.getElementById('nodeCount');
+const canvasHint  = document.getElementById('canvasHint');
+const copyFb      = document.getElementById('copyFeedback');
+
+// ================================================================
+//  MATH UTILITIES
+// ================================================================
+// Round to at most 2 decimal places, eliminating floating-point noise
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+// Convert a pointer event to bounding-box percentage coordinates
+function eventToPercent(e) {
+  const rect = canvasWrap.getBoundingClientRect();
+  const rawX = ((e.clientX - rect.left)  / rect.width)  * 100;
+  const rawY = ((e.clientY - rect.top)   / rect.height) * 100;
+  return {
+    x: Math.min(100, Math.max(0, round2(rawX))),
+    y: Math.min(100, Math.max(0, round2(rawY)))
+  };
+}
+
+// Hit-test pointer against existing vertex nodes
+// Returns vertex index or -1
+function hitVertex(e) {
+  const rect   = canvasWrap.getBoundingClientRect();
+  const px     = ((e.clientX - rect.left)  / rect.width)  * 100;
+  const py     = ((e.clientY - rect.top)   / rect.height) * 100;
+  // Hit radius in canvas-percent units, normalised for aspect ratio
+  const hitPx  = 14; // physical pixels
+  const hitPctX = (hitPx / rect.width)  * 100;
+  const hitPctY = (hitPx / rect.height) * 100;
+
+  for (let i = vertices.length - 1; i >= 0; i--) {
+    const dx = (vertices[i].x - px) / hitPctX;
+    const dy = (vertices[i].y - py) / hitPctY;
+    if (Math.sqrt(dx * dx + dy * dy) < 1) return i;
+  }
+  return -1;
+}
+
+// ================================================================
+//  BUILD POLYGON STRING
+// ================================================================
+function polygonStr() {
+  return vertices.map(v => v.x + '% ' + v.y + '%').join(', ');
+}
+
+// ================================================================
+//  RENDER
+// ================================================================
+function render() {
+  const n = vertices.length;
+
+  // Node count label
+  nodeCount.textContent = n + ' ' + (n === 1 ? 'vertex' : 'vertices') + ' plotted';
+
+  // Show/hide canvas hint
+  canvasHint.style.display = n === 0 ? 'flex' : 'none';
+
+  // Build SVG points string
+  const pts = vertices.map(v => v.x + ',' + v.y).join(' ');
+
+  if (n >= 2) {
+    polyFill.setAttribute('points', pts);
+    polyStroke.setAttribute('points', pts);
+    polyFill.style.display   = '';
+    polyStroke.style.display = '';
+  } else if (n === 1) {
+    polyFill.setAttribute('points', pts);
+    polyStroke.setAttribute('points', pts);
+    polyFill.style.display   = 'none';
+    polyStroke.style.display = 'none';
+  } else {
+    polyFill.style.display   = 'none';
+    polyStroke.style.display = 'none';
+  }
+
+  // Remove old vertex nodes
+  canvasSvg.querySelectorAll('.v-node, .v-label').forEach(el => el.remove());
+
+  // Draw vertex nodes
+  vertices.forEach((v, i) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', v.x);
+    circle.setAttribute('cy', v.y);
+    circle.setAttribute('r', '6');
+    circle.setAttribute('class', 'v-node');
+    circle.setAttribute('data-i', i);
+    if (i === draggingIdx) circle.classList.add('dragging');
+    canvasSvg.appendChild(circle);
+
+    // Small index label inside the node
+    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    txt.setAttribute('x', v.x);
+    txt.setAttribute('y', v.y);
+    txt.setAttribute('class', 'v-label');
+    txt.textContent = i + 1;
+    canvasSvg.appendChild(txt);
+  });
+
+  // Apply clip-path to the foreground layer
+  if (n >= 3) {
+    const poly = 'polygon(' + polygonStr() + ')';
+    clipLayer.style.webkitClipPath = poly;
+    clipLayer.style.clipPath       = poly;
+    clipLayer.style.opacity        = '1';
+    bgLayer.style.opacity          = '0.22';
+  } else {
+    clipLayer.style.webkitClipPath = 'none';
+    clipLayer.style.clipPath       = 'none';
+    clipLayer.style.opacity        = '0.4';
+    bgLayer.style.opacity          = '0';
+  }
+
+  // CSS output
+  if (n >= 3) {
+    const poly = polygonStr();
+    cssOutput.innerHTML =
+      '<span class="css-prop">-webkit-clip-path</span>' +
+      '<span class="css-punc">: </span>' +
+      '<span class="css-func">polygon</span>' +
+      '<span class="css-punc">(</span>' +
+      '<span class="css-val">' + escHtml(poly) + '</span>' +
+      '<span class="css-punc">);</span>\n' +
+      '<span class="css-prop">clip-path</span>' +
+      '<span class="css-punc">: </span>' +
+      '<span class="css-func">polygon</span>' +
+      '<span class="css-punc">(</span>' +
+      '<span class="css-val">' + escHtml(poly) + '</span>' +
+      '<span class="css-punc">);</span>';
+  } else {
+    cssOutput.innerHTML = '<span class="css-empty">Plot at least 3 vertices to generate CSS output...</span>';
+  }
+
+  // Coordinate list
+  coordList.innerHTML = '';
+  vertices.forEach((v, i) => {
+    const el = document.createElement('div');
+    el.className = 'coord-item';
+    el.setAttribute('data-i', i);
+    el.innerHTML =
+      '<span class="ci-idx">' + (i + 1) + '</span>' +
+      '<span>' + v.x + '%&nbsp;&nbsp;' + v.y + '%</span>';
+    coordList.appendChild(el);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ================================================================
+//  POINTER EVENTS - click to add, drag to move, dblclick to delete
+// ================================================================
+let pointerDownTime  = 0;
+let pointerDownIdx   = -1;
+let movedSinceDown   = false;
+
+canvasWrap.addEventListener('pointerdown', function(e) {
+  e.preventDefault();
+  canvasWrap.setPointerCapture(e.pointerId);
+
+  pointerDownTime  = Date.now();
+  movedSinceDown   = false;
+
+  const idx = hitVertex(e);
+  pointerDownIdx   = idx;
+
+  if (idx !== -1) {
+    draggingIdx = idx;
+    isDragging  = false; // not confirmed drag yet
+  }
+});
+
+canvasWrap.addEventListener('pointermove', function(e) {
+  if (pointerDownIdx === -1 && draggingIdx === -1) return;
+  if (draggingIdx === -1) return;
+  e.preventDefault();
+
+  movedSinceDown = true;
+  isDragging     = true;
+
+  const pt = eventToPercent(e);
+  vertices[draggingIdx] = pt;
+  render();
+});
+
+canvasWrap.addEventListener('pointerup', function(e) {
+  e.preventDefault();
+
+  const wasIdx    = pointerDownIdx;
+  const wasDrag   = isDragging;
+  const elapsed   = Date.now() - pointerDownTime;
+
+  draggingIdx    = -1;
+  isDragging     = false;
+  pointerDownIdx = -1;
+
+  if (wasIdx !== -1 && !wasDrag) {
+    // Single click on an existing vertex - do nothing (vertex stays)
+    // Double-click is handled by the dblclick event
+  } else if (wasIdx === -1 && !wasDrag) {
+    // Click on empty canvas - add a new vertex
+    const pt = eventToPercent(e);
+    vertices.push(pt);
+    render();
+  } else {
+    // Finished dragging
+    render();
+  }
+});
+
+canvasWrap.addEventListener('dblclick', function(e) {
+  e.preventDefault();
+  const idx = hitVertex(e);
+  if (idx !== -1) {
+    vertices.splice(idx, 1);
+    draggingIdx = -1;
+    render();
+  }
+});
+
+// ================================================================
+//  BACKGROUND CONTROLS
+// ================================================================
+function applyBg() {
+  if (bgMode === 'solid') {
+    bgLayer.style.backgroundImage   = '';
+    bgLayer.style.backgroundColor   = solidColor;
+    clipLayer.style.backgroundImage = '';
+    clipLayer.style.backgroundColor = solidColor;
+    canvasWrap.style.backgroundColor = '#111118';
+  } else if (bgMode === 'sample') {
+    bgLayer.style.backgroundImage   = 'url("' + SAMPLE_SVG + '")';
+    bgLayer.style.backgroundColor   = '';
+    clipLayer.style.backgroundImage = 'url("' + SAMPLE_SVG + '")';
+    clipLayer.style.backgroundColor = '';
+    canvasWrap.style.backgroundColor = '#111118';
+  } else if (bgMode === 'custom' && customImgUrl) {
+    bgLayer.style.backgroundImage   = 'url("' + customImgUrl + '")';
+    bgLayer.style.backgroundColor   = '';
+    clipLayer.style.backgroundImage = 'url("' + customImgUrl + '")';
+    clipLayer.style.backgroundColor = '';
+    canvasWrap.style.backgroundColor = '#111118';
+  }
+}
+
+function setBg(mode) {
+  bgMode = mode;
+  document.getElementById('bg-solid-btn').classList.toggle('active', mode === 'solid');
+  document.getElementById('bg-sample-btn').classList.toggle('active', mode === 'sample');
+  applyBg();
+}
+
+function updateSolidColor(val) {
+  solidColor = val;
+  if (bgMode === 'solid') applyBg();
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (customImgUrl) URL.revokeObjectURL(customImgUrl);
+  customImgUrl = URL.createObjectURL(file);
+  bgMode = 'custom';
+  document.getElementById('bg-solid-btn').classList.remove('active');
+  document.getElementById('bg-sample-btn').classList.remove('active');
+  applyBg();
+}
+
+// ================================================================
+//  ASPECT RATIO TOGGLE
+// ================================================================
+function setRatio(r) {
+  ['11', '169', '43'].forEach(function(k) {
+    canvasWrap.classList.toggle('ratio-' + k, k === r);
+    document.getElementById('ratio-' + k + '-btn').classList.toggle('active', k === r);
+  });
+  render();
+}
+
+// ================================================================
+//  SHAPE PRESETS
+// ================================================================
+function rd(n) { return round2(n); }
+
+var PRESETS = {
+  triangle: [
+    {x: 50, y: 0},
+    {x: 100, y: 100},
+    {x: 0, y: 100}
+  ],
+  hexagon: (function() {
+    var pts = [];
+    for (var i = 0; i < 6; i++) {
+      var a = (Math.PI / 180) * (60 * i - 30);
+      pts.push({ x: rd(50 + 47 * Math.cos(a)), y: rd(50 + 47 * Math.sin(a)) });
+    }
+    return pts;
+  }()),
+  star: (function() {
+    var pts = [];
+    for (var i = 0; i < 10; i++) {
+      var a = (Math.PI / 180) * (36 * i - 90);
+      var radius = (i % 2 === 0) ? 47 : 20;
+      pts.push({ x: rd(50 + radius * Math.cos(a)), y: rd(50 + radius * Math.sin(a)) });
+    }
+    return pts;
+  }()),
+  chevron: [
+    {x: 0,   y: 0},
+    {x: 75,  y: 0},
+    {x: 100, y: 50},
+    {x: 75,  y: 100},
+    {x: 0,   y: 100},
+    {x: 25,  y: 50}
+  ],
+  cross: [
+    {x: 33, y: 0},
+    {x: 67, y: 0},
+    {x: 67, y: 33},
+    {x: 100,y: 33},
+    {x: 100,y: 67},
+    {x: 67, y: 67},
+    {x: 67, y: 100},
+    {x: 33, y: 100},
+    {x: 33, y: 67},
+    {x: 0,  y: 67},
+    {x: 0,  y: 33},
+    {x: 33, y: 33}
+  ],
+  arrow: [
+    {x: 0,   y: 22},
+    {x: 60,  y: 22},
+    {x: 60,  y: 0},
+    {x: 100, y: 50},
+    {x: 60,  y: 100},
+    {x: 60,  y: 78},
+    {x: 0,   y: 78}
+  ]
+};
+
+function loadPreset(name) {
+  if (PRESETS[name]) {
+    vertices = PRESETS[name].map(function(v) { return {x: v.x, y: v.y}; });
+    render();
+  }
+}
+
+// ================================================================
+//  ACTIONS
+// ================================================================
+function undoLast() {
+  if (vertices.length > 0) {
+    vertices.pop();
+    render();
+  }
+}
+
+function clearAll() {
+  vertices = [];
+  render();
+}
+
+function copyCss() {
+  if (vertices.length < 3) return;
+  var poly = polygonStr();
+  var text = '-webkit-clip-path: polygon(' + poly + ');\nclip-path: polygon(' + poly + ');';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(fallbackCopy.bind(null, text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(err) {}
+  document.body.removeChild(ta);
+  showCopied();
+}
+
+function showCopied() {
+  copyFb.classList.add('show');
+  setTimeout(function() { copyFb.classList.remove('show'); }, 2200);
+}
+
+// ================================================================
+//  FAQ TOGGLE
+// ================================================================
+function toggleFaq(item) {
+  item.classList.toggle('open');
+}
+
+// ================================================================
+//  INIT
+// ================================================================
+applyBg();
+loadPreset('triangle');
+</script>
+</body>
+</html>

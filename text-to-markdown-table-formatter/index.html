@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text to Markdown Table Formatter: Convert CSV, TSV, and Excel Pastes to Syntax Grids | AxiomApe</title>
+  <meta name="description" content="Free text to Markdown table formatter. Paste raw data from Excel, Google Sheets, CSV, or TSV and instantly convert it to a clean, padded Markdown pipe table with live preview. Supports auto-detect delimiter, column alignment, and GitHub Flavored Markdown. 100% client-side." />
+  <meta name="keywords" content="text to markdown table, csv to markdown table, excel to markdown, google sheets to markdown, tsv to markdown, markdown table generator, pipe table formatter, GFM table converter, column to markdown, paste to markdown table, markdown table from csv, table formatter online, github flavored markdown table, markdown table alignment, markdown syntax grid" />
+  <link rel="canonical" href="https://axiomape.com/text-to-markdown-table-formatter/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Text to Markdown Table Formatter",
+        "description": "Free text to Markdown table formatter. Paste raw data from Excel, Google Sheets, CSV, or TSV and instantly convert it to a clean, padded Markdown pipe table with live preview. Supports auto-detect delimiter, column alignment, and GitHub Flavored Markdown. 100% client-side.",
+        "url": "https://axiomape.com/text-to-markdown-table-formatter/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I align columns in a Markdown table?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Column alignment in a Markdown table is controlled by the separator row - the row of hyphens placed between the header and the data rows. A colon on the left side only (:---) produces left alignment. A colon on the right side only (---:) produces right alignment. Colons on both sides (:---:) produce center alignment. No colons (---) defaults to left in most renderers. Use the Alignment selector in this tool to apply your preferred alignment to every column at once."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I copy and paste directly from Microsoft Excel or Google Sheets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Both Microsoft Excel and Google Sheets copy cells as tab-separated values (TSV) when you use Ctrl+C or Cmd+C. Select any range of cells in either application, copy it, and paste it directly into the input area of this tool. The auto-detect mode will recognize the tab character and parse your columns correctly. Column headers from the first row of your selection will become the Markdown table header if the First row is header option is checked."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Markdown support merged cells or complex table layouts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. GitHub Flavored Markdown pipe tables do not support merged cells, rowspans, colspans, nested tables, or multi-line cell content. Each cell is a flat string on a single line. If you need merged cells or complex layouts, you will need to write raw HTML inside your Markdown document, since most Markdown renderers allow inline HTML. For simple grid data, the pipe table syntax produced by this tool covers the vast majority of documentation and README use cases."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do my Markdown columns look misaligned in the raw text editor?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Misaligned raw Markdown columns happen when cell content varies in character length and no padding is added. The Markdown table will still render correctly in any compliant renderer regardless of spacing, but the raw text is hard to read and edit. This tool adds trailing spaces to every cell so each column is padded to the width of its widest entry. The result is a perfectly aligned syntax grid that looks clean in both your IDE and the rendered output."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is GitHub Flavored Markdown (GFM) and how does it affect tables?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GitHub Flavored Markdown (GFM) is a superset of the CommonMark specification created by GitHub. One of its most important additions is pipe table syntax, which CommonMark does not include. A GFM table uses pipe characters to separate columns, a required separator row of hyphens after the header, and optional colon characters to control alignment. GFM tables are now supported by most modern Markdown editors, static site generators (Jekyll, Hugo, Docusaurus), and documentation platforms (Notion, Confluence, GitLab). This tool outputs valid GFM pipe table syntax."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:        #3B82F6;
+      --accent-hover:  #2563EB;
+      --accent-light:  rgba(59,130,246,0.12);
+      --accent-border: rgba(59,130,246,0.35);
+      --green:         #10B981;
+      --green-light:   rgba(16,185,129,0.12);
+      --green-border:  rgba(16,185,129,0.35);
+      --success:       #22C55E;
+      --bg:            #0F1117;
+      --bg-card:       #1A1D27;
+      --bg-input:      #12151F;
+      --bg-table-head: #1E2235;
+      --border:        #2A2D3E;
+      --border-focus:  #3B82F6;
+      --text:          #E2E8F0;
+      --text-muted:    #94A3B8;
+      --text-dim:      #64748B;
+      --radius:        10px;
+      --shadow:        0 4px 24px rgba(0,0,0,0.4);
+      --font:          'Inter', 'Roboto', 'Segoe UI', system-ui, sans-serif;
+      --mono:          'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .top-bar { display: none; }
+
+    /* PAGE WRAPPER */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* PAGE HEADER */
+    .page-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3.8vw, 2rem);
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 660px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    /* SEE-ALSO BANNER */
+    .see-also-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green-light);
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .see-also-banner a { color: var(--green); font-weight: 600; }
+    .see-also-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    /* CONTROL DASHBOARD */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: flex-end;
+      margin-bottom: 14px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .control-select, .control-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.875rem;
+      padding: 7px 10px;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .control-select:focus, .control-input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    /* CUSTOM DELIMITER WRAPPER */
+    .custom-delim-wrap { display: none; flex-direction: column; gap: 5px; }
+    .custom-delim-wrap.visible { display: flex; }
+
+    /* TOGGLE SWITCH */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(18px);
+      background: #fff;
+    }
+    .toggle-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* ALIGNMENT BUTTONS */
+    .align-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .align-btn {
+      padding: 6px 13px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: var(--mono);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .align-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .align-btn:hover:not(.active) { border-color: var(--text-dim); color: var(--text); }
+
+    /* THREE-PANEL LAYOUT */
+    .three-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .panel-input  { grid-column: 1; }
+    .panel-output { grid-column: 2; }
+    .panel-preview { grid-column: 1 / -1; margin-top: 4px; }
+
+    @media (max-width: 768px) {
+      .three-panel { grid-template-columns: 1fr; }
+      .panel-input, .panel-output, .panel-preview { grid-column: 1; }
+    }
+
+    /* PANEL LABELS */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .panel-label.green { color: var(--green); }
+
+    /* DETECTED BADGE */
+    .detected-badge {
+      display: inline-block;
+      font-size: 0.67rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+
+    /* DATA INPUT TEXTAREA */
+    .data-input {
+      width: 100%;
+      min-height: 230px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 12px;
+      font-family: var(--mono);
+      resize: vertical;
+      transition: border-color 0.15s;
+      line-height: 1.55;
+    }
+    .data-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .data-input::placeholder { color: var(--text-dim); font-style: italic; }
+
+    /* STAT PILLS */
+    .stat-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .stat-pill {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .stat-pill span { color: var(--green); font-weight: 700; }
+
+    /* MARKDOWN OUTPUT BLOCK */
+    .md-output-block {
+      width: 100%;
+      min-height: 230px;
+      background: var(--bg-input);
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+      color: #a5f3fc;
+      font-size: 0.78rem;
+      padding: 12px;
+      font-family: var(--mono);
+      white-space: pre;
+      overflow-x: auto;
+      line-height: 1.6;
+      resize: vertical;
+    }
+    .md-output-block.empty {
+      color: var(--text-dim);
+      font-style: italic;
+      white-space: pre-wrap;
+    }
+
+    /* COPY BUTTON */
+    .copy-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--green-border);
+      background: var(--green-light);
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--green); color: #0F1117; }
+    .copy-btn.copied { background: var(--success); color: #0F1117; border-color: var(--success); }
+
+    /* PREVIEW TABLE */
+    .preview-wrap { overflow-x: auto; }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .preview-table th {
+      background: var(--bg-table-head);
+      color: var(--accent);
+      font-weight: 700;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .preview-table td {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+    }
+    .preview-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .preview-table .a-left  { text-align: left;   }
+    .preview-table .a-center { text-align: center; }
+    .preview-table .a-right  { text-align: right;  }
+
+    /* EMPTY STATE */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+      color: var(--text-dim);
+      font-size: 0.875rem;
+      gap: 6px;
+      padding: 20px;
+    }
+    .empty-state .es-icon { font-size: 1.8rem; }
+
+    /* PREVIEW SECTION LABEL */
+    .preview-section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* AD PLACEMENTS - site-chrome.js handles media queries */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+    }
+
+    /* GLOSSARY */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* EDUCATIONAL SECTION */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .edu-section h3 {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 9px;
+      margin-top: 20px;
+    }
+    .edu-section h3:first-of-type { margin-top: 0; }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .edu-section p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* HOW-TO STEPS */
+    .how-to-steps {
+      list-style: none;
+      counter-reset: steps;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 20px;
+    }
+    .how-to-steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .how-to-steps li::before {
+      content: counter(steps);
+      background: var(--accent-light);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.72rem;
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* FAQ */
+    .faq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    .faq-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg-input);
+      user-select: none;
+      transition: background 0.15s;
+      gap: 12px;
+    }
+    .faq-question:hover { background: var(--accent-light); }
+    .faq-icon {
+      font-size: 0.72rem;
+      color: var(--accent);
+      transition: transform 0.22s;
+      flex-shrink: 0;
+    }
+    .faq-icon.open { transform: rotate(180deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      background: var(--bg-card);
+    }
+    .faq-answer.open { max-height: 500px; }
+    .faq-answer p {
+      padding: 14px 16px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Text to <span>Markdown Table</span> Formatter</h1>
+      <p>Paste raw data from Excel, Google Sheets, CSV, or TSV and instantly transform it into a clean, padded Markdown pipe table syntax grid with live visual preview.</p>
+    </header>
+
+    <!-- SEE ALSO CROSS-REFERENCE -->
+    <div class="see-also-banner" role="note">
+      <span class="see-also-icon">&#128203;</span>
+      <span>Building a table from scratch instead of pasting data? Try the <a href="/markdown-table-grid-builder/">Markdown Table Grid Builder</a> for an interactive spreadsheet-style cell editor.</span>
+    </div>
+
+    <!-- MAIN TOOL CARD -->
+    <div class="card">
+
+      <!-- CONTROL DASHBOARD -->
+      <div class="controls-row">
+
+        <div class="control-group">
+          <span class="control-label">Delimiter Type</span>
+          <select class="control-select" id="delimiter-select" onchange="onDelimiterChange(); convert();">
+            <option value="auto">Auto-Detect (Recommended)</option>
+            <option value="tab">Tab - Excel / Google Sheets (TSV)</option>
+            <option value="comma">Comma - CSV Files</option>
+            <option value="pipe">Pipe Character ( | )</option>
+            <option value="space">Multiple Spaces</option>
+            <option value="semicolon">Semicolon ( ; )</option>
+            <option value="custom">Custom String</option>
+          </select>
+        </div>
+
+        <div class="control-group custom-delim-wrap" id="custom-delim-wrap">
+          <span class="control-label">Custom Delimiter</span>
+          <input type="text" class="control-input" id="custom-delim"
+            placeholder="e.g.  ;  or  ::"
+            style="width: 120px;"
+            oninput="convert();" />
+        </div>
+
+        <div class="control-group">
+          <span class="control-label">Column Alignment</span>
+          <div class="align-group">
+            <button class="align-btn active" data-align="left"   onclick="setAlign('left')">:--- Left</button>
+            <button class="align-btn"         data-align="center" onclick="setAlign('center')">:---: Center</button>
+            <button class="align-btn"         data-align="right"  onclick="setAlign('right')">---: Right</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- HEADER TOGGLE -->
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="header-toggle" checked onchange="convert();" />
+          <span class="toggle-track"></span>
+        </label>
+        <span class="toggle-label" onclick="document.getElementById('header-toggle').click();">
+          First row is the table header
+        </span>
+      </div>
+
+      <!-- THREE-PANEL LAYOUT -->
+      <div class="three-panel">
+
+        <!-- PANEL 1: DATA INPUT -->
+        <div class="panel-input">
+          <div class="panel-header">
+            <span class="panel-label">Raw Data Input</span>
+            <span id="detected-label"></span>
+          </div>
+          <textarea
+            class="data-input"
+            id="raw-input"
+            placeholder="Paste your data here...
+
+Examples this tool accepts:
+  Excel / Google Sheets selection (tab-separated)
+  CSV files (comma-separated)
+  Pipe-delimited data
+  Space-padded column exports
+
+Quick start: select cells in Excel, press Ctrl+C,
+then paste here. Your Markdown table appears instantly."
+            oninput="convert();"
+          ></textarea>
+          <div class="stat-pills" id="stat-pills"></div>
+        </div>
+
+        <!-- PANEL 2: MARKDOWN OUTPUT -->
+        <div class="panel-output">
+          <div class="panel-header">
+            <span class="panel-label green">Markdown Syntax Output</span>
+            <button class="copy-btn" id="copy-btn" onclick="copyMarkdown();">Copy Markdown</button>
+          </div>
+          <div class="md-output-block empty" id="md-output">Paste data on the left to generate Markdown table syntax...</div>
+        </div>
+
+        <!-- PANEL 3: LIVE PREVIEW -->
+        <div class="panel-preview">
+          <div class="preview-section-label">Live Visual Preview</div>
+          <div class="preview-wrap" id="preview-wrap">
+            <div class="empty-state">
+              <div class="es-icon">&#128203;</div>
+              <div>Your rendered table will appear here</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- END THREE-PANEL -->
+
+    </div>
+    <!-- END TOOL CARD -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY CARD -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Markdown</div>
+          <div class="glossary-def">A lightweight plain-text formatting language that converts to styled HTML. Created by John Gruber in 2004, it is now standard for README files, documentation sites, wikis, and developer notes.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">GitHub Flavored Markdown (GFM)</div>
+          <div class="glossary-def">A superset of the CommonMark specification maintained by GitHub. GFM adds pipe table syntax, task list checkboxes, strikethrough text, and autolinks that are not part of standard Markdown.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Syntax Grid</div>
+          <div class="glossary-def">A Markdown table whose raw text is space-padded so every column lines up visually in a plain-text or monospace editor, making the source code as readable as the rendered output.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">CSV (Comma-Separated Values)</div>
+          <div class="glossary-def">A plain-text format where each row is a line and each column value is separated by a comma. The most widely used format for exporting spreadsheet and database data to other applications.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">TSV (Tab-Separated Values)</div>
+          <div class="glossary-def">Similar to CSV but uses a tab character as the column separator. When you copy cells from Microsoft Excel or Google Sheets, the clipboard content is TSV format.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Delimiter</div>
+          <div class="glossary-def">The character or string used to separate column values in a row of raw data. Common delimiters include the tab, comma, pipe ( | ), semicolon, and colon. Choosing the correct one is required for accurate parsing.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Pipe Table</div>
+          <div class="glossary-def">The specific Markdown table syntax that uses the vertical bar ( | ) character to divide columns. A pipe table requires a mandatory separator row of hyphens immediately after the header row.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Monospace Formatting</div>
+          <div class="glossary-def">A display style where every character occupies equal horizontal width. Raw Markdown tables only appear correctly grid-aligned when viewed in a monospace font, which is the default in most code editors and IDEs.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Converting Raw Data into Markdown Tables</h2>
+
+      <p class="section-intro">Whether you are documenting an API response, writing a README for a GitHub repository, or building technical content for a documentation platform, Markdown pipe tables are the most portable way to display structured data in a developer context. The challenge is that most data lives in spreadsheets, CSV files, or clipboard pastes that look nothing like Markdown syntax. This tool converts that raw input to a valid, padded syntax grid in one paste operation.</p>
+
+      <h3>How to Use This Formatter</h3>
+      <ol class="how-to-steps">
+        <li>Select a range of cells in Microsoft Excel or Google Sheets and copy them with Ctrl+C (or Cmd+C on Mac). Or open a CSV file in any text editor and copy the contents.</li>
+        <li>Paste directly into the Raw Data Input area. The Auto-Detect mode will identify your delimiter character automatically based on the content of the first line.</li>
+        <li>If the first row of your data contains column names, leave the "First row is the table header" toggle enabled. Disable it if your data has no header row and you want auto-generated column labels.</li>
+        <li>Select your preferred Column Alignment. Left is the Markdown default and works for most content. Center suits numeric or status columns. Right is conventional for currency and measurement data.</li>
+        <li>The Markdown Syntax Output panel on the right updates with every keystroke. Click Copy Markdown to copy the formatted code to your clipboard, then paste it into your README, documentation file, or any GFM-compatible editor.</li>
+        <li>Check the Live Visual Preview below to verify your column structure and data looks correct before committing the Markdown to your repository or documentation.</li>
+      </ol>
+
+      <h3>Why Raw Markdown Output Is Space-Padded</h3>
+      <p>This formatter adds trailing spaces to every cell value so that each column is padded to the width of its widest entry across the entire dataset, including the header row and the separator row. The resulting raw text forms a perfect alignment grid when viewed in any monospace font, making it readable in version control diffs, code review, and plain-text editors. Markdown renderers ignore the extra whitespace entirely and produce visually identical output whether cells are padded or not, so padded output is strictly better with no tradeoff.</p>
+
+      <h3>How Delimiter Auto-Detection Works</h3>
+      <p>When the Auto-Detect option is active, the engine examines the first non-empty line of your pasted input. It tests for a tab character first (the reliable signature of clipboard content copied from Excel or Google Sheets). If no tab is found, it tests for a pipe character, then a comma, then a semicolon, then two or more consecutive spaces (common in fixed-width column exports). This ordering reflects real-world frequency. You can always override it by selecting a specific delimiter from the dropdown, or supply any arbitrary string separator using the Custom option.</p>
+
+      <h3>Matrix Normalization: Handling Uneven Row Lengths</h3>
+      <p>Real data is rarely perfectly rectangular. Trailing delimiters, copied partial selections, or mismatched row lengths will produce rows with fewer columns than the widest row. This formatter counts the maximum column count across your entire dataset and pads every shorter row with empty Markdown cells ( empty pipe segments ) so the output table never breaks. The separator row of hyphens is always generated to match the exact column count of the widest detected row.</p>
+
+      <!-- FAQ ACCORDION -->
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            How do I align columns in a Markdown table?
+            <span class="faq-icon">&#9660;</span>
+          </div>
+          <div class="faq-answer">
+            <p>Column alignment in a Markdown table is controlled by the separator row - the row of hyphens placed between the header and the data rows. A colon on the left side only (:---) produces left alignment. A colon on the right side only (---:) produces right alignment. Colons on both sides (:---:) produce center alignment. No colons (---) defaults to left in most renderers. Use the Alignment selector in this tool to apply your preferred alignment to every column at once.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            Can I copy and paste directly from Microsoft Excel or Google Sheets?
+            <span class="faq-icon">&#9660;</span>
+          </div>
+          <div class="faq-answer">
+            <p>Yes. Both Microsoft Excel and Google Sheets use tab-separated values (TSV) when you copy cells with Ctrl+C or Cmd+C. Select any range of cells in either application, copy, and paste directly into the input area of this tool. The Auto-Detect mode will recognize the tab character and parse your columns correctly. Column names from the first row of your selection will become the Markdown table header row if the "First row is the table header" toggle is enabled.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            Does Markdown support merged cells or complex table layouts?
+            <span class="faq-icon">&#9660;</span>
+          </div>
+          <div class="faq-answer">
+            <p>No. GitHub Flavored Markdown pipe tables do not support merged cells, rowspan, colspan, nested tables, or multi-line cell content. Each cell is a flat string on a single line. If your layout requires merged cells or complex structure, you will need to write raw HTML directly inside your Markdown document. Most Markdown renderers pass inline HTML through unchanged, so that approach works for advanced cases. For standard data grids, the pipe table syntax this tool generates covers the vast majority of documentation and README use cases.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            Why do my Markdown columns look misaligned in the raw text editor?
+            <span class="faq-icon">&#9660;</span>
+          </div>
+          <div class="faq-answer">
+            <p>Misaligned raw Markdown columns occur when cell content varies in character length and no padding is applied. The rendered table will look correct in any compliant Markdown renderer regardless of spacing, but the raw source text is hard to read, review, and edit by hand. This tool adds trailing spaces to every cell so each column is padded to the width of its widest entry. The padded output forms a perfect grid in monospace environments like VS Code, GitHub's file viewer, or any terminal editor.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            What is GitHub Flavored Markdown (GFM) and how does it affect tables?
+            <span class="faq-icon">&#9660;</span>
+          </div>
+          <div class="faq-answer">
+            <p>GitHub Flavored Markdown (GFM) is a superset of the CommonMark specification authored by GitHub. Its most practically important addition is pipe table syntax, which is not part of standard CommonMark at all. A GFM table uses pipe characters to separate columns, a required separator row of hyphens immediately after the header row, and optional colon characters in the separator to control alignment. GFM tables are supported by nearly all modern Markdown editors, static site generators including Jekyll, Hugo, and Docusaurus, and documentation platforms including Notion, Confluence, GitLab, and Bitbucket. This tool generates fully valid GFM pipe table syntax.</p>
+          </div>
+        </div>
+
+      </div>
+      <!-- END FAQ -->
+
+    </div>
+    <!-- END EDUCATIONAL SECTION -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    var currentAlign = 'left';
+
+    /* ============================================================
+       DELIMITER SELECTOR CHANGE
+    ============================================================ */
+    function onDelimiterChange() {
+      var val = document.getElementById('delimiter-select').value;
+      var wrap = document.getElementById('custom-delim-wrap');
+      if (val === 'custom') {
+        wrap.classList.add('visible');
+      } else {
+        wrap.classList.remove('visible');
+      }
+    }
+
+    /* ============================================================
+       ALIGNMENT SETTER
+    ============================================================ */
+    function setAlign(align) {
+      currentAlign = align;
+      document.querySelectorAll('.align-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.align === align);
+      });
+      convert();
+    }
+
+    /* ============================================================
+       GET ACTIVE DELIMITER
+    ============================================================ */
+    function getDelimiter(text) {
+      var sel = document.getElementById('delimiter-select').value;
+
+      if (sel === 'tab')       return { mode: 'str', val: '\t',    label: 'Tab (TSV)' };
+      if (sel === 'comma')     return { mode: 'str', val: ',',     label: 'Comma (CSV)' };
+      if (sel === 'pipe')      return { mode: 'str', val: '|',     label: 'Pipe' };
+      if (sel === 'semicolon') return { mode: 'str', val: ';',     label: 'Semicolon' };
+      if (sel === 'space')     return { mode: 'rex', val: /[ \t]{2,}/, label: 'Multiple Spaces' };
+
+      if (sel === 'custom') {
+        var c = document.getElementById('custom-delim').value;
+        if (c.length > 0) return { mode: 'str', val: c, label: 'Custom: "' + c + '"' };
+        return { mode: 'str', val: '\t', label: 'Tab (fallback)' };
+      }
+
+      /* Auto-detect: scan first non-empty line */
+      var firstLine = '';
+      var lines = text.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].trim() !== '') { firstLine = lines[i]; break; }
+      }
+
+      if (firstLine.indexOf('\t') !== -1)  return { mode: 'str', val: '\t', label: 'Tab (TSV) - auto' };
+      if (firstLine.indexOf('|') !== -1)   return { mode: 'str', val: '|',  label: 'Pipe - auto' };
+      if (firstLine.indexOf(',') !== -1)   return { mode: 'str', val: ',',  label: 'Comma (CSV) - auto' };
+      if (firstLine.indexOf(';') !== -1)   return { mode: 'str', val: ';',  label: 'Semicolon - auto' };
+      if (/[ \t]{2,}/.test(firstLine))     return { mode: 'rex', val: /[ \t]{2,}/, label: 'Spaces - auto' };
+
+      return { mode: 'str', val: '\t', label: 'Tab (default)' };
+    }
+
+    /* ============================================================
+       PARSE RAW TEXT TO 2D ARRAY
+    ============================================================ */
+    function parseRows(text) {
+      var delim = getDelimiter(text);
+      var rawLines = text.split('\n');
+      var rows = [];
+
+      for (var i = 0; i < rawLines.length; i++) {
+        var line = rawLines[i];
+        if (line.trim() === '') continue;
+
+        var cells;
+        if (delim.mode === 'rex') {
+          cells = line.split(delim.val);
+        } else {
+          cells = line.split(delim.val);
+        }
+
+        /* Strip leading and trailing empty cells produced by surrounding pipes */
+        if (delim.val === '|') {
+          if (cells.length > 0 && cells[0].trim() === '') cells.shift();
+          if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
+        }
+
+        rows.push(cells.map(function(c) { return c.trim(); }));
+      }
+
+      return { rows: rows, delimLabel: delim.label };
+    }
+
+    /* ============================================================
+       NORMALIZE MATRIX: pad short rows to max col count
+    ============================================================ */
+    function normalize(rows) {
+      if (rows.length === 0) return rows;
+      var maxCols = 0;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].length > maxCols) maxCols = rows[i].length;
+      }
+      return rows.map(function(row) {
+        var r = row.slice();
+        while (r.length < maxCols) r.push('');
+        return r;
+      });
+    }
+
+    /* ============================================================
+       COMPUTE COLUMN WIDTHS (minimum 3 for ---)
+    ============================================================ */
+    function computeWidths(allRows) {
+      if (allRows.length === 0) return [];
+      var numCols = allRows[0].length;
+      var widths = [];
+      for (var c = 0; c < numCols; c++) widths.push(3);
+      for (var r = 0; r < allRows.length; r++) {
+        for (var c = 0; c < allRows[r].length; c++) {
+          var len = (allRows[r][c] || '').length;
+          if (len > widths[c]) widths[c] = len;
+        }
+      }
+      return widths;
+    }
+
+    /* ============================================================
+       BUILD SEPARATOR ROW
+    ============================================================ */
+    function buildSeparator(widths, align) {
+      var cells = widths.map(function(w) {
+        var dashes = '-'.repeat(Math.max(w, 3));
+        if (align === 'left')   return ':' + dashes + ' ';
+        if (align === 'center') return ':' + dashes + ':';
+        if (align === 'right')  return ' ' + dashes + ':';
+        return dashes;
+      });
+      /* Trim trailing space from right-align case for cleaner look */
+      var row = '| ';
+      for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        if (align === 'right') {
+          /* pad to width+2 total (space + dashes + colon) */
+          row += cell;
+        } else {
+          /* pad separator cell to match column width */
+          var needed = widths[i];
+          if (align === 'left')   needed = needed + 1; /* colon + dashes */
+          if (align === 'center') needed = needed + 2; /* colon + dashes + colon */
+          row += cell.padEnd(needed + 1, ' ');
+        }
+        if (i < cells.length - 1) row += '| ';
+      }
+      row += '|';
+      return row;
+    }
+
+    /* ============================================================
+       BUILD PADDED SEPARATOR (clean version used in output)
+    ============================================================ */
+    function buildSep(widths, align) {
+      var parts = widths.map(function(w) {
+        var fill = '-'.repeat(w);
+        if (align === 'left')   return ':' + fill;
+        if (align === 'center') return ':' + fill + ':';
+        if (align === 'right')  return fill + ':';
+        return fill;
+      });
+      /* Pad each separator segment to match column width + alignment chars */
+      var padded = parts.map(function(p, i) {
+        return p.padEnd(widths[i] + (align === 'center' ? 2 : 1), '-');
+      });
+      return '| ' + padded.join(' | ') + ' |';
+    }
+
+    /* ============================================================
+       BUILD PADDED DATA ROW
+    ============================================================ */
+    function buildRow(cells, widths) {
+      var padded = cells.map(function(c, i) {
+        return (c || '').padEnd(widths[i], ' ');
+      });
+      return '| ' + padded.join(' | ') + ' |';
+    }
+
+    /* ============================================================
+       MAIN CONVERT FUNCTION (called on every input event)
+    ============================================================ */
+    function convert() {
+      var raw        = document.getElementById('raw-input').value;
+      var isHeader   = document.getElementById('header-toggle').checked;
+      var outputEl   = document.getElementById('md-output');
+      var previewEl  = document.getElementById('preview-wrap');
+      var detected   = document.getElementById('detected-label');
+      var statPills  = document.getElementById('stat-pills');
+
+      /* Empty input state */
+      if (!raw.trim()) {
+        outputEl.textContent = 'Paste data on the left to generate Markdown table syntax...';
+        outputEl.classList.add('empty');
+        previewEl.innerHTML = '<div class="empty-state"><div class="es-icon">&#128203;</div><div>Your rendered table will appear here</div></div>';
+        detected.innerHTML  = '';
+        statPills.innerHTML = '';
+        return;
+      }
+
+      var parsed = parseRows(raw);
+      var rows   = parsed.rows;
+      var delimLabel = parsed.delimLabel;
+
+      if (rows.length === 0) {
+        outputEl.textContent = 'No rows detected. Try switching the Delimiter Type.';
+        outputEl.classList.add('empty');
+        previewEl.innerHTML = '<div class="empty-state"><div class="es-icon">&#9888;&#65039;</div><div>No rows detected - try a different delimiter</div></div>';
+        detected.innerHTML  = '';
+        statPills.innerHTML = '';
+        return;
+      }
+
+      var norm    = normalize(rows);
+      var numCols = norm[0].length;
+
+      /* Separate header row from data rows */
+      var headerRow, dataRows;
+      if (isHeader) {
+        headerRow = norm[0];
+        dataRows  = norm.slice(1);
+      } else {
+        headerRow = [];
+        for (var i = 0; i < numCols; i++) headerRow.push('Column ' + (i + 1));
+        dataRows = norm;
+      }
+
+      /* Compute column widths across header + all data */
+      var allRows = [headerRow].concat(dataRows);
+      var widths  = computeWidths(allRows);
+
+      /* Build Markdown lines */
+      var lines = [];
+      lines.push(buildRow(headerRow, widths));
+      lines.push(buildSep(widths, currentAlign));
+      for (var r = 0; r < dataRows.length; r++) {
+        lines.push(buildRow(dataRows[r], widths));
+      }
+      var md = lines.join('\n');
+
+      /* Update output panel */
+      outputEl.textContent = md;
+      outputEl.classList.remove('empty');
+
+      /* Detected delimiter badge */
+      detected.innerHTML = '<span class="detected-badge">' + htmlEsc(delimLabel) + '</span>';
+
+      /* Stat pills */
+      statPills.innerHTML =
+        '<div class="stat-pill"><span>' + numCols + '</span> col' + (numCols !== 1 ? 's' : '') + '</div>' +
+        '<div class="stat-pill"><span>' + dataRows.length + '</span> data row' + (dataRows.length !== 1 ? 's' : '') + '</div>' +
+        '<div class="stat-pill"><span>' + allRows.length + '</span> total rows</div>';
+
+      /* Build HTML preview table */
+      var ac = 'a-' + currentAlign;
+      var html = '<table class="preview-table"><thead><tr>';
+      for (var c = 0; c < headerRow.length; c++) {
+        html += '<th class="' + ac + '">' + htmlEsc(headerRow[c]) + '</th>';
+      }
+      html += '</tr></thead><tbody>';
+      for (var r = 0; r < dataRows.length; r++) {
+        html += '<tr>';
+        for (var c = 0; c < dataRows[r].length; c++) {
+          html += '<td class="' + ac + '">' + htmlEsc(dataRows[r][c]) + '</td>';
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      previewEl.innerHTML = '<div class="preview-wrap">' + html + '</div>';
+    }
+
+    /* ============================================================
+       COPY TO CLIPBOARD
+    ============================================================ */
+    function copyMarkdown() {
+      var md  = document.getElementById('md-output').textContent;
+      var btn = document.getElementById('copy-btn');
+      if (document.getElementById('md-output').classList.contains('empty')) return;
+
+      function flashBtn() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy Markdown';
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(flashBtn).catch(function() {
+          fallbackCopy(md);
+          flashBtn();
+        });
+      } else {
+        fallbackCopy(md);
+        flashBtn();
+      }
+    }
+
+    function fallbackCopy(text) {
+      var el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(el);
+    }
+
+    /* ============================================================
+       FAQ ACCORDION TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      var icon   = el.querySelector('.faq-icon');
+      var answer = el.nextElementSibling;
+      icon.classList.toggle('open');
+      answer.classList.toggle('open');
+    }
+
+    /* ============================================================
+       HTML ESCAPE UTILITY
+    ============================================================ */
+    function htmlEsc(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Time Zone Visual Meeting Grid Planner: Coordinate Global Team Schedules | AxiomApe</title>
+  <meta name="description" content="Free world time zone meeting planner with interactive heatmap grid. Add team locations, set work hours, and instantly find optimal meeting windows across global time zones. 100% browser-based, no data sent to any server." />
+  <meta name="keywords" content="world time zone meeting planner, global team scheduler, time zone heatmap, meeting time finder, distributed team coordination, international meeting scheduler, UTC offset planner, work hour overlap calculator, remote team meeting tool, time zone grid, global working hours, team schedule planner, DST aware meeting scheduler, IANA time zone planner, world clock meeting scheduler" />
+  <link rel="canonical" href="https://axiomape.com/world-time-zone-meeting-planner/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "World Time Zone Visual Meeting Grid Planner",
+        "description": "Free world time zone meeting planner with interactive heatmap grid. Add team locations, set work hours, and instantly find optimal meeting windows across global time zones. 100% browser-based, no data sent to any server.",
+        "url": "https://axiomape.com/world-time-zone-meeting-planner/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does this tool handle daylight saving time changes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This planner uses the browser's built-in Intl.DateTimeFormat API with IANA time zone identifiers such as America/New_York and Europe/London. The API automatically applies the correct UTC offset for the current date, which means daylight saving time transitions are handled without any manual adjustment. When DST is active, clocks shift forward by one hour in the affected region, and the grid reflects that shift immediately. You never need to know whether a city is currently on standard time or summer time - the tool computes the correct local hour from today's date every time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the best way to coordinate meetings across more than three time zones?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The key strategy is to identify the smallest possible overlap window and then rotate the burden fairly across the team. Start by adding all team locations to the heatmap and looking for columns where the maximum number of zones fall inside their working hours. If no single hour covers everyone, look for the highest-scoring columns. Then establish a rotation policy: teams on the east side of the date line take the early call one week, while teams on the west side take it the next. Document the agreed rotation in your team handbook so expectations are clear and no single group carries the inconvenience permanently."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do some regions use half-hour or 45-minute UTC offsets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Most time zones align on full-hour boundaries from UTC, but some regions chose offsets based on geographic or political reasons rather than rounding to the nearest hour. India Standard Time is UTC+5:30, Nepal Time is UTC+5:45, and parts of Australia use UTC+9:30 or UTC+10:30. These unusual offsets originated when countries set their clocks to match local solar noon for their geographic center, then never changed to a whole-hour boundary when global standardization occurred. This tool handles fractional offsets correctly through the IANA time zone database, so cities like Mumbai and Kathmandu are displayed at their true local times on the heatmap."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I maximize my team's overlap without burnout?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The most sustainable approach is to identify a short daily synchronization window of one to two hours where the maximum number of team members can attend during normal work hours, and then use that window only for time-sensitive collaboration. All other communication should be async-first: recorded video updates, written briefs, and shared documents that anyone can consume at their own local peak hours. Use the heatmap's gold-highlighted columns to find your core overlap, schedule only recurring standups and critical reviews in that window, and protect the rest of your team's day for deep work."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is an interactive heatmap more effective than a static list of times?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A static list forces you to mentally parse rows of numbers and reason about which combinations of times are mutually acceptable - a cognitively demanding task that scales poorly when three or more zones are involved. A heatmap maps the same information onto a two-dimensional grid where color does the comparison work for you. Your eyes immediately locate the bright columns where most or all zones overlap, versus the dark columns where most locations are outside their working hours. Studies of information visualization consistently show that color-coded grids reduce the time required to make a correct scheduling decision and reduce errors, especially at the edges of working windows where off-by-one-hour mistakes are most common."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    /* ---- PAGE HEADER ---- */
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin-bottom: 0.6rem;
+    }
+    .page-header .subtitle {
+      color: #94a3b8;
+      font-size: 0.975rem;
+      max-width: 740px;
+      margin: 0 auto;
+      line-height: 1.65;
+    }
+
+    /* ---- THREE-PANEL DASHBOARD ---- */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 290px 1fr 270px;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+      #panel-heatmap {
+        grid-column: 1 / -1;
+        order: -1;
+      }
+    }
+    @media (max-width: 640px) {
+      .dashboard { grid-template-columns: 1fr; }
+      #panel-heatmap { order: 0; }
+    }
+
+    /* ---- PANEL BASE ---- */
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+
+    /* ---- PANEL 1: TEAM SETUP ---- */
+    .defaults-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .defaults-lbl {
+      font-size: 0.72rem;
+      color: #64748b;
+      white-space: nowrap;
+    }
+    .def-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      padding: 0.28rem 0.45rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      outline: none;
+      flex: 1;
+      min-width: 70px;
+    }
+    .def-select:focus { border-color: #4F46E5; }
+
+    .search-wrap {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .search-box-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .city-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .city-input:focus { border-color: #4F46E5; }
+    .city-input::placeholder { color: #475569; }
+
+    .ac-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: #1e293b;
+      border: 1px solid #4F46E5;
+      border-radius: 8px;
+      max-height: 210px;
+      overflow-y: auto;
+      z-index: 200;
+      display: none;
+    }
+    .ac-list.open { display: block; }
+    .ac-item {
+      padding: 0.55rem 0.75rem;
+      font-size: 0.83rem;
+      cursor: pointer;
+      border-bottom: 1px solid #1e293b;
+      transition: background 0.1s;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.ac-active { background: #4F46E5; }
+    .ac-item:hover .ac-tz, .ac-item.ac-active .ac-tz { color: #c7d2fe; }
+    .ac-city { font-weight: 600; color: #f1f5f9; }
+    .ac-tz { color: #64748b; font-size: 0.72rem; display: block; margin-top: 1px; }
+
+    .btn-add {
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-add:hover { background: #4338ca; }
+
+    .zone-list { display: flex; flex-direction: column; gap: 0.65rem; }
+    .no-zones-msg {
+      text-align: center;
+      color: #475569;
+      font-size: 0.85rem;
+      padding: 0.75rem 0;
+      line-height: 1.5;
+    }
+
+    .zone-item {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 0.75rem;
+    }
+    .zone-hdr {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.55rem;
+    }
+    .zone-city {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #f1f5f9;
+    }
+    .zone-offset {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .btn-rm {
+      background: none;
+      border: 1px solid #334155;
+      color: #64748b;
+      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+    }
+    .btn-rm:hover { border-color: #ef4444; color: #ef4444; }
+
+    .hours-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .hours-lbl {
+      font-size: 0.68rem;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .hours-sel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      padding: 0.3rem 0.45rem;
+      font-size: 0.78rem;
+      width: 100%;
+      cursor: pointer;
+      outline: none;
+    }
+    .hours-sel:focus { border-color: #4F46E5; }
+
+    /* ---- PANEL 2: HEATMAP ---- */
+    #panel-heatmap {
+      overflow: hidden;
+    }
+    .heatmap-scroll {
+      overflow-x: auto;
+      border-radius: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .heatmap-scroll::-webkit-scrollbar {
+      height: 5px;
+    }
+    .heatmap-scroll::-webkit-scrollbar-track { background: #0f172a; }
+    .heatmap-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    .hmap {
+      border-collapse: collapse;
+      min-width: 750px;
+      width: 100%;
+    }
+    .hmap th, .hmap td {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* Column headers */
+    .hmap thead th {
+      padding: 0.3rem 0;
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: #64748b;
+      background: #0f172a;
+      min-width: 38px;
+      user-select: none;
+      border-bottom: 2px solid #1e293b;
+    }
+    .hmap thead th.lbl-th {
+      text-align: left;
+      padding-left: 0.75rem;
+      min-width: 130px;
+      max-width: 130px;
+      position: sticky;
+      left: 0;
+      background: #0f172a;
+      z-index: 3;
+      font-size: 0.65rem;
+      color: #475569;
+    }
+    .hmap thead th.h-hover {
+      color: #F59E0B;
+    }
+
+    /* Row label */
+    .hmap td.rlabel {
+      text-align: left;
+      padding: 0.35rem 0.6rem;
+      background: #1e293b;
+      border-right: 2px solid #334155;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      min-width: 130px;
+      max-width: 130px;
+    }
+    .rlabel-city {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rlabel-tz {
+      font-size: 0.62rem;
+      color: #64748b;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+
+    /* Heat cells */
+    .hcell {
+      width: 38px;
+      min-width: 38px;
+      height: 48px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      cursor: default;
+      border: 1px solid transparent;
+      line-height: 1.1;
+      padding: 0 1px;
+    }
+    .hcell.c-out {
+      background: #0f172a;
+      color: transparent;
+    }
+    .hcell.c-in {
+      background: #4F46E5;
+      color: #c7d2fe;
+    }
+    .hcell.c-opt {
+      background: #F59E0B;
+      color: #451a03;
+      box-shadow: 0 0 10px rgba(245,158,11,0.45);
+    }
+    .hcell.h-hover {
+      outline: 2px solid rgba(245,158,11,0.8);
+      outline-offset: -2px;
+      z-index: 2;
+      position: relative;
+    }
+    .hcell.c-out.h-hover { color: #94a3b8; }
+    .hcell.c-in.h-hover { color: #fff; }
+    .hcell.c-opt.h-hover { color: #1c0802; }
+
+    /* Score row */
+    .score-row td {
+      font-size: 0.63rem;
+      font-weight: 700;
+      padding: 0.28rem 0;
+      background: #0f172a;
+      color: #475569;
+      border-top: 2px solid #1e293b;
+    }
+    .score-row td.sc-lbl {
+      text-align: left;
+      padding-left: 0.75rem;
+      font-size: 0.62rem;
+      color: #334155;
+      position: sticky;
+      left: 0;
+      background: #0f172a;
+    }
+    .score-row td.sc-opt { color: #F59E0B; }
+    .score-row td.sc-good { color: #818cf8; }
+    .score-row td.h-hover { background: rgba(245,158,11,0.06); }
+
+    .hmap-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #475569;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem;
+      margin-top: 0.8rem;
+    }
+    .legend-it {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.73rem;
+      color: #94a3b8;
+    }
+    .sw {
+      width: 13px; height: 13px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .sw-opt { background: #F59E0B; }
+    .sw-in  { background: #4F46E5; }
+    .sw-out { background: #1e293b; border: 1px solid #334155; }
+
+    /* ---- PANEL 3: TELEMETRY ---- */
+    .tele-hint {
+      color: #475569;
+      font-size: 0.8rem;
+      text-align: center;
+      line-height: 1.55;
+      margin-bottom: 1.1rem;
+    }
+    .best-lbl {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.55rem;
+    }
+    .slot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.38rem 0.5rem;
+      border-radius: 6px;
+      margin-bottom: 0.3rem;
+      font-size: 0.78rem;
+      background: #0f172a;
+    }
+    .slot-row.top-slot {
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+    }
+    .slot-utc { font-weight: 700; color: #e2e8f0; }
+    .slot-pct { font-size: 0.68rem; font-weight: 700; color: #F59E0B; }
+
+    /* Hover state - telemetry detail */
+    .tele-badge {
+      background: linear-gradient(135deg, #4F46E5, #7c3aed);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-align: center;
+      border-radius: 10px;
+      padding: 0.55rem;
+      margin-bottom: 0.85rem;
+      letter-spacing: 0.03em;
+    }
+    .tele-badge.is-opt {
+      background: linear-gradient(135deg, #d97706, #F59E0B);
+      color: #1c0802;
+    }
+    .score-hero {
+      text-align: center;
+      margin-bottom: 0.85rem;
+    }
+    .score-num {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: #4F46E5;
+      line-height: 1;
+    }
+    .score-num.is-opt { color: #F59E0B; }
+    .score-sub {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 3px;
+    }
+    .tele-zones { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.85rem; }
+    .tele-zone {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 0.45rem 0.65rem;
+      border-left: 3px solid #334155;
+    }
+    .tele-zone.z-in  { border-left-color: #4F46E5; }
+    .tele-zone.z-opt { border-left-color: #F59E0B; }
+    .tele-zname { font-size: 0.78rem; font-weight: 600; color: #e2e8f0; }
+    .tele-zstatus { font-size: 0.63rem; color: #64748b; margin-top: 1px; }
+    .tele-zstatus.s-in  { color: #818cf8; }
+    .tele-zstatus.s-opt { color: #F59E0B; }
+    .tele-ztime { font-size: 0.82rem; font-weight: 700; color: #f1f5f9; white-space: nowrap; margin-left: 0.5rem; }
+
+    /* Copy button */
+    .btn-copy {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #4F46E5;
+      color: #818cf8;
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 0.6rem;
+    }
+    .btn-copy:hover { background: #4F46E5; color: #fff; }
+    .btn-copy.copied { background: #064e3b; border-color: #10b981; color: #10b981; }
+
+    /* ---- SHARED CARD BASE ---- */
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+
+    /* ---- GLOSSARY ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 0.85rem;
+    }
+    .glossary-item { display: flex; flex-direction: column; gap: 0.25rem; }
+    .glossary-term { font-weight: 600; color: #818cf8; font-size: 0.875rem; }
+    .glossary-def { color: #94a3b8; font-size: 0.8rem; line-height: 1.55; }
+
+    /* ---- EDUCATIONAL SECTION ---- */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+    .edu-section h3 {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 1.4rem 0 0.5rem;
+    }
+    .section-intro, .edu-section p {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      line-height: 1.72;
+      margin-bottom: 0.65rem;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border-bottom: 1px solid #334155;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #e2e8f0;
+      user-select: none;
+      gap: 1rem;
+    }
+    .faq-q:hover { color: #818cf8; }
+    .faq-chev {
+      color: #64748b;
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-chev { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      line-height: 1.72;
+      padding-bottom: 0.9rem;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* Responsive polish */
+    @media (max-width: 480px) {
+      .page-header h1 { font-size: 1.25rem; }
+      .card { padding: 1.1rem; }
+      .legend { gap: 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>World Time Zone Visual Meeting Grid Planner</h1>
+      <p class="subtitle">Align distributed teams across non-overlapping work windows. Add your team locations, configure individual work hours, and instantly find optimal global meeting times on a live 24-hour heatmap grid.</p>
+    </header>
+
+    <!-- THREE-PANEL DASHBOARD -->
+    <div class="dashboard">
+
+      <!-- PANEL 1: Team Location Setup -->
+      <div class="panel" id="panel-setup">
+        <div class="panel-label">Team Location Setup</div>
+
+        <!-- Global default work-hour range -->
+        <div class="defaults-bar">
+          <span class="defaults-lbl">Default window:</span>
+          <select class="def-select" id="def-start" title="Default start of working day"></select>
+          <span class="defaults-lbl">to</span>
+          <select class="def-select" id="def-end" title="Default end of working day"></select>
+        </div>
+
+        <!-- City search -->
+        <div class="search-wrap">
+          <div class="search-box-wrap">
+            <input type="text" class="city-input" id="city-input"
+              placeholder="Search city or time zone..." autocomplete="off" />
+            <div class="ac-list" id="ac-list"></div>
+          </div>
+          <button class="btn-add" id="btn-add" onclick="addFromInput()">Add</button>
+        </div>
+
+        <!-- Added zones -->
+        <div class="zone-list" id="zone-list">
+          <p class="no-zones-msg" id="no-zones-msg" style="display:none;">
+            No locations added yet. Search for a city above to get started.
+          </p>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Heatmap Grid -->
+      <div class="panel" id="panel-heatmap">
+        <div class="panel-label">24-Hour Global Work Window Heatmap (hover a column for details)</div>
+
+        <div class="heatmap-scroll" id="hmap-scroll">
+          <div class="hmap-empty" id="hmap-empty">
+            Add team locations in the setup panel to generate your global meeting heatmap.
+          </div>
+          <table class="hmap" id="hmap" style="display:none;"></table>
+        </div>
+
+        <div class="legend">
+          <div class="legend-it"><div class="sw sw-opt"></div>Optimal overlap window</div>
+          <div class="legend-it"><div class="sw sw-in"></div>Within working hours</div>
+          <div class="legend-it"><div class="sw sw-out"></div>Outside working hours</div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Meeting Telemetry -->
+      <div class="panel" id="panel-telemetry">
+        <div class="panel-label">Meeting Telemetry</div>
+
+        <!-- Default view (no hover) -->
+        <div id="tele-default">
+          <p class="tele-hint">Hover over any column in the heatmap to see local times for all your team locations simultaneously.</p>
+          <div class="best-lbl">Best Meeting Slots (UTC)</div>
+          <div id="best-slots"></div>
+          <button class="btn-copy" id="copy-btn" onclick="copySlots()">Copy Optimal Slots</button>
+        </div>
+
+        <!-- Hover detail view -->
+        <div id="tele-hover" style="display:none;">
+          <div class="tele-badge" id="tele-badge">UTC 14:00</div>
+          <div class="score-hero">
+            <div class="score-num" id="tele-score">100%</div>
+            <div class="score-sub" id="tele-sub">All locations available</div>
+          </div>
+          <div class="tele-zones" id="tele-zones"></div>
+          <button class="btn-copy" onclick="copySlots()">Copy Optimal Slots</button>
+        </div>
+      </div>
+
+    </div><!-- /.dashboard -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <span class="glossary-term">IANA Time Zone Database</span>
+          <span class="glossary-def">The authoritative global registry of named time zones, maintained by the Internet Assigned Numbers Authority. Identifiers like "America/New_York" and "Asia/Tokyo" map to precise UTC offsets and DST rules for every region on Earth.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">UTC Offset</span>
+          <span class="glossary-def">The number of hours (and sometimes minutes) by which a region's local time differs from Coordinated Universal Time. For example, UTC+9 means local time is 9 hours ahead of UTC, and UTC-5 means 5 hours behind.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Daylight Saving Time (DST)</span>
+          <span class="glossary-def">A seasonal clock adjustment used by many countries, typically advancing clocks forward by one hour in spring and returning them in autumn. DST shifts the UTC offset for affected regions, which is why the same meeting time can feel different after a DST transition.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Working Window</span>
+          <span class="glossary-def">The configured start-of-day and end-of-day range for a team location. Hours within the working window are highlighted on the heatmap grid as available for meetings. Each location can have its own independently configured window.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Heatmap</span>
+          <span class="glossary-def">A data visualization technique that uses color to represent values across a matrix. In this planner, gold columns indicate hours where all team locations are available; indigo cells indicate hours within at least one location's working window.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Compatibility Score</span>
+          <span class="glossary-def">The percentage of added team locations that fall within their configured working window for a given UTC hour. A score of 100% means every location is simultaneously available. Scores above 50% appear in indigo; 100% columns glow in gold.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Greenwich Mean Time (GMT)</span>
+          <span class="glossary-def">The mean solar time at the Royal Observatory in Greenwich, London. Historically the world's primary time standard, now largely replaced by UTC for scientific precision. The two terms are often used interchangeably in everyday scheduling contexts.</span>
+        </div>
+        <div class="glossary-item">
+          <span class="glossary-term">Synchronization</span>
+          <span class="glossary-def">In distributed team scheduling, the act of aligning two or more people across different time zones to participate in a shared real-time activity at the same absolute moment. High synchronization cost is the primary scheduling challenge in globally distributed teams.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Scheduling Meetings Across Global Time Zones</h2>
+      <p class="section-intro">Coordinating meetings across multiple time zones is one of the defining challenges of distributed team work. A single weekly standup that feels effortless for a co-located team becomes a genuine scheduling puzzle once members span Europe, the Americas, and Asia-Pacific simultaneously. This guide explains how the heatmap grid works, what strategies make global scheduling more sustainable, and why visual tools consistently outperform mental arithmetic for this problem.</p>
+
+      <h3>How to Use This Meeting Grid Planner</h3>
+      <p>Start by entering your team locations in the Team Location Setup panel. Type a city name, select it from the dropdown, and click Add. The 24-hour heatmap will generate instantly using today's actual DST-adjusted UTC offsets. By default each location uses a 9 AM to 6 PM working window, but you can adjust the start and end of day for each location independently. The heatmap updates in real time with every change you make.</p>
+      <p>Look for gold-highlighted columns in the grid. These are UTC hours where every added location falls within its configured working window, producing a 100% compatibility score. If no column reaches 100%, the brightest indigo columns represent the best partial overlap available. Hover over any column to see exact local times and availability status for every location simultaneously in the telemetry panel. Click "Copy Optimal Slots" to generate a formatted text block ready to paste into a calendar invite or team message.</p>
+
+      <h3>Why Global Time Zone Coordination Is Hard</h3>
+      <p>The difficulty is not just arithmetic. When you span more than two time zones, constraints compound rapidly. A time that is early morning in New York is late evening in Tokyo and mid-afternoon in London. No single answer satisfies all three constraints equally, and the least-bad option changes depending on whether you weight the convenience of one region over another. The heatmap makes this tradeoff visible at a glance, instead of requiring mental rotation across three simultaneous number lines while trying to remember which cities are currently on DST.</p>
+      <p>Half-hour and 45-minute offsets (used by India, Nepal, and parts of Australia) add further complexity: a meeting that is "on the hour" everywhere else lands at an odd fraction of an hour for those locations. The heatmap handles these offsets correctly and shows the real local time in each cell, so no mental conversion is needed.</p>
+
+      <h3>The Rotation Principle for Distributed Teams</h3>
+      <p>When no perfect overlap window exists, the fairest long-term policy is a rotation schedule. If the only viable meeting time is either 7 AM in New York or 10 PM in Tokyo, neither team should bear that burden every week. A rotation alternates the inconvenience over time so no single region is consistently disadvantaged. This principle is widely adopted by multinational engineering and product organizations and is considered best practice in distributed work research. When building your rotation, note the best-scoring UTC hours from the telemetry panel and identify two or three slots that rotate fairly across your most constrained locations.</p>
+
+      <h3>Async-First and the Synchronization Budget</h3>
+      <p>Even with good overlap, real-time meetings carry hidden costs: they interrupt deep work, require scheduling overhead, and often produce outcomes that a well-written document would have delivered with less friction. Leading distributed teams treat their overlap window as a limited synchronization budget. They reserve real-time slots for decisions that genuinely require live discussion and push all status updates, progress reports, and information sharing to asynchronous formats. The result is more focused synchronous time for the whole team and more uninterrupted hours for individual contributors in every time zone.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How does this tool handle daylight saving time changes? <span class="faq-chev">&#9660;</span></div>
+        <div class="faq-a">This planner uses the browser's built-in Intl.DateTimeFormat API with IANA time zone identifiers such as America/New_York and Europe/London. The API automatically applies the correct UTC offset for the current date, which means daylight saving time transitions are handled without any manual adjustment. When DST is active, clocks shift forward by one hour in the affected region, and the grid reflects that shift immediately. You never need to know whether a city is currently on standard time or summer time - the tool computes the correct local hour from today's date every time.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">What is the best way to coordinate meetings across more than three time zones? <span class="faq-chev">&#9660;</span></div>
+        <div class="faq-a">The key strategy is to identify the smallest possible overlap window and then rotate the burden fairly across the team. Start by adding all team locations to the heatmap and looking for columns where the maximum number of zones fall inside their working hours. If no single hour covers everyone, look for the highest-scoring columns. Then establish a rotation policy: teams on the east side of the date line take the early call one week, while teams on the west side take it the next. Document the agreed rotation in your team handbook so expectations are clear and no single group carries the inconvenience permanently.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why do some regions use half-hour or 45-minute UTC offsets? <span class="faq-chev">&#9660;</span></div>
+        <div class="faq-a">Most time zones align on full-hour boundaries from UTC, but some regions chose offsets based on geographic or political reasons rather than rounding to the nearest hour. India Standard Time is UTC+5:30, Nepal Time is UTC+5:45, and parts of Australia use UTC+9:30 or UTC+10:30. These unusual offsets originated when countries set their clocks to match local solar noon for their geographic center, then never changed to a whole-hour boundary when global standardization occurred. This tool handles fractional offsets correctly through the IANA time zone database, so cities like Mumbai and Kathmandu are displayed at their true local times on the heatmap.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">How can I maximize my team's overlap without burnout? <span class="faq-chev">&#9660;</span></div>
+        <div class="faq-a">The most sustainable approach is to identify a short daily synchronization window of one to two hours where the maximum number of team members can attend during normal work hours, and then use that window only for time-sensitive collaboration. All other communication should be async-first: recorded video updates, written briefs, and shared documents that anyone can consume at their own local peak hours. Use the heatmap's gold-highlighted columns to find your core overlap, schedule only recurring standups and critical reviews in that window, and protect the rest of your team's day for deep work.</div>
+      </div>
+      <div class="faq-item" onclick="toggleFaq(this)">
+        <div class="faq-q">Why is an interactive heatmap more effective than a static list of times? <span class="faq-chev">&#9660;</span></div>
+        <div class="faq-a">A static list forces you to mentally parse rows of numbers and reason about which combinations of times are mutually acceptable - a cognitively demanding task that scales poorly when three or more zones are involved. A heatmap maps the same information onto a two-dimensional grid where color does the comparison work for you. Your eyes immediately locate the bright columns where most or all zones overlap, versus the dark columns where most locations are outside their working hours. Studies of information visualization consistently show that color-coded grids reduce the time required to make a correct scheduling decision and reduce errors, especially at the edges of working windows where off-by-one-hour mistakes are most common.</div>
+      </div>
+    </div><!-- /.edu-section -->
+
+  </main><!-- /#main -->
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+  // ============================================================
+  // CITY DATABASE (IANA-keyed, 90 major cities)
+  // ============================================================
+  const CITIES = [
+    { city: 'Honolulu',          country: 'US', tz: 'Pacific/Honolulu' },
+    { city: 'Anchorage',         country: 'US', tz: 'America/Anchorage' },
+    { city: 'Vancouver',         country: 'CA', tz: 'America/Vancouver' },
+    { city: 'Los Angeles',       country: 'US', tz: 'America/Los_Angeles' },
+    { city: 'San Francisco',     country: 'US', tz: 'America/Los_Angeles' },
+    { city: 'Seattle',           country: 'US', tz: 'America/Los_Angeles' },
+    { city: 'Las Vegas',         country: 'US', tz: 'America/Los_Angeles' },
+    { city: 'Denver',            country: 'US', tz: 'America/Denver' },
+    { city: 'Phoenix',           country: 'US', tz: 'America/Phoenix' },
+    { city: 'Mexico City',       country: 'MX', tz: 'America/Mexico_City' },
+    { city: 'Chicago',           country: 'US', tz: 'America/Chicago' },
+    { city: 'Houston',           country: 'US', tz: 'America/Chicago' },
+    { city: 'Dallas',            country: 'US', tz: 'America/Chicago' },
+    { city: 'Minneapolis',       country: 'US', tz: 'America/Chicago' },
+    { city: 'Bogota',            country: 'CO', tz: 'America/Bogota' },
+    { city: 'Lima',              country: 'PE', tz: 'America/Lima' },
+    { city: 'Toronto',           country: 'CA', tz: 'America/Toronto' },
+    { city: 'New York',          country: 'US', tz: 'America/New_York' },
+    { city: 'Miami',             country: 'US', tz: 'America/New_York' },
+    { city: 'Boston',            country: 'US', tz: 'America/New_York' },
+    { city: 'Washington DC',     country: 'US', tz: 'America/New_York' },
+    { city: 'Atlanta',           country: 'US', tz: 'America/New_York' },
+    { city: 'Montreal',          country: 'CA', tz: 'America/Toronto' },
+    { city: 'Santiago',          country: 'CL', tz: 'America/Santiago' },
+    { city: 'Buenos Aires',      country: 'AR', tz: 'America/Argentina/Buenos_Aires' },
+    { city: 'Sao Paulo',         country: 'BR', tz: 'America/Sao_Paulo' },
+    { city: 'Rio de Janeiro',    country: 'BR', tz: 'America/Sao_Paulo' },
+    { city: 'Reykjavik',         country: 'IS', tz: 'Atlantic/Reykjavik' },
+    { city: 'Casablanca',        country: 'MA', tz: 'Africa/Casablanca' },
+    { city: 'London',            country: 'GB', tz: 'Europe/London' },
+    { city: 'Dublin',            country: 'IE', tz: 'Europe/Dublin' },
+    { city: 'Lisbon',            country: 'PT', tz: 'Europe/Lisbon' },
+    { city: 'Lagos',             country: 'NG', tz: 'Africa/Lagos' },
+    { city: 'Paris',             country: 'FR', tz: 'Europe/Paris' },
+    { city: 'Berlin',            country: 'DE', tz: 'Europe/Berlin' },
+    { city: 'Madrid',            country: 'ES', tz: 'Europe/Madrid' },
+    { city: 'Rome',              country: 'IT', tz: 'Europe/Rome' },
+    { city: 'Amsterdam',         country: 'NL', tz: 'Europe/Amsterdam' },
+    { city: 'Brussels',          country: 'BE', tz: 'Europe/Brussels' },
+    { city: 'Zurich',            country: 'CH', tz: 'Europe/Zurich' },
+    { city: 'Vienna',            country: 'AT', tz: 'Europe/Vienna' },
+    { city: 'Prague',            country: 'CZ', tz: 'Europe/Prague' },
+    { city: 'Warsaw',            country: 'PL', tz: 'Europe/Warsaw' },
+    { city: 'Stockholm',         country: 'SE', tz: 'Europe/Stockholm' },
+    { city: 'Oslo',              country: 'NO', tz: 'Europe/Oslo' },
+    { city: 'Copenhagen',        country: 'DK', tz: 'Europe/Copenhagen' },
+    { city: 'Helsinki',          country: 'FI', tz: 'Europe/Helsinki' },
+    { city: 'Athens',            country: 'GR', tz: 'Europe/Athens' },
+    { city: 'Bucharest',         country: 'RO', tz: 'Europe/Bucharest' },
+    { city: 'Cape Town',         country: 'ZA', tz: 'Africa/Johannesburg' },
+    { city: 'Johannesburg',      country: 'ZA', tz: 'Africa/Johannesburg' },
+    { city: 'Nairobi',           country: 'KE', tz: 'Africa/Nairobi' },
+    { city: 'Cairo',             country: 'EG', tz: 'Africa/Cairo' },
+    { city: 'Istanbul',          country: 'TR', tz: 'Europe/Istanbul' },
+    { city: 'Kiev',              country: 'UA', tz: 'Europe/Kiev' },
+    { city: 'Moscow',            country: 'RU', tz: 'Europe/Moscow' },
+    { city: 'Riyadh',            country: 'SA', tz: 'Asia/Riyadh' },
+    { city: 'Kuwait City',       country: 'KW', tz: 'Asia/Kuwait' },
+    { city: 'Dubai',             country: 'AE', tz: 'Asia/Dubai' },
+    { city: 'Abu Dhabi',         country: 'AE', tz: 'Asia/Dubai' },
+    { city: 'Doha',              country: 'QA', tz: 'Asia/Qatar' },
+    { city: 'Tehran',            country: 'IR', tz: 'Asia/Tehran' },
+    { city: 'Kabul',             country: 'AF', tz: 'Asia/Kabul' },
+    { city: 'Karachi',           country: 'PK', tz: 'Asia/Karachi' },
+    { city: 'Mumbai',            country: 'IN', tz: 'Asia/Kolkata' },
+    { city: 'Delhi',             country: 'IN', tz: 'Asia/Kolkata' },
+    { city: 'Kolkata',           country: 'IN', tz: 'Asia/Kolkata' },
+    { city: 'Bangalore',         country: 'IN', tz: 'Asia/Kolkata' },
+    { city: 'Chennai',           country: 'IN', tz: 'Asia/Kolkata' },
+    { city: 'Colombo',           country: 'LK', tz: 'Asia/Colombo' },
+    { city: 'Kathmandu',         country: 'NP', tz: 'Asia/Kathmandu' },
+    { city: 'Dhaka',             country: 'BD', tz: 'Asia/Dhaka' },
+    { city: 'Tashkent',          country: 'UZ', tz: 'Asia/Tashkent' },
+    { city: 'Almaty',            country: 'KZ', tz: 'Asia/Almaty' },
+    { city: 'Yangon',            country: 'MM', tz: 'Asia/Rangoon' },
+    { city: 'Bangkok',           country: 'TH', tz: 'Asia/Bangkok' },
+    { city: 'Ho Chi Minh City',  country: 'VN', tz: 'Asia/Ho_Chi_Minh' },
+    { city: 'Hanoi',             country: 'VN', tz: 'Asia/Ho_Chi_Minh' },
+    { city: 'Jakarta',           country: 'ID', tz: 'Asia/Jakarta' },
+    { city: 'Singapore',         country: 'SG', tz: 'Asia/Singapore' },
+    { city: 'Kuala Lumpur',      country: 'MY', tz: 'Asia/Kuala_Lumpur' },
+    { city: 'Hong Kong',         country: 'HK', tz: 'Asia/Hong_Kong' },
+    { city: 'Taipei',            country: 'TW', tz: 'Asia/Taipei' },
+    { city: 'Beijing',           country: 'CN', tz: 'Asia/Shanghai' },
+    { city: 'Shanghai',          country: 'CN', tz: 'Asia/Shanghai' },
+    { city: 'Shenzhen',          country: 'CN', tz: 'Asia/Shanghai' },
+    { city: 'Novosibirsk',       country: 'RU', tz: 'Asia/Novosibirsk' },
+    { city: 'Seoul',             country: 'KR', tz: 'Asia/Seoul' },
+    { city: 'Tokyo',             country: 'JP', tz: 'Asia/Tokyo' },
+    { city: 'Osaka',             country: 'JP', tz: 'Asia/Tokyo' },
+    { city: 'Vladivostok',       country: 'RU', tz: 'Asia/Vladivostok' },
+    { city: 'Perth',             country: 'AU', tz: 'Australia/Perth' },
+    { city: 'Adelaide',          country: 'AU', tz: 'Australia/Adelaide' },
+    { city: 'Brisbane',          country: 'AU', tz: 'Australia/Brisbane' },
+    { city: 'Sydney',            country: 'AU', tz: 'Australia/Sydney' },
+    { city: 'Melbourne',         country: 'AU', tz: 'Australia/Melbourne' },
+    { city: 'Auckland',          country: 'NZ', tz: 'Pacific/Auckland' },
+    { city: 'Fiji',              country: 'FJ', tz: 'Pacific/Fiji' },
+  ];
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  let zones = [];          // { city, country, tz, startHour, endHour }
+  let hoveredCol = null;   // null | 0-23
+  let pendingCity = null;  // CITIES item selected from autocomplete
+  let acResults = [];      // filtered city list
+  let acIndex = -1;        // keyboard navigation index
+
+  const DEFAULT_START = 9;
+  const DEFAULT_END = 18;
+
+  // ============================================================
+  // TIME UTILITIES (Intl.DateTimeFormat, DST-aware)
+  // ============================================================
+  function todayAtUTC(h) {
+    const n = new Date();
+    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), h, 0, 0));
+  }
+
+  function localHour(utcH, tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour: 'numeric', hour12: false
+      }).formatToParts(todayAtUTC(utcH));
+      return parseInt(parts.find(p => p.type === 'hour').value, 10) % 24;
+    } catch(e) { return 0; }
+  }
+
+  function localTimeStr(utcH, tz) {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true
+      }).format(todayAtUTC(utcH));
+    } catch(e) { return '--'; }
+  }
+
+  function offsetStr(tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, timeZoneName: 'shortOffset'
+      }).formatToParts(todayAtUTC(0));
+      const p = parts.find(p => p.type === 'timeZoneName');
+      return p ? p.value : '';
+    } catch(e) { return ''; }
+  }
+
+  function shortTzLabel(tz) {
+    return tz.split('/').pop().replace(/_/g, ' ');
+  }
+
+  function inWindow(utcH, z) {
+    const lh = localHour(utcH, z.tz);
+    if (z.startHour < z.endHour) return lh >= z.startHour && lh < z.endHour;
+    return lh >= z.startHour || lh < z.endHour; // handles overnight windows
+  }
+
+  function colScore(utcH) {
+    if (!zones.length) return { count: 0, total: 0, pct: 0 };
+    const count = zones.filter(z => inWindow(utcH, z)).length;
+    return { count, total: zones.length, pct: Math.round((count / zones.length) * 100) };
+  }
+
+  function maxScore() {
+    if (!zones.length) return 0;
+    let m = 0;
+    for (let h = 0; h < 24; h++) m = Math.max(m, colScore(h).pct);
+    return m;
+  }
+
+  function topSlots(limit = 6) {
+    const ms = maxScore();
+    if (!ms) return [];
+    const arr = [];
+    for (let h = 0; h < 24; h++) {
+      const s = colScore(h);
+      if (s.pct > 0) arr.push({ h, ...s });
+    }
+    arr.sort((a, b) => b.pct - a.pct || a.h - b.h);
+    return arr.slice(0, limit);
+  }
+
+  function fmtUTC(h) {
+    return String(h).padStart(2, '0') + ':00';
+  }
+
+  // ============================================================
+  // HOUR OPTION BUILDER
+  // ============================================================
+  const HOUR_LABELS = [
+    '12 AM','1 AM','2 AM','3 AM','4 AM','5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM',
+    '12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM'
+  ];
+
+  function hourOpts(selected) {
+    return HOUR_LABELS.map((l, i) =>
+      `<option value="${i}"${i === selected ? ' selected' : ''}>${l}</option>`
+    ).join('');
+  }
+
+  function buildDefSelects() {
+    const s = document.getElementById('def-start');
+    const e = document.getElementById('def-end');
+    HOUR_LABELS.forEach((l, i) => {
+      s.add(new Option(l, i, false, i === DEFAULT_START));
+      e.add(new Option(l, i, false, i === DEFAULT_END));
+    });
+  }
+
+  function defStart() { return parseInt(document.getElementById('def-start').value, 10); }
+  function defEnd()   { return parseInt(document.getElementById('def-end').value, 10); }
+
+  // ============================================================
+  // ZONE MANAGEMENT
+  // ============================================================
+  function addZone(city) {
+    if (zones.find(z => z.city === city.city && z.tz === city.tz)) return;
+    zones.push({ city: city.city, country: city.country, tz: city.tz,
+                 startHour: defStart(), endHour: defEnd() });
+    refreshAll();
+  }
+
+  function removeZone(i) {
+    zones.splice(i, 1);
+    refreshAll();
+  }
+
+  function setHours(i, field, val) {
+    zones[i][field] = parseInt(val, 10);
+    renderGrid();
+    renderTelemetry();
+  }
+
+  function renderZoneList() {
+    const list = document.getElementById('zone-list');
+    const msg  = document.getElementById('no-zones-msg');
+    if (!zones.length) {
+      list.innerHTML = '';
+      msg.style.display = '';
+      return;
+    }
+    msg.style.display = 'none';
+    list.innerHTML = zones.map((z, i) => {
+      const off = offsetStr(z.tz);
+      return `<div class="zone-item">
+        <div class="zone-hdr">
+          <div>
+            <div class="zone-city">${z.city}, ${z.country}</div>
+            <div class="zone-offset">${z.tz} &nbsp;${off}</div>
+          </div>
+          <button class="btn-rm" onclick="removeZone(${i})" title="Remove ${z.city}">&#x2715;</button>
+        </div>
+        <div class="hours-row">
+          <div>
+            <div class="hours-lbl">Start of Day</div>
+            <select class="hours-sel" onchange="setHours(${i},'startHour',this.value)">${hourOpts(z.startHour)}</select>
+          </div>
+          <div>
+            <div class="hours-lbl">End of Day</div>
+            <select class="hours-sel" onchange="setHours(${i},'endHour',this.value)">${hourOpts(z.endHour)}</select>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ============================================================
+  // HEATMAP GRID RENDERING
+  // ============================================================
+  function renderGrid() {
+    const empty = document.getElementById('hmap-empty');
+    const tbl   = document.getElementById('hmap');
+
+    if (!zones.length) {
+      tbl.style.display = 'none';
+      empty.style.display = '';
+      renderBestSlots();
+      return;
+    }
+    empty.style.display = 'none';
+    tbl.style.display = '';
+
+    const ms = maxScore();
+    const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+    // thead
+    let thead = '<thead><tr>';
+    thead += `<th class="lbl-th">Location / UTC Hour</th>`;
+    for (const h of HOURS) {
+      thead += `<th data-col="${h}"${h === hoveredCol ? ' class="h-hover"' : ''}>${h}</th>`;
+    }
+    thead += '</tr></thead>';
+
+    // tbody rows
+    let tbody = '<tbody>';
+    for (const z of zones) {
+      const off = offsetStr(z.tz);
+      tbody += '<tr>';
+      tbody += `<td class="rlabel"><div class="rlabel-city">${z.city}</div><div class="rlabel-tz">${shortTzLabel(z.tz)} ${off}</div></td>`;
+      for (const h of HOURS) {
+        const inW  = inWindow(h, z);
+        const sc   = colScore(h);
+        const isOpt = inW && sc.pct > 0 && sc.pct === ms;
+        const ts   = localTimeStr(h, z.tz);
+        let cls = 'hcell ';
+        cls += isOpt ? 'c-opt' : (inW ? 'c-in' : 'c-out');
+        if (h === hoveredCol) cls += ' h-hover';
+        tbody += `<td class="${cls}" data-col="${h}">${ts}</td>`;
+      }
+      tbody += '</tr>';
+    }
+    tbody += '</tbody>';
+
+    // score tfoot
+    let tfoot = '<tfoot><tr class="score-row">';
+    tfoot += '<td class="sc-lbl">Overlap Score</td>';
+    for (const h of HOURS) {
+      const s = colScore(h);
+      let cls = '';
+      if (s.pct === 100) cls = 'sc-opt';
+      else if (s.pct >= 50) cls = 'sc-good';
+      if (h === hoveredCol) cls += (cls ? ' h-hover' : 'h-hover');
+      const lbl = zones.length === 1
+        ? (s.pct === 100 ? 'Y' : '')
+        : (s.count ? `${s.count}/${s.total}` : '');
+      tfoot += `<td${cls ? ` class="${cls}"` : ''} data-col="${h}">${lbl}</td>`;
+    }
+    tfoot += '</tr></tfoot>';
+
+    tbl.innerHTML = thead + tbody + tfoot;
+    renderBestSlots();
+  }
+
+  // ============================================================
+  // HEATMAP HOVER - event delegation (no full re-renders on hover)
+  // ============================================================
+  document.getElementById('hmap').addEventListener('mouseover', function(e) {
+    const cell = e.target.closest('[data-col]');
+    if (!cell) return;
+    const col = parseInt(cell.dataset.col, 10);
+    if (col === hoveredCol) return;
+    hoveredCol = col;
+    applyColHighlight(col);
+    renderTelemetry();
+  });
+
+  document.getElementById('hmap').addEventListener('mouseleave', function() {
+    if (hoveredCol === null) return;
+    hoveredCol = null;
+    applyColHighlight(null);
+    renderTelemetry();
+  });
+
+  function applyColHighlight(col) {
+    // Clear existing highlights
+    document.querySelectorAll('#hmap .h-hover').forEach(el => el.classList.remove('h-hover'));
+    if (col === null) return;
+    document.querySelectorAll(`#hmap [data-col="${col}"]`).forEach(el => el.classList.add('h-hover'));
+  }
+
+  // ============================================================
+  // TELEMETRY PANEL
+  // ============================================================
+  function renderTelemetry() {
+    const defDiv   = document.getElementById('tele-default');
+    const hovDiv   = document.getElementById('tele-hover');
+
+    if (hoveredCol === null || !zones.length) {
+      defDiv.style.display = '';
+      hovDiv.style.display = 'none';
+      return;
+    }
+
+    defDiv.style.display = 'none';
+    hovDiv.style.display = '';
+
+    const h  = hoveredCol;
+    const sc = colScore(h);
+    const ms = maxScore();
+    const isOpt = sc.pct > 0 && sc.pct === ms;
+
+    // Badge
+    const badge = document.getElementById('tele-badge');
+    badge.textContent = `UTC ${fmtUTC(h)}`;
+    badge.className = 'tele-badge' + (isOpt ? ' is-opt' : '');
+
+    // Score hero
+    const sn = document.getElementById('tele-score');
+    sn.textContent = sc.pct + '%';
+    sn.className = 'score-num' + (isOpt ? ' is-opt' : '');
+    document.getElementById('tele-sub').textContent =
+      `${sc.count} of ${sc.total} location${sc.total !== 1 ? 's' : ''} available`;
+
+    // Zone rows
+    document.getElementById('tele-zones').innerHTML = zones.map(z => {
+      const inW = inWindow(h, z);
+      const ts  = localTimeStr(h, z.tz);
+      const zCls   = inW ? (isOpt ? 'z-opt' : 'z-in') : '';
+      const sCls   = inW ? (isOpt ? 's-opt' : 's-in') : '';
+      const sTxt   = inW ? (isOpt ? 'Within optimal window' : 'Within working hours') : 'Outside working hours';
+      return `<div class="tele-zone ${zCls}">
+        <div>
+          <div class="tele-zname">${z.city}</div>
+          <div class="tele-zstatus ${sCls}">${sTxt}</div>
+        </div>
+        <div class="tele-ztime">${ts}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderBestSlots() {
+    const el = document.getElementById('best-slots');
+    if (!el) return;
+    const slots = topSlots(6);
+    if (!slots.length) {
+      el.innerHTML = '<div style="color:#475569;font-size:0.8rem;margin-bottom:0.5rem;">Add team locations to see recommended meeting windows.</div>';
+      return;
+    }
+    const top = slots[0].pct;
+    el.innerHTML = slots.map(s => {
+      const isTop = s.pct === top;
+      return `<div class="slot-row${isTop ? ' top-slot' : ''}">
+        <span class="slot-utc">${fmtUTC(s.h)} UTC</span>
+        <span class="slot-pct">${s.pct}% (${s.count}/${s.total})</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ============================================================
+  // COPY OPTIMAL SLOTS
+  // ============================================================
+  function copySlots() {
+    const slots = topSlots(5);
+    if (!slots.length) { alert('Add team locations first to generate meeting slots.'); return; }
+    const top = slots[0].pct;
+    const best = slots.filter(s => s.pct === top);
+
+    let txt = `Optimal Global Meeting Windows\n${'='.repeat(34)}\n`;
+    txt += `Compatibility Score: ${top}% (${best[0].count} of ${best[0].total} locations)\n\n`;
+    for (const s of best) {
+      txt += `UTC ${fmtUTC(s.h)}\n`;
+      zones.forEach(z => { txt += `  ${z.city}: ${localTimeStr(s.h, z.tz)}\n`; });
+      txt += '\n';
+    }
+    txt += 'Generated by AxiomApe World Time Zone Visual Meeting Grid Planner\nhttps://axiomape.com/world-time-zone-meeting-planner/';
+
+    const btn = document.getElementById('copy-btn');
+    navigator.clipboard.writeText(txt).then(() => {
+      if (btn) { btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy Optimal Slots'; btn.classList.remove('copied'); }, 2200);
+      }
+    }).catch(() => { prompt('Copy this text:', txt); });
+  }
+
+  // ============================================================
+  // AUTOCOMPLETE SEARCH
+  // ============================================================
+  const cityInput = document.getElementById('city-input');
+  const acList    = document.getElementById('ac-list');
+
+  cityInput.addEventListener('input', () => {
+    const q = cityInput.value.trim().toLowerCase();
+    pendingCity = null;
+    if (q.length < 1) { closeAC(); return; }
+    acResults = CITIES.filter(c => c.city.toLowerCase().includes(q)).slice(0, 10);
+    acIndex = -1;
+    renderAC();
+  });
+
+  cityInput.addEventListener('keydown', e => {
+    if (!acList.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') {
+      acIndex = Math.min(acIndex + 1, acResults.length - 1);
+      renderAC(); e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      acIndex = Math.max(acIndex - 1, -1);
+      renderAC(); e.preventDefault();
+    } else if (e.key === 'Enter') {
+      const pick = acIndex >= 0 ? acResults[acIndex] : (acResults[0] || null);
+      if (pick) pickCity(pick);
+      e.preventDefault();
+    } else if (e.key === 'Escape') { closeAC(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#panel-setup')) closeAC();
+  });
+
+  function renderAC() {
+    if (!acResults.length) { closeAC(); return; }
+    acList.classList.add('open');
+    acList.innerHTML = acResults.map((c, i) =>
+      `<div class="ac-item${i === acIndex ? ' ac-active' : ''}" data-idx="${i}">
+        <span class="ac-city">${c.city}, ${c.country}</span>
+        <span class="ac-tz">${c.tz}</span>
+      </div>`
+    ).join('');
+  }
+
+  acList.addEventListener('mousedown', e => {
+    const item = e.target.closest('.ac-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.idx, 10);
+    pickCity(acResults[idx]);
+    e.preventDefault();
+  });
+
+  function pickCity(c) {
+    cityInput.value = '';
+    closeAC();
+    addZone(c);
+    cityInput.focus();
+  }
+
+  function closeAC() {
+    acList.classList.remove('open');
+    acResults = [];
+    acIndex = -1;
+  }
+
+  function addFromInput() {
+    const q = cityInput.value.trim().toLowerCase();
+    if (!q) return;
+    const match = CITIES.find(c => c.city.toLowerCase() === q)
+                || (acResults.length ? acResults[0] : null);
+    if (match) { pickCity(match); }
+    else { alert('City not found. Please select a city from the dropdown list.'); }
+  }
+
+  // ============================================================
+  // FAQ ACCORDION
+  // ============================================================
+  function toggleFaq(el) { el.classList.toggle('open'); }
+
+  // ============================================================
+  // UNIFIED REFRESH
+  // ============================================================
+  function refreshAll() {
+    renderZoneList();
+    renderGrid();
+    renderTelemetry();
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  buildDefSelects();
+
+  // Pre-load three illustrative default locations
+  [
+    { city: 'New York',  country: 'US', tz: 'America/New_York' },
+    { city: 'London',    country: 'GB', tz: 'Europe/London'    },
+    { city: 'Tokyo',     country: 'JP', tz: 'Asia/Tokyo'       }
+  ].forEach(c => zones.push({ ...c, startHour: DEFAULT_START, endHour: DEFAULT_END }));
+
+  refreshAll();
+  </script>
+
+</body>
+</html>

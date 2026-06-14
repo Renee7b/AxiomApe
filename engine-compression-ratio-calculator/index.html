@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engine Compression Ratio Calculator: Compute Static CR from Bore, Stroke, and Chamber Volumes | AxiomApe</title>
+  <meta name="description" content="Free engine compression ratio calculator. Enter cylinder bore, piston stroke, combustion chamber volume, piston dome or dish, deck clearance, and head gasket specs to instantly compute static compression ratio. Works in inches or millimeters. 100% browser-based." />
+  <meta name="keywords" content="engine compression ratio calculator, static compression ratio, compression ratio formula, cylinder swept volume, clearance volume calculator, piston dome dish calculator, head chamber volume, head gasket compression ratio, deck clearance volume, TDC clearance volume, bore stroke compression, static CR calculator, engine builder calculator, compression ratio math, automotive compression ratio" />
+  <link rel="canonical" href="https://axiomape.com/engine-compression-ratio-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Engine Compression Ratio Calculator",
+        "description": "Free engine compression ratio calculator. Enter cylinder bore, piston stroke, combustion chamber volume, piston dome or dish, deck clearance, and head gasket specs to instantly compute static compression ratio. Works in inches or millimeters. 100% browser-based.",
+        "url": "https://axiomape.com/engine-compression-ratio-calculator/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a good static compression ratio for a street engine?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For a pump-gas street engine running 91 to 93 octane fuel, a static compression ratio between 9.5:1 and 10.5:1 is generally considered the sweet spot. Naturally aspirated performance builds often push to 11:1 or higher, but those require premium fuel or race gas. Forced induction engines (turbo or supercharged) typically run lower ratios of 8:1 to 9:1 because boost pressure adds to the effective compression."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does head gasket thickness affect my compression ratio?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Head gasket thickness directly affects clearance volume. A thicker gasket increases the compressed gasket volume, which raises total clearance volume at TDC and therefore lowers the compression ratio. Engine builders use different gasket thicknesses as a tuning lever: switching from a 0.027-inch gasket to a 0.051-inch gasket can drop the ratio by roughly 0.3 to 0.5 points depending on bore size. Gasket bore diameter matters as much as thickness, since volume is calculated from the bore area."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a piston dome and a piston dish?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A piston dome is a raised protrusion on the piston crown that extends up into the combustion chamber. Because it displaces space, it reduces the clearance volume at TDC and therefore increases the compression ratio. A piston dish (or valve relief pocket) is a recessed area in the piston crown that adds extra volume at TDC, increasing clearance volume and reducing the compression ratio. This calculator applies dome volume as a negative number (subtracting from clearance) and dish volume as a positive number (adding to clearance)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do high compression engines require higher octane fuel?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Higher compression ratios compress the air-fuel mixture to a much smaller volume before ignition. That smaller volume means higher temperature and pressure inside the cylinder, which can cause the fuel to ignite spontaneously before the spark plug fires. This is called pre-ignition or detonation (knocking), and it can destroy pistons and bearings quickly. Higher octane fuel resists this spontaneous ignition, giving the spark plug time to fire at the correct moment. Premium 91 to 93 octane fuel handles ratios up to about 10.5:1; anything above that often needs race fuel or an ethanol blend."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the mathematical difference between Swept Volume and Clearance Volume?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Swept volume (also called displacement) is the volume the piston travels through from Bottom Dead Center to Top Dead Center. It is calculated as: Vswept = (PI divided by 4) multiplied by bore squared multiplied by stroke, then converted to cubic centimeters. Clearance volume is the total space remaining in the cylinder when the piston is at TDC with the valves closed: combustion chamber volume in the head, plus compressed head gasket volume, plus deck clearance volume above the piston, plus or minus piston crown volume (positive for dish, negative for dome). The compression ratio is the total cylinder volume (swept plus clearance) divided by the clearance volume alone."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* Reset and base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --page-bg:        #0f172a;
+      --panel-bg:       #1e293b;
+      --panel-border:   #334155;
+      --inset-bg:       #0f172a;
+      --inset-border:   #1e3a5f;
+      --orange:         #F97316;
+      --orange-hover:   #ea6c10;
+      --orange-glow:    rgba(249, 115, 22, 0.22);
+      --steel:          #94A3B8;
+      --steel-mid:      #64748b;
+      --text-on-dark:   #f1f5f9;
+      --text:           #0f172a;
+      --text-muted:     #64748b;
+      --border-light:   #e2e8f0;
+      --radius:         14px;
+      --radius-sm:      8px;
+      --shadow-panel:   0 4px 24px rgba(0,0,0,.35);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--page-bg);
+      color: var(--text-on-dark);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Container */
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      background: linear-gradient(160deg, #0a0f1e 0%, #1a2744 50%, #0f172a 100%);
+      border-bottom: 2px solid var(--orange);
+      padding: 48px 20px 38px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: clamp(22px, 4.5vw, 36px);
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.025em;
+    }
+
+    .page-header h1 .accent { color: var(--orange); }
+
+    .page-header p {
+      font-size: 15px;
+      color: var(--steel);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       TOOL DASHBOARD
+    ============================================================ */
+    .tool-dashboard {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 20px 8px;
+    }
+
+    /* Global unit toggle bar */
+    .unit-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .unit-bar-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--steel-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .unit-toggle {
+      display: flex;
+      background: var(--inset-bg);
+      border: 1.5px solid var(--panel-border);
+      border-radius: 100px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .unit-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--steel);
+      padding: 7px 24px;
+      border-radius: 100px;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+      letter-spacing: 0.03em;
+    }
+
+    .unit-btn.active {
+      background: var(--orange);
+      color: #ffffff;
+      box-shadow: 0 2px 10px var(--orange-glow);
+    }
+
+    .unit-btn:not(.active):hover {
+      background: var(--panel-border);
+      color: var(--text-on-dark);
+    }
+
+    /* Three-panel grid layout */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      grid-template-rows: auto auto;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 22px 24px 24px;
+      box-shadow: var(--shadow-panel);
+    }
+
+    .panel-swept   { grid-column: 1; grid-row: 1; }
+    .panel-output  { grid-column: 1; grid-row: 2; }
+    .panel-clearance { grid-column: 2; grid-row: 1 / 3; }
+
+    .panel-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--steel-mid);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    /* Input groups */
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group:last-child { margin-bottom: 0; }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--steel);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: stretch;
+      background: var(--inset-bg);
+      border: 1.5px solid var(--panel-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .input-row:focus-within {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px var(--orange-glow);
+    }
+
+    .input-row input[type="number"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-on-dark);
+      padding: 10px 14px;
+      min-width: 0;
+    }
+
+    .input-row input[type="number"]::placeholder { color: #3d5068; }
+
+    /* Remove spin arrows */
+    .input-row input[type="number"]::-webkit-inner-spin-button,
+    .input-row input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .input-row input[type="number"] { -moz-appearance: textfield; }
+
+    .unit-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--steel-mid);
+      background: #162032;
+      border-left: 1px solid var(--panel-border);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      min-width: 36px;
+      justify-content: center;
+    }
+
+    /* Piston type toggle */
+    .piston-type-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .piston-btn {
+      flex: 1;
+      background: var(--inset-bg);
+      border: 1.5px solid var(--panel-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--steel);
+      padding: 9px 8px;
+      text-align: center;
+      transition: all 0.18s;
+      letter-spacing: 0.03em;
+    }
+
+    .piston-btn.dome-active {
+      background: #1c2a4a;
+      border-color: #60a5fa;
+      color: #93c5fd;
+    }
+
+    .piston-btn.dish-active {
+      background: #162a1e;
+      border-color: #4ade80;
+      color: #86efac;
+    }
+
+    .piston-btn:not(.dome-active):not(.dish-active):hover {
+      border-color: #475569;
+      color: var(--text-on-dark);
+    }
+
+    .piston-hint {
+      font-size: 11px;
+      color: var(--steel-mid);
+      margin-bottom: 7px;
+      font-style: italic;
+    }
+
+    /* Output / Telemetry panel */
+    .panel-output {
+      border-color: var(--orange);
+      background: linear-gradient(145deg, #1a1208 0%, #1e293b 100%);
+    }
+
+    .cr-hero {
+      text-align: center;
+      padding: 8px 0 16px;
+    }
+
+    .cr-hero-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--steel-mid);
+      margin-bottom: 6px;
+    }
+
+    .cr-value {
+      font-size: clamp(38px, 7vw, 54px);
+      font-weight: 900;
+      color: var(--orange);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      text-shadow: 0 0 40px var(--orange-glow);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cr-error {
+      font-size: 13px;
+      color: #f87171;
+      padding: 6px 0;
+      display: none;
+    }
+
+    .cr-breakdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      border-top: 1px solid var(--panel-border);
+      padding-top: 14px;
+      margin-top: 4px;
+    }
+
+    .cr-stat {
+      background: var(--inset-bg);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .cr-stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--steel-mid);
+      margin-bottom: 3px;
+    }
+
+    .cr-stat-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--orange);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .copy-btn {
+      width: 100%;
+      margin-top: 14px;
+      background: transparent;
+      border: 1.5px solid var(--orange);
+      border-radius: var(--radius-sm);
+      color: var(--orange);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px 16px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .copy-btn:hover {
+      background: var(--orange);
+      color: #ffffff;
+    }
+
+    .copy-btn:active { transform: scale(0.98); }
+
+    /* Mobile: stack panels vertically */
+    @media (max-width: 640px) {
+      .panels-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .panel-swept     { grid-column: 1; grid-row: 1; }
+      .panel-clearance { grid-column: 1; grid-row: 2; }
+      .panel-output    { grid-column: 1; grid-row: 3; }
+    }
+
+    /* ============================================================
+       AD PLACEMENT CONTAINER (between tool and education)
+    ============================================================ */
+    .ad-zone {
+      max-width: 920px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION (light background)
+    ============================================================ */
+    .edu-wrap {
+      background: #f8fafc;
+      color: var(--text);
+      padding: 40px 0 52px;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+      padding: 30px 32px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 22px 18px; }
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--orange);
+      display: inline-block;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .glossary-item {
+      background: #f8fafc;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--orange);
+      padding: 12px 14px;
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Educational content */
+    .edu-section h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.75;
+    }
+
+    .edu-section h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 24px 0 9px;
+    }
+
+    .edu-section p {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-bottom: 13px;
+      line-height: 1.75;
+    }
+
+    .formula-block {
+      background: #1e293b;
+      color: #f1f5f9;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      font-size: 15px;
+      font-family: 'Courier New', Consolas, monospace;
+      margin: 14px 0;
+      border-left: 3px solid var(--orange);
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      background: #f8fafc;
+      border: none;
+      text-align: left;
+      padding: 15px 18px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.14s;
+    }
+
+    .faq-question:hover { background: #f1f5f9; }
+
+    .faq-icon {
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--orange);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      line-height: 1;
+    }
+
+    .faq-icon.open { transform: rotate(45deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      background: #ffffff;
+    }
+
+    .faq-answer.open { display: block; }
+
+    /* Tool disclaimer */
+    .tool-disclaimer {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 20px;
+      border-left: 3px solid #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Engine Compression Ratio <span class="accent">Calculator</span></h1>
+      <p>Compute static CR from cylinder bore, piston stroke, combustion chamber volume, piston dome or dish, deck clearance, and head gasket specs. Results update instantly as you type.</p>
+    </header>
+
+    <!-- ============================================================
+         INTERACTIVE DASHBOARD
+    ============================================================ -->
+    <div class="tool-dashboard">
+
+      <div class="unit-bar">
+        <span class="unit-bar-label">Linear unit for bore, stroke, deck, and gasket measurements</span>
+        <div class="unit-toggle" role="group" aria-label="Select linear measurement unit">
+          <button class="unit-btn active" id="btn-in" onclick="setUnits('in')" type="button">Inches</button>
+          <button class="unit-btn" id="btn-mm" onclick="setUnits('mm')" type="button">Millimeters</button>
+        </div>
+      </div>
+
+      <div class="panels-grid">
+
+        <!-- PANEL 1: Swept Volume Specs -->
+        <div class="panel panel-swept">
+          <div class="panel-label">Panel 1 - Swept Volume Specs</div>
+
+          <div class="input-group">
+            <label for="inp-bore">Cylinder Bore Diameter</label>
+            <div class="input-row">
+              <input type="number" id="inp-bore" placeholder="e.g. 4.030" step="0.001" min="0.001" oninput="recalculate()" />
+              <span class="unit-badge" id="tag-bore">in</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="inp-stroke">Piston Stroke Length</label>
+            <div class="input-row">
+              <input type="number" id="inp-stroke" placeholder="e.g. 3.480" step="0.001" min="0.001" oninput="recalculate()" />
+              <span class="unit-badge" id="tag-stroke">in</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: Clearance Volume Specs -->
+        <div class="panel panel-clearance">
+          <div class="panel-label">Panel 2 - Clearance Volume Specs</div>
+
+          <div class="input-group">
+            <label for="inp-chamber">Combustion Chamber Volume</label>
+            <div class="input-row">
+              <input type="number" id="inp-chamber" placeholder="e.g. 64.0" step="0.1" min="0" oninput="recalculate()" />
+              <span class="unit-badge">cc</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Piston Crown Type</label>
+            <div class="piston-type-row">
+              <button class="piston-btn dome-active" id="btn-dome" onclick="setPiston('dome')" type="button">Dome (-) raises CR</button>
+              <button class="piston-btn" id="btn-dish" onclick="setPiston('dish')" type="button">Dish (+) lowers CR</button>
+            </div>
+            <p class="piston-hint" id="piston-hint">Dome volume is subtracted from clearance volume, raising the ratio.</p>
+            <div class="input-row">
+              <input type="number" id="inp-piston" placeholder="e.g. 5.0" step="0.1" min="0" oninput="recalculate()" />
+              <span class="unit-badge">cc</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="inp-deck">Deck Clearance Height (piston to block deck at TDC)</label>
+            <div class="input-row">
+              <input type="number" id="inp-deck" placeholder="e.g. 0.005" step="0.001" min="0" oninput="recalculate()" />
+              <span class="unit-badge" id="tag-deck">in</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="inp-gasket-bore">Head Gasket Bore Diameter</label>
+            <div class="input-row">
+              <input type="number" id="inp-gasket-bore" placeholder="e.g. 4.060" step="0.001" min="0" oninput="recalculate()" />
+              <span class="unit-badge" id="tag-gbore">in</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="inp-gasket-thick">Compressed Gasket Thickness</label>
+            <div class="input-row">
+              <input type="number" id="inp-gasket-thick" placeholder="e.g. 0.039" step="0.001" min="0" oninput="recalculate()" />
+              <span class="unit-badge" id="tag-gthick">in</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: Telemetry and Ratio Output -->
+        <div class="panel panel-output">
+          <div class="panel-label">Panel 3 - Compression Ratio Telemetry</div>
+
+          <div class="cr-hero">
+            <div class="cr-hero-label">Static Compression Ratio</div>
+            <div class="cr-value" id="cr-display">-- : 1</div>
+            <div class="cr-error" id="cr-error"></div>
+          </div>
+
+          <div class="cr-breakdown">
+            <div class="cr-stat">
+              <div class="cr-stat-label">Total Swept Volume</div>
+              <div class="cr-stat-value" id="stat-swept">-- cc</div>
+            </div>
+            <div class="cr-stat">
+              <div class="cr-stat-label">Total Clearance Volume</div>
+              <div class="cr-stat-value" id="stat-clearance">-- cc</div>
+            </div>
+          </div>
+
+          <button class="copy-btn" id="copy-btn" onclick="copySpecs()" type="button">Copy Engine Specs</button>
+        </div>
+
+      </div><!-- /panels-grid -->
+    </div><!-- /tool-dashboard -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="ad-zone">
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        Advertisement
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL CONTENT
+    ============================================================ -->
+    <div class="edu-wrap">
+      <div class="container">
+
+        <!-- Glossary card -->
+        <div class="card">
+          <div class="card-title">Key Engine Builder Terms Explained</div>
+          <div class="glossary-grid">
+
+            <div class="glossary-item">
+              <div class="glossary-term">Static Compression Ratio (SCR)</div>
+              <div class="glossary-def">The ratio of total cylinder volume at Bottom Dead Center to the remaining clearance volume at Top Dead Center. Written as a number followed by ":1", for example 10.5:1.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Swept Volume (Displacement)</div>
+              <div class="glossary-def">The volume the piston sweeps as it travels from BDC to TDC. Calculated from bore diameter and stroke length. One cylinder's swept volume multiplied by cylinder count gives total engine displacement.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Clearance Volume</div>
+              <div class="glossary-def">The total space remaining in the cylinder when the piston is at TDC. Includes the combustion chamber in the head, the compressed head gasket bore, deck clearance above the piston, and any piston crown volume (dome or dish).</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Top Dead Center (TDC)</div>
+              <div class="glossary-def">The highest point the piston reaches in the cylinder bore during its stroke. At TDC on the compression stroke, the air-fuel mixture is at maximum compression just before the spark fires.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Piston Dome</div>
+              <div class="glossary-def">A raised protrusion on the piston crown that extends up into the combustion chamber. A dome reduces clearance volume at TDC, which raises the static compression ratio.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Piston Dish / Valve Relief</div>
+              <div class="glossary-def">A recessed pocket machined into the piston crown. A dish adds volume to the clearance space at TDC, lowering the compression ratio. Valve reliefs also prevent piston-to-valve contact on aggressive cam profiles.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Deck Clearance</div>
+              <div class="glossary-def">The gap between the top of the piston at TDC and the flat deck surface of the engine block. This small gap contributes a calculable cylindrical volume to the total clearance volume.</div>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-term">Head Gasket Thickness</div>
+              <div class="glossary-def">The compressed thickness of the head gasket once the cylinder head is torqued down. Thicker gaskets increase clearance volume and lower the compression ratio. Gasket bore diameter also determines how much volume is added.</div>
+            </div>
+
+          </div>
+        </div><!-- /glossary -->
+
+        <!-- Educational guide card -->
+        <div class="card edu-section">
+          <h2>The Complete Guide to Engine Compression Ratio Calculations</h2>
+          <p class="section-intro">Compression ratio is one of the most consequential numbers in engine building. It affects peak power, fuel requirements, heat rejection, detonation risk, and overall thermal efficiency. This guide walks through exactly how static compression ratio is calculated, what each physical input contributes, and how to use this calculator to plan or verify your engine combination before any parts are ordered or machined.</p>
+
+          <h3>How to Use This Calculator</h3>
+          <p>Start by selecting your preferred unit for linear dimensions using the Inches / Millimeters toggle at the top. That setting applies to bore, stroke, deck clearance, gasket bore, and gasket thickness all at once. Enter your cylinder bore diameter and piston stroke in Panel 1. In Panel 2, enter the combustion chamber volume in cubic centimeters as measured with a burette or pulled from your cylinder head manufacturer's spec sheet. Select whether your piston crown has a dome (which raises CR) or a dish and valve pockets (which lower CR), then enter that volume in cc. Fill in the deck clearance height above the piston at TDC, and the compressed head gasket bore diameter and thickness. The compression ratio and volume breakdown in Panel 3 update immediately as you type - no submit button needed.</p>
+
+          <h3>The Static Compression Ratio Formula</h3>
+          <p>The standard formula used in automotive engineering is:</p>
+          <div class="formula-block">CR = (Vswept + Vclearance) / Vclearance</div>
+          <p>Where Vswept is the cylinder displacement volume swept by the piston from BDC to TDC, and Vclearance is the sum of all remaining volumes in the cylinder at TDC. All volumes must be in the same unit before dividing. This calculator uses cubic centimeters (cc) for all intermediate math, then presents the dimensionless ratio.</p>
+
+          <h3>How Each Clearance Volume Component Is Calculated</h3>
+          <p>The total clearance volume at TDC is the sum of four distinct physical spaces:</p>
+          <p><strong>1. Combustion Chamber Volume:</strong> Measured directly in cc by filling the chamber with fluid (burette test) or read from the head specification sheet. This is usually the largest contributor to clearance volume.</p>
+          <p><strong>2. Piston Dome or Dish Volume:</strong> A dome protrudes into the chamber and displaces space that would otherwise be clearance volume, so it is subtracted. A dish or valve relief adds space, so it is added. This calculator applies dome as a negative adjustment and dish as a positive adjustment to the clearance total.</p>
+          <p><strong>3. Head Gasket Volume:</strong> Calculated from gasket bore and compressed thickness using the formula: Vgasket = (PI / 4) x gasket_bore^2 x gasket_thickness, then converted to cc. Note that the gasket bore diameter is often slightly larger than the cylinder bore, and that difference matters at these precision levels.</p>
+          <p><strong>4. Deck Clearance Volume:</strong> Calculated from the cylinder bore diameter and the deck height (the gap between piston top and block deck surface at TDC). Same cylindrical formula: Vdeck = (PI / 4) x bore^2 x deck_height, converted to cc. Blocks that are decked flat to zero have no deck clearance contribution.</p>
+
+          <h3>Piston Dome vs. Dish: Why the Sign Matters</h3>
+          <p>A flat-top piston is the neutral baseline: it contributes neither positive nor negative volume to the clearance calculation. A domed piston invades the combustion chamber, shrinking the effective TDC space and pushing the ratio up. Engine builders intentionally use high dome pistons to achieve 12:1 or 13:1 ratios in race engines with large-chamber heads. Conversely, a dished piston expands the clearance volume, which is useful when building an engine that will run pump gas, accept a head gasket change that raised the ratio, or tolerate forced induction.</p>
+
+          <h3>Frequently Asked Questions About Engine Compression Ratios</h3>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button">
+              What is a good static compression ratio for a street engine?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              For a pump-gas street engine running 91 to 93 octane fuel, a static compression ratio between 9.5:1 and 10.5:1 is generally considered the sweet spot. Naturally aspirated performance builds often push to 11:1 or higher, but those require premium fuel or race gas. Forced induction engines (turbo or supercharged) typically run lower ratios of 8:1 to 9:1 because boost pressure adds to the effective compression.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button">
+              How does head gasket thickness affect my compression ratio?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              Head gasket thickness directly affects clearance volume. A thicker gasket increases the compressed gasket volume, which raises total clearance volume at TDC and therefore lowers the compression ratio. Engine builders use different gasket thicknesses as a tuning lever: switching from a 0.027-inch gasket to a 0.051-inch gasket can drop the ratio by roughly 0.3 to 0.5 points depending on bore size. Gasket bore diameter matters as much as thickness, since volume is calculated from the bore area.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button">
+              What is the difference between a piston dome and a piston dish?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              A piston dome is a raised protrusion on the piston crown that extends up into the combustion chamber. Because it displaces space, it reduces the clearance volume at TDC and therefore increases the compression ratio. A piston dish (or valve relief pocket) is a recessed area in the piston crown that adds extra volume at TDC, increasing clearance volume and reducing the compression ratio. This calculator applies dome volume as a negative number (subtracting from clearance) and dish volume as a positive number (adding to clearance).
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button">
+              Why do high compression engines require higher octane fuel?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              Higher compression ratios compress the air-fuel mixture to a much smaller volume before ignition. That smaller volume means higher temperature and pressure inside the cylinder, which can cause the fuel to ignite spontaneously before the spark plug fires. This is called pre-ignition or detonation (knocking), and it can destroy pistons and bearings quickly. Higher octane fuel resists this spontaneous ignition, giving the spark plug time to fire at the correct moment. Premium 91 to 93 octane fuel handles ratios up to about 10.5:1; anything above that often needs race fuel or an ethanol blend.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)" type="button">
+              What is the mathematical difference between Swept Volume and Clearance Volume?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              Swept volume (also called displacement) is the volume the piston travels through from Bottom Dead Center to Top Dead Center. It is calculated as: Vswept = (PI / 4) multiplied by bore squared multiplied by stroke, then converted to cubic centimeters. Clearance volume is the total space remaining in the cylinder when the piston is at TDC with the valves closed: combustion chamber volume in the head, plus compressed head gasket volume, plus deck clearance volume above the piston, plus or minus piston crown volume (positive for dish, negative for dome). The compression ratio is the total cylinder volume (swept plus clearance) divided by the clearance volume alone. Swept volume is the working displacement of the engine; clearance volume is the unavoidable dead space that caps how much the mixture can be compressed.
+            </div>
+          </div>
+
+          <div class="tool-disclaimer">
+            This calculator computes static compression ratio using standard automotive engineering formulas. Results are mathematical estimates based on the values you enter. For critical engine builds, always verify specifications with a qualified engine builder and perform a physical burette check of actual combustion chamber volume.
+          </div>
+
+        </div><!-- /edu-section -->
+
+      </div><!-- /container -->
+    </div><!-- /edu-wrap -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       ENGINE COMPRESSION RATIO CALCULATOR
+       Conversion factor: 1 cubic inch = 16.387064 cc (exact)
+       All math is 100% client-side. No data leaves the browser.
+    ============================================================ */
+
+    const CC_PER_CIN = 16.387064;
+
+    let currentUnit = 'in';
+    let pistonType  = 'dome';
+
+    /* Convert a linear value in the current unit to centimeters */
+    function toCm(val) {
+      return currentUnit === 'in' ? val * 2.54 : val / 10;
+    }
+
+    /* Calculate cylindrical volume in cc from diameter and height
+       both supplied in the current linear unit */
+    function cylVolCC(diameter, height) {
+      var d = toCm(diameter);
+      var h = toCm(height);
+      return (Math.PI / 4) * d * d * h;
+    }
+
+    /* Switch linear unit */
+    function setUnits(unit) {
+      currentUnit = unit;
+      document.getElementById('btn-in').classList.toggle('active', unit === 'in');
+      document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
+      var tag = unit === 'in' ? 'in' : 'mm';
+      document.getElementById('tag-bore').textContent   = tag;
+      document.getElementById('tag-stroke').textContent = tag;
+      document.getElementById('tag-deck').textContent   = tag;
+      document.getElementById('tag-gbore').textContent  = tag;
+      document.getElementById('tag-gthick').textContent = tag;
+      recalculate();
+    }
+
+    /* Switch piston crown type */
+    function setPiston(type) {
+      pistonType = type;
+      document.getElementById('btn-dome').className = 'piston-btn' + (type === 'dome' ? ' dome-active' : '');
+      document.getElementById('btn-dish').className = 'piston-btn' + (type === 'dish' ? ' dish-active' : '');
+      document.getElementById('piston-hint').textContent = type === 'dome'
+        ? 'Dome volume is subtracted from clearance volume, raising the ratio.'
+        : 'Dish volume is added to clearance volume, lowering the ratio.';
+      recalculate();
+    }
+
+    /* Show an error state in the output panel */
+    function showError(msg) {
+      document.getElementById('cr-display').textContent = '-- : 1';
+      var err = document.getElementById('cr-error');
+      err.textContent = msg;
+      err.style.display = 'block';
+      document.getElementById('stat-swept').textContent     = '-- cc';
+      document.getElementById('stat-clearance').textContent = '-- cc';
+      window._lastSpecs = null;
+    }
+
+    /* Clear error and update output */
+    function showResult(cr, swept, clearance) {
+      document.getElementById('cr-error').style.display = 'none';
+      document.getElementById('cr-error').textContent   = '';
+
+      /* Format ratio to 2 decimal places */
+      document.getElementById('cr-display').textContent = cr.toFixed(2) + ' : 1';
+      document.getElementById('stat-swept').textContent     = swept.toFixed(2) + ' cc';
+      document.getElementById('stat-clearance').textContent = clearance.toFixed(2) + ' cc';
+    }
+
+    /* Main calculation - runs on every input event */
+    function recalculate() {
+      var bore     = parseFloat(document.getElementById('inp-bore').value);
+      var stroke   = parseFloat(document.getElementById('inp-stroke').value);
+      var chamber  = parseFloat(document.getElementById('inp-chamber').value);
+      var pistonCC = parseFloat(document.getElementById('inp-piston').value)      || 0;
+      var deck     = parseFloat(document.getElementById('inp-deck').value)         || 0;
+      var gBore    = parseFloat(document.getElementById('inp-gasket-bore').value)  || 0;
+      var gThick   = parseFloat(document.getElementById('inp-gasket-thick').value) || 0;
+
+      /* Require the three primary inputs */
+      if (!bore || !stroke || isNaN(chamber) || chamber === '') {
+        showResult(0, 0, 0);
+        document.getElementById('cr-display').textContent     = '-- : 1';
+        document.getElementById('stat-swept').textContent     = '-- cc';
+        document.getElementById('stat-clearance').textContent = '-- cc';
+        document.getElementById('cr-error').style.display     = 'none';
+        return;
+      }
+
+      if (bore <= 0 || stroke <= 0 || chamber < 0) {
+        showError('Bore and stroke must be positive. Chamber volume must be 0 or greater.');
+        return;
+      }
+
+      /* Swept volume */
+      var Vswept = cylVolCC(bore, stroke);
+
+      /* Head gasket volume */
+      var Vgasket = (gBore > 0 && gThick > 0) ? cylVolCC(gBore, gThick) : 0;
+
+      /* Deck clearance volume */
+      var Vdeck = (deck > 0) ? cylVolCC(bore, deck) : 0;
+
+      /* Piston volume contribution:
+         dome SUBTRACTS from clearance (reduces TDC space, raises CR)
+         dish ADDS to clearance (increases TDC space, lowers CR) */
+      var Vpiston = (pistonType === 'dome') ? -pistonCC : pistonCC;
+
+      /* Total clearance volume at TDC */
+      var Vclearance = chamber + Vpiston + Vgasket + Vdeck;
+
+      if (Vclearance <= 0) {
+        showError('Clearance volume is zero or negative. The dome volume cannot exceed the combined chamber, gasket, and deck volumes.');
+        return;
+      }
+
+      /* Static Compression Ratio */
+      var CR = (Vswept + Vclearance) / Vclearance;
+
+      showResult(CR, Vswept, Vclearance);
+
+      /* Store for copy function */
+      window._lastSpecs = {
+        cr:         CR.toFixed(2),
+        swept:      Vswept.toFixed(2),
+        clearance:  Vclearance.toFixed(2),
+        bore:       document.getElementById('inp-bore').value,
+        stroke:     document.getElementById('inp-stroke').value,
+        chamber:    chamber,
+        pistonCC:   pistonCC,
+        pistonType: pistonType,
+        deck:       deck,
+        gBore:      gBore,
+        gThick:     gThick,
+        unit:       currentUnit
+      };
+    }
+
+    /* Copy engine specs to clipboard */
+    function copySpecs() {
+      var d = window._lastSpecs;
+      if (!d) {
+        alert('Enter your engine measurements first to generate specs.');
+        return;
+      }
+      var u = d.unit === 'in' ? 'in' : 'mm';
+      var pLabel = d.pistonType === 'dome' ? 'Dome (-)' : 'Dish (+)';
+      var lines = [
+        'Engine Compression Ratio Specs - via AxiomApe',
+        '-----------------------------------------------',
+        'Static Compression Ratio : ' + d.cr + ' : 1',
+        'Total Swept Volume       : ' + d.swept + ' cc',
+        'Total Clearance Volume   : ' + d.clearance + ' cc',
+        '-----------------------------------------------',
+        'Cylinder Bore            : ' + d.bore + ' ' + u,
+        'Piston Stroke            : ' + d.stroke + ' ' + u,
+        'Chamber Volume           : ' + d.chamber + ' cc',
+        'Piston Crown             : ' + pLabel + ' ' + d.pistonCC + ' cc',
+        'Deck Clearance           : ' + d.deck + ' ' + u,
+        'Gasket Bore              : ' + d.gBore + ' ' + u,
+        'Gasket Thickness         : ' + d.gThick + ' ' + u
+      ];
+      var text = lines.join('\n');
+
+      var btn = document.getElementById('copy-btn');
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = 'Copy Engine Specs'; }, 2200);
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = 'Copy Engine Specs'; }, 2200);
+      }
+    }
+
+    /* FAQ accordion toggle */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var icon   = btn.querySelector('.faq-icon');
+      var isOpen = answer.classList.contains('open');
+      /* Close all */
+      document.querySelectorAll('.faq-answer').forEach(function (a) { a.classList.remove('open'); });
+      document.querySelectorAll('.faq-icon').forEach(function (i) { i.classList.remove('open'); });
+      /* Re-open if it was closed */
+      if (!isOpen) {
+        answer.classList.add('open');
+        icon.classList.add('open');
+      }
+    }
+  </script>
+
+</body>
+</html>

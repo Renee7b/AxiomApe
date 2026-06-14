@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free cryptographically secure password generator. Fabricate strong random strings locally in your browser using window.crypto - never Math.random(). Choose uppercase, lowercase, numbers, and symbols. See live entropy bits. Nothing sent to any server." />
+  <meta name="keywords" content="secure password generator, cryptographically secure password, random password generator, strong password maker, CSPRNG password tool, window.crypto password, local password generator, entropy password calculator, password bit strength, generate strong password, random string fabricator, password character set, exclude ambiguous characters, offline password generator, browser password generator, password entropy bits, brute force resistant password" />
+  <title>Secure Random Password Fabricator: Generate Strong Strings Completely Locally | AxiomApe</title>
+
+  <link rel="canonical" href="https://axiomape.com/secure-random-password-fabricator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Secure Random Password Fabricator",
+        "description": "Free cryptographically secure password generator. Fabricate strong random strings locally in your browser using window.crypto - never Math.random(). Choose uppercase, lowercase, numbers, and symbols. See live entropy bits. Nothing sent to any server.",
+        "url": "https://axiomape.com/secure-random-password-fabricator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is Math.random() unsafe for generating passwords?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Math.random() is a pseudo-random number generator (PRNG) seeded by a predictable value and designed for speed, not security. Its output can be reverse-engineered by an attacker who observes enough values, allowing them to predict every future output. window.crypto.getRandomValues() pulls entropy from your operating system's cryptographically secure pool, which is seeded by genuinely unpredictable physical sources such as hardware interrupts, mouse timing, and CPU jitter. That seed cannot be observed or reconstructed, making the output computationally infeasible to predict."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does password entropy influence the time required for a brute-force attack?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Entropy, measured in bits, expresses how many equally likely passwords an attacker must try on average before guessing correctly. Each additional bit doubles the search space. A 40-bit password requires about 1 trillion guesses, which a modern GPU can exhaust in hours. A 72-bit password pushes that estimate past billions of years at current hardware speeds. The formula is E = L x log2(R), where L is password length and R is the size of the character pool. Increasing either variable grows the search space exponentially."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should I exclude ambiguous characters like 0 and O?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Characters such as uppercase I (eye), lowercase l (el), the digit 1 (one), uppercase O (oh), and the digit 0 (zero) look nearly identical in many fonts and on printed labels. When you type a password into a mobile device, a printed card, or a terminal with a small font, these characters cause transcription errors. Excluding them reduces your effective character set by a small amount (losing perhaps 8 characters), but the reduction in typos and lockouts is usually worth the trade-off, especially for passwords that must also be entered manually."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What makes a password strong according to modern security standards?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "NIST SP 800-63B (the current US federal password standard) prioritizes length over complexity rules. A random 15-character password drawn from a large character set is stronger than an 8-character password with forced substitutions. Security researchers generally consider passwords with 60 or more bits of entropy to be strong against offline attacks with current hardware. At 128 bits, a password is considered computationally unbreakable for any foreseeable future. This tool shows your live entropy score so you can tune length and character sets until you reach your target threshold."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are there any risks in generating passwords inside a web browser?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The main risk with browser-based password generators is that a malicious or compromised page could read the generated string before you copy it. This tool eliminates that risk: all generation uses window.crypto.getRandomValues() locally, no network requests are made, and the page contains no analytics, trackers, or external scripts other than the site-chrome layout injector. You can verify this by opening your browser developer tools and watching the Network tab while generating passwords - you will see zero outbound requests. For maximum assurance, use the tool offline by loading the page once and then disconnecting from the internet before generating passwords you intend to use."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0a0c10;
+      --bg-card:      #0f1117;
+      --bg-input:     #0c0e14;
+      --border:       #1e2333;
+      --border-hi:    #2d3450;
+      --teal:         #0D9488;
+      --teal-dim:     #0a7a6e;
+      --teal-glow:    rgba(13,148,136,.18);
+      --violet:       #7C3AED;
+      --violet-dim:   #6d31d4;
+      --violet-glow:  rgba(124,58,237,.18);
+      --green:        #4ADE80;
+      --green-dim:    #22c55e;
+      --green-glow:   rgba(74,222,128,.15);
+      --red:          #EF4444;
+      --yellow:       #EAB308;
+      --text:         #dde4f0;
+      --text-muted:   #6e7a99;
+      --text-dim:     #3d4a66;
+      --mono:         'Fira Code', 'Roboto Mono', monospace;
+      --sans:         'Inter', system-ui, sans-serif;
+      --radius:       10px;
+      --radius-lg:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Page wrapper */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    /* Page header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2rem);
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 20px;
+      font-family: var(--mono);
+    }
+
+    /* Three-panel grid */
+    .triple-panel {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 820px) {
+      .triple-panel { grid-template-columns: 1fr 1fr; }
+      .triple-panel .panel-output { grid-column: 1 / -1; order: -1; }
+    }
+    @media (max-width: 540px) {
+      .triple-panel { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+    }
+    .panel-label {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 18px;
+      font-family: var(--mono);
+    }
+
+    /* Slider */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .slider-row span {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--violet);
+      min-width: 28px;
+      text-align: center;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      background: var(--border-hi);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--violet);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--violet-glow);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--violet);
+      cursor: pointer;
+      border: none;
+    }
+    .slider-bounds {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      margin-bottom: 20px;
+      margin-top: -12px;
+    }
+
+    /* Checkboxes */
+    .check-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .check-item input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      border: 2px solid var(--border-hi);
+      border-radius: 4px;
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .check-item input[type="checkbox"]:checked {
+      background: var(--teal);
+      border-color: var(--teal);
+    }
+    .check-item input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 5px;
+      width: 5px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+    .check-label {
+      font-size: 0.82rem;
+      color: var(--text);
+      font-family: var(--mono);
+      letter-spacing: 0.02em;
+    }
+    .check-label span {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    /* Toggle switch for ambiguous */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .toggle-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border-hi);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle-track::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--teal); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+
+    /* Output panel */
+    .output-box {
+      width: 100%;
+      background: var(--bg-input);
+      border: 2px solid var(--teal);
+      border-radius: var(--radius);
+      color: var(--teal);
+      font-family: var(--mono);
+      font-size: clamp(0.8rem, 2vw, 1rem);
+      font-weight: 500;
+      padding: 14px;
+      min-height: 80px;
+      letter-spacing: 0.06em;
+      word-break: break-all;
+      line-height: 1.7;
+      resize: none;
+      outline: none;
+      cursor: default;
+      box-shadow: 0 0 16px var(--teal-glow);
+      transition: box-shadow .2s;
+    }
+    .output-box:focus { box-shadow: 0 0 24px var(--teal-glow); }
+
+    .output-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: none;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: opacity .15s, transform .1s, box-shadow .15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-copy {
+      background: var(--teal);
+      color: #000;
+      box-shadow: 0 0 10px var(--teal-glow);
+    }
+    .btn-copy:hover { opacity: 0.88; }
+    .btn-regen {
+      background: transparent;
+      color: var(--violet);
+      border: 1.5px solid var(--violet);
+      box-shadow: 0 0 10px var(--violet-glow);
+    }
+    .btn-regen:hover { background: var(--violet-glow); }
+    .btn-download {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border-hi);
+    }
+    .btn-download:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* Strength badge */
+    .strength-badge {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .strength-weak { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+    .strength-strong { background: rgba(234,179,8,.12); color: var(--yellow); border: 1px solid rgba(234,179,8,.3); }
+    .strength-unbreakable { background: var(--teal-glow); color: var(--teal); border: 1px solid rgba(13,148,136,.35); }
+    .strength-none { background: var(--border); color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* Telemetry panel */
+    .tele-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tele-row:last-child { border-bottom: none; }
+    .tele-key {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      letter-spacing: 0.06em;
+    }
+    .tele-val {
+      font-size: 0.9rem;
+      font-family: var(--mono);
+      font-weight: 600;
+      color: var(--violet);
+    }
+    .tele-val.tele-entropy { font-size: 1.2rem; color: var(--violet); }
+    .entropy-bar-wrap {
+      margin: 14px 0;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .entropy-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--violet), var(--teal));
+      transition: width .3s ease;
+    }
+    .error-msg {
+      color: var(--red);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 24px auto;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-hi);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      letter-spacing: 0.08em;
+    }
+    .axiom-ad-mobile-anchor {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      z-index: 999;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 6px 0;
+    }
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor { display: block; }
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .glossary-term {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 5px;
+      letter-spacing: 0.04em;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 16px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .faq-q:hover { color: var(--teal); }
+    .faq-arrow {
+      color: var(--teal);
+      font-size: 1.1rem;
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 0 0 16px;
+      color: var(--text-muted);
+      font-size: 0.87rem;
+      line-height: 1.65;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* Edu section */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--teal);
+      margin: 20px 0 10px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+    .copy-feedback {
+      font-size: 0.72rem;
+      color: var(--green);
+      font-family: var(--mono);
+      margin-left: 4px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .copy-feedback.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Secure Random Password Fabricator</h1>
+    <p>Generate strong, cryptographically secure strings completely locally. Powered by <code>window.crypto</code>, never <code>Math.random()</code>. Zero network calls.</p>
+  </header>
+
+  <!-- ============================================================
+       THREE-PANEL DASHBOARD
+  ============================================================ -->
+  <div class="triple-panel">
+
+    <!-- PANEL 1: Configuration Console -->
+    <div class="panel">
+      <div class="panel-label">Configuration Console</div>
+
+      <!-- Length slider -->
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text-muted);letter-spacing:0.06em;">PASSWORD LENGTH</span>
+        <span id="lenDisplay" style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--violet);">20</span>
+      </div>
+      <div class="slider-row" style="margin-bottom:4px;">
+        <input type="range" id="lengthSlider" min="8" max="64" value="20" oninput="onConfigChange()" />
+      </div>
+      <div class="slider-bounds"><span>8</span><span>64</span></div>
+
+      <!-- Character sets -->
+      <div style="font-family:var(--mono);font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Character Sets</div>
+      <div class="check-group">
+        <label class="check-item">
+          <input type="checkbox" id="chkUpper" checked onchange="onConfigChange()" />
+          <span class="check-label">Uppercase <span>A-Z</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" id="chkLower" checked onchange="onConfigChange()" />
+          <span class="check-label">Lowercase <span>a-z</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" id="chkNumbers" checked onchange="onConfigChange()" />
+          <span class="check-label">Numeric <span>0-9</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" id="chkSymbols" checked onchange="onConfigChange()" />
+          <span class="check-label">Symbols <span>!@#$%^&amp;*</span></span>
+        </label>
+      </div>
+
+      <!-- Exclude ambiguous toggle -->
+      <div class="toggle-row" style="margin-top:14px;">
+        <span class="toggle-text">Exclude Ambiguous Characters<br><span style="font-size:0.7rem;color:var(--text-dim);">Removes: I l 1 O 0</span></span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="chkAmbig" onchange="onConfigChange()" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- PANEL 2: Fabricated String Output -->
+    <div class="panel panel-output">
+      <div class="panel-label">Fabricated String Output</div>
+
+      <textarea id="outputBox" class="output-box" rows="3" readonly spellcheck="false" aria-label="Generated password output"></textarea>
+
+      <div id="strengthBadge" class="strength-badge strength-none">-- No Character Set Selected --</div>
+
+      <div class="output-actions">
+        <button class="btn btn-copy" onclick="copyPassword()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button class="btn btn-regen" onclick="generatePassword()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Regenerate
+        </button>
+        <span class="copy-feedback" id="copyFeedback">Copied!</span>
+      </div>
+
+      <div id="errMsg" class="error-msg" style="display:none;"></div>
+    </div>
+
+    <!-- PANEL 3: Telemetry -->
+    <div class="panel">
+      <div class="panel-label">Entropy Telemetry</div>
+
+      <div class="tele-row">
+        <span class="tele-key">ENTROPY</span>
+        <span class="tele-val tele-entropy" id="teleEntropy">-- bits</span>
+      </div>
+      <div class="entropy-bar-wrap">
+        <div class="entropy-bar" id="entropyBar" style="width:0%"></div>
+      </div>
+      <div class="tele-row">
+        <span class="tele-key">LENGTH</span>
+        <span class="tele-val" id="teleLen">20 chars</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-key">CHARSET SIZE</span>
+        <span class="tele-val" id="telePool">-- symbols</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-key">STRENGTH TIER</span>
+        <span class="tele-val" id="teleTier" style="font-size:0.78rem;">--</span>
+      </div>
+      <div class="tele-row" style="border-bottom:none;padding-bottom:0;margin-top:4px;">
+        <span class="tele-key">RNG ENGINE</span>
+        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--teal);">window.crypto</span>
+      </div>
+
+      <button class="btn btn-download" style="width:100%;margin-top:18px;justify-content:center;" onclick="downloadLog()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Password Log
+      </button>
+      <div style="margin-top:8px;font-size:0.68rem;color:var(--text-dim);font-family:var(--mono);text-align:center;line-height:1.4;">Log cleared on page refresh</div>
+    </div>
+  </div><!-- /triple-panel -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       GLOSSARY
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Key Terms: Cryptographic Password Security Glossary</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Cryptographic Entropy</div>
+        <div class="glossary-def">A measure of unpredictability, expressed in bits. Higher entropy means more possible values, making the output harder to guess or reproduce.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Bit Strength</div>
+        <div class="glossary-def">The number of binary digits needed to encode all possible values in a password's search space. Each extra bit doubles the difficulty of guessing.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Brute-Force Attack</div>
+        <div class="glossary-def">An attack that systematically tries every possible password combination until the correct one is found. Longer, more complex passwords make this computationally infeasible.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">CSPRNG</div>
+        <div class="glossary-def">Cryptographically Secure Pseudo-Random Number Generator. Produces random values that are statistically unpredictable, suitable for generating keys, tokens, and passwords. <code>window.crypto</code> is a CSPRNG.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Character Set (Pool)</div>
+        <div class="glossary-def">The set of unique symbols from which each character in a password is drawn. A larger pool raises the base of the entropy exponent, increasing strength rapidly.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Password Hash</div>
+        <div class="glossary-def">A one-way mathematical transformation of a password into a fixed-length digest. Servers store hashes, not plaintext passwords, so a breach does not immediately expose credentials.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Rejection Sampling</div>
+        <div class="glossary-def">A technique used in this tool to avoid modulo bias. Random bytes that fall outside an even multiple of the pool size are discarded and resampled, preserving uniform distribution.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Modulo Bias</div>
+        <div class="glossary-def">A statistical skew that occurs when mapping a random number range onto a character set whose size does not evenly divide the source range. Rejection sampling eliminates this skew.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL SECTION
+  ============================================================ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Cryptographically Secure Password Generation</h2>
+
+    <p class="section-intro">Most password generators rely on <code>Math.random()</code>, a pseudo-random function designed for game logic and statistical simulations, not security. When your login credentials depend on unpredictability, the underlying random number generator matters enormously. This tool uses <code>window.crypto.getRandomValues()</code>, the browser's CSPRNG, which draws entropy from your operating system's hardware noise pool. The result: a password whose generation process cannot be reverse-engineered, predicted, or replayed.</p>
+
+    <h3>How to Use This Fabricator</h3>
+    <p>Drag the length slider to set your target password length. Check or uncheck the four character sets (uppercase, lowercase, numeric, symbols) to define the pool of characters the fabricator will draw from. Toggle "Exclude Ambiguous Characters" to remove visually similar symbols if you will be typing the password by hand. The output field, strength badge, and entropy telemetry update instantly with every configuration change. Copy the result with one click or download a session log as a plain text file.</p>
+
+    <h3>Understanding the Entropy Formula</h3>
+    <p>Password entropy in bits is calculated as E = L x log2(R), where L is the password length in characters and R is the number of unique symbols in the character pool. With all four sets active (95 printable ASCII symbols), a 20-character password yields roughly 131 bits. At 72 bits or above, a password is considered computationally unbreakable against offline brute-force attacks using current hardware. The entropy bar and bit readout update live so you can tune length and character sets to hit your target security threshold.</p>
+
+    <h3>Why Character Set Size Matters More Than Rules</h3>
+    <p>Legacy password policies requiring capital letters, numbers, and symbols on short 8-character passwords were designed before modern brute-force benchmarks. A GPU cluster running bcrypt can test tens of millions of 8-character permutations per second. The actual defense is entropy: a purely lowercase 18-character random string (entropy 84 bits) is statistically stronger than an 8-character string satisfying every complexity rule (entropy 52 bits). Pool size and length compound each other exponentially, not linearly.</p>
+
+    <h3>Rejection Sampling: Why This Tool Avoids Modulo Bias</h3>
+    <p>A naive implementation might take a random byte (0-255) and compute <code>byte % poolSize</code> to pick a character. If poolSize is not a power of two, characters with lower index values appear slightly more often. This tool uses rejection sampling: random bytes that fall outside the largest even multiple of the pool size are discarded and replaced, ensuring every character in the pool is chosen with exactly equal probability. The cost is a small number of extra <code>getRandomValues()</code> calls, which are negligible given the CSPRNG's speed.</p>
+
+    <h3>FAQ: Secure Password Generation</h3>
+    <div id="faqBlock">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why is Math.random() unsafe for generating passwords?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">Math.random() is a pseudo-random number generator (PRNG) seeded by a predictable value and designed for speed, not security. Its output can be reverse-engineered by an attacker who observes enough values, allowing them to predict every future output. window.crypto.getRandomValues() pulls entropy from your operating system's cryptographically secure pool, which is seeded by genuinely unpredictable physical sources such as hardware interrupts, mouse timing, and CPU jitter. That seed cannot be observed or reconstructed, making the output computationally infeasible to predict.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does password entropy influence the time required for a brute-force attack?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">Entropy, measured in bits, expresses how many equally likely passwords an attacker must try on average before guessing correctly. Each additional bit doubles the search space. A 40-bit password requires about 1 trillion guesses, which a modern GPU can exhaust in hours. A 72-bit password pushes that estimate past billions of years at current hardware speeds. The formula is E = L x log2(R), where L is password length and R is the size of the character pool. Increasing either variable grows the search space exponentially.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why should I exclude ambiguous characters like 0 and O?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">Characters such as uppercase I (eye), lowercase l (el), the digit 1 (one), uppercase O (oh), and the digit 0 (zero) look nearly identical in many fonts and on printed labels. When you type a password into a mobile device, a printed card, or a terminal with a small font, these characters cause transcription errors. Excluding them reduces your effective character set by a small amount, but the reduction in typos and lockouts is usually worth the trade-off, especially for passwords that must also be entered manually.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What makes a password strong according to modern security standards?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">NIST SP 800-63B (the current US federal password standard) prioritizes length over complexity rules. A random 15-character password drawn from a large character set is stronger than an 8-character password with forced substitutions. Security researchers generally consider passwords with 60 or more bits of entropy to be strong against offline attacks with current hardware. At 128 bits, a password is considered computationally unbreakable for any foreseeable future. This tool shows your live entropy score so you can tune length and character sets until you reach your target threshold.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Are there any risks in generating passwords inside a web browser?
+          <span class="faq-arrow">+</span>
+        </button>
+        <div class="faq-a">The main risk with browser-based password generators is that a malicious or compromised page could read the generated string before you copy it. This tool eliminates that risk: all generation uses window.crypto.getRandomValues() locally, no network requests are made, and the page contains no analytics, trackers, or external scripts other than the site-chrome layout injector. You can verify this by opening your browser developer tools and watching the Network tab while generating passwords - you will see zero outbound requests. For maximum assurance, use the tool offline by loading the page once and then disconnecting from the internet before generating passwords you intend to use.</div>
+      </div>
+
+    </div><!-- /faqBlock -->
+  </div><!-- /edu-section -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ============================================================
+     CONSTANTS
+  ============================================================ */
+  const POOL_UPPER   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';     // ambiguous-stripped version
+  const POOL_LOWER   = 'abcdefghijkmnopqrstuvwxyz';    // ambiguous-stripped version
+  const POOL_NUMBERS = '23456789';                      // ambiguous-stripped version
+  const POOL_SYMBOLS = '!@#$%^&*()-_=+[]{}|;:,.<>?';
+
+  const POOL_UPPER_FULL   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const POOL_LOWER_FULL   = 'abcdefghijklmnopqrstuvwxyz';
+  const POOL_NUMBERS_FULL = '0123456789';
+
+  /* ambiguous chars to remove when toggle is ON */
+  const AMBIGUOUS = new Set(['I', 'l', '1', 'O', '0']);
+
+  /* session log accumulates generated passwords */
+  const sessionLog = [];
+
+  /* ============================================================
+     CRYPTO RANDOM
+     Uses rejection sampling to guarantee uniform distribution.
+  ============================================================ */
+  function cryptoRandBelow(n) {
+    const max = Math.floor(0x100000000 / n) * n;
+    const buf = new Uint32Array(1);
+    let val;
+    do {
+      window.crypto.getRandomValues(buf);
+      val = buf[0];
+    } while (val >= max);
+    return val % n;
+  }
+
+  /* ============================================================
+     BUILD CHARACTER POOL
+  ============================================================ */
+  function buildPool() {
+    const excludeAmbig = document.getElementById('chkAmbig').checked;
+    let pool = '';
+
+    if (document.getElementById('chkUpper').checked) {
+      pool += excludeAmbig ? POOL_UPPER : POOL_UPPER_FULL;
+    }
+    if (document.getElementById('chkLower').checked) {
+      pool += excludeAmbig ? POOL_LOWER : POOL_LOWER_FULL;
+    }
+    if (document.getElementById('chkNumbers').checked) {
+      pool += excludeAmbig ? POOL_NUMBERS : POOL_NUMBERS_FULL;
+    }
+    if (document.getElementById('chkSymbols').checked) {
+      pool += POOL_SYMBOLS;
+    }
+
+    /* deduplicate (safety, should not normally be needed) */
+    return [...new Set(pool.split(''))].join('');
+  }
+
+  /* ============================================================
+     ENTROPY CALCULATION
+     E = L x log2(R)
+  ============================================================ */
+  function calcEntropy(length, poolSize) {
+    if (poolSize < 2) return 0;
+    return length * Math.log2(poolSize);
+  }
+
+  /* ============================================================
+     STRENGTH TIER
+  ============================================================ */
+  function strengthTier(bits) {
+    if (bits < 40)  return 'Weak';
+    if (bits < 72)  return 'Strong';
+    return 'Unbreakable';
+  }
+
+  function strengthClass(bits) {
+    if (bits < 40)  return 'strength-weak';
+    if (bits < 72)  return 'strength-strong';
+    return 'strength-unbreakable';
+  }
+
+  /* ============================================================
+     GENERATE PASSWORD
+  ============================================================ */
+  function generatePassword() {
+    const len  = parseInt(document.getElementById('lengthSlider').value, 10);
+    const pool = buildPool();
+    const errEl = document.getElementById('errMsg');
+
+    if (pool.length === 0) {
+      document.getElementById('outputBox').value = '';
+      document.getElementById('strengthBadge').className = 'strength-badge strength-none';
+      document.getElementById('strengthBadge').textContent = '-- Select at least one character set --';
+      errEl.textContent = 'Please enable at least one character set.';
+      errEl.style.display = 'block';
+      updateTelemetry(0, len, 0);
+      return;
+    }
+
+    errEl.style.display = 'none';
+
+    let pwd = '';
+    for (let i = 0; i < len; i++) {
+      pwd += pool[cryptoRandBelow(pool.length)];
+    }
+
+    document.getElementById('outputBox').value = pwd;
+
+    const bits = calcEntropy(len, pool.length);
+    const tier  = strengthTier(bits);
+    const badge = document.getElementById('strengthBadge');
+    badge.className = 'strength-badge ' + strengthClass(bits);
+    badge.textContent = tier + ' - ' + bits.toFixed(1) + ' bits';
+
+    updateTelemetry(bits, len, pool.length);
+
+    /* push to session log */
+    sessionLog.push({
+      timestamp: new Date().toISOString(),
+      length: len,
+      poolSize: pool.length,
+      entropyBits: bits.toFixed(1),
+      strength: tier,
+      password: pwd
+    });
+  }
+
+  /* ============================================================
+     TELEMETRY UPDATE
+  ============================================================ */
+  function updateTelemetry(bits, len, poolSize) {
+    document.getElementById('teleEntropy').textContent = bits > 0 ? bits.toFixed(1) + ' bits' : '-- bits';
+    document.getElementById('teleLen').textContent = len + ' chars';
+    document.getElementById('telePool').textContent = poolSize > 0 ? poolSize + ' symbols' : '--';
+    document.getElementById('teleTier').textContent = bits > 0 ? strengthTier(bits) : '--';
+
+    /* entropy bar: cap at 128 bits = 100% */
+    const pct = Math.min(100, (bits / 128) * 100);
+    document.getElementById('entropyBar').style.width = pct + '%';
+  }
+
+  /* ============================================================
+     CONFIG CHANGE HANDLER
+  ============================================================ */
+  function onConfigChange() {
+    const len = parseInt(document.getElementById('lengthSlider').value, 10);
+    document.getElementById('lenDisplay').textContent = len;
+    generatePassword();
+  }
+
+  /* ============================================================
+     COPY TO CLIPBOARD
+  ============================================================ */
+  function copyPassword() {
+    const val = document.getElementById('outputBox').value;
+    if (!val) return;
+    navigator.clipboard.writeText(val).then(() => {
+      const fb = document.getElementById('copyFeedback');
+      fb.classList.add('show');
+      setTimeout(() => fb.classList.remove('show'), 1800);
+    }).catch(() => {
+      /* fallback for older browsers */
+      document.getElementById('outputBox').select();
+      document.execCommand('copy');
+    });
+  }
+
+  /* ============================================================
+     DOWNLOAD LOG
+  ============================================================ */
+  function downloadLog() {
+    if (sessionLog.length === 0) {
+      alert('No passwords generated yet in this session.');
+      return;
+    }
+    const lines = [
+      'AxiomApe Secure Random Password Fabricator - Session Log',
+      'Generated using window.crypto.getRandomValues() (CSPRNG)',
+      'This file was created locally. Nothing was sent to any server.',
+      'Log clears when you close or refresh this page.',
+      '',
+      ...sessionLog.map((e, i) =>
+        '#' + (i + 1) + ' | ' + e.timestamp +
+        ' | Length: ' + e.length +
+        ' | Pool: ' + e.poolSize +
+        ' | Entropy: ' + e.entropyBits + ' bits' +
+        ' | Strength: ' + e.strength +
+        '\nPassword: ' + e.password
+      )
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'axiomape-password-log.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     FAQ ACCORDION
+  ============================================================ */
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    item.classList.toggle('open');
+  }
+
+  /* ============================================================
+     INIT
+  ============================================================ */
+  generatePassword();
+</script>
+</body>
+</html>

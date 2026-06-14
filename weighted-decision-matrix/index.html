@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weighted Decision Matrix: Grade Options Against Custom Priority Criteria | AxiomApe</title>
+  <meta name="description" content="Free weighted decision matrix calculator. Score and rank any options against custom criteria with adjustable importance weights. Instant leaderboard, Pugh matrix scoring, and Markdown export. 100% client-side." />
+  <meta name="keywords" content="weighted decision matrix, decision matrix calculator, Pugh matrix tool, priority scoring grid, criteria weighting calculator, decision analysis tool, option ranking tool, weighted scoring matrix, prioritization framework, decision making tool" />
+  <link rel="canonical" href="https://axiomape.com/weighted-decision-matrix/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+       SoftwareApplication + FAQPage (matches on-page FAQ accordion)
+  ============================================================ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Weighted Decision Matrix Priority Selector",
+        "description": "Free weighted decision matrix calculator. Score and rank any options against custom criteria with adjustable importance weights. Instant leaderboard, Pugh matrix scoring, and Markdown export. 100% client-side.",
+        "url": "https://axiomape.com/weighted-decision-matrix/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a weighted decision matrix and when should I use one?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A weighted decision matrix is a structured scoring tool that helps you compare multiple options against a set of criteria, where each criterion is assigned an importance weight. Use one whenever you face a complex decision with several competing factors and more than two options - such as choosing a vendor, selecting a job offer, picking a technology stack, or prioritizing features for a product roadmap. By forcing you to make your priorities explicit and apply them consistently, it removes gut-feel bias and produces a defensible, data-driven ranking."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I choose the right weights for my decision criteria?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Assign each criterion a weight from 1 (minor factor) to 10 (critical factor). A useful technique: ask which single criterion matters most - that one gets the highest weight. Then work downward. The tool normalizes weights automatically, so only the ratios between weights matter, not the absolute scale. Set weights before grading options to avoid anchoring bias."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between an unweighted and a weighted decision matrix?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An unweighted decision matrix treats every criterion as equally important. A weighted decision matrix multiplies each grade by that criterion's importance score before summing, so criteria you care about more have a proportionally larger effect on the final ranking. To simulate an unweighted matrix in this tool, set every criterion to the same weight."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can this tool help remove bias from decision-making?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The matrix counteracts anchoring bias (favoring the first option encountered), availability bias (overweighting memorable information), and preference bias (picking a favorite before evaluating objectively). By separating the weight-setting step from the scoring step, you lock in priorities before grading, forcing the same standard to be applied to every option."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I interpret the final score difference between two close options?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A difference under 5 points on the 0-100 normalized scale usually means the two options are functionally tied. Revisit your weights or add a tiebreaker criterion. A gap of 15 or more points is a strong signal that one option genuinely dominates. Always cross-reference the matrix output with hard constraints - budget caps, regulatory requirements - that cannot be scored numerically."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --surface:     #1e293b;
+      --surface-2:   #253347;
+      --surface-3:   #162032;
+      --border:      #334155;
+      --border-2:    #475569;
+      --text:        #f1f5f9;
+      --muted:       #94a3b8;
+      --dim:         #64748b;
+      --blue:        #3B82F6;
+      --blue-h:      #2563EB;
+      --blue-dim:    rgba(59, 130, 246, 0.12);
+      --gold:        #EAB308;
+      --gold-h:      #ca8a04;
+      --gold-dim:    rgba(234, 179, 8, 0.12);
+      --green:       #22c55e;
+      --red:         #ef4444;
+      --red-dim:     rgba(239, 68, 68, 0.15);
+      --radius:      12px;
+      --radius-sm:   8px;
+      --shadow:      0 4px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue); }
+    a:hover { color: var(--blue-h); }
+
+    /* ============================================================
+       PAGE HEADER (site-chrome injects #axiom-header above this)
+    ============================================================ */
+    .page-header {
+      background: linear-gradient(135deg, #060d1a 0%, #0a1628 55%, #112240 100%);
+      padding: 52px 20px 44px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.35rem, 4vw, 2.1rem);
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-bottom: 14px;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+      color: #94a3b8;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+    }
+
+    /* ============================================================
+       CARD
+    ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 520px) { .card { padding: 18px 14px; } }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .panel-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: var(--blue);
+      color: #fff;
+      padding: 3px 9px;
+      border-radius: 99px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .panel-badge.gold { background: var(--gold); color: #0f172a; }
+
+    /* ============================================================
+       PANEL 1 - SETUP
+    ============================================================ */
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 600px) { .setup-grid { grid-template-columns: 1fr; } }
+
+    .setup-col h3 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 8px;
+    }
+
+    .weight-hint {
+      font-size: 0.78rem;
+      color: var(--dim);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .criterion-row,
+    .option-row {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+
+    .field-text {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 8px 11px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 0;
+    }
+    .field-text::placeholder { color: var(--dim); }
+    .field-text:focus { border-color: var(--blue); }
+
+    .field-weight {
+      width: 60px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--gold);
+      padding: 8px 6px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .field-weight:focus { border-color: var(--gold); }
+
+    .btn-remove {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: var(--red-dim);
+      color: var(--red);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+    .btn-remove:hover:not(:disabled) { background: rgba(239, 68, 68, 0.28); }
+    .btn-remove:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    .btn-add {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: none;
+      border: 1.5px dashed var(--border-2);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      padding: 9px 14px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-add:hover { border-color: var(--blue); color: var(--blue); }
+
+    .weight-total-row {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .wt-val { font-weight: 700; color: var(--gold); }
+
+    /* ============================================================
+       NORMALIZATION NOTICE
+    ============================================================ */
+    .normalize-bar {
+      display: none;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: #93c5fd;
+      margin-bottom: 16px;
+      line-height: 1.55;
+    }
+    .normalize-bar.show { display: block; }
+
+    /* ============================================================
+       PANEL 2 - INTERACTIVE MATRIX
+    ============================================================ */
+    .matrix-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: var(--radius-sm);
+    }
+
+    .matrix-table {
+      border-collapse: collapse;
+      min-width: 100%;
+      font-size: 0.875rem;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      border: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .th-corner {
+      background: var(--surface-3);
+      padding: 10px 16px;
+      color: var(--dim);
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    .th-option {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 12px;
+      text-align: center;
+      white-space: nowrap;
+      min-width: 96px;
+      max-width: 160px;
+    }
+    .th-option.winner {
+      background: var(--blue-h);
+      box-shadow: inset 0 0 0 2px var(--gold);
+    }
+
+    .td-crit {
+      background: var(--surface-3);
+      padding: 8px 14px;
+      white-space: nowrap;
+      min-width: 130px;
+    }
+    .td-crit .cn { display: block; font-weight: 600; color: var(--text); font-size: 0.875rem; }
+    .td-crit .cw { display: block; font-size: 0.7rem; color: var(--gold); margin-top: 2px; }
+
+    .td-score {
+      background: var(--surface-2);
+      padding: 0;
+      text-align: center;
+    }
+    .td-score:focus-within { box-shadow: inset 0 0 0 2px var(--blue); }
+
+    .score-input {
+      display: block;
+      width: 100%;
+      min-width: 80px;
+      min-height: 46px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: text;
+      padding: 8px 4px;
+    }
+    .score-input::-webkit-inner-spin-button,
+    .score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .score-input[type=number] { -moz-appearance: textfield; }
+
+    /* total row */
+    .tr-total .td-total-label {
+      background: var(--gold-dim);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .tr-total .td-total-score {
+      background: var(--gold-dim);
+      text-align: center;
+      padding: 9px 8px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--gold);
+    }
+    .tr-total .td-total-score.winner { font-size: 1.1rem; }
+
+    /* ============================================================
+       PANEL 3 - LEADERBOARD
+    ============================================================ */
+    .winner-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(90deg, rgba(234, 179, 8, 0.14) 0%, rgba(59, 130, 246, 0.07) 100%);
+      border: 1.5px solid var(--gold);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .winner-banner .trophy { font-size: 1.7rem; flex-shrink: 0; }
+    .winner-banner .wb-body { flex: 1; min-width: 0; }
+    .winner-banner .wb-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      font-weight: 700;
+    }
+    .winner-banner .wb-name {
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: var(--gold);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .winner-banner .wb-score {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--gold);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 18px;
+    }
+
+    .lb-item {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .lb-item.r1 { border-color: var(--gold); background: var(--gold-dim); }
+
+    .lb-rank { font-weight: 800; font-size: 1rem; color: var(--muted); text-align: center; }
+    .lb-item.r1 .lb-rank { color: var(--gold); }
+
+    .lb-body { min-width: 0; }
+    .lb-name {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lb-bar-wrap { margin-top: 5px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .lb-bar { height: 100%; border-radius: 99px; background: var(--blue); transition: width 0.4s ease; }
+    .lb-item.r1 .lb-bar { background: var(--gold); }
+
+    .lb-score { font-size: 1.1rem; font-weight: 800; color: var(--blue); white-space: nowrap; }
+    .lb-item.r1 .lb-score { color: var(--gold); }
+
+    .btn-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 20px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-copy:hover { background: var(--blue-h); }
+    .btn-copy.ok { background: var(--green); }
+
+    /* ============================================================
+       EMPTY STATE
+    ============================================================ */
+    .empty-state {
+      text-align: center;
+      color: var(--dim);
+      font-size: 0.88rem;
+      padding: 28px 0;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       GLOSSARY
+    ============================================================ */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION AND FAQ
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .section-intro {
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.72;
+      margin-bottom: 24px;
+    }
+
+    .how-to-use { margin-bottom: 26px; }
+    .how-to-use h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .how-to-use ol { padding-left: 22px; }
+    .how-to-use ol li {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 9px;
+      line-height: 1.65;
+    }
+    .how-to-use ol li strong { color: var(--text); }
+
+    .faq-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: var(--surface-2);
+      border: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--surface-3); }
+    .faq-question[aria-expanded="true"] { color: var(--blue); }
+
+    .faq-chevron {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      stroke: currentColor;
+    }
+    .faq-question[aria-expanded="true"] .faq-chevron { transform: rotate(180deg); }
+
+    .faq-answer {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.72;
+      background: var(--surface-3);
+      border-top: 1px solid var(--border);
+    }
+    .faq-answer.open { display: block; }
+    .faq-answer p { margin-bottom: 10px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+    .faq-answer strong { color: var(--text); }
+
+    /* ============================================================
+       AD PLACEHOLDERS (classes come from site-chrome.js)
+    ============================================================ */
+    /* No custom media queries needed - site-chrome.js handles visibility */
+
+    /* ============================================================
+       RESPONSIVE TWEAKS
+    ============================================================ */
+    @media (max-width: 640px) {
+      .page-header { padding: 36px 16px 30px; }
+      .winner-banner { flex-wrap: wrap; }
+      .winner-banner .wb-score { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects #axiom-header (role="banner"), green privacy badge,
+       site-wide disclaimer, and footer automatically. -->
+
+  <header class="page-header">
+    <h1>Weighted Decision Matrix Priority Selector</h1>
+    <p>Grade complex options against custom importance metrics. Set criteria weights, score each option 1-10, and get an instant ranked leaderboard.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         PANEL 1: MATRIX SETUP
+    ============================================================ -->
+    <section class="card" aria-labelledby="setup-heading">
+      <div class="card-title" id="setup-heading">
+        <span>Panel 1: Matrix Setup</span>
+        <span class="panel-badge">Step 1</span>
+      </div>
+
+      <div class="setup-grid">
+
+        <!-- Criteria Column -->
+        <div class="setup-col">
+          <h3>Decision Criteria</h3>
+          <p class="weight-hint">Give each criterion an importance weight from 1 (minor) to 10 (critical). Weights are normalized automatically when they do not sum to 100.</p>
+          <div id="criteria-list"></div>
+          <button class="btn-add" onclick="addCriterion()" aria-label="Add a new criterion">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Criterion
+          </button>
+          <div class="weight-total-row">Weight sum: <span class="wt-val" id="weight-sum">0</span></div>
+        </div>
+
+        <!-- Options Column -->
+        <div class="setup-col">
+          <h3>Options to Evaluate</h3>
+          <p class="weight-hint">List every option you want to compare. You can evaluate up to 8 options side by side.</p>
+          <div id="options-list"></div>
+          <button class="btn-add" onclick="addOption()" aria-label="Add a new option">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Option
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PANEL 2: INTERACTIVE SCORING MATRIX
+    ============================================================ -->
+    <section class="card" aria-labelledby="matrix-heading">
+      <div class="card-title" id="matrix-heading">
+        <span>Panel 2: Scoring Matrix</span>
+        <span class="panel-badge">Step 2</span>
+      </div>
+
+      <div class="normalize-bar" id="normalize-bar">
+        Your weights are automatically normalized for scoring. The percentage shown beside each criterion weight reflects its effective share of the total importance. Only the ratios between weights affect the outcome.
+      </div>
+
+      <div class="matrix-scroll" id="matrix-scroll">
+        <div class="empty-state" id="matrix-empty">Add at least one criterion and one option in Panel 1 to build the scoring matrix.</div>
+        <table class="matrix-table" id="matrix-table" style="display:none" aria-label="Decision scoring matrix">
+          <thead id="matrix-thead"></thead>
+          <tbody id="matrix-tbody"></tbody>
+          <tfoot id="matrix-tfoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PANEL 3: LEADERBOARD AND OUTPUT
+    ============================================================ -->
+    <section class="card" aria-labelledby="leaderboard-heading">
+      <div class="card-title" id="leaderboard-heading">
+        <span>Panel 3: Ranked Leaderboard</span>
+        <span class="panel-badge gold">Results</span>
+      </div>
+      <div id="leaderboard-content">
+        <div class="empty-state">Score your options in the matrix above to see the ranked results here.</div>
+      </div>
+      <button class="btn-copy" id="copy-btn" onclick="copyResults()" style="display:none" aria-label="Copy results as Markdown">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy Results as Markdown
+      </button>
+    </section>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Weighted Decision Matrix</div>
+          <div class="glossary-def">A scoring framework that multiplies each option's grade for a given criterion by that criterion's importance weight, then sums across all criteria. Options with higher weighted sums rank better. The word "weighted" distinguishes it from simple averaging.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Pugh Matrix</div>
+          <div class="glossary-def">A variant of the decision matrix named after Stuart Pugh. It uses a reference option and scores others as better, same, or worse. The numeric weighted version used in this tool is the most rigorous form and is standard in engineering design and product management.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Criterion</div>
+          <div class="glossary-def">A single dimension or factor used to evaluate options - for example, cost, speed, or reliability. A good criterion is specific, independently measurable, and does not overlap significantly with other criteria in your matrix.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Criteria Weighting</div>
+          <div class="glossary-def">The process of assigning relative importance scores to each criterion before grading options. A weight of 10 signals that this criterion is ten times more important than a criterion weighted 1. Setting weights before scoring prevents post-hoc rationalization.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Normalized Score</div>
+          <div class="glossary-def">A percentage score (0-100) derived by dividing an option's raw weighted sum by the theoretical maximum (every criterion graded 10) and multiplying by 100. Normalization makes scores comparable regardless of the number of criteria or the scale of their weights.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Decision Analysis</div>
+          <div class="glossary-def">A structured discipline for choosing among alternatives by systematically evaluating each against predefined objectives. Weighted decision matrices are one of the most widely used decision analysis methods in engineering, strategy consulting, and project management.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Prioritization</div>
+          <div class="glossary-def">The act of ranking competing options or tasks by their relative importance or value. In a decision matrix context, prioritization emerges from the interplay of criterion weights (your stated priorities) and option grades (each option's measured performance on each factor).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION WITH FAQ ACCORDION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Weighted Decision Matrices</h2>
+
+      <p class="section-intro">
+        A weighted decision matrix is the fastest way to turn a complex, multi-factor choice into a clear, defensible answer. Whether you are choosing a software vendor, evaluating job offers, prioritizing a product roadmap, or deciding which city to relocate to, the matrix forces you to separate two things that most people collapse together: how important each factor is to you, and how well each option performs on that factor. Handling those separately eliminates the most common sources of decision error.
+      </p>
+
+      <div class="how-to-use">
+        <h3>How to Use This Weighted Decision Matrix Tool</h3>
+        <ol>
+          <li><strong>Define your criteria.</strong> In Panel 1, type the factors that matter to your decision - for example, "Total Cost," "Implementation Speed," or "Team Expertise." Aim for 3-8 criteria. Too few and the matrix adds no value over intuition. Too many and each criterion dilutes the others.</li>
+          <li><strong>Assign importance weights.</strong> Give each criterion a weight from 1 (barely relevant) to 10 (absolutely critical). Do this before grading any option to avoid anchoring bias.</li>
+          <li><strong>List your options.</strong> In the Options column, name each candidate you are comparing. Be specific - "Vendor A" beats "Option 1" when you share results with a team.</li>
+          <li><strong>Grade each option in Panel 2.</strong> For every cell in the matrix, enter a grade from 1 (poor) to 10 (excellent) reflecting how well that option performs on that criterion. The leaderboard updates in real time after every keystroke.</li>
+          <li><strong>Read the leaderboard in Panel 3.</strong> The top-ranked option has the highest normalized weighted score. Use the Copy Results button to export the full matrix as a Markdown table for reports or team discussion.</li>
+        </ol>
+      </div>
+
+      <div class="faq-heading">Frequently Asked Questions</div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is a weighted decision matrix and when should I use one?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          <p>A weighted decision matrix is a structured scoring tool that helps you compare multiple options against a set of criteria, where each criterion is assigned an importance weight. The final score for each option is the sum of (grade times weight) across all criteria, normalized to a 0-100 scale so results are easy to compare regardless of how many criteria or how high the weights are.</p>
+          <p>Use one whenever you face a complex decision with several competing factors and more than two options - such as choosing a vendor, selecting a job offer, picking a technology stack, or prioritizing features for a product roadmap. By forcing you to make your priorities explicit and apply them consistently, it removes gut-feel bias and produces a defensible, data-driven ranking that you can share and discuss with a team.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How do I choose the right weights for my decision criteria?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          <p>Start by listing all criteria that matter, then assign each a weight from 1 (minor factor) to 10 (critical factor). A useful technique: ask yourself, if you could only keep one criterion, which would it be? That one gets the highest weight. Then ask the same question for the remaining criteria and work downward.</p>
+          <p>You can also use a proportional allocation approach: imagine you have 100 points to distribute across all criteria based on relative importance. Assign points, then scale to the 1-10 range. The tool normalizes weights automatically, so only the ratios between weights affect the ranking - not the absolute numbers.</p>
+          <p>One important rule: set your weights before grading the options. If you adjust weights after seeing the scores, you risk unconsciously tuning them to favor the option you already prefer, which defeats the purpose of the matrix.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is the difference between an unweighted and a weighted decision matrix?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          <p>An <strong>unweighted decision matrix</strong> treats every criterion as equally important. It simply adds up the grades for each option and ranks them by the total. This is fast and transparent, but it is only accurate when you genuinely care about all criteria equally - which is rare in practice.</p>
+          <p>A <strong>weighted decision matrix</strong> multiplies each grade by that criterion's importance score before summing. Criteria you care about more have a proportionally larger effect on the final ranking. For most real-world decisions, the weighted version is more accurate because not all criteria matter equally - cost, for example, often matters far more than office aesthetics when choosing a workspace.</p>
+          <p>To simulate an unweighted matrix using this tool, simply set every criterion to the same weight (for example, all 5). The leaderboard will then reflect a pure sum of grades.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Can this tool help remove bias from decision-making?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          <p>Yes, significantly. The main sources of decision bias this tool counteracts are:</p>
+          <p><strong>Anchoring bias:</strong> favoring the first option you encountered. Because the matrix evaluates all options on the same criteria simultaneously, no single option gets extra mental weight just because you heard about it first.</p>
+          <p><strong>Availability bias:</strong> overweighting recent or memorable information. By scoring every criterion for every option, you are forced to engage with factors you might otherwise overlook when one option feels more vivid or recent in memory.</p>
+          <p><strong>Preference bias:</strong> picking a favorite before evaluating it objectively. By separating the weight-setting step from the scoring step, you lock in your priorities before grading each option. This structure forces you to apply the same standard to every option for every criterion.</p>
+          <p>No tool eliminates bias entirely - the grades you enter still reflect your judgment. But the matrix makes that judgment explicit and auditable, which makes it much easier to spot and correct when a team member questions a score.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How do I interpret the final score difference between two close options?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          <p>A <strong>small score difference</strong> (under 5 points on the 0-100 normalized scale) usually means the two options are functionally tied on your stated criteria. In that case, revisit your weights first: are they accurately reflecting your real priorities? A small adjustment to one high-weight criterion can break the tie clearly.</p>
+          <p>You can also add a tiebreaker criterion - such as "risk level," "implementation time," or "team confidence" - to differentiate the two options on a dimension you had not previously quantified.</p>
+          <p>A <strong>large score gap</strong> (15 or more points) is a strong signal that one option genuinely dominates on the criteria you care about most. Unless there is a hard constraint the matrix cannot capture (a budget cap, a regulatory requirement, a non-negotiable stakeholder preference), the higher-scoring option is almost certainly the better choice.</p>
+          <p>Always cross-reference the matrix output with any constraints that cannot be scored. The matrix ranks options on the criteria you define - it cannot account for factors you did not include.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+       criteria : [{id, label, weight}]
+       options  : [{id, label}]
+       scores   : {'c1_o1': 5, 'c2_o3': 8, ...}
+    ============================================================ */
+    var state = {
+      criteria: [
+        {id: 'c1', label: 'Cost',     weight: 8},
+        {id: 'c2', label: 'Quality',  weight: 9},
+        {id: 'c3', label: 'Timeline', weight: 6},
+      ],
+      options: [
+        {id: 'o1', label: 'Option A'},
+        {id: 'o2', label: 'Option B'},
+        {id: 'o3', label: 'Option C'},
+      ],
+      scores: {},
+      _cid: 4,
+      _oid: 4
+    };
+
+    /* ---- Utilities ---- */
+    function nextCid() { return 'c' + (state._cid++); }
+    function nextOid() { return 'o' + (state._oid++); }
+    function skey(cid, oid) { return cid + '_' + oid; }
+
+    function getScore(cid, oid) {
+      var v = state.scores[skey(cid, oid)];
+      return (v === undefined || v === '') ? '' : Number(v);
+    }
+
+    function sumWeights() {
+      return state.criteria.reduce(function(s, c) { return s + (Number(c.weight) || 0); }, 0);
+    }
+
+    function computeResults() {
+      var sw = sumWeights();
+      return state.options.map(function(o) {
+        var raw = 0;
+        state.criteria.forEach(function(c) {
+          var g = getScore(c.id, o.id);
+          raw += (g === '' ? 0 : g) * (Number(c.weight) || 0);
+        });
+        var maxPossible = sw * 10;
+        var pct = maxPossible > 0 ? (raw / maxPossible) * 100 : 0;
+        return {id: o.id, label: o.label, raw: raw, pct: Math.round(pct * 10) / 10};
+      });
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /* ---- RENDER SETUP PANEL ---- */
+    function renderCriteriaList() {
+      var el = document.getElementById('criteria-list');
+      var isLast = state.criteria.length <= 1;
+      el.innerHTML = '';
+      state.criteria.forEach(function(c) {
+        var row = document.createElement('div');
+        row.className = 'criterion-row';
+        row.innerHTML =
+          '<input type="text" class="field-text" placeholder="Criterion name"' +
+          ' value="' + escHtml(c.label) + '"' +
+          ' oninput="onCriterionLabelChange(this,\'' + c.id + '\')"' +
+          ' aria-label="Criterion name" />' +
+          '<input type="number" class="field-weight" min="1" max="10" step="1" placeholder="Wt"' +
+          ' value="' + escHtml(String(c.weight)) + '"' +
+          ' oninput="onCriterionWeightChange(this,\'' + c.id + '\')"' +
+          ' title="Importance weight 1 to 10" aria-label="Importance weight 1 to 10" />' +
+          '<button class="btn-remove" onclick="removeCriterion(\'' + c.id + '\')"' +
+          ' title="Remove criterion" aria-label="Remove criterion"' +
+          (isLast ? ' disabled' : '') + '>&#10005;</button>';
+        el.appendChild(row);
+      });
+    }
+
+    function renderOptionsList() {
+      var el = document.getElementById('options-list');
+      var isLast = state.options.length <= 1;
+      el.innerHTML = '';
+      state.options.forEach(function(o) {
+        var row = document.createElement('div');
+        row.className = 'option-row';
+        row.innerHTML =
+          '<input type="text" class="field-text" placeholder="Option name"' +
+          ' value="' + escHtml(o.label) + '"' +
+          ' oninput="onOptionLabelChange(this,\'' + o.id + '\')"' +
+          ' aria-label="Option name" />' +
+          '<button class="btn-remove" onclick="removeOption(\'' + o.id + '\')"' +
+          ' title="Remove option" aria-label="Remove option"' +
+          (isLast ? ' disabled' : '') + '>&#10005;</button>';
+        el.appendChild(row);
+      });
+    }
+
+    function updateWeightSum() {
+      var sw = sumWeights();
+      document.getElementById('weight-sum').textContent = sw;
+      var nb = document.getElementById('normalize-bar');
+      nb.classList.toggle('show', sw !== 100 && state.criteria.length > 0);
+    }
+
+    /* ---- RENDER MATRIX TABLE ---- */
+    function renderMatrix() {
+      var hasC = state.criteria.length > 0;
+      var hasO = state.options.length > 0;
+      var show = hasC && hasO;
+
+      document.getElementById('matrix-empty').style.display = show ? 'none' : '';
+      var tbl = document.getElementById('matrix-table');
+      tbl.style.display = show ? '' : 'none';
+      if (!show) return;
+
+      var results = computeResults();
+      var maxPct = results.reduce(function(m, r) { return Math.max(m, r.pct); }, 0);
+      var winIds = results.filter(function(r) { return r.pct === maxPct && maxPct > 0; }).map(function(r) { return r.id; });
+
+      var sw = sumWeights();
+
+      /* THEAD */
+      var thHtml = '<tr><th class="th-corner">Criterion / Weight</th>';
+      state.options.forEach(function(o) {
+        var win = winIds.indexOf(o.id) >= 0;
+        thHtml += '<th class="th-option' + (win ? ' winner' : '') + '" data-oid="' + o.id + '">' +
+                  escHtml(o.label || 'Option') + '</th>';
+      });
+      thHtml += '</tr>';
+      document.getElementById('matrix-thead').innerHTML = thHtml;
+
+      /* TBODY */
+      var tbHtml = '';
+      state.criteria.forEach(function(c) {
+        var wt  = Number(c.weight) || 0;
+        var pct = sw > 0 ? Math.round((wt / sw) * 100) : 0;
+        tbHtml += '<tr>';
+        tbHtml += '<td class="td-crit" data-cid="' + c.id + '">' +
+                  '<span class="cn">' + escHtml(c.label || 'Criterion') + '</span>' +
+                  '<span class="cw">Weight ' + wt + ' (' + pct + '%)</span></td>';
+        state.options.forEach(function(o) {
+          var val = getScore(c.id, o.id);
+          tbHtml += '<td class="td-score">' +
+            '<input type="number" class="score-input" min="0" max="10" step="1" placeholder="-"' +
+            ' value="' + (val === '' ? '' : val) + '"' +
+            ' oninput="onScoreInput(this,\'' + c.id + '\',\'' + o.id + '\')"' +
+            ' aria-label="Grade for ' + escHtml(c.label || 'criterion') +
+            ' vs ' + escHtml(o.label || 'option') + '" />' +
+            '</td>';
+        });
+        tbHtml += '</tr>';
+      });
+      document.getElementById('matrix-tbody').innerHTML = tbHtml;
+
+      /* TFOOT - total row */
+      var tfHtml = '<tr class="tr-total"><td class="td-total-label">Total Score (0-100%)</td>';
+      results.forEach(function(r) {
+        var win = winIds.indexOf(r.id) >= 0;
+        tfHtml += '<td class="td-total-score' + (win ? ' winner' : '') + '" data-oid="' + r.id + '">' +
+                  r.pct.toFixed(1) + '</td>';
+      });
+      tfHtml += '</tr>';
+      document.getElementById('matrix-tfoot').innerHTML = tfHtml;
+    }
+
+    /* ---- RENDER LEADERBOARD ---- */
+    function renderLeaderboard() {
+      var hasC = state.criteria.length > 0;
+      var hasO = state.options.length > 0;
+      var lbEl = document.getElementById('leaderboard-content');
+      var copyBtn = document.getElementById('copy-btn');
+
+      if (!hasC || !hasO) {
+        lbEl.innerHTML = '<div class="empty-state">Score your options in the matrix above to see the ranked results here.</div>';
+        copyBtn.style.display = 'none';
+        return;
+      }
+
+      var results = computeResults();
+      var sorted = results.slice().sort(function(a, b) { return b.pct - a.pct; });
+      var maxPct = sorted.length > 0 ? sorted[0].pct : 0;
+
+      var html = '';
+
+      if (maxPct > 0) {
+        var w = sorted[0];
+        html += '<div class="winner-banner">' +
+          '<div class="trophy">&#127942;</div>' +
+          '<div class="wb-body">' +
+            '<div class="wb-label">Best Option</div>' +
+            '<div class="wb-name">' + escHtml(w.label || 'Option') + '</div>' +
+          '</div>' +
+          '<div class="wb-score">' + w.pct.toFixed(1) +
+            '<span style="font-size:0.65em;font-weight:600;color:var(--muted);margin-left:1px">%</span>' +
+          '</div>' +
+          '</div>';
+      }
+
+      html += '<div class="leaderboard-list">';
+      sorted.forEach(function(r, i) {
+        var rank = i + 1;
+        var cls  = rank === 1 ? 'lb-item r1' : 'lb-item';
+        var barW = maxPct > 0 ? (r.pct / maxPct * 100).toFixed(1) : '0';
+        var medal = rank === 1 ? '&#127942;' : (rank === 2 ? '&#129351;' : (rank === 3 ? '&#129352;' : rank));
+        html += '<div class="' + cls + '">' +
+          '<div class="lb-rank">' + medal + '</div>' +
+          '<div class="lb-body">' +
+            '<div class="lb-name">' + escHtml(r.label || 'Option') + '</div>' +
+            '<div class="lb-bar-wrap"><div class="lb-bar" style="width:' + barW + '%"></div></div>' +
+          '</div>' +
+          '<div class="lb-score">' + r.pct.toFixed(1) + '%</div>' +
+          '</div>';
+      });
+      html += '</div>';
+
+      lbEl.innerHTML = html;
+      copyBtn.style.display = maxPct > 0 ? '' : 'none';
+    }
+
+    /* ---- FULL RE-RENDER (structure changed) ---- */
+    function renderAll() {
+      renderCriteriaList();
+      renderOptionsList();
+      updateWeightSum();
+      renderMatrix();
+      renderLeaderboard();
+    }
+
+    /* ---- LIGHTWEIGHT TOTAL UPDATE (score value changed) ---- */
+    function updateTotals() {
+      var results = computeResults();
+      var maxPct = results.reduce(function(m, r) { return Math.max(m, r.pct); }, 0);
+      var winIds = results.filter(function(r) { return r.pct === maxPct && maxPct > 0; }).map(function(r) { return r.id; });
+
+      /* update tfoot cells by data-oid */
+      results.forEach(function(r) {
+        var cell = document.querySelector('.td-total-score[data-oid="' + r.id + '"]');
+        if (cell) {
+          cell.textContent = r.pct.toFixed(1);
+          cell.classList.toggle('winner', winIds.indexOf(r.id) >= 0);
+        }
+        var th = document.querySelector('.th-option[data-oid="' + r.id + '"]');
+        if (th) { th.classList.toggle('winner', winIds.indexOf(r.id) >= 0); }
+      });
+
+      renderLeaderboard();
+    }
+
+    /* ---- EVENT HANDLERS ---- */
+
+    function onScoreInput(input, cid, oid) {
+      var raw = input.value.trim();
+      if (raw === '') {
+        state.scores[skey(cid, oid)] = '';
+        updateTotals();
+        return;
+      }
+      var n = Number(raw);
+      if (isNaN(n)) { input.value = ''; state.scores[skey(cid, oid)] = ''; updateTotals(); return; }
+      /* clamp 0-10 (negative scores not enabled) */
+      var clamped = Math.min(10, Math.max(0, n));
+      state.scores[skey(cid, oid)] = clamped;
+      if (clamped !== n) { input.value = clamped; }
+      updateTotals();
+    }
+
+    function onCriterionLabelChange(input, cid) {
+      var c = state.criteria.find(function(x) { return x.id === cid; });
+      if (!c) return;
+      c.label = input.value;
+      /* update criterion cells in matrix directly - no full re-render needed */
+      var cell = document.querySelector('.td-crit[data-cid="' + cid + '"] .cn');
+      if (cell) { cell.textContent = c.label || 'Criterion'; }
+      renderLeaderboard();
+    }
+
+    function onCriterionWeightChange(input, cid) {
+      var n = Number(input.value);
+      var val = isNaN(n) ? 1 : Math.min(10, Math.max(1, Math.round(n)));
+      var c = state.criteria.find(function(x) { return x.id === cid; });
+      if (!c) return;
+      c.weight = val;
+      updateWeightSum();
+      /* re-render matrix to update weight percentage labels and totals */
+      renderMatrix();
+      renderLeaderboard();
+    }
+
+    function onOptionLabelChange(input, oid) {
+      var o = state.options.find(function(x) { return x.id === oid; });
+      if (!o) return;
+      o.label = input.value;
+      /* update option header in matrix directly */
+      var th = document.querySelector('.th-option[data-oid="' + oid + '"]');
+      if (th) { th.textContent = o.label || 'Option'; }
+      renderLeaderboard();
+    }
+
+    function addCriterion() {
+      if (state.criteria.length >= 12) { return; }
+      var id = nextCid();
+      state.criteria.push({id: id, label: '', weight: 5});
+      renderAll();
+      var rows = document.querySelectorAll('.criterion-row');
+      var last = rows[rows.length - 1];
+      if (last) { last.querySelector('input[type="text"]').focus(); }
+    }
+
+    function removeCriterion(cid) {
+      if (state.criteria.length <= 1) { return; }
+      state.criteria = state.criteria.filter(function(c) { return c.id !== cid; });
+      /* clean orphaned scores */
+      state.options.forEach(function(o) { delete state.scores[skey(cid, o.id)]; });
+      renderAll();
+    }
+
+    function addOption() {
+      if (state.options.length >= 8) { return; }
+      var id = nextOid();
+      state.options.push({id: id, label: ''});
+      renderAll();
+      var rows = document.querySelectorAll('.option-row');
+      var last = rows[rows.length - 1];
+      if (last) { last.querySelector('input[type="text"]').focus(); }
+    }
+
+    function removeOption(oid) {
+      if (state.options.length <= 1) { return; }
+      state.options = state.options.filter(function(o) { return o.id !== oid; });
+      /* clean orphaned scores */
+      state.criteria.forEach(function(c) { delete state.scores[skey(c.id, oid)]; });
+      renderAll();
+    }
+
+    /* ---- COPY RESULTS AS MARKDOWN ---- */
+    function copyResults() {
+      var results = computeResults().slice().sort(function(a, b) { return b.pct - a.pct; });
+      var sw = sumWeights();
+      var lines = [];
+
+      lines.push('# Weighted Decision Matrix Results');
+      lines.push('');
+      lines.push('## Criteria and Weights');
+      lines.push('');
+      lines.push('| Criterion | Weight | Effective Share |');
+      lines.push('|-----------|--------|-----------------|');
+      state.criteria.forEach(function(c) {
+        var wt   = Number(c.weight) || 0;
+        var norm = sw > 0 ? ((wt / sw) * 100).toFixed(1) + '%' : '-';
+        lines.push('| ' + (c.label || 'Criterion') + ' | ' + wt + ' | ' + norm + ' |');
+      });
+
+      lines.push('');
+      lines.push('## Scoring Matrix (Grades 0-10)');
+      lines.push('');
+      var mhdr = '| Criterion |' + state.options.map(function(o) { return ' ' + (o.label || 'Option') + ' |'; }).join('');
+      var msep = '|-----------|' + state.options.map(function() { return '--------|'; }).join('');
+      lines.push(mhdr);
+      lines.push(msep);
+      state.criteria.forEach(function(c) {
+        var row = '| ' + (c.label || 'Criterion') + ' |';
+        state.options.forEach(function(o) {
+          var g = getScore(c.id, o.id);
+          row += ' ' + (g === '' ? '-' : g) + ' |';
+        });
+        lines.push(row);
+      });
+
+      var totRow = '| **Total Score (0-100%)** |';
+      var resById = {};
+      computeResults().forEach(function(r) { resById[r.id] = r; });
+      state.options.forEach(function(o) {
+        var r = resById[o.id];
+        totRow += ' **' + (r ? r.pct.toFixed(1) : '0.0') + '%** |';
+      });
+      lines.push(totRow);
+
+      lines.push('');
+      lines.push('## Ranked Leaderboard');
+      lines.push('');
+      lines.push('| Rank | Option | Weighted Score |');
+      lines.push('|------|--------|----------------|');
+      results.forEach(function(r, i) {
+        lines.push('| ' + (i + 1) + ' | ' + (r.label || 'Option') + ' | ' + r.pct.toFixed(1) + '% |');
+      });
+
+      lines.push('');
+      lines.push('_Generated by AxiomApe Weighted Decision Matrix - https://axiomape.com/weighted-decision-matrix/_');
+
+      var md  = lines.join('\n');
+      var btn = document.getElementById('copy-btn');
+
+      function flashCopied() {
+        btn.innerHTML = '&#10003; Copied!';
+        btn.classList.add('ok');
+        setTimeout(function() {
+          btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Results as Markdown';
+          btn.classList.remove('ok');
+        }, 2200);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(flashCopied).catch(function() { fallbackCopy(md, flashCopied); });
+      } else {
+        fallbackCopy(md, flashCopied);
+      }
+    }
+
+    function fallbackCopy(text, cb) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+      cb();
+    }
+
+    /* ---- FAQ ACCORDION ---- */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var isOpen = btn.getAttribute('aria-expanded') === 'true';
+      document.querySelectorAll('.faq-question').forEach(function(q) {
+        q.setAttribute('aria-expanded', 'false');
+        q.nextElementSibling.classList.remove('open');
+      });
+      if (!isOpen) {
+        btn.setAttribute('aria-expanded', 'true');
+        answer.classList.add('open');
+      }
+    }
+
+    /* ---- INIT ---- */
+    renderAll();
+  </script>
+</body>
+</html>

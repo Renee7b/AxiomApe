@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Braking Distance Kinetic Energy Dissipation Solver: Calculate Total Stopping Distances Across Slick Paths | AxiomApe</title>
+  <meta name="description" content="Free braking distance calculator. Enter speed, vehicle weight, and road condition to instantly compute reaction distance, braking distance, total stopping distance, and kinetic energy dissipated by your brakes. Covers dry, wet, snow, and black ice surfaces. 100% client-side." />
+  <meta name="keywords" content="braking distance calculator, stopping distance calculator, kinetic energy dissipation, coefficient of friction calculator, reaction distance calculator, total stopping distance, vehicle stopping distance, braking physics, work energy theorem calculator, black ice stopping distance, wet road braking, skid distance calculator, speed braking distance, highway stopping distance, vehicle safety calculator" />
+  <link rel="canonical" href="https://axiomape.com/braking-distance-solver/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Braking Distance Kinetic Energy Dissipation Solver",
+        "description": "Free braking distance calculator. Enter speed, vehicle weight, and road condition to instantly compute reaction distance, braking distance, total stopping distance, and kinetic energy dissipated by your brakes. Covers dry, wet, snow, and black ice surfaces. 100% client-side.",
+        "url": "https://axiomape.com/braking-distance-solver/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does braking distance quadruple when you double your speed?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Braking distance follows the work-energy theorem: the kinetic energy that must be scrubbed away equals one-half times mass times velocity squared (KE = 0.5mv^2). Because velocity is squared, doubling your speed from 30 mph to 60 mph quadruples the kinetic energy your brakes must convert into heat. Since friction force stays roughly constant for a given road surface, it takes four times the distance to absorb four times the energy. At highway speeds (70 mph vs 35 mph), the braking distance is again four times longer, not two. This exponential growth is why speed limits exist and why reducing speed by even 10 mph dramatically shortens stopping distances."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a wet or icy road affect the coefficient of friction?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The coefficient of friction (mu) describes how much grip a tire has against a surface. Dry asphalt typically yields a mu of 0.8, meaning tires can apply a deceleration force equal to 80% of the vehicle's weight. Wet asphalt drops mu to around 0.5 because a thin water film reduces rubber-to-road contact. Packed snow lowers it further to about 0.2 as tires float partially on a compressible layer. Black ice is the most extreme case, with mu near 0.1, because an invisible liquid water film on the ice surface nearly eliminates mechanical grip. Since braking distance is inversely proportional to mu, going from dry asphalt to black ice stretches the braking distance by a factor of eight at the same speed."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a heavier vehicle take longer to stop than a lighter one?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For braking distance alone, the answer is no, assuming adequate brakes. Heavier vehicles carry more kinetic energy (KE = 0.5mv^2), but they also press harder against the road, generating more friction force in direct proportion. The two effects cancel in the braking distance formula (d = v^2 / (2*mu*g)), which contains no mass term at all. However, heavier vehicles do carry substantially more total kinetic energy, which puts far greater thermal demands on the brake system. Under repeated hard stops, brake fade from overheating becomes a real danger for heavy trucks. Weight also dramatically affects reaction distance if the heavier vehicle has a slower or less responsive brake actuation system."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the average human reaction time before hitting the brakes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The commonly accepted average perception-reaction time for an alert driver is 1.5 seconds. This covers the full chain: perceiving a hazard visually, processing the threat, deciding to brake, and mechanically moving your foot to the pedal. At 60 mph (88 ft/s), 1.5 seconds of reaction time alone covers 132 feet before the brakes even engage. Distraction, fatigue, alcohol, and poor visibility all increase this number. The U.S. Federal Highway Administration uses 2.5 seconds for safety-critical designs to account for delayed reactions. Older drivers and those reacting to unexpected (rather than anticipated) hazards often show reaction times of 2 seconds or longer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How much kinetic energy must my brakes convert into heat to stop a car?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Kinetic energy is calculated as KE = 0.5 * m * v^2. A typical sedan weighing 1,590 kg (3,500 lbs) traveling at 60 mph (26.8 m/s) carries approximately 572,000 Joules of kinetic energy - equivalent to about 136 food calories or the energy stored in a small lithium battery pack. All of that energy must be converted into heat by the brakes during a full stop. At highway speeds of 70 mph with an SUV (2,270 kg / 5,000 lbs), the brakes must absorb over 1.3 million Joules in a single stop. Repeated hard stops from high speed are why race cars and heavy trucks use ventilated rotors, drilled discs, and cooling ducts - brake fade from overheated rotors is a direct result of this thermal load."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0D1117;
+      --bg-card:      #161B22;
+      --bg-input:     #0D1117;
+      --border:       #30363D;
+
+      --text:         #E6EDF3;
+      --text-muted:   #8B949E;
+      --text-dim:     #484F58;
+
+      --red:          #EF4444;
+      --red-mid:      #DC2626;
+      --red-light:    #FCA5A5;
+      --red-dim:      rgba(239,68,68,0.14);
+      --red-glow:     rgba(239,68,68,0.30);
+
+      --amber:        #F59E0B;
+      --amber-mid:    #D97706;
+      --amber-light:  #FCD34D;
+      --amber-dim:    rgba(245,158,11,0.14);
+      --amber-glow:   rgba(245,158,11,0.30);
+
+      --green:        #22C55E;
+      --cyan:         #06B6D4;
+      --cyan-dim:     rgba(6,182,212,0.12);
+      --purple:       #A78BFA;
+
+      --sans: system-ui, -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.55);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+    /* Page header */
+    .tool-header {
+      background: linear-gradient(135deg, #0a0302 0%, #1a0505 50%, #0D1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-header::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 280px;
+      background: radial-gradient(ellipse at center, rgba(239,68,68,0.16) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.35rem, 3.6vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .tool-header h1 span { color: var(--red); }
+    .tool-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .card-label.red   { color: var(--red); }
+    .card-label.amber { color: var(--amber); }
+    .card-label.cyan  { color: var(--cyan); }
+
+    .main-content { padding: 32px 0 52px; }
+
+    /* Unit toggle */
+    .unit-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .unit-toggle-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .seg-ctrl {
+      display: inline-flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .seg-btn {
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg-btn.active { background: var(--red); color: #fff; }
+    .seg-btn:hover:not(.active) { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    /* Input grid */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 640px) { .input-grid { grid-template-columns: 1fr; } }
+
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    .input-group.full { grid-column: 1 / -1; }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .num-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .num-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+
+    /* Speed with slider */
+    .speed-wrapper { display: flex; flex-direction: column; gap: 8px; }
+    .speed-row { display: flex; gap: 10px; align-items: center; }
+    .speed-row .num-input { flex: 1; }
+    .speed-unit-badge {
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--red);
+      cursor: pointer;
+      height: 6px;
+    }
+
+    /* Quick-select buttons */
+    .quick-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .quick-btn {
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .quick-btn:hover { border-color: var(--amber); color: var(--amber); }
+    .quick-btn.active { border-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+
+    /* Road condition segmented control */
+    .road-seg {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    @media (max-width: 500px) { .road-seg { grid-template-columns: repeat(2, 1fr); } }
+    .road-btn {
+      padding: 10px 6px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-align: center;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1.3;
+    }
+    .road-btn:last-child { border-right: none; }
+    .road-btn .mu-val { font-size: 0.67rem; color: var(--text-dim); display: block; margin-top: 2px; }
+    .road-btn.active { background: var(--red-dim); color: var(--red); }
+    .road-btn.active .mu-val { color: var(--red-light); }
+    .road-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: var(--text); }
+
+    /* Reaction time input */
+    .react-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .react-row .num-input { flex: 1; }
+    .react-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Panel 2 - Visual Bar */
+    .bar-card { padding: 28px; }
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .bar-total-dist {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .bar-total-dist span { font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+    .bar-legend {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .legend-dot.amber { background: var(--amber); }
+    .legend-dot.red   { background: var(--red); }
+
+    .dist-bar-track {
+      width: 100%;
+      height: 42px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      position: relative;
+    }
+    .dist-bar-react {
+      height: 100%;
+      background: linear-gradient(90deg, var(--amber-mid), var(--amber));
+      transition: width 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #000;
+      overflow: hidden;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .dist-bar-brake {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red-mid), var(--red));
+      transition: width 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .bar-sublabels {
+      display: flex;
+      margin-top: 8px;
+      gap: 0;
+    }
+    .bar-sublabel {
+      font-size: 0.72rem;
+      font-weight: 600;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: width 0.25s ease;
+    }
+    .bar-sublabel.amber { color: var(--amber); text-align: left; }
+    .bar-sublabel.red   { color: var(--red); text-align: right; }
+
+    /* Scale markers */
+    .scale-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      padding: 0 2px;
+    }
+    .scale-mark { font-size: 0.67rem; color: var(--text-dim); }
+
+    /* Speed comparison strip */
+    .speed-strip {
+      margin-top: 20px;
+    }
+    .speed-strip-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .speed-rows { display: flex; flex-direction: column; gap: 6px; }
+    .speed-compare-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sc-label {
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      width: 54px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .sc-track {
+      flex: 1;
+      height: 14px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+    .sc-react {
+      height: 100%;
+      background: var(--amber-mid);
+      transition: width 0.25s;
+    }
+    .sc-brake {
+      height: 100%;
+      background: var(--red-mid);
+      transition: width 0.25s;
+    }
+    .sc-dist {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      width: 70px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    /* Panel 3 - Telemetry */
+    .telem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 560px) { .telem-grid { grid-template-columns: 1fr; } }
+
+    .telem-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .telem-item.highlight-red   { border-color: var(--red);   background: var(--red-dim); }
+    .telem-item.highlight-amber { border-color: var(--amber); background: var(--amber-dim); }
+    .telem-item.highlight-cyan  { border-color: var(--cyan);  background: var(--cyan-dim); }
+
+    .telem-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .telem-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .telem-val.red   { color: var(--red); }
+    .telem-val.amber { color: var(--amber); }
+    .telem-val.cyan  { color: var(--cyan); }
+    .telem-unit {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .telem-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .copy-btn:hover { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--green); color: var(--green); }
+
+    /* Zero-speed warning */
+    .zero-msg {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 18px;
+      margin: 28px 0;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .glossary-term {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--amber);
+      margin: 22px 0 8px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-input);
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: rgba(255,255,255,0.04); }
+    .faq-icon {
+      font-size: 1.1rem;
+      color: var(--red);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-item.open .faq-a { display: block; }
+
+    /* Formula display */
+    .formula-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .formula-box .f-comment {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    /* Mobile sticky ad */
+    .axiom-ad-mobile-anchor {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor {
+        display: block;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        text-align: center;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border);
+        padding: 8px;
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        z-index: 900;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="tool-header">
+      <h1>Braking Distance <span>Kinetic Energy Dissipation</span> Solver</h1>
+      <p>Calculate total stopping distances across slick paths. Enter speed, vehicle weight, and road condition to instantly compute reaction distance, braking distance, and total kinetic energy your brakes must absorb.</p>
+    </header>
+
+    <div class="container main-content">
+
+      <!-- Unit toggle -->
+      <div class="unit-toggle-row">
+        <span class="unit-toggle-label">Unit System:</span>
+        <div class="seg-ctrl">
+          <button class="seg-btn active" id="btn-metric" onclick="setUnit('metric')">Metric</button>
+          <button class="seg-btn" id="btn-imperial" onclick="setUnit('imperial')">Imperial</button>
+        </div>
+      </div>
+
+      <!-- Panel 1: Kinematic Inputs -->
+      <div class="card">
+        <div class="card-label red">Panel 1: Kinematic Inputs</div>
+
+        <div class="input-grid">
+
+          <!-- Speed -->
+          <div class="input-group full">
+            <div class="field-label">Vehicle Speed</div>
+            <div class="speed-wrapper">
+              <div class="speed-row">
+                <input type="number" class="num-input" id="speed-input"
+                  min="0" max="300" value="60" step="1"
+                  oninput="onSpeedInput()" />
+                <div class="speed-unit-badge" id="speed-unit-badge">km/h</div>
+              </div>
+              <input type="range" id="speed-slider"
+                min="0" max="200" value="60" step="1"
+                oninput="onSliderInput()" />
+            </div>
+          </div>
+
+          <!-- Vehicle Weight -->
+          <div class="input-group">
+            <div class="field-label">Vehicle Mass / Weight</div>
+            <div class="speed-row">
+              <input type="number" class="num-input" id="mass-input"
+                min="0" max="99999" value="1587" step="1"
+                oninput="recalc()" />
+              <div class="speed-unit-badge" id="mass-unit-badge">kg</div>
+            </div>
+            <div class="quick-row">
+              <button class="quick-btn" onclick="setMass(1587, this)">Sedan</button>
+              <button class="quick-btn" onclick="setMass(2268, this)">SUV</button>
+              <button class="quick-btn" onclick="setMass(4536, this)">Heavy Truck</button>
+            </div>
+          </div>
+
+          <!-- Reaction Time -->
+          <div class="input-group">
+            <div class="field-label">Driver Reaction Time (seconds)</div>
+            <input type="number" class="num-input" id="react-input"
+              min="0.5" max="5" value="1.5" step="0.1"
+              oninput="recalc()" />
+            <div class="react-hint">Default: 1.5 s (alert driver average)</div>
+          </div>
+
+          <!-- Road Condition -->
+          <div class="input-group full">
+            <div class="field-label">Road Condition (Coefficient of Friction)</div>
+            <div class="road-seg">
+              <button class="road-btn active" id="cond-dry" onclick="setCond('dry', this)">
+                Dry Asphalt<span class="mu-val">mu = 0.80</span>
+              </button>
+              <button class="road-btn" id="cond-wet" onclick="setCond('wet', this)">
+                Wet Asphalt<span class="mu-val">mu = 0.50</span>
+              </button>
+              <button class="road-btn" id="cond-snow" onclick="setCond('snow', this)">
+                Packed Snow<span class="mu-val">mu = 0.20</span>
+              </button>
+              <button class="road-btn" id="cond-ice" onclick="setCond('ice', this)">
+                Black Ice<span class="mu-val">mu = 0.10</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel 2: Visual Stopping Distance Chart -->
+      <div class="card bar-card">
+        <div class="card-label amber">Panel 2: Stopping Distance Visualization</div>
+
+        <div class="bar-header">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Total Stopping Distance</div>
+            <div class="bar-total-dist" id="bar-total-dist">--<span id="bar-dist-unit">m</span></div>
+          </div>
+          <div class="bar-legend">
+            <div class="legend-item"><div class="legend-dot amber"></div> Reaction Distance</div>
+            <div class="legend-item"><div class="legend-dot red"></div> Braking Distance</div>
+          </div>
+        </div>
+
+        <div class="dist-bar-track" id="dist-bar-track">
+          <div class="dist-bar-react" id="dist-bar-react" style="width:30%">Reaction</div>
+          <div class="dist-bar-brake" id="dist-bar-brake" style="width:70%">Braking</div>
+        </div>
+        <div class="bar-sublabels" id="bar-sublabels">
+          <div class="bar-sublabel amber" id="sub-react" style="width:30%"></div>
+          <div class="bar-sublabel red" id="sub-brake" style="width:70%;text-align:right"></div>
+        </div>
+
+        <!-- Speed comparison strip -->
+        <div class="speed-strip" id="speed-strip">
+          <div class="speed-strip-label">Speed Comparison (same road condition)</div>
+          <div class="speed-rows" id="speed-rows"></div>
+        </div>
+
+      </div>
+
+      <!-- Panel 3: Telemetry Output -->
+      <div class="card">
+        <div class="card-label cyan">Panel 3: Safety Telemetry Readout</div>
+
+        <div class="telem-grid">
+          <div class="telem-item highlight-red">
+            <div class="telem-label">Total Stopping Distance</div>
+            <div class="telem-val red" id="out-total">--</div><span class="telem-unit" id="out-total-unit">m</span>
+            <div class="telem-sub" id="out-total-sub"></div>
+          </div>
+          <div class="telem-item highlight-amber">
+            <div class="telem-label">Reaction Distance</div>
+            <div class="telem-val amber" id="out-react">--</div><span class="telem-unit" id="out-react-unit">m</span>
+            <div class="telem-sub" id="out-react-sub"></div>
+          </div>
+          <div class="telem-item">
+            <div class="telem-label">Braking Distance</div>
+            <div class="telem-val" id="out-brake">--</div><span class="telem-unit" id="out-brake-unit">m</span>
+            <div class="telem-sub" id="out-brake-sub"></div>
+          </div>
+          <div class="telem-item highlight-cyan">
+            <div class="telem-label">Kinetic Energy Dissipated</div>
+            <div class="telem-val cyan" id="out-ke">--</div><span class="telem-unit" id="out-ke-unit">kJ</span>
+            <div class="telem-sub" id="out-ke-sub"></div>
+          </div>
+          <div class="telem-item" style="grid-column:1/-1">
+            <div class="telem-label">Friction Coefficient (mu) / Deceleration</div>
+            <div class="telem-val" id="out-mu">--</div>
+            <div class="telem-sub" id="out-mu-sub"></div>
+          </div>
+        </div>
+
+        <button class="copy-btn" id="copy-btn" onclick="copyTelemetry()">
+          <span>&#128203;</span> Copy Safety Telemetry
+        </button>
+      </div>
+
+      <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        Advertisement
+      </div>
+
+      <!-- Glossary -->
+      <div class="card">
+        <div class="card-label">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Kinetic Energy</div>
+            <div class="glossary-def">The energy a moving object possesses due to its motion, calculated as KE = 0.5 x m x v^2. A vehicle must convert all of this into heat (via brakes) or sound and deformation (via collision) before it can stop.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Braking Distance</div>
+            <div class="glossary-def">The distance a vehicle travels from the moment the brakes are fully applied until the vehicle comes to a complete stop. Derived from the work-energy principle: d = v^2 / (2 x mu x g).</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Reaction Distance</div>
+            <div class="glossary-def">The distance a vehicle travels during the driver's perception-reaction time, before the brakes engage. At 60 mph with a 1.5-second reaction time, this alone is 132 feet.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Coefficient of Friction (mu)</div>
+            <div class="glossary-def">A dimensionless number expressing how much grip exists between two surfaces. A higher mu means more grip and a shorter stopping distance. Dry asphalt is around 0.8; black ice can drop to 0.1.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Velocity</div>
+            <div class="glossary-def">The speed of a vehicle in a specific direction, measured in m/s, km/h, or mph. Velocity appears squared in both kinetic energy and braking distance formulas, producing a non-linear relationship with stopping performance.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Work-Energy Theorem</div>
+            <div class="glossary-def">A fundamental physics principle stating that the net work done on an object equals its change in kinetic energy. Braking converts kinetic energy into thermal energy through friction between brake pads and rotors.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Mass vs. Weight</div>
+            <div class="glossary-def">Mass is the amount of matter in an object (kilograms), while weight is the gravitational force acting on that mass (Newtons or pounds-force). In braking calculations, mass (not weight) appears in the kinetic energy formula, but the two scale together under standard gravity.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Total Stopping Distance</div>
+            <div class="glossary-def">The full distance from when a hazard is perceived to when the vehicle is fully stopped. It equals Reaction Distance plus Braking Distance and is the figure used in highway safety engineering to set speed limits and sight-distance standards.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Educational Section -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Braking Distance and Kinetic Energy Dissipation</h2>
+        <p class="section-intro">
+          Whether you are a driver trying to understand safe following distances, a physics student working through kinematics, or an engineer sizing brake systems, this tool gives you the full stopping distance picture from first principles. Speed is the central variable, and its squared relationship to both kinetic energy and braking distance is the single most important concept in vehicle safety math.
+        </p>
+
+        <h3>How to Use This Solver</h3>
+        <p>
+          Enter your vehicle speed using the numeric field or the slider. Select a road condition to set the friction coefficient. Input your vehicle mass (or use a quick-select preset). Adjust reaction time if your scenario differs from the 1.5-second default. All three output panels update instantly with no button press required.
+        </p>
+        <p>
+          The visual bar in Panel 2 stretches and contracts in real time as conditions change. Notice how the braking segment grows dramatically at higher speeds and on slick surfaces. The speed comparison strip below the main bar shows multiple reference speeds at your current road condition, giving you immediate intuition for how stopping distances scale.
+        </p>
+
+        <h3>The Physics Behind the Numbers</h3>
+        <p>The braking distance formula comes directly from the work-energy theorem. The kinetic energy a vehicle carries is:</p>
+        <div class="formula-box">
+          KE = 0.5 x m x v^2<br>
+          <span class="f-comment">where m = mass in kg, v = velocity in m/s, KE in Joules</span>
+        </div>
+        <p>The friction force opposing motion equals the vehicle's weight multiplied by the friction coefficient:</p>
+        <div class="formula-box">
+          F_friction = mu x m x g<br>
+          <span class="f-comment">where mu = friction coefficient, g = 9.81 m/s^2</span>
+        </div>
+        <p>Setting the work done by friction (F x d) equal to the kinetic energy and solving for d gives the braking distance:</p>
+        <div class="formula-box">
+          d_brake = v^2 / (2 x mu x g)<br>
+          <span class="f-comment">Mass cancels entirely, so braking distance is independent of vehicle weight</span>
+        </div>
+        <p>The reaction distance adds the distance covered before brakes engage:</p>
+        <div class="formula-box">
+          d_react = v x t_react<br>
+          <span class="f-comment">where t_react = perception-reaction time in seconds (default 1.5 s)</span>
+        </div>
+
+        <h3>Why Speed Kills: The Quadratic Relationship</h3>
+        <p>
+          Because velocity is squared in both formulas, small speed increases produce large stopping distance penalties. Going from 30 mph to 60 mph does not double your braking distance - it quadruples it. At 90 mph, the braking distance is nine times longer than at 30 mph. This quadratic penalty explains why speed limit reductions from 70 mph to 60 mph (a 14% reduction in speed) yield roughly a 25% reduction in braking distance - disproportionately large returns for modest speed decreases.
+        </p>
+
+        <h3>Road Conditions and Friction Coefficients</h3>
+        <p>
+          The coefficient of friction is not a fixed property of a tire; it depends on the contact between tire rubber and the specific road surface at a specific temperature and contamination level. Dry asphalt at mu = 0.8 allows the maximum deceleration your tires can generate before sliding. Wet asphalt (mu = 0.5) cuts available grip by 37.5%, which stretches braking distance by 60%. Packed snow (mu = 0.2) reduces grip to a quarter of dry conditions, making braking distances four times longer. Black ice (mu = 0.1) is the extreme case - eight times the braking distance of dry pavement at the same speed.
+        </p>
+
+        <!-- FAQ -->
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">Why does braking distance quadruple when you double your speed? <span class="faq-icon">+</span></div>
+          <div class="faq-a">Braking distance follows the work-energy theorem: the kinetic energy that must be scrubbed away equals one-half times mass times velocity squared (KE = 0.5mv^2). Because velocity is squared, doubling your speed from 30 mph to 60 mph quadruples the kinetic energy your brakes must convert into heat. Since friction force stays roughly constant for a given road surface, it takes four times the distance to absorb four times the energy. At highway speeds (70 mph vs 35 mph), the braking distance is again four times longer, not two. This exponential growth is why speed limits exist and why reducing speed by even 10 mph dramatically shortens stopping distances.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">How does a wet or icy road affect the coefficient of friction? <span class="faq-icon">+</span></div>
+          <div class="faq-a">The coefficient of friction (mu) describes how much grip a tire has against a surface. Dry asphalt typically yields a mu of 0.8, meaning tires can apply a deceleration force equal to 80% of the vehicle's weight. Wet asphalt drops mu to around 0.5 because a thin water film reduces rubber-to-road contact. Packed snow lowers it further to about 0.2 as tires float partially on a compressible layer. Black ice is the most extreme case, with mu near 0.1, because an invisible liquid water film on the ice surface nearly eliminates mechanical grip. Since braking distance is inversely proportional to mu, going from dry asphalt to black ice stretches the braking distance by a factor of eight at the same speed.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">Does a heavier vehicle take longer to stop than a lighter one? <span class="faq-icon">+</span></div>
+          <div class="faq-a">For braking distance alone, the answer is no, assuming adequate brakes. Heavier vehicles carry more kinetic energy (KE = 0.5mv^2), but they also press harder against the road, generating more friction force in direct proportion. The two effects cancel in the braking distance formula (d = v^2 / (2 x mu x g)), which contains no mass term at all. However, heavier vehicles do carry substantially more total kinetic energy, which puts far greater thermal demands on the brake system. Under repeated hard stops, brake fade from overheating becomes a real danger for heavy trucks. Weight also affects reaction distance if the heavier vehicle has a slower or less responsive brake actuation system.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">What is the average human reaction time before hitting the brakes? <span class="faq-icon">+</span></div>
+          <div class="faq-a">The commonly accepted average perception-reaction time for an alert driver is 1.5 seconds. This covers the full chain: perceiving a hazard visually, processing the threat, deciding to brake, and mechanically moving your foot to the pedal. At 60 mph (88 ft/s), 1.5 seconds of reaction time alone covers 132 feet before the brakes even engage. Distraction, fatigue, alcohol, and poor visibility all increase this number. The U.S. Federal Highway Administration uses 2.5 seconds for safety-critical designs to account for delayed reactions. Older drivers and those reacting to unexpected (rather than anticipated) hazards often show reaction times of 2 seconds or longer.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">How much kinetic energy must my brakes convert into heat to stop a car? <span class="faq-icon">+</span></div>
+          <div class="faq-a">Kinetic energy is calculated as KE = 0.5 x m x v^2. A typical sedan weighing 1,590 kg (3,500 lbs) traveling at 60 mph (26.8 m/s) carries approximately 572,000 Joules of kinetic energy - equivalent to about 136 food calories or the energy stored in a small lithium battery pack. All of that energy must be converted into heat by the brakes during a full stop. At highway speeds of 70 mph with an SUV (2,270 kg / 5,000 lbs), the brakes must absorb over 1.3 million Joules in a single stop. Repeated hard stops from high speed are why race cars and heavy trucks use ventilated rotors, drilled discs, and cooling ducts - brake fade from overheated rotors is a direct result of this thermal load.</div>
+        </div>
+
+      </div>
+
+    </div><!-- /.container -->
+  </main>
+
+  <!-- AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    var unit = 'metric'; // 'metric' or 'imperial'
+    var mu = 0.8;        // friction coefficient
+    var condKey = 'dry';
+
+    var MU_MAP = { dry: 0.8, wet: 0.5, snow: 0.2, ice: 0.1 };
+    var G = 9.81; // m/s^2
+
+    /* Quick-select mass values in kg */
+    var PRESETS_KG = { sedan: 1587, suv: 2268, truck: 4536 };
+
+    /* Speed comparison reference values in km/h */
+    var COMPARE_SPEEDS_METRIC   = [20, 40, 60, 80, 100, 120];
+    var COMPARE_SPEEDS_IMPERIAL = [15, 30, 45, 60, 75, 90];
+
+    /* ============================================================
+       UNIT SYSTEM
+    ============================================================ */
+    function setUnit(u) {
+      unit = u;
+      document.getElementById('btn-metric').classList.toggle('active', u === 'metric');
+      document.getElementById('btn-imperial').classList.toggle('active', u === 'imperial');
+
+      var speedInput = document.getElementById('speed-input');
+      var massInput  = document.getElementById('mass-input');
+      var curSpeedKmh = parseFloat(speedInput.dataset.kmh) || 60;
+      var curMassKg   = parseFloat(massInput.dataset.kg)   || 1587;
+
+      if (u === 'metric') {
+        speedInput.value = Math.round(curSpeedKmh);
+        speedInput.max = 300;
+        document.getElementById('speed-slider').max = 200;
+        document.getElementById('speed-slider').value = Math.round(curSpeedKmh);
+        document.getElementById('speed-unit-badge').textContent = 'km/h';
+        massInput.value = Math.round(curMassKg);
+        document.getElementById('mass-unit-badge').textContent = 'kg';
+      } else {
+        var mph = Math.round(curSpeedKmh * 0.621371);
+        speedInput.value = mph;
+        speedInput.max = 200;
+        document.getElementById('speed-slider').max = 150;
+        document.getElementById('speed-slider').value = mph;
+        document.getElementById('speed-unit-badge').textContent = 'mph';
+        massInput.value = Math.round(curMassKg * 2.20462);
+        document.getElementById('mass-unit-badge').textContent = 'lbs';
+      }
+      speedInput.dataset.kmh = curSpeedKmh;
+      massInput.dataset.kg   = curMassKg;
+      recalc();
+    }
+
+    /* ============================================================
+       INPUT HANDLERS
+    ============================================================ */
+    function onSpeedInput() {
+      var speedInput = document.getElementById('speed-input');
+      var v = parseFloat(speedInput.value) || 0;
+      var kmh = (unit === 'metric') ? v : v / 0.621371;
+      speedInput.dataset.kmh = kmh;
+      document.getElementById('speed-slider').value = v;
+      recalc();
+    }
+
+    function onSliderInput() {
+      var slider = document.getElementById('speed-slider');
+      var v = parseFloat(slider.value) || 0;
+      document.getElementById('speed-input').value = v;
+      var kmh = (unit === 'metric') ? v : v / 0.621371;
+      document.getElementById('speed-input').dataset.kmh = kmh;
+      recalc();
+    }
+
+    function setMass(kg, btn) {
+      var massInput = document.getElementById('mass-input');
+      massInput.dataset.kg = kg;
+      massInput.value = (unit === 'metric') ? Math.round(kg) : Math.round(kg * 2.20462);
+      document.querySelectorAll('.quick-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      recalc();
+    }
+
+    function setCond(key, btn) {
+      condKey = key;
+      mu = MU_MAP[key];
+      document.querySelectorAll('.road-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      recalc();
+    }
+
+    /* ============================================================
+       CORE PHYSICS
+    ============================================================ */
+    function calcPhysics(speedKmh, massKg, reactTime, muVal) {
+      var vMs = speedKmh / 3.6; // convert km/h to m/s
+      var dReact = vMs * reactTime;                          // meters
+      var dBrake = (vMs * vMs) / (2 * muVal * G);           // meters
+      var dTotal = dReact + dBrake;                          // meters
+      var ke     = 0.5 * massKg * vMs * vMs;                // Joules
+      var decel  = muVal * G;                                // m/s^2
+      return { vMs: vMs, dReact: dReact, dBrake: dBrake, dTotal: dTotal, ke: ke, decel: decel };
+    }
+
+    /* ============================================================
+       RECALC - fires on every input change
+    ============================================================ */
+    function recalc() {
+      var speedInput = document.getElementById('speed-input');
+      var massInput  = document.getElementById('mass-input');
+      var reactInput = document.getElementById('react-input');
+
+      var displaySpeed = parseFloat(speedInput.value) || 0;
+      var speedKmh = (unit === 'metric') ? displaySpeed : displaySpeed / 0.621371;
+
+      /* Sync mass kg */
+      var displayMass = parseFloat(massInput.value) || 0;
+      var massKg = (unit === 'metric') ? displayMass : displayMass / 2.20462;
+      massInput.dataset.kg = massKg;
+
+      var reactTime = parseFloat(reactInput.value) || 1.5;
+      if (reactTime < 0) reactTime = 0;
+
+      var p = calcPhysics(speedKmh, massKg, reactTime, mu);
+
+      updateOutputs(p, speedKmh, massKg, reactTime);
+      updateBar(p);
+      updateComparisonStrip(reactTime, massKg);
+    }
+
+    /* ============================================================
+       FORMAT HELPERS
+    ============================================================ */
+    function fmtDist(meters) {
+      if (unit === 'metric') {
+        return { val: meters.toFixed(1), unit: 'm' };
+      } else {
+        return { val: (meters * 3.28084).toFixed(1), unit: 'ft' };
+      }
+    }
+
+    function fmtEnergy(joules) {
+      if (unit === 'metric') {
+        if (joules >= 1000000) {
+          return { val: (joules / 1000000).toFixed(2), unit: 'MJ', sub: (joules / 1000).toFixed(0) + ' kJ' };
+        }
+        return { val: (joules / 1000).toFixed(2), unit: 'kJ', sub: joules.toFixed(0) + ' J' };
+      } else {
+        var ftlb = joules * 0.737562;
+        if (ftlb >= 1000000) return { val: (ftlb / 1000000).toFixed(2), unit: 'M ft-lb', sub: (ftlb / 1000).toFixed(0) + 'k ft-lb' };
+        if (ftlb >= 1000)    return { val: (ftlb / 1000).toFixed(1), unit: 'k ft-lb', sub: ftlb.toFixed(0) + ' ft-lb' };
+        return { val: ftlb.toFixed(0), unit: 'ft-lb', sub: '' };
+      }
+    }
+
+    /* ============================================================
+       UPDATE OUTPUTS
+    ============================================================ */
+    function updateOutputs(p, speedKmh, massKg, reactTime) {
+      var total = fmtDist(p.dTotal);
+      var react = fmtDist(p.dReact);
+      var brake = fmtDist(p.dBrake);
+      var ke    = fmtEnergy(p.ke);
+      var decelG = (p.decel / G).toFixed(2);
+
+      setText('out-total', total.val);
+      setText('out-total-unit', total.unit);
+      setText('out-total-sub', 'Reaction ' + react.val + ' ' + react.unit + ' + Braking ' + brake.val + ' ' + brake.unit);
+
+      setText('out-react', react.val);
+      setText('out-react-unit', react.unit);
+      setText('out-react-sub', 'At ' + (unit === 'metric' ? Math.round(speedKmh) + ' km/h' : Math.round(speedKmh * 0.621371) + ' mph') + ' for ' + reactTime.toFixed(1) + ' s');
+
+      setText('out-brake', brake.val);
+      setText('out-brake-unit', brake.unit);
+      setText('out-brake-sub', 'Stopping from ' + p.vMs.toFixed(1) + ' m/s');
+
+      setText('out-ke', ke.val);
+      setText('out-ke-unit', ke.unit);
+      setText('out-ke-sub', ke.sub || ('All heat absorbed by brake system'));
+
+      setText('out-mu', 'mu = ' + mu.toFixed(2) + '   /   ' + p.decel.toFixed(2) + ' m/s^2 (' + decelG + ' G)');
+      setText('out-mu-sub', condName(condKey) + ' surface - tire friction deceleration');
+
+      setText('bar-total-dist', total.val);
+      setText('bar-dist-unit', total.unit);
+    }
+
+    function condName(k) {
+      var m = { dry: 'Dry asphalt', wet: 'Wet asphalt', snow: 'Packed snow', ice: 'Black ice' };
+      return m[k] || k;
+    }
+
+    function setText(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+
+    /* ============================================================
+       UPDATE BAR
+    ============================================================ */
+    function updateBar(p) {
+      var reactPct = (p.dTotal > 0) ? (p.dReact / p.dTotal * 100) : 30;
+      var brakePct = 100 - reactPct;
+      var reactEl = document.getElementById('dist-bar-react');
+      var brakeEl = document.getElementById('dist-bar-brake');
+      var subR    = document.getElementById('sub-react');
+      var subB    = document.getElementById('sub-brake');
+
+      reactEl.style.width = reactPct.toFixed(1) + '%';
+      brakeEl.style.width = brakePct.toFixed(1) + '%';
+
+      /* Show labels inside bars only if there is room */
+      reactEl.textContent = (reactPct > 15) ? 'Reaction' : '';
+      brakeEl.textContent = (brakePct > 15) ? 'Braking'  : '';
+
+      var rd = fmtDist(p.dReact);
+      var bd = fmtDist(p.dBrake);
+      subR.style.width = reactPct.toFixed(1) + '%';
+      subB.style.width = brakePct.toFixed(1) + '%';
+      subR.textContent = rd.val + ' ' + rd.unit;
+      subB.textContent = bd.val + ' ' + bd.unit;
+    }
+
+    /* ============================================================
+       COMPARISON STRIP
+    ============================================================ */
+    function updateComparisonStrip(reactTime, massKg) {
+      var speedKmh = parseFloat(document.getElementById('speed-input').dataset.kmh) || 0;
+      var refs = (unit === 'metric') ? COMPARE_SPEEDS_METRIC : COMPARE_SPEEDS_IMPERIAL;
+      var refKmh = refs.map(function(s) {
+        return (unit === 'metric') ? s : s / 0.621371;
+      });
+
+      /* Find max total distance across all refs for scaling */
+      var maxTotal = 1;
+      refKmh.forEach(function(kmh) {
+        var p = calcPhysics(kmh, massKg, reactTime, mu);
+        if (p.dTotal > maxTotal) maxTotal = p.dTotal;
+      });
+
+      var html = '';
+      refs.forEach(function(dispSpeed, i) {
+        var kmh = refKmh[i];
+        var p = calcPhysics(kmh, massKg, reactTime, mu);
+        var total = fmtDist(p.dTotal);
+        var reactPct = (p.dTotal > 0) ? (p.dReact / p.dTotal * 100) : 30;
+        var brakePct = 100 - reactPct;
+        var trackPct = (p.dTotal / maxTotal * 100).toFixed(1);
+        var spUnit = (unit === 'metric') ? 'km/h' : 'mph';
+        var isCurrent = (Math.abs(kmh - speedKmh) < 2);
+        html += '<div class="speed-compare-row" style="' + (isCurrent ? 'opacity:1;' : 'opacity:0.6;') + '">' +
+          '<div class="sc-label" style="' + (isCurrent ? 'color:var(--text);' : '') + '">' + dispSpeed + ' ' + spUnit + '</div>' +
+          '<div class="sc-track"><div class="sc-react" style="width:' + (reactPct * parseFloat(trackPct) / 100).toFixed(1) + '%"></div><div class="sc-brake" style="width:' + (brakePct * parseFloat(trackPct) / 100).toFixed(1) + '%"></div></div>' +
+          '<div class="sc-dist">' + total.val + ' ' + total.unit + '</div>' +
+          '</div>';
+      });
+      document.getElementById('speed-rows').innerHTML = html;
+    }
+
+    /* ============================================================
+       COPY TELEMETRY
+    ============================================================ */
+    function copyTelemetry() {
+      var speedInput = document.getElementById('speed-input');
+      var massInput  = document.getElementById('mass-input');
+      var reactInput = document.getElementById('react-input');
+
+      var displaySpeed = parseFloat(speedInput.value) || 0;
+      var speedKmh = (unit === 'metric') ? displaySpeed : displaySpeed / 0.621371;
+      var displayMass  = parseFloat(massInput.value)  || 0;
+      var massKg = (unit === 'metric') ? displayMass : displayMass / 2.20462;
+      var reactTime = parseFloat(reactInput.value) || 1.5;
+      var p = calcPhysics(speedKmh, massKg, reactTime, mu);
+
+      var total = fmtDist(p.dTotal);
+      var react = fmtDist(p.dReact);
+      var brake = fmtDist(p.dBrake);
+      var ke    = fmtEnergy(p.ke);
+      var spUnit = (unit === 'metric') ? 'km/h' : 'mph';
+      var dispSpeed2 = (unit === 'metric') ? Math.round(speedKmh) : Math.round(speedKmh * 0.621371);
+
+      var lines = [
+        'Braking Distance Safety Telemetry (axiomape.com/braking-distance-solver/)',
+        '---',
+        'Speed: ' + dispSpeed2 + ' ' + spUnit,
+        'Road Condition: ' + condName(condKey) + ' (mu = ' + mu.toFixed(2) + ')',
+        'Vehicle Mass: ' + massInput.value + ' ' + (unit === 'metric' ? 'kg' : 'lbs'),
+        'Reaction Time: ' + reactTime.toFixed(1) + ' s',
+        '---',
+        'Total Stopping Distance: ' + total.val + ' ' + total.unit,
+        'Reaction Distance: ' + react.val + ' ' + react.unit,
+        'Braking Distance: ' + brake.val + ' ' + brake.unit,
+        'Kinetic Energy Dissipated: ' + ke.val + ' ' + ke.unit,
+        'Deceleration: ' + p.decel.toFixed(2) + ' m/s^2 (' + (p.decel / G).toFixed(2) + ' G)',
+        '---',
+        'Generated by AxiomApe Braking Distance Solver'
+      ];
+
+      var text = lines.join('\n');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() { flashCopy(); });
+      } else {
+        /* Fallback */
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        flashCopy();
+      }
+    }
+
+    function flashCopy() {
+      var btn = document.getElementById('copy-btn');
+      btn.classList.add('copied');
+      btn.innerHTML = '<span>&#10003;</span> Telemetry Copied!';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<span>&#128203;</span> Copy Safety Telemetry';
+      }, 2200);
+    }
+
+    /* ============================================================
+       FAQ TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    (function init() {
+      /* Seed dataset values */
+      var speedInput = document.getElementById('speed-input');
+      var massInput  = document.getElementById('mass-input');
+      speedInput.dataset.kmh = 60;
+      massInput.dataset.kg   = 1587;
+      recalc();
+    })();
+  </script>
+
+</body>
+</html>

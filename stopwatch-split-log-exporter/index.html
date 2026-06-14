@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stopwatch Split Log Exporter: Record Event Durations and Export Lap Times | AxiomApe</title>
+  <meta name="description" content="Free browser-based stopwatch split log exporter. Record precise lap times and split durations using the high-resolution Performance API, view a live split log with cumulative totals, and export your full session as a CSV file. 100% local, nothing sent to any server." />
+  <meta name="keywords" content="stopwatch split log, lap time recorder, split time exporter, event duration tracker, chronometer online, lap time CSV export, performance API stopwatch, interval timer logger, multi-lap stopwatch, split time calculator, cumulative time tracker, athletic lap timer, race split recorder, stopwatch CSV download, browser stopwatch tool, precision interval timer, event timing software" />
+  <link rel="canonical" href="https://axiomape.com/stopwatch-split-log-exporter/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Stopwatch Split Log Exporter",
+        "description": "Free browser-based stopwatch split log exporter. Record precise lap times and split durations using the high-resolution Performance API, view a live split log with cumulative totals, and export your full session as a CSV file. 100% local, nothing sent to any server.",
+        "url": "https://axiomape.com/stopwatch-split-log-exporter/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How accurate is the browser Performance API for event timing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The browser Performance API (performance.now()) provides sub-millisecond resolution, typically accurate to within 0.1 ms under normal conditions. It measures time elapsed since the page navigation started using a monotonic clock, meaning it cannot go backward and is not affected by system clock adjustments. This makes it far more reliable for short-interval timing than Date.now(), which only offers millisecond resolution and can jump or drift when the OS adjusts the system clock. For most stopwatch and lap timing use cases, performance.now() is the correct and recommended approach."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between split time and lap time?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A split time (also called a cumulative time) is the total elapsed time from the very start of the session to the moment a split was recorded. A lap time (also called an interval time or leg time) is the duration of just that one segment - the time between the previous split and the current split. For example, if you record splits at 0:30, 1:10, and 2:00, the split times are 0:30, 1:10, and 2:00, while the lap times are 0:30, 0:40, and 0:50. Both measurements are shown in this tool's split log and included in the CSV export."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do browsers throttle timers when the tab is inactive?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "To conserve battery and CPU resources, all major browsers throttle or pause setTimeout and setInterval callbacks in background tabs. Chrome, Firefox, and Safari all limit timer callbacks to roughly one execution per second (or less) when a tab loses focus. This tool uses requestAnimationFrame for its display loop, which is also paused in background tabs. However, because the elapsed time is calculated from a stored performance.now() timestamp rather than accumulated tick counts, the total time and all split calculations remain accurate regardless of throttling. The display simply catches up instantly when you switch back to the tab."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I import this CSV data into Excel or Google Sheets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The exported CSV file uses standard comma-separated formatting with a header row and is fully compatible with Microsoft Excel, Google Sheets, LibreOffice Calc, and any other spreadsheet application. In Excel, use File - Open or drag the file into the window. In Google Sheets, use File - Import - Upload. All four columns (Lap Number, Lap Duration, Cumulative Time, and Wall Clock Timestamp) import cleanly. If any split note you add contains a comma, the tool automatically wraps that field in double quotes so the CSV parser reads it as a single value."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I ensure my stopwatch is as precise as possible?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Keep the tab visible and active during your timing session - background throttling can delay the visual display update, though the underlying timestamps remain accurate. Use a physical keyboard shortcut or tap the Split button immediately when the event occurs rather than clicking after a delay. Avoid running CPU-intensive tasks in other tabs simultaneously, as heavy JavaScript workloads can introduce a few milliseconds of latency between the true event moment and the recorded timestamp. For lab-grade precision beyond what a browser can offer, dedicated hardware timers or purpose-built sports timing systems are the appropriate tool."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =====================================================
+       RESET AND BASE
+    ===================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* AxiomApe dark base */
+      --bg:           #0d1117;
+      --bg-card:      #161b22;
+      --bg-panel:     #1a2030;
+      --bg-input:     #0d1117;
+      --border:       #30363d;
+      --text:         #e6edf3;
+      --text-muted:   #8b949e;
+      --text-dim:     #6e7681;
+
+      /* Chronometer palette */
+      --steel:        #64748B;
+      --steel-dim:    rgba(100,116,139,0.15);
+      --steel-glow:   0 0 0 3px rgba(100,116,139,0.25);
+      --blue:         #2563EB;
+      --blue-dim:     rgba(37,99,235,0.18);
+      --blue-hover:   #1d4ed8;
+      --blue-glow:    0 0 12px rgba(37,99,235,0.4);
+      --red:          #DC2626;
+      --red-dim:      rgba(220,38,38,0.18);
+      --red-hover:    #b91c1c;
+      --red-glow:     0 0 12px rgba(220,38,38,0.4);
+
+      /* Fastest lap gold */
+      --gold:         #f59e0b;
+      --gold-dim:     rgba(245,158,11,0.15);
+
+      --card-shadow:  0 4px 24px rgba(0,0,0,0.5);
+      --radius:       12px;
+      --radius-sm:    7px;
+      --mono:         'Fira Code','Cascadia Code','JetBrains Mono','Consolas',monospace;
+      --sans:         -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =====================================================
+       TOPBAR (hidden by site-chrome)
+    ===================================================== */
+    .site-topbar {
+      background: #0d1117;
+      text-align: center;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .site-topbar a {
+      color: #8b949e;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* =====================================================
+       PAGE HEADER (tool title block)
+    ===================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 60%, #1a2030 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 800;
+      line-height: 1.3;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      color: var(--text);
+    }
+    .page-header h1 .accent { color: #2563EB; }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* =====================================================
+       MAIN LAYOUT
+    ===================================================== */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* =====================================================
+       CARD
+    ===================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--card-shadow);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .card { padding: 18px 14px; } }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--steel);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--steel);
+      border-radius: 2px;
+    }
+    .card-title.blue { color: var(--blue); }
+    .card-title.blue::before { background: var(--blue); }
+    .card-title.red { color: var(--red); }
+    .card-title.red::before { background: var(--red); }
+
+    /* =====================================================
+       PANEL 1 - CHRONOMETER DISPLAY
+    ===================================================== */
+    .chrono-display {
+      text-align: center;
+      padding: 16px 0 24px;
+    }
+
+    .timer-readout {
+      font-family: var(--mono);
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      margin-bottom: 8px;
+      text-shadow: 0 0 40px rgba(37,99,235,0.18);
+      transition: color 0.2s;
+    }
+    .timer-readout.running {
+      color: #e6edf3;
+      text-shadow: 0 0 40px rgba(37,99,235,0.35), 0 0 80px rgba(37,99,235,0.15);
+    }
+
+    .timer-ms {
+      font-family: var(--mono);
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      font-weight: 400;
+      color: var(--steel);
+      letter-spacing: 0.06em;
+    }
+
+    .split-preview {
+      margin-top: 12px;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      min-height: 1.4em;
+    }
+    .split-preview span { color: var(--blue); font-weight: 600; }
+
+    /* =====================================================
+       CONTROL BUTTONS
+    ===================================================== */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: var(--sans);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
+      letter-spacing: 0.02em;
+      min-width: 120px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+    .btn-start {
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn-start:not(:disabled):hover {
+      background: var(--blue-hover);
+      box-shadow: var(--blue-glow);
+    }
+
+    .btn-stop {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-stop:not(:disabled):hover {
+      background: var(--red-hover);
+      box-shadow: var(--red-glow);
+    }
+
+    .btn-split {
+      background: var(--bg-panel);
+      border: 1px solid var(--steel);
+      color: var(--steel);
+    }
+    .btn-split:not(:disabled):hover {
+      background: var(--steel-dim);
+      border-color: #94a3b8;
+      color: #cbd5e1;
+      box-shadow: var(--steel-glow);
+    }
+
+    .btn-reset {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-reset:not(:disabled):hover {
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+
+    /* =====================================================
+       NOTE INPUT (optional split label)
+    ===================================================== */
+    .note-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .note-row label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .note-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .note-input:focus { border-color: var(--blue); }
+    .note-input::placeholder { color: var(--text-dim); }
+
+    /* =====================================================
+       PANEL 2 - LIVE SPLIT LOG TABLE
+    ===================================================== */
+    .split-table-wrapper {
+      max-height: 320px;
+      overflow-y: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .split-table-wrapper::-webkit-scrollbar { width: 6px; }
+    .split-table-wrapper::-webkit-scrollbar-track { background: transparent; }
+    .split-table-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .split-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .split-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .split-table thead th {
+      background: var(--bg-panel);
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .split-table tbody tr {
+      border-bottom: 1px solid rgba(48,54,61,0.6);
+      transition: background 0.15s;
+      animation: slideIn 0.25s ease-out;
+    }
+    .split-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+    .split-table tbody tr.fastest-lap { background: var(--gold-dim); }
+    .split-table tbody td {
+      padding: 11px 14px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .split-table .td-lap {
+      color: var(--steel);
+      font-weight: 700;
+      font-size: 0.8rem;
+      width: 60px;
+    }
+    .split-table .td-duration { color: var(--blue); }
+    .split-table .td-fastest { color: var(--gold); }
+    .split-table .td-cumulative { color: var(--text-muted); }
+    .split-table .td-note {
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .split-table .td-wall {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .no-splits-msg {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+    .no-splits-msg .hint {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =====================================================
+       PANEL 3 - TELEMETRY AND EXPORT
+    ===================================================== */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 540px) {
+      .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .telem-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 14px 14px;
+      text-align: center;
+    }
+    .telem-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .telem-value {
+      font-family: var(--mono);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .telem-value.blue { color: var(--blue); }
+    .telem-value.gold { color: var(--gold); }
+    .telem-value.steel { color: var(--steel); }
+
+    .export-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-export {
+      background: var(--blue);
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 0.95rem;
+    }
+    .btn-export:not(:disabled):hover {
+      background: var(--blue-hover);
+      box-shadow: var(--blue-glow);
+    }
+
+    .btn-clear-log {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 12px 20px;
+      font-size: 0.9rem;
+    }
+    .btn-clear-log:not(:disabled):hover {
+      background: var(--red-dim);
+    }
+
+    .export-note {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      flex: 1;
+      min-width: 160px;
+    }
+
+    /* =====================================================
+       STATUS BADGE
+    ===================================================== */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .status-badge.stopped {
+      background: rgba(100,116,139,0.15);
+      color: var(--steel);
+    }
+    .status-badge.running {
+      background: rgba(37,99,235,0.15);
+      color: var(--blue);
+    }
+    .status-badge.paused {
+      background: rgba(220,38,38,0.15);
+      color: var(--red);
+    }
+    .pulse-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .status-badge.running .pulse-dot {
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* =====================================================
+       AD PLACEMENTS
+    ===================================================== */
+    /* Classes .axiom-ad-leaderboard and .axiom-ad-mobile-anchor
+       are provided and media-queried by site-chrome.js. No extra
+       CSS needed here. */
+
+    /* =====================================================
+       GLOSSARY
+    ===================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* =====================================================
+       EDUCATIONAL SECTION
+    ===================================================== */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      font-size: 0.97rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--steel);
+      margin: 22px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .edu-section p {
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ol {
+      padding-left: 22px;
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+    .edu-section li { margin-bottom: 4px; }
+
+    /* =====================================================
+       FAQ ACCORDION
+    ===================================================== */
+    .faq-list { margin-top: 12px; }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .faq-item.open { border-color: var(--steel); }
+
+    .faq-question {
+      width: 100%;
+      background: var(--bg-panel);
+      border: none;
+      padding: 15px 18px;
+      text-align: left;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: rgba(255,255,255,0.04); }
+    .faq-chevron {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      color: var(--steel);
+      transition: transform 0.25s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.25s;
+      background: var(--bg-card);
+    }
+    .faq-item.open .faq-answer { max-height: 400px; padding: 16px 18px; }
+    .faq-answer p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Topbar hidden by site-chrome.js -->
+  <div class="site-topbar">
+    <a href="https://axiomape.com">AxiomApe.com</a>
+  </div>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Stopwatch <span class="accent">Split Log</span> Exporter: Record Event Durations Locally</h1>
+      <p>Precision lap timer and interval duration recorder. Log unlimited splits, view live cumulative and per-lap times, and export your full session as a CSV file. 100% browser-based.</p>
+    </header>
+
+    <!-- ====================================================
+         PANEL 1: THE CHRONOMETER
+    ==================================================== -->
+    <div class="card" id="panel-chrono">
+      <div class="card-title blue">Chronometer</div>
+
+      <div class="chrono-display">
+        <div class="status-badge stopped" id="status-badge">
+          <span class="pulse-dot"></span>
+          <span id="status-text">Ready</span>
+        </div>
+
+        <div class="timer-readout" id="timer-readout">00:00:00</div>
+        <div class="timer-ms" id="timer-ms">.000</div>
+
+        <div class="split-preview" id="split-preview">
+          &nbsp;
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-start" id="btn-start" onclick="startTimer()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Start
+        </button>
+        <button class="btn btn-stop" id="btn-stop" onclick="stopTimer()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+          Stop
+        </button>
+        <button class="btn btn-split" id="btn-split" onclick="recordSplit()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          Split / Lap
+        </button>
+        <button class="btn btn-reset" id="btn-reset" onclick="resetTimer()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+          Reset
+        </button>
+      </div>
+
+      <div class="note-row">
+        <label for="split-note">Split label:</label>
+        <input type="text" id="split-note" class="note-input"
+               placeholder="Optional note for next split (e.g. Lap 1 start)" maxlength="80" />
+      </div>
+    </div>
+
+    <!-- ====================================================
+         PANEL 2: LIVE SPLIT LOG
+    ==================================================== -->
+    <div class="card" id="panel-log">
+      <div class="card-title">Live Split Log</div>
+
+      <div id="split-log-container">
+        <div class="no-splits-msg" id="no-splits-msg">
+          No splits recorded yet.
+          <div class="hint">Start the timer and press Split / Lap to record an interval.</div>
+        </div>
+        <div class="split-table-wrapper" id="table-wrapper" style="display:none;">
+          <table class="split-table" aria-label="Lap split log">
+            <thead>
+              <tr>
+                <th class="td-lap">Lap</th>
+                <th>Lap Duration</th>
+                <th>Cumulative Time</th>
+                <th>Wall Clock</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="split-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================
+         PANEL 3: TELEMETRY AND EXPORT
+    ==================================================== -->
+    <div class="card" id="panel-telemetry">
+      <div class="card-title red">Telemetry and Export</div>
+
+      <div class="telemetry-grid">
+        <div class="telem-card">
+          <div class="telem-label">Total Laps</div>
+          <div class="telem-value blue" id="telem-laps">0</div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Fastest Lap</div>
+          <div class="telem-value gold" id="telem-fastest">-</div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Average Lap</div>
+          <div class="telem-value steel" id="telem-avg">-</div>
+        </div>
+      </div>
+
+      <div class="export-row">
+        <button class="btn btn-export" id="btn-export" onclick="exportCSV()" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV Log
+        </button>
+        <button class="btn btn-clear-log" id="btn-clear-log" onclick="clearLog()" disabled>
+          Clear Log
+        </button>
+        <span class="export-note">Downloads a .csv file compatible with Excel and Google Sheets. All data stays in your browser.</span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ====================================================
+         GLOSSARY
+    ==================================================== -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Split Time</div>
+          <div class="glossary-def">The total elapsed time from the session start to the moment a split was recorded. Also called cumulative time. Every split time is larger than the previous one.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Lap Time</div>
+          <div class="glossary-def">The duration of a single interval: the time between the previous split and the current split. Also called interval time or leg time. Lap times can vary widely between laps.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Cumulative Time</div>
+          <div class="glossary-def">The running total of all lap durations added together. Equivalent to split time. Useful for checking your overall pace rather than a single segment's performance.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Chronometer</div>
+          <div class="glossary-def">A precision timekeeping instrument. In software, a chronometer measures elapsed duration with high accuracy, distinct from a simple clock that shows the current time of day.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Performance API</div>
+          <div class="glossary-def">A browser built-in (performance.now()) that returns sub-millisecond timestamps from a monotonic clock. Unlike Date.now(), it cannot be skewed by system clock changes, making it ideal for timing tasks.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">CSV Export</div>
+          <div class="glossary-def">Comma-Separated Values - a plain-text file format where each row is one record and each field is separated by a comma. Universally supported by Excel, Google Sheets, and database tools.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Latency</div>
+          <div class="glossary-def">The delay between when an event occurs and when it is recorded. In browser-based timing, latency is typically under 1 ms when the tab is active and in focus. Background throttling can increase apparent latency in the display but not in the stored timestamp.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">requestAnimationFrame</div>
+          <div class="glossary-def">A browser API that schedules a callback before the next screen repaint, typically 60 times per second. Used here to update the timer display at 60 FPS without taxing the CPU unnecessarily.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================
+         EDUCATIONAL SECTION
+    ==================================================== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Stopwatch Split Timing and Lap Log Exports</h2>
+
+      <p class="section-intro">Whether you are a coach tracking athlete interval splits, a researcher recording reaction times, a developer benchmarking code segments, or simply someone who wants to log how long each step of a process takes, a precision stopwatch with a downloadable split log is the right tool. This guide explains how to use this tool effectively, the engineering choices behind it, and why browser-based timing is more capable than most people expect.</p>
+
+      <h3>How to Use This Tool</h3>
+      <ol>
+        <li>Press <strong>Start</strong> to begin the chronometer. The display updates in real time at up to 60 frames per second.</li>
+        <li>Optionally type a label in the <strong>Split label</strong> field before pressing the split button (for example, "Lap 1" or "Segment A to B").</li>
+        <li>Press <strong>Split / Lap</strong> each time you want to record a time interval. A new row appears in the Live Split Log showing the lap duration and the cumulative elapsed time at that moment.</li>
+        <li>Press <strong>Stop</strong> to pause the timer without losing your data. Press <strong>Start</strong> again to resume.</li>
+        <li>When your session is complete, check the <strong>Telemetry and Export</strong> panel for your total lap count, fastest lap, and average lap time.</li>
+        <li>Press <strong>Export CSV Log</strong> to download a .csv file containing every split. You can open this file directly in Excel or Google Sheets for further analysis.</li>
+        <li>Press <strong>Reset</strong> to clear the timer and start a fresh session. Note: the log persists in memory until you press Clear Log or reload the page.</li>
+      </ol>
+
+      <h3>Why performance.now() Is the Right Timing Engine</h3>
+      <p>Standard JavaScript timing (Date.now()) returns the number of milliseconds since January 1, 1970 - a wall clock reading accurate only to the nearest millisecond and subject to jumps if the operating system synchronizes the clock mid-session. The Performance API's performance.now() uses a dedicated monotonic high-resolution timer that starts at page navigation and never resets, never goes backward, and is never adjusted by NTP or daylight saving changes. The resolution is typically 0.1 ms or better, making it the correct choice for any timing work that needs to be reliable across a session of arbitrary length.</p>
+
+      <h3>Understanding the Split Log Columns</h3>
+      <p>The Live Split Log shows four columns for every recorded split. The <strong>Lap</strong> column is a sequential counter starting at 1. The <strong>Lap Duration</strong> column shows how long that specific interval lasted - the time between the previous split (or session start) and this split. The <strong>Cumulative Time</strong> column shows the total elapsed time from the very beginning of the session to this split. The <strong>Wall Clock</strong> column records the real-world date and time (your local clock) at the moment the split was pressed. The optional <strong>Note</strong> column carries any label you typed in the split label field.</p>
+
+      <h3>How the CSV Export Works</h3>
+      <p>Pressing Export CSV Log generates a comma-separated text file entirely in memory using a Blob URL and an anchor tag click. No data leaves your computer. The header row names all five columns. Each subsequent row is one split record. String fields (specifically the optional split note) are wrapped in double quotes, and any double quote characters inside those fields are escaped as "" per RFC 4180. This ensures the file parses correctly in all spreadsheet applications even if your notes contain commas, line breaks, or quote characters.</p>
+
+      <h3>Browser Tab Throttling and What It Means for Your Timing</h3>
+      <p>All major browsers reduce the frequency of background timers when you switch to another tab, typically limiting them to one call per second or less. This tool uses requestAnimationFrame for its display loop, which is also suspended in the background. However, the elapsed time is never computed by counting ticks - it is always calculated as the difference between the current performance.now() reading and the stored start timestamp. This means your cumulative totals and every split duration are mathematically correct regardless of how long the tab was in the background. The display simply catches up the moment you return to the tab.</p>
+
+      <h3>Use Cases for Split Time Logging</h3>
+      <p>Sports coaches use split logs to track each lap of a swim meet, each 400-meter segment of a track race, or each set of a weight training session. Researchers use split timing to record reaction times across multiple trials, with the CSV providing ready-made data for statistical analysis. Software developers use interval logs to benchmark individual steps of a multi-stage process without the overhead of a full profiling tool. Event planners use stopwatch splits to track the exact duration of each segment of a production, helping them refine timing for future events. In all these cases, the ability to export the log as a structured CSV file is what transforms a simple timer into a useful data collection instrument.</p>
+
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-list">
+
+        <div class="faq-item" id="faq-0">
+          <button class="faq-question" onclick="toggleFaq(0)" aria-expanded="false" aria-controls="faq-answer-0">
+            How accurate is the browser Performance API for event timing?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-answer-0" role="region">
+            <p>The browser Performance API (performance.now()) provides sub-millisecond resolution, typically accurate to within 0.1 ms under normal conditions. It measures time elapsed since the page navigation started using a monotonic clock, meaning it cannot go backward and is not affected by system clock adjustments. This makes it far more reliable for short-interval timing than Date.now(), which only offers millisecond resolution and can jump or drift when the OS adjusts the system clock. For most stopwatch and lap timing use cases, performance.now() is the correct and recommended approach.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-1">
+          <button class="faq-question" onclick="toggleFaq(1)" aria-expanded="false" aria-controls="faq-answer-1">
+            What is the difference between split time and lap time?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-answer-1" role="region">
+            <p>A split time (also called a cumulative time) is the total elapsed time from the very start of the session to the moment a split was recorded. A lap time (also called an interval time or leg time) is the duration of just that one segment - the time between the previous split and the current split. For example, if you record splits at 0:30, 1:10, and 2:00, the split times are 0:30, 1:10, and 2:00, while the lap times are 0:30, 0:40, and 0:50. Both measurements are shown in this tool's split log and included in the CSV export.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-2">
+          <button class="faq-question" onclick="toggleFaq(2)" aria-expanded="false" aria-controls="faq-answer-2">
+            Why do browsers throttle timers when the tab is inactive?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-answer-2" role="region">
+            <p>To conserve battery and CPU resources, all major browsers throttle or pause setTimeout and setInterval callbacks in background tabs. Chrome, Firefox, and Safari all limit timer callbacks to roughly one execution per second (or less) when a tab loses focus. This tool uses requestAnimationFrame for its display loop, which is also paused in background tabs. However, because the elapsed time is calculated from a stored performance.now() timestamp rather than accumulated tick counts, the total time and all split calculations remain accurate regardless of throttling. The display simply catches up instantly when you switch back to the tab.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-3">
+          <button class="faq-question" onclick="toggleFaq(3)" aria-expanded="false" aria-controls="faq-answer-3">
+            Can I import this CSV data into Excel or Google Sheets?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-answer-3" role="region">
+            <p>Yes. The exported CSV file uses standard comma-separated formatting with a header row and is fully compatible with Microsoft Excel, Google Sheets, LibreOffice Calc, and any other spreadsheet application. In Excel, use File - Open or drag the file into the window. In Google Sheets, use File - Import - Upload. All four columns (Lap Number, Lap Duration, Cumulative Time, and Wall Clock Timestamp) import cleanly. If any split note you add contains a comma, the tool automatically wraps that field in double quotes so the CSV parser reads it as a single value.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-4">
+          <button class="faq-question" onclick="toggleFaq(4)" aria-expanded="false" aria-controls="faq-answer-4">
+            How do I ensure my stopwatch is as precise as possible?
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer" id="faq-answer-4" role="region">
+            <p>Keep the tab visible and active during your timing session - background throttling can delay the visual display update, though the underlying timestamps remain accurate. Use a physical keyboard shortcut or tap the Split button immediately when the event occurs rather than clicking after a delay. Avoid running CPU-intensive tasks in other tabs simultaneously, as heavy JavaScript workloads can introduce a few milliseconds of latency between the true event moment and the recorded timestamp. For lab-grade precision beyond what a browser can offer, dedicated hardware timers or purpose-built sports timing systems are the appropriate tool.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main><!-- /#main -->
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ====================================================
+       TIMING ENGINE
+       All elapsed time is computed from a stored
+       performance.now() origin - never from tick counters -
+       so background throttling cannot corrupt the totals.
+    ==================================================== */
+
+    // State
+    let startPerfNow   = 0;       // performance.now() at last resume
+    let accumulatedMs  = 0;       // ms accumulated before last stop
+    let isRunning      = false;
+    let rafId          = null;
+
+    // Split log array: { lapNumber, lapDurationMs, cumulativeMs, wallTimestamp, note }
+    let splitLog = [];
+    let lastSplitMs = 0;   // cumulative ms at the last recorded split
+
+    /* ---- Format helpers ---- */
+    function fmtTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      return [
+        String(h).padStart(2, '0'),
+        String(m).padStart(2, '0'),
+        String(s).padStart(2, '0')
+      ].join(':');
+    }
+
+    function fmtMs(ms) {
+      return '.' + String(Math.floor(ms % 1000)).padStart(3, '0');
+    }
+
+    function fmtTimeFull(ms) {
+      return fmtTime(ms) + fmtMs(ms);
+    }
+
+    /* ---- Current elapsed ms ---- */
+    function elapsedMs() {
+      if (isRunning) {
+        return accumulatedMs + (performance.now() - startPerfNow);
+      }
+      return accumulatedMs;
+    }
+
+    /* ---- RAF display loop ---- */
+    function tick() {
+      const e = elapsedMs();
+      document.getElementById('timer-readout').textContent = fmtTime(e);
+      document.getElementById('timer-ms').textContent = fmtMs(e);
+
+      // Live current-lap preview
+      const lapSoFar = e - lastSplitMs;
+      if (isRunning && splitLog.length > 0) {
+        document.getElementById('split-preview').innerHTML =
+          'Current interval: <span>' + fmtTimeFull(lapSoFar) + '</span>';
+      } else if (isRunning) {
+        document.getElementById('split-preview').innerHTML =
+          'Elapsed: <span>' + fmtTimeFull(e) + '</span>';
+      }
+
+      if (isRunning) rafId = requestAnimationFrame(tick);
+    }
+
+    /* ---- Controls ---- */
+    function startTimer() {
+      if (isRunning) return;
+      isRunning = true;
+      startPerfNow = performance.now();
+      setStatus('running', 'Running');
+      document.getElementById('timer-readout').classList.add('running');
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      document.getElementById('btn-split').disabled = false;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function stopTimer() {
+      if (!isRunning) return;
+      accumulatedMs += performance.now() - startPerfNow;
+      isRunning = false;
+      cancelAnimationFrame(rafId);
+      setStatus('paused', 'Paused');
+      document.getElementById('timer-readout').classList.remove('running');
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('btn-split').disabled = true;
+      document.getElementById('split-preview').innerHTML = '&nbsp;';
+    }
+
+    function resetTimer() {
+      if (isRunning) {
+        cancelAnimationFrame(rafId);
+        isRunning = false;
+      }
+      accumulatedMs = 0;
+      startPerfNow = 0;
+      lastSplitMs = 0;
+      document.getElementById('timer-readout').textContent = '00:00:00';
+      document.getElementById('timer-readout').classList.remove('running');
+      document.getElementById('timer-ms').textContent = '.000';
+      document.getElementById('split-preview').innerHTML = '&nbsp;';
+      document.getElementById('split-note').value = '';
+      setStatus('stopped', 'Ready');
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('btn-split').disabled = true;
+    }
+
+    function recordSplit() {
+      if (!isRunning) return;
+      const cumMs = elapsedMs();
+      const lapMs = cumMs - lastSplitMs;
+      const note  = document.getElementById('split-note').value.trim();
+      const wall  = new Date().toLocaleString();
+
+      const entry = {
+        lapNumber:      splitLog.length + 1,
+        lapDurationMs:  lapMs,
+        cumulativeMs:   cumMs,
+        wallTimestamp:  wall,
+        note:           note
+      };
+      splitLog.push(entry);
+      lastSplitMs = cumMs;
+
+      document.getElementById('split-note').value = '';
+      renderSplitRow(entry);
+      updateTelemetry();
+      scrollTableToBottom();
+    }
+
+    /* ---- Split table ---- */
+    function renderSplitRow(entry) {
+      document.getElementById('no-splits-msg').style.display = 'none';
+      document.getElementById('table-wrapper').style.display = '';
+
+      const tbody = document.getElementById('split-tbody');
+
+      // Determine if this is the fastest lap so far (only if >1 laps)
+      let fastestIdx = -1;
+      if (splitLog.length > 1) {
+        let minMs = Infinity;
+        splitLog.forEach((s, i) => { if (s.lapDurationMs < minMs) { minMs = s.lapDurationMs; fastestIdx = i; } });
+        // Re-style all rows
+        Array.from(tbody.querySelectorAll('tr')).forEach((tr, i) => {
+          tr.classList.toggle('fastest-lap', i === fastestIdx);
+          const durTd = tr.querySelector('.td-duration');
+          if (durTd) {
+            durTd.className = 'td-duration ' + (i === fastestIdx ? 'td-fastest' : '');
+          }
+        });
+      }
+
+      const tr = document.createElement('tr');
+      const isCurrentFastest = splitLog.length > 1 && entry === splitLog.reduce((a, b) => a.lapDurationMs <= b.lapDurationMs ? a : b);
+      if (isCurrentFastest) tr.classList.add('fastest-lap');
+
+      tr.innerHTML =
+        '<td class="td-lap">' + String(entry.lapNumber).padStart(2, '0') + '</td>' +
+        '<td class="td-duration ' + (isCurrentFastest ? 'td-fastest' : '') + '">' + fmtTimeFull(entry.lapDurationMs) + '</td>' +
+        '<td class="td-cumulative">' + fmtTimeFull(entry.cumulativeMs) + '</td>' +
+        '<td class="td-wall">' + entry.wallTimestamp + '</td>' +
+        '<td class="td-note">' + escapeHtml(entry.note || '') + '</td>';
+
+      tbody.appendChild(tr);
+
+      document.getElementById('btn-export').disabled = false;
+      document.getElementById('btn-clear-log').disabled = false;
+    }
+
+    function scrollTableToBottom() {
+      const wrapper = document.getElementById('table-wrapper');
+      wrapper.scrollTop = wrapper.scrollHeight;
+    }
+
+    function clearLog() {
+      splitLog = [];
+      lastSplitMs = 0;
+      document.getElementById('split-tbody').innerHTML = '';
+      document.getElementById('no-splits-msg').style.display = '';
+      document.getElementById('table-wrapper').style.display = 'none';
+      document.getElementById('btn-export').disabled = true;
+      document.getElementById('btn-clear-log').disabled = true;
+      updateTelemetry();
+    }
+
+    /* ---- Telemetry ---- */
+    function updateTelemetry() {
+      const n = splitLog.length;
+      document.getElementById('telem-laps').textContent = n;
+
+      if (n === 0) {
+        document.getElementById('telem-fastest').textContent = '-';
+        document.getElementById('telem-avg').textContent = '-';
+        return;
+      }
+
+      const fastMs = Math.min(...splitLog.map(s => s.lapDurationMs));
+      const avgMs  = splitLog.reduce((sum, s) => sum + s.lapDurationMs, 0) / n;
+
+      document.getElementById('telem-fastest').textContent = fmtTimeFull(fastMs);
+      document.getElementById('telem-avg').textContent = fmtTimeFull(avgMs);
+    }
+
+    /* ---- Status badge ---- */
+    function setStatus(state, label) {
+      const badge = document.getElementById('status-badge');
+      badge.className = 'status-badge ' + state;
+      document.getElementById('status-text').textContent = label;
+    }
+
+    /* ---- CSV Export ---- */
+    function csvField(value) {
+      const s = String(value == null ? '' : value);
+      // Wrap in quotes if it contains comma, newline, or double-quote
+      if (s.includes(',') || s.includes('\n') || s.includes('"')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function exportCSV() {
+      if (splitLog.length === 0) return;
+
+      const header = ['Lap Number', 'Lap Duration', 'Cumulative Time', 'Wall Clock Timestamp', 'Note'];
+      const rows = splitLog.map(s => [
+        s.lapNumber,
+        fmtTimeFull(s.lapDurationMs),
+        fmtTimeFull(s.cumulativeMs),
+        s.wallTimestamp,
+        s.note || ''
+      ]);
+
+      const csvContent =
+        [header, ...rows]
+          .map(row => row.map(csvField).join(','))
+          .join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = 'split-log-' + dateStr + '.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    /* ---- FAQ accordion ---- */
+    function toggleFaq(index) {
+      const item = document.getElementById('faq-' + index);
+      const btn  = item.querySelector('.faq-question');
+      const isOpen = item.classList.contains('open');
+      item.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+    }
+
+    /* ---- Utility ---- */
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ---- Keyboard shortcuts ---- */
+    document.addEventListener('keydown', function(e) {
+      // Space = Start/Stop toggle (only when not typing in input)
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        if (isRunning) stopTimer(); else startTimer();
+      }
+      // L = Split/Lap
+      if (e.code === 'KeyL' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        if (isRunning) recordSplit();
+      }
+      // R = Reset (only when stopped)
+      if (e.code === 'KeyR' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        if (!isRunning) resetTimer();
+      }
+    });
+  </script>
+</body>
+</html>

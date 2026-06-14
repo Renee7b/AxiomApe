@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Great Circle Distance Calculator: Flight Path and Geodesic Distance Tool | AxiomApe</title>
+  <meta name="description" content="Free great circle distance calculator. Compute the shortest flight path distance between any two points on Earth using the Haversine formula. Enter coordinates or IATA airport codes to get distance in km, miles, and nautical miles, plus the initial compass bearing. 100% browser-based." />
+  <meta name="keywords" content="great circle distance calculator, flight path distance, geodesic distance tool, haversine formula calculator, aviation route distance, Earth curvature distance, IATA airport distance, shortest flight path, great circle route, azimuth bearing calculator, nautical miles calculator, flight distance between cities, geodesic bearing, arc distance calculator, global flight path calculator, orthodromic distance, spherical distance calculator" />
+  <link rel="canonical" href="https://axiomape.com/great-circle-distance-tool/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Great Circle Distance Calculator",
+        "description": "Free great circle distance calculator. Compute the shortest flight path distance between any two points on Earth using the Haversine formula. Enter coordinates or IATA airport codes to get distance in km, miles, and nautical miles, plus the initial compass bearing. 100% browser-based.",
+        "url": "https://axiomape.com/great-circle-distance-tool/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is the shortest flight path not a straight line on a flat map?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A flat map (Mercator projection) distorts the curved surface of a sphere onto a flat plane. A straight line on that map is a rhumb line, which holds a constant compass bearing but is not the shortest route. The shortest path between two points on a sphere follows a great circle arc, which appears curved on a flat map but is geometrically shorter. Flights from New York to London, for example, curve far north over Canada and Greenland because that great circle arc is hundreds of miles shorter than following a straight line on a Mercator map."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a great circle and why is it used in aviation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A great circle is any circle formed by the intersection of a sphere and a plane passing through the center of that sphere. The equator and every line of longitude are great circles. Because they represent the largest possible circles on a sphere, arcs along a great circle always represent the shortest distance between two points on the surface. Airlines use great circle routes to minimize fuel consumption and flight time, since even a few percent reduction in distance across a long-haul route saves thousands of dollars per flight."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How accurate is the Earth mean radius for distance calculations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Earth mean radius of 6,371 km (3,959 miles) is accurate to within about 0.3% for most practical distance calculations. The Earth is actually an oblate spheroid, slightly flattened at the poles, with an equatorial radius of 6,378 km and a polar radius of 6,357 km. For aviation route planning and general geodesic purposes, the mean radius produces results within a few kilometers on transcontinental flights, which is well within operational margins. Higher-precision applications such as GPS navigation use the WGS-84 ellipsoid model instead."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between true north and magnetic bearing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "True north (geographic north) points toward the geographic North Pole, the axis around which Earth rotates. Magnetic north is where a compass needle actually points, determined by Earth's magnetic field. The angular difference between them is called magnetic declination (or variation), which changes by location and shifts slowly over time. The initial bearing (azimuth) calculated by this tool is a true bearing measured clockwise from true north. Pilots apply their local magnetic declination value to convert it to a magnetic heading for actual navigation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does altitude affect the distance of a flight path?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Altitude adds a small amount to actual flight distance because an aircraft flying at 35,000 feet (about 10.7 km) traces a slightly larger arc than one on the surface. At typical cruising altitudes, the added radius increases the path length by roughly 0.17% compared to the surface great circle distance. On a 10,000 km route that is about 17 km extra. This tool calculates surface great circle distance using the Earth mean radius, which is the standard method for route planning. Airline published distances typically also ignore altitude correction since it is negligible for scheduling and fuel estimates."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin-bottom: 0.6rem;
+    }
+    .page-header .subtitle {
+      color: #94a3b8;
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ---- CARD BASE ---- */
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+
+    /* ---- THREE-PANEL LAYOUT ---- */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr 1fr; }
+      .panel-viz { grid-column: 1 / -1; }
+    }
+    @media (max-width: 600px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .panel-viz { grid-column: auto; }
+    }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #64748b;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .panel-label .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #3B82F6;
+      display: inline-block;
+    }
+    .panel-label .dot.teal { background: #0EA5E9; }
+
+    /* ---- INPUTS ---- */
+    .field-group {
+      margin-bottom: 1rem;
+    }
+    .field-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+    .field-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .field-row input {
+      flex: 1;
+      min-width: 0;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 0.9rem;
+      padding: 0.55rem 0.75rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: #3B82F6;
+    }
+    input[type="text"].valid { border-color: #10b981; }
+    input[type="text"].error { border-color: #ef4444; }
+
+    .iata-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      align-items: flex-end;
+    }
+    .iata-row .iata-input-wrap { flex: 1; }
+    .btn-lookup {
+      background: #1e3a5f;
+      border: 1px solid #3B82F6;
+      color: #93c5fd;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.55rem 0.8rem;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-lookup:hover { background: #1d4ed8; color: #fff; }
+
+    .iata-feedback {
+      font-size: 0.75rem;
+      color: #10b981;
+      min-height: 1rem;
+      margin-bottom: 0.4rem;
+    }
+    .iata-feedback.err { color: #ef4444; }
+
+    .divider-or {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+      margin: 0.5rem 0;
+    }
+
+    /* ---- RESULTS PANEL ---- */
+    .result-hero {
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+    .result-hero .hero-value {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #3B82F6;
+      line-height: 1;
+    }
+    .result-hero .hero-unit {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-top: 0.2rem;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .result-cell {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+    .result-cell .rc-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0EA5E9;
+    }
+    .result-cell .rc-label {
+      font-size: 0.7rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 0.2rem;
+    }
+
+    .bearing-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    .compass-ring {
+      width: 48px; height: 48px;
+      border: 2px solid #334155;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .compass-arrow {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 2px; height: 18px;
+      background: #3B82F6;
+      transform-origin: bottom center;
+      margin-left: -1px;
+      margin-top: -18px;
+      transition: transform 0.4s ease;
+    }
+    .compass-n {
+      position: absolute;
+      top: 1px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.55rem;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .bearing-info .bear-val {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #0EA5E9;
+    }
+    .bearing-info .bear-label {
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+    .central-angle-row {
+      margin-top: 0.6rem;
+      font-size: 0.78rem;
+      color: #64748b;
+      text-align: center;
+    }
+    .central-angle-row span { color: #94a3b8; font-weight: 600; }
+
+    .placeholder-hint {
+      text-align: center;
+      color: #475569;
+      font-size: 0.85rem;
+      padding: 2rem 0;
+      line-height: 1.6;
+    }
+
+    /* ---- VISUALIZATION PANEL ---- */
+    #flight-canvas {
+      width: 100%;
+      display: block;
+      border-radius: 8px;
+      background: #0a1628;
+    }
+    .viz-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.75rem;
+      font-size: 0.72rem;
+      color: #64748b;
+      flex-wrap: wrap;
+    }
+    .viz-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .viz-legend-item .swatch {
+      width: 20px; height: 3px;
+      border-radius: 2px;
+    }
+    .swatch-arc { background: #3B82F6; }
+    .swatch-rhumb { background: #475569; stroke-dasharray: 4; }
+    .swatch-eq { background: #1e3a5f; }
+
+    /* ---- AD PLACEMENTS ---- */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 0.75rem;
+      color: #475569;
+      font-size: 0.75rem;
+      border: 1px dashed #334155;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .axiom-ad-mobile-anchor {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor {
+        display: block;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: #1e293b;
+        border-top: 1px solid #334155;
+        text-align: center;
+        padding: 0.4rem;
+        color: #475569;
+        font-size: 0.72rem;
+        z-index: 900;
+      }
+      .axiom-ad-leaderboard { display: none; }
+    }
+
+    /* ---- EDU SECTION ---- */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 1rem;
+    }
+    .section-intro {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 1.25rem;
+    }
+    .edu-h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin: 1.25rem 0 0.5rem;
+    }
+    .edu-p {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ---- GLOSSARY ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .glossary-item {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .glossary-term {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #3B82F6;
+      margin-bottom: 0.3rem;
+    }
+    .glossary-def {
+      font-size: 0.78rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* ---- FAQ ACCORDION ---- */
+    .faq-item {
+      border-bottom: 1px solid #1e293b;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 0.9rem 0;
+      color: #cbd5e1;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .faq-q:hover { color: #f1f5f9; }
+    .faq-icon {
+      font-size: 1.1rem;
+      color: #3B82F6;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-a {
+      display: none;
+      font-size: 0.84rem;
+      color: #94a3b8;
+      line-height: 1.7;
+      padding-bottom: 0.9rem;
+    }
+    .faq-a.open { display: block; }
+    .faq-icon.open { transform: rotate(45deg); }
+  </style>
+</head>
+
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Great Circle Distance Calculator: Flight Path and Geodesic Distance Tool</h1>
+      <p class="subtitle">Calculate the shortest flight path distance between any two points on Earth using the Haversine formula. Enter coordinates or look up IATA airport codes for instant great-circle distance and initial compass bearing.</p>
+    </header>
+
+    <!-- THREE-PANEL DASHBOARD -->
+    <div class="dashboard">
+
+      <!-- PANEL 1: ORIGIN AND DESTINATION -->
+      <div class="panel">
+        <div class="panel-label"><span class="dot"></span> Origin and Destination Coordinates</div>
+
+        <!-- POINT A -->
+        <div style="margin-bottom:1.25rem;">
+          <div style="font-size:0.8rem;font-weight:700;color:#0EA5E9;margin-bottom:0.7rem;text-transform:uppercase;letter-spacing:0.07em;">Point A - Origin</div>
+
+          <div class="iata-row">
+            <div class="iata-input-wrap">
+              <label for="iata-a">IATA Airport Code (e.g. JFK)</label>
+              <input type="text" id="iata-a" placeholder="JFK" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+            <button class="btn-lookup" onclick="lookupIATA('a')">Look Up</button>
+          </div>
+          <div class="iata-feedback" id="iata-feedback-a"></div>
+
+          <div class="divider-or">- or enter coordinates directly -</div>
+
+          <div class="field-group">
+            <label>Latitude (degrees, -90 to 90)</label>
+            <input type="number" id="lat-a" placeholder="40.6413" step="any" oninput="onCoordChange()" />
+          </div>
+          <div class="field-group" style="margin-bottom:0">
+            <label>Longitude (degrees, -180 to 180)</label>
+            <input type="number" id="lon-a" placeholder="-73.7781" step="any" oninput="onCoordChange()" />
+          </div>
+        </div>
+
+        <!-- POINT B -->
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:#3B82F6;margin-bottom:0.7rem;text-transform:uppercase;letter-spacing:0.07em;">Point B - Destination</div>
+
+          <div class="iata-row">
+            <div class="iata-input-wrap">
+              <label for="iata-b">IATA Airport Code (e.g. LHR)</label>
+              <input type="text" id="iata-b" placeholder="LHR" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" />
+            </div>
+            <button class="btn-lookup" onclick="lookupIATA('b')">Look Up</button>
+          </div>
+          <div class="iata-feedback" id="iata-feedback-b"></div>
+
+          <div class="divider-or">- or enter coordinates directly -</div>
+
+          <div class="field-group">
+            <label>Latitude (degrees, -90 to 90)</label>
+            <input type="number" id="lat-b" placeholder="51.4775" step="any" oninput="onCoordChange()" />
+          </div>
+          <div class="field-group" style="margin-bottom:0">
+            <label>Longitude (degrees, -180 to 180)</label>
+            <input type="number" id="lon-b" placeholder="-0.4614" step="any" oninput="onCoordChange()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: GEODESIC RESULTS -->
+      <div class="panel">
+        <div class="panel-label"><span class="dot teal"></span> Geodesic Flight Path Results</div>
+        <div id="results-panel">
+          <div class="placeholder-hint">Enter coordinates or look up airport codes on the left to compute the great-circle distance and initial bearing.</div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: PATH VISUALIZATION -->
+      <div class="panel panel-viz">
+        <div class="panel-label"><span class="dot"></span> Great Circle Arc Path Visualization</div>
+        <canvas id="flight-canvas" height="240"></canvas>
+        <div class="viz-legend">
+          <div class="viz-legend-item"><div class="swatch swatch-arc"></div> Great Circle Arc (shortest path)</div>
+          <div class="viz-legend-item"><div class="swatch swatch-rhumb" style="background:#475569;height:2px;border-top:2px dashed #475569;"></div> Straight Line on Map</div>
+          <div class="viz-legend-item"><div class="swatch swatch-eq"></div> Equator</div>
+        </div>
+      </div>
+
+    </div><!-- end dashboard -->
+
+    <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only) -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Great Circle</div>
+          <div class="glossary-def">Any circle on a sphere whose plane passes through the center of the sphere. The equator and all lines of longitude are great circles. Arcs along a great circle are the shortest path between two points on a sphere.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Geodesic</div>
+          <div class="glossary-def">The shortest curve connecting two points on a curved surface. On a perfect sphere, a geodesic is always a great circle arc. Aviation route planning uses geodesic paths to minimize flight distance.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Haversine Formula</div>
+          <div class="glossary-def">A trigonometric equation for calculating great-circle distance between two points defined by latitude and longitude. It avoids numerical errors for short distances that a simpler spherical law of cosines formula would produce.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Azimuth</div>
+          <div class="glossary-def">The horizontal compass bearing measured clockwise from true north (0 degrees) to the destination. A bearing of 90 degrees points due east, 180 degrees points due south, and 270 degrees points due west.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Nautical Mile</div>
+          <div class="glossary-def">A unit of distance equal to exactly 1,852 meters (1.15078 statute miles). One nautical mile corresponds to one minute of arc along a meridian, which is why it is the standard unit in aviation and maritime navigation.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">IATA Code</div>
+          <div class="glossary-def">A three-letter identifier assigned by the International Air Transport Association to airports worldwide. Examples: JFK (John F. Kennedy, New York), LHR (Heathrow, London), HND (Haneda, Tokyo), LAX (Los Angeles).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Earth Curvature</div>
+          <div class="glossary-def">The gradual curving of the Earth's surface due to its roughly spherical shape. Over long distances, flight paths must account for this curvature, which is why routes that appear curved on a flat map are actually the geometrically shortest option.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Central Angle</div>
+          <div class="glossary-def">The angle in radians or degrees between two points as measured from the center of the Earth. Multiplying the central angle by the Earth's mean radius gives the great-circle surface distance.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Great Circle Distance and Flight Path Geodesics</h2>
+
+      <p class="section-intro">When you book a long-haul flight, the route displayed on the in-flight map often appears to arc strangely far north or south compared to what you might expect from a straight line on a standard world map. This is not a quirk of the airline's routing. It is basic geometry: the surface of the Earth is curved, and on a curved surface, the shortest path between two points is always a great circle arc, not a straight line on a flat projection.</p>
+
+      <div class="edu-h3">How to Use This Great Circle Distance Calculator</div>
+      <p class="edu-p">You can enter your origin and destination coordinates in one of two ways. First, type a valid IATA airport code (such as JFK, LHR, or HND) into the airport code field and click "Look Up" to automatically fill in that airport's latitude and longitude. Second, type decimal-degree coordinates directly into the latitude and longitude fields. The calculation fires automatically on every input change with no submit button required. The results panel updates instantly with the great-circle distance in kilometers, statute miles, and nautical miles, along with the initial compass bearing (azimuth) from Point A to Point B. The visualization panel draws the arc path across a flat equirectangular projection so you can see how the great circle curves relative to the "straight line on the map" path.</p>
+
+      <div class="edu-h3">Why Flat Maps Mislead Us About Flight Paths</div>
+      <p class="edu-p">The most common world map projection (Mercator) preserves compass bearings and shapes of small areas but severely distorts distances and sizes at high latitudes. Greenland appears as large as Africa on a Mercator map, even though Africa is about 14 times larger. Because of this distortion, a straight line drawn on a Mercator map between two cities at similar latitudes (such as Los Angeles and London) appears to be the shortest route. It is not. That straight line corresponds to a rhumb line: a path that crosses every meridian at the same compass angle. A rhumb line is easy to follow on a compass but it is longer than the great circle route. A flight from Los Angeles to London following the great circle arcs far north over Canada and the North Atlantic, cutting hundreds of miles off the journey.</p>
+
+      <div class="edu-h3">The Haversine Formula: How This Tool Does the Math</div>
+      <p class="edu-p">The Haversine formula is a specialized application of the spherical law of cosines, designed to handle the numerical precision challenges that arise when computing distances between points that are very close together. The formula works in four steps. First, the latitude and longitude of both points are converted from degrees to radians (radians = degrees multiplied by pi divided by 180). Second, the differences in latitude (delta-lat) and longitude (delta-lon) are calculated. Third, the Haversine function is applied: a = sin(delta-lat / 2) squared plus cos(lat1) times cos(lat2) times sin(delta-lon / 2) squared. Fourth, the central angle c = 2 multiplied by arctan2(sqrt(a), sqrt(1 minus a)) is computed, and the distance is d = R multiplied by c, where R is the Earth's mean radius of 6,371 km. This tool also computes the initial bearing using the atan2 formula: bearing = atan2(sin(delta-lon) times cos(lat2), cos(lat1) times sin(lat2) minus sin(lat1) times cos(lat2) times cos(delta-lon)), converted to degrees and normalized to a 0 to 360 degree compass heading.</p>
+
+      <div class="edu-h3">Practical Applications in Aviation and Navigation</div>
+      <p class="edu-p">Airlines use great circle routing as a starting point for every long-haul flight plan. The actual flown route is then refined by factoring in jet stream winds, restricted airspace, overflight permit requirements, and airport slot availability. Typically, a flight from New York (JFK) to London (LHR) has a great circle distance of about 5,540 km. Due to favorable jet stream winds blowing eastward across the North Atlantic, the actual flight eastbound often takes a slightly longer northern arc to maximize tailwind benefit, while the westbound return takes a more southerly track to avoid headwinds. Understanding the baseline great circle distance is the essential first step in all of this planning.</p>
+
+      <!-- FAQ ACCORDION -->
+      <div class="edu-h3" style="margin-top:1.5rem;">Frequently Asked Questions</div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why is the shortest flight path not a straight line on a flat map?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">A flat map (Mercator projection) distorts the curved surface of a sphere onto a flat plane. A straight line on that map is a rhumb line, which holds a constant compass bearing but is not the shortest route. The shortest path between two points on a sphere follows a great circle arc, which appears curved on a flat map but is geometrically shorter. Flights from New York to London, for example, curve far north over Canada and Greenland because that great circle arc is hundreds of miles shorter than following a straight line on a Mercator map.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is a great circle and why is it used in aviation?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">A great circle is any circle formed by the intersection of a sphere and a plane passing through the center of that sphere. The equator and every line of longitude are great circles. Because they represent the largest possible circles on a sphere, arcs along a great circle always represent the shortest distance between two points on the surface. Airlines use great circle routes to minimize fuel consumption and flight time, since even a few percent reduction in distance across a long-haul route saves thousands of dollars per flight.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How accurate is the Earth mean radius for distance calculations?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">The Earth mean radius of 6,371 km (3,959 miles) is accurate to within about 0.3% for most practical distance calculations. The Earth is actually an oblate spheroid, slightly flattened at the poles, with an equatorial radius of 6,378 km and a polar radius of 6,357 km. For aviation route planning and general geodesic purposes, the mean radius produces results within a few kilometers on transcontinental flights, which is well within operational margins. Higher-precision applications such as GPS navigation use the WGS-84 ellipsoid model instead.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between true north and magnetic bearing?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">True north (geographic north) points toward the geographic North Pole, the axis around which Earth rotates. Magnetic north is where a compass needle actually points, determined by Earth's magnetic field. The angular difference between them is called magnetic declination (or variation), which changes by location and shifts slowly over time. The initial bearing (azimuth) calculated by this tool is a true bearing measured clockwise from true north. Pilots apply their local magnetic declination value to convert it to a magnetic heading for actual navigation.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does altitude affect the distance of a flight path?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">Altitude adds a small amount to actual flight distance because an aircraft flying at 35,000 feet (about 10.7 km) traces a slightly larger arc than one on the surface. At typical cruising altitudes, the added radius increases the path length by roughly 0.17% compared to the surface great circle distance. On a 10,000 km route that is about 17 km extra. This tool calculates surface great circle distance using the Earth mean radius, which is the standard method for route planning. Airline published distances typically also ignore altitude correction since it is negligible for scheduling and fuel estimates.</div>
+      </div>
+
+    </div><!-- end edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    // -------------------------------------------------------
+    // IATA AIRPORT DATABASE (major global airports)
+    // -------------------------------------------------------
+    const AIRPORTS = {
+      "JFK": { name: "John F. Kennedy Intl, New York, USA", lat: 40.6413, lon: -73.7781 },
+      "LHR": { name: "Heathrow, London, UK", lat: 51.4775, lon: -0.4614 },
+      "HND": { name: "Haneda, Tokyo, Japan", lat: 35.5494, lon: 139.7798 },
+      "NRT": { name: "Narita Intl, Tokyo, Japan", lat: 35.7720, lon: 140.3929 },
+      "LAX": { name: "Los Angeles Intl, USA", lat: 33.9425, lon: -118.4081 },
+      "CDG": { name: "Charles de Gaulle, Paris, France", lat: 49.0097, lon: 2.5479 },
+      "DXB": { name: "Dubai Intl, UAE", lat: 25.2532, lon: 55.3657 },
+      "ORD": { name: "O'Hare Intl, Chicago, USA", lat: 41.9742, lon: -87.9073 },
+      "SYD": { name: "Kingsford Smith, Sydney, Australia", lat: -33.9399, lon: 151.1753 },
+      "SIN": { name: "Changi, Singapore", lat: 1.3644, lon: 103.9915 },
+      "FRA": { name: "Frankfurt Airport, Germany", lat: 50.0379, lon: 8.5622 },
+      "AMS": { name: "Amsterdam Schiphol, Netherlands", lat: 52.3086, lon: 4.7639 },
+      "HKG": { name: "Hong Kong Intl, China", lat: 22.3080, lon: 113.9185 },
+      "ICN": { name: "Incheon Intl, Seoul, South Korea", lat: 37.4602, lon: 126.4407 },
+      "GRU": { name: "Guarulhos Intl, Sao Paulo, Brazil", lat: -23.4356, lon: -46.4731 },
+      "MEX": { name: "Benito Juarez Intl, Mexico City", lat: 19.4363, lon: -99.0721 },
+      "MAD": { name: "Adolfo Suarez Barajas, Madrid, Spain", lat: 40.4719, lon: -3.5626 },
+      "BCN": { name: "El Prat, Barcelona, Spain", lat: 41.2971, lon: 2.0785 },
+      "FCO": { name: "Leonardo da Vinci Fiumicino, Rome, Italy", lat: 41.7999, lon: 12.2462 },
+      "MUC": { name: "Munich Airport, Germany", lat: 48.3537, lon: 11.7750 },
+      "BKK": { name: "Suvarnabhumi, Bangkok, Thailand", lat: 13.6900, lon: 100.7501 },
+      "KUL": { name: "Kuala Lumpur Intl, Malaysia", lat: 2.7456, lon: 101.7099 },
+      "DEL": { name: "Indira Gandhi Intl, New Delhi, India", lat: 28.5665, lon: 77.1031 },
+      "BOM": { name: "Chhatrapati Shivaji Intl, Mumbai, India", lat: 19.0896, lon: 72.8656 },
+      "JNB": { name: "OR Tambo Intl, Johannesburg, South Africa", lat: -26.1367, lon: 28.2411 },
+      "CAI": { name: "Cairo Intl, Egypt", lat: 30.1219, lon: 31.4056 },
+      "LOS": { name: "Murtala Muhammed Intl, Lagos, Nigeria", lat: 6.5774, lon: 3.3212 },
+      "NBO": { name: "Jomo Kenyatta Intl, Nairobi, Kenya", lat: -1.3192, lon: 36.9275 },
+      "SFO": { name: "San Francisco Intl, USA", lat: 37.6213, lon: -122.3790 },
+      "SEA": { name: "Seattle-Tacoma Intl, USA", lat: 47.4502, lon: -122.3088 },
+      "MIA": { name: "Miami Intl, USA", lat: 25.7959, lon: -80.2870 },
+      "ATL": { name: "Hartsfield-Jackson Atlanta Intl, USA", lat: 33.6407, lon: -84.4277 },
+      "DFW": { name: "Dallas/Fort Worth Intl, USA", lat: 32.8998, lon: -97.0403 },
+      "EWR": { name: "Newark Liberty Intl, USA", lat: 40.6895, lon: -74.1745 },
+      "BOS": { name: "Boston Logan Intl, USA", lat: 42.3656, lon: -71.0096 },
+      "YYZ": { name: "Toronto Pearson Intl, Canada", lat: 43.6777, lon: -79.6248 },
+      "YVR": { name: "Vancouver Intl, Canada", lat: 49.1939, lon: -123.1844 },
+      "GIG": { name: "Galeao Intl, Rio de Janeiro, Brazil", lat: -22.8099, lon: -43.2505 },
+      "SCL": { name: "Arturo Merino Benitez, Santiago, Chile", lat: -33.3930, lon: -70.7858 },
+      "EZE": { name: "Ministro Pistarini Intl, Buenos Aires, Argentina", lat: -34.8222, lon: -58.5358 },
+      "LIM": { name: "Jorge Chavez Intl, Lima, Peru", lat: -12.0219, lon: -77.1143 },
+      "BOG": { name: "El Dorado Intl, Bogota, Colombia", lat: 4.7016, lon: -74.1469 },
+      "CPT": { name: "Cape Town Intl, South Africa", lat: -33.9715, lon: 18.6021 },
+      "ADD": { name: "Bole Intl, Addis Ababa, Ethiopia", lat: 8.9779, lon: 38.7993 },
+      "IST": { name: "Istanbul Airport, Turkey", lat: 41.2753, lon: 28.7519 },
+      "DME": { name: "Domodedovo Intl, Moscow, Russia", lat: 55.4088, lon: 37.9063 },
+      "SVO": { name: "Sheremetyevo Intl, Moscow, Russia", lat: 55.9726, lon: 37.4146 },
+      "MEL": { name: "Melbourne Airport, Australia", lat: -37.6690, lon: 144.8410 },
+      "AKL": { name: "Auckland Airport, New Zealand", lat: -37.0082, lon: 174.7917 },
+      "PEK": { name: "Beijing Capital Intl, China", lat: 40.0799, lon: 116.6031 },
+      "PVG": { name: "Pudong Intl, Shanghai, China", lat: 31.1434, lon: 121.8052 },
+      "CAN": { name: "Baiyun Intl, Guangzhou, China", lat: 23.3924, lon: 113.2988 },
+      "TPE": { name: "Taiwan Taoyuan Intl, Taiwan", lat: 25.0797, lon: 121.2342 },
+      "MNL": { name: "Ninoy Aquino Intl, Manila, Philippines", lat: 14.5086, lon: 121.0197 },
+      "CGK": { name: "Soekarno-Hatta Intl, Jakarta, Indonesia", lat: -6.1256, lon: 106.6559 },
+      "DPS": { name: "Ngurah Rai Intl, Bali, Indonesia", lat: -8.7467, lon: 115.1670 },
+      "RUH": { name: "King Khalid Intl, Riyadh, Saudi Arabia", lat: 24.9576, lon: 46.6988 },
+      "DOH": { name: "Hamad Intl, Doha, Qatar", lat: 25.2609, lon: 51.6138 },
+      "AUH": { name: "Abu Dhabi Intl, UAE", lat: 24.4330, lon: 54.6511 },
+      "KWI": { name: "Kuwait Intl, Kuwait", lat: 29.2266, lon: 47.9689 },
+      "TLV": { name: "Ben Gurion Intl, Tel Aviv, Israel", lat: 32.0114, lon: 34.8867 },
+      "MXP": { name: "Malpensa Intl, Milan, Italy", lat: 45.6306, lon: 8.7281 },
+      "ZRH": { name: "Zurich Airport, Switzerland", lat: 47.4647, lon: 8.5492 },
+      "VIE": { name: "Vienna Intl, Austria", lat: 48.1103, lon: 16.5697 },
+      "BRU": { name: "Brussels Airport, Belgium", lat: 50.9014, lon: 4.4844 },
+      "OSL": { name: "Oslo Gardermoen, Norway", lat: 60.1939, lon: 11.1004 },
+      "ARN": { name: "Stockholm Arlanda, Sweden", lat: 59.6519, lon: 17.9186 },
+      "CPH": { name: "Copenhagen Airport, Denmark", lat: 55.6180, lon: 12.6560 },
+      "HEL": { name: "Helsinki Vantaa, Finland", lat: 60.3172, lon: 24.9633 },
+      "WAW": { name: "Warsaw Chopin, Poland", lat: 52.1657, lon: 20.9671 },
+      "PRG": { name: "Vaclav Havel Prague Airport, Czech Republic", lat: 50.1008, lon: 14.2600 },
+      "BUD": { name: "Budapest Ferenc Liszt Intl, Hungary", lat: 47.4298, lon: 19.2611 },
+      "OTP": { name: "Henri Coanda Intl, Bucharest, Romania", lat: 44.5711, lon: 26.0850 },
+      "ATH": { name: "Athens Eleftherios Venizelos, Greece", lat: 37.9364, lon: 23.9445 },
+      "LIS": { name: "Lisbon Humberto Delgado, Portugal", lat: 38.7742, lon: -9.1342 },
+      "DUB": { name: "Dublin Airport, Ireland", lat: 53.4213, lon: -6.2700 },
+      "MAN": { name: "Manchester Airport, UK", lat: 53.3537, lon: -2.2750 },
+      "EDI": { name: "Edinburgh Airport, UK", lat: 55.9500, lon: -3.3725 },
+      "BHX": { name: "Birmingham Airport, UK", lat: 52.4539, lon: -1.7480 },
+      "LGW": { name: "Gatwick Airport, London, UK", lat: 51.1537, lon: -0.1821 }
+    };
+
+    // -------------------------------------------------------
+    // EARTH CONSTANTS
+    // -------------------------------------------------------
+    const R_KM = 6371;
+    const KM_TO_MI = 0.621371;
+    const KM_TO_NM = 0.539957;
+
+    // -------------------------------------------------------
+    // CORE HAVERSINE + BEARING MATH
+    // -------------------------------------------------------
+    function toRad(deg) { return deg * Math.PI / 180; }
+    function toDeg(rad) { return rad * 180 / Math.PI; }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const phi1 = toRad(lat1), phi2 = toRad(lat2);
+      const dPhi = toRad(lat2 - lat1);
+      const dLam = toRad(lon2 - lon1);
+      const a = Math.sin(dPhi / 2) ** 2 +
+                Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return { distKm: R_KM * c, centralAngleDeg: toDeg(c) };
+    }
+
+    function initialBearing(lat1, lon1, lat2, lon2) {
+      const phi1 = toRad(lat1), phi2 = toRad(lat2);
+      const dLam = toRad(lon2 - lon1);
+      const x = Math.sin(dLam) * Math.cos(phi2);
+      const y = Math.cos(phi1) * Math.sin(phi2) -
+                Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLam);
+      return (toDeg(Math.atan2(x, y)) + 360) % 360;
+    }
+
+    // Intermediate point along a great circle at fraction t (0..1)
+    function intermediatePoint(lat1, lon1, lat2, lon2, t) {
+      const phi1 = toRad(lat1), lam1 = toRad(lon1);
+      const phi2 = toRad(lat2), lam2 = toRad(lon2);
+      const dPhi = phi2 - phi1, dLam = lam2 - lam1;
+      const a = Math.sin(dPhi / 2) ** 2 +
+                Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+      const delta = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      if (delta < 1e-10) return { lat: lat1, lon: lon1 };
+      const A = Math.sin((1 - t) * delta) / Math.sin(delta);
+      const B = Math.sin(t * delta) / Math.sin(delta);
+      const x = A * Math.cos(phi1) * Math.cos(lam1) + B * Math.cos(phi2) * Math.cos(lam2);
+      const y = A * Math.cos(phi1) * Math.sin(lam1) + B * Math.cos(phi2) * Math.sin(lam2);
+      const z = A * Math.sin(phi1) + B * Math.sin(phi2);
+      const phi = Math.atan2(z, Math.sqrt(x * x + y * y));
+      const lam = Math.atan2(y, x);
+      return { lat: toDeg(phi), lon: toDeg(lam) };
+    }
+
+    // -------------------------------------------------------
+    // INPUT VALIDATION
+    // -------------------------------------------------------
+    function getValidCoord(id, min, max) {
+      const el = document.getElementById(id);
+      const v = parseFloat(el.value);
+      if (isNaN(v) || v < min || v > max) return null;
+      return v;
+    }
+
+    // -------------------------------------------------------
+    // IATA LOOKUP
+    // -------------------------------------------------------
+    function lookupIATA(point) {
+      const code = document.getElementById('iata-' + point).value.trim().toUpperCase();
+      const fb = document.getElementById('iata-feedback-' + point);
+      const airport = AIRPORTS[code];
+      if (!airport) {
+        fb.textContent = code ? 'Airport code "' + code + '" not found in database.' : 'Please enter a 3-letter IATA code.';
+        fb.className = 'iata-feedback err';
+        return;
+      }
+      document.getElementById('lat-' + point).value = airport.lat;
+      document.getElementById('lon-' + point).value = airport.lon;
+      fb.textContent = airport.name + ' (' + airport.lat + ', ' + airport.lon + ')';
+      fb.className = 'iata-feedback';
+      onCoordChange();
+    }
+
+    // Enter key triggers lookup
+    ['a','b'].forEach(p => {
+      document.getElementById('iata-' + p).addEventListener('keydown', e => {
+        if (e.key === 'Enter') lookupIATA(p);
+      });
+    });
+
+    // -------------------------------------------------------
+    // MAIN CALCULATION - fires on every input change
+    // -------------------------------------------------------
+    function onCoordChange() {
+      const lat1 = getValidCoord('lat-a', -90, 90);
+      const lon1 = getValidCoord('lon-a', -180, 180);
+      const lat2 = getValidCoord('lat-b', -90, 90);
+      const lon2 = getValidCoord('lon-b', -180, 180);
+
+      if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) {
+        renderPlaceholder();
+        drawCanvas(null);
+        return;
+      }
+
+      const { distKm, centralAngleDeg } = haversine(lat1, lon1, lat2, lon2);
+      const bearing = initialBearing(lat1, lon1, lat2, lon2);
+      const distMi = distKm * KM_TO_MI;
+      const distNm = distKm * KM_TO_NM;
+
+      renderResults(distKm, distMi, distNm, bearing, centralAngleDeg);
+      drawCanvas({ lat1, lon1, lat2, lon2, centralAngleDeg });
+    }
+
+    // -------------------------------------------------------
+    // RESULT PANEL RENDERING
+    // -------------------------------------------------------
+    function renderPlaceholder() {
+      document.getElementById('results-panel').innerHTML =
+        '<div class="placeholder-hint">Enter coordinates or look up airport codes on the left to compute the great-circle distance and initial bearing.</div>';
+    }
+
+    function fmt(n, dec) { return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+    function bearingLabel(b) {
+      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(b / 22.5) % 16];
+    }
+
+    function renderResults(km, mi, nm, bearing, centralAngle) {
+      document.getElementById('results-panel').innerHTML = `
+        <div class="result-hero">
+          <div class="hero-value">${fmt(km, 1)}</div>
+          <div class="hero-unit">Kilometers (great-circle surface distance)</div>
+        </div>
+        <div class="result-grid">
+          <div class="result-cell">
+            <div class="rc-value">${fmt(mi, 1)}</div>
+            <div class="rc-label">Statute Miles</div>
+          </div>
+          <div class="result-cell">
+            <div class="rc-value">${fmt(nm, 1)}</div>
+            <div class="rc-label">Nautical Miles</div>
+          </div>
+        </div>
+        <div class="bearing-row">
+          <div class="compass-ring">
+            <span class="compass-n">N</span>
+            <div class="compass-arrow" id="compass-arrow" style="transform: rotate(${bearing}deg)"></div>
+          </div>
+          <div class="bearing-info">
+            <div class="bear-val">${fmt(bearing, 1)}&deg; &middot; ${bearingLabel(bearing)}</div>
+            <div class="bear-label">Initial True Bearing (Azimuth) from Origin</div>
+          </div>
+        </div>
+        <div class="central-angle-row">Central angle: <span>${fmt(centralAngle, 3)}&deg;</span></div>
+      `;
+    }
+
+    // -------------------------------------------------------
+    // CANVAS VISUALIZATION
+    // -------------------------------------------------------
+    function drawCanvas(data) {
+      const canvas = document.getElementById('flight-canvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.offsetWidth || 400;
+      canvas.width = W;
+      canvas.height = 240;
+
+      // Background
+      ctx.fillStyle = '#0a1628';
+      ctx.fillRect(0, 0, W, 240);
+
+      // Grid lines (latitude/longitude)
+      ctx.strokeStyle = '#0f2340';
+      ctx.lineWidth = 1;
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const y = latToY(lat, 240);
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      for (let lon = -180; lon <= 180; lon += 60) {
+        const x = lonToX(lon, W);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 240); ctx.stroke();
+      }
+
+      // Equator
+      ctx.strokeStyle = '#1e3a5f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, latToY(0, 240)); ctx.lineTo(W, latToY(0, 240));
+      ctx.stroke();
+
+      // Lat/lon labels
+      ctx.fillStyle = '#1e3a5f';
+      ctx.font = '9px monospace';
+      ctx.fillText('EQ', 4, latToY(0, 240) - 3);
+
+      if (!data) {
+        ctx.fillStyle = '#334155';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Enter coordinates to visualize the flight arc', W / 2, 120);
+        ctx.textAlign = 'left';
+        return;
+      }
+
+      const { lat1, lon1, lat2, lon2 } = data;
+      const STEPS = 80;
+
+      // Rhumb line (straight line on map - dashed)
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(lonToX(lon1, W), latToY(lat1, 240));
+      ctx.lineTo(lonToX(lon2, W), latToY(lat2, 240));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Great circle arc
+      const pts = [];
+      for (let i = 0; i <= STEPS; i++) {
+        const t = i / STEPS;
+        const pt = intermediatePoint(lat1, lon1, lat2, lon2, t);
+        pts.push({ x: lonToX(pt.lon, W), y: latToY(pt.lat, 240) });
+      }
+
+      // Detect dateline crossing and split
+      const segments = [];
+      let seg = [pts[0]];
+      for (let i = 1; i <= STEPS; i++) {
+        if (Math.abs(pts[i].x - pts[i - 1].x) > W * 0.5) {
+          segments.push(seg);
+          seg = [pts[i]];
+        } else {
+          seg.push(pts[i]);
+        }
+      }
+      segments.push(seg);
+
+      // Glow effect for arc
+      ctx.shadowColor = '#3B82F6';
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 2.5;
+      segments.forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s[0].x, s[0].y);
+        s.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      });
+      ctx.shadowBlur = 0;
+
+      // Origin dot
+      ctx.fillStyle = '#0EA5E9';
+      ctx.beginPath();
+      ctx.arc(lonToX(lon1, W), latToY(lat1, 240), 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px Inter, sans-serif';
+      ctx.fillText('A', lonToX(lon1, W) + 7, latToY(lat1, 240) + 4);
+
+      // Destination dot
+      ctx.fillStyle = '#3B82F6';
+      ctx.beginPath();
+      ctx.arc(lonToX(lon2, W), latToY(lat2, 240), 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('B', lonToX(lon2, W) + 7, latToY(lat2, 240) + 4);
+    }
+
+    function lonToX(lon, W) { return (lon + 180) / 360 * W; }
+    function latToY(lat, H) { return (90 - lat) / 180 * H; }
+
+    // Redraw canvas on resize
+    window.addEventListener('resize', () => {
+      const lat1 = getValidCoord('lat-a', -90, 90);
+      const lon1 = getValidCoord('lon-a', -180, 180);
+      const lat2 = getValidCoord('lat-b', -90, 90);
+      const lon2 = getValidCoord('lon-b', -180, 180);
+      if (lat1 !== null && lon1 !== null && lat2 !== null && lon2 !== null) {
+        const { centralAngleDeg } = haversine(lat1, lon1, lat2, lon2);
+        drawCanvas({ lat1, lon1, lat2, lon2, centralAngleDeg });
+      } else {
+        drawCanvas(null);
+      }
+    });
+
+    // Initial canvas draw
+    drawCanvas(null);
+
+    // FAQ accordion
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling;
+      const icon = btn.querySelector('.faq-icon');
+      const isOpen = answer.classList.contains('open');
+      document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.faq-icon').forEach(i => i.classList.remove('open'));
+      if (!isOpen) {
+        answer.classList.add('open');
+        icon.classList.add('open');
+      }
+    }
+  </script>
+</body>
+</html>

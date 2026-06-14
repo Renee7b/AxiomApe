@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hidden Unicode Zero-Width Space Detector: Find Invisible Tracking Characters | AxiomApe</title>
+  <meta name="description" content="Free browser-based tool that detects and removes invisible Unicode characters hidden in copied web text, including zero-width spaces, joiners, direction marks, and other non-printing characters used for tracking or watermarking. 100% client-side." />
+  <meta name="keywords" content="zero width space detector, invisible character finder, unicode hidden character remover, zwsp detector, non-printing character cleaner, text obfuscation detector, unicode watermark detector, zero width joiner detector, invisible unicode remover, clean copied text, remove hidden characters, zero width space, FEFF BOM remover, direction mark detector, text sanitizer" />
+  <link rel="canonical" href="https://axiomape.com/unicode-zero-width-detector/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Hidden Unicode Zero-Width Space Detector",
+        "description": "Free browser-based tool that detects and removes invisible Unicode characters hidden in copied web text, including zero-width spaces, joiners, direction marks, and other non-printing characters used for tracking or watermarking. 100% client-side.",
+        "url": "https://axiomape.com/unicode-zero-width-detector/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a zero-width space and why is it used?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A zero-width space (U+200B) is a Unicode character that occupies no visible width and renders as nothing on screen. It is legitimately used in some languages and typesetting systems to indicate potential line-break points where a space character would look wrong. However, it is also placed inside text by some websites and content management systems to act as a hidden watermark or tracking token, allowing the original source of a leaked document or copied content to be traced back to a specific user or session."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can invisible characters be used for tracking or watermarking text?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Publishers and platforms can encode a unique binary fingerprint by placing different combinations of zero-width characters at specific positions in a document. For example, a Zero-Width Space might represent a binary 1 and a Zero-Width Non-Joiner might represent a binary 0. By varying which invisible characters appear between each word, a unique identifier can be embedded that survives copy-pasting. When the text later appears online, the original source can decode the hidden pattern and identify the specific user or account it was copied from."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can zero-width spaces cause errors in code or database entries?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Zero-width and other non-printing Unicode characters are a frequent source of hard-to-debug errors in software. If a developer copies a variable name, API key, URL, or JSON key from a webpage or PDF and a hidden character is present, the string will look correct in the editor but will fail string comparisons, key lookups, and URL parsing at runtime. Database queries can also fail silently if a primary key or field value contains an invisible character that was not present in the original schema. This tool lets you sanitize any pasted text before using it in code."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does this tool detect characters that are invisible to the eye?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The detector iterates through every character in your pasted text and checks each character's Unicode code point value against a list of known non-printing characters. These include the range U+200B through U+200F (zero-width space, non-joiner, joiner, left-to-right mark, and right-to-left mark), as well as U+FEFF (the byte-order mark), U+2060 through U+2064 (word joiner and invisible math operators), and U+180E (Mongolian vowel separator). When a match is found, the tool inserts a labeled amber badge at the exact position in the output visualizer so you can see precisely where each hidden character was hiding."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it safe to copy and paste text from untrusted websites?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Copied text from untrusted websites can carry hidden Unicode characters that range from harmless formatting artifacts to intentional tracking watermarks or even obfuscated code snippets designed to look like safe text. Best practice is to paste any copied text into this detector before using it in emails, documents, source code, or database fields. The Strip All Hidden Characters button removes every detected non-printing character and returns a clean string you can safely use anywhere."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* RESET AND BASE */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:        #1a3a5c;
+      --navy-dark:   #0d1f33;
+      --navy-light:  #1e4a7a;
+      --green:       #10b981;
+      --detect-blue: #0EA5E9;
+      --amber:       #F59E0B;
+      --amber-glow:  rgba(245, 158, 11, 0.22);
+      --bg:          #f0f2f5;
+      --card:        #ffffff;
+      --border:      #dde3ea;
+      --text:        #1c2b3a;
+      --muted:       #6b7c8d;
+      --shadow:      0 4px 24px rgba(26,58,92,0.09);
+      --radius:      12px;
+
+      --hud-bg:      #0f172a;
+      --hud-alt:     #1e293b;
+      --hud-border:  #334155;
+      --hud-chrome:  #1e293b;
+      --hud-text:    #e2e8f0;
+      --hud-muted:   #94a3b8;
+      --mono:        'Courier New', Courier, monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* PAGE HEADER */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 10px;
+      line-height: 1.25;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--detect-blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* TWO-PANEL WORKSPACE ROW */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 768px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    /* PANEL SHELL */
+    .panel {
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      background: var(--hud-chrome);
+      border-bottom: 1px solid var(--hud-border);
+      padding: 10px 16px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--detect-blue);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--detect-blue);
+      box-shadow: 0 0 6px var(--detect-blue);
+      flex-shrink: 0;
+    }
+    .panel-body {
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* INPUT TEXTAREA */
+    #inputText {
+      width: 100%;
+      flex: 1;
+      min-height: 220px;
+      background: #0a0f1a;
+      border: 1px solid var(--hud-border);
+      border-radius: 6px;
+      color: var(--hud-text);
+      font-family: var(--mono);
+      font-size: 0.875rem;
+      line-height: 1.65;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #inputText:focus {
+      border-color: var(--detect-blue);
+      box-shadow: 0 0 0 2px rgba(14,165,233,0.14);
+    }
+    #inputText::placeholder { color: #475569; }
+
+    .input-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.73rem;
+      color: var(--hud-muted);
+      font-family: var(--mono);
+    }
+    #scanStatus { color: var(--detect-blue); }
+
+    /* OVERLAY VISUALIZER */
+    #overlayOutput {
+      width: 100%;
+      flex: 1;
+      min-height: 220px;
+      background: #0a0f1a;
+      border: 1px solid var(--hud-border);
+      border-radius: 6px;
+      color: var(--hud-text);
+      font-family: var(--mono);
+      font-size: 0.875rem;
+      line-height: 1.85;
+      padding: 12px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* SECURE / AWAITING INDICATOR */
+    .status-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 196px;
+      gap: 10px;
+    }
+    .status-icon { font-size: 2.4rem; }
+    .status-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .status-label.await { color: var(--hud-muted); }
+    .status-label.secure { color: var(--green); }
+
+    /* HIDDEN CHARACTER BADGE */
+    .zwchar {
+      display: inline-block;
+      background: var(--amber-glow);
+      border: 1px solid var(--amber);
+      border-radius: 3px;
+      color: var(--amber);
+      font-size: 0.63rem;
+      font-weight: 800;
+      padding: 1px 4px;
+      margin: 0 1px;
+      vertical-align: middle;
+      box-shadow: 0 0 7px var(--amber-glow);
+      font-family: var(--mono);
+      letter-spacing: 0.04em;
+      cursor: default;
+    }
+
+    /* TELEMETRY PANEL */
+    .telemetry-panel {
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .telemetry-body { padding: 18px; }
+
+    .telem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .telem-stat {
+      background: var(--hud-alt);
+      border: 1px solid var(--hud-border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--amber);
+      font-family: var(--mono);
+      line-height: 1;
+    }
+    .stat-value.clean { color: var(--green); }
+    .stat-value.blue  { font-size: 1.3rem; color: var(--detect-blue); }
+    .stat-value.muted { font-size: 1.3rem; color: var(--hud-muted); }
+    .stat-label {
+      font-size: 0.68rem;
+      color: var(--hud-muted);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* FINDINGS BREAKDOWN */
+    .findings-section { margin-bottom: 22px; }
+    .findings-title {
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--detect-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 10px;
+    }
+    .finding-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--hud-alt);
+      border: 1px solid var(--hud-border);
+      border-radius: 6px;
+      padding: 9px 14px;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+    }
+    .finding-name  { color: var(--hud-text); font-family: var(--mono); }
+    .finding-code  { color: var(--hud-muted); font-size: 0.74rem; font-family: var(--mono); }
+    .finding-count {
+      background: var(--amber);
+      color: #000;
+      font-weight: 800;
+      font-size: 0.74rem;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+    .no-findings {
+      color: var(--hud-muted);
+      font-size: 0.83rem;
+      text-align: center;
+      padding: 14px;
+      font-family: var(--mono);
+    }
+
+    /* BUTTONS */
+    .btn-strip {
+      width: 100%;
+      background: linear-gradient(135deg, #F59E0B, #d97706);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 13px 20px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: opacity 0.18s, transform 0.1s;
+      letter-spacing: 0.03em;
+      margin-bottom: 10px;
+    }
+    .btn-strip:hover  { opacity: 0.88; transform: translateY(-1px); }
+    .btn-strip:active { transform: translateY(0); }
+    .btn-strip:disabled {
+      background: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+      transform: none;
+      opacity: 1;
+    }
+
+    .btn-copy {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--detect-blue);
+      color: var(--detect-blue);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .btn-copy:hover { background: rgba(14,165,233,0.1); }
+
+    .strip-feedback {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--green);
+      margin-top: 8px;
+      min-height: 18px;
+      font-family: var(--mono);
+    }
+
+    /* EDUCATIONAL SECTION */
+    .edu-wrap { margin-top: 4px; }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .edu-section h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      font-size: 1rem;
+      color: #4a5568;
+      margin-bottom: 22px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 26px 0 10px;
+    }
+    .edu-section p {
+      color: #4a5568;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ul {
+      padding-left: 20px;
+      color: #4a5568;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section li { margin-bottom: 5px; }
+
+    /* UNICODE REFERENCE TABLE */
+    .char-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin: 16px 0;
+    }
+    .char-table th {
+      background: var(--navy);
+      color: #fff;
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .char-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: #4a5568;
+    }
+    .char-table td:first-child {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--amber);
+      font-weight: 700;
+    }
+    .char-table tr:last-child td { border-bottom: none; }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: #f8fafc;
+      border: none;
+      padding: 15px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--navy);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: #eef4fb; }
+    .faq-chev { font-size: 0.8rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-question[aria-expanded="true"] .faq-chev { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      color: #4a5568;
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+
+    /* TOOL DISCLAIMER */
+    .disclaimer {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.82rem;
+      color: #78350f;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Hidden Unicode Zero-Width Space Detector</h1>
+    <p>Find invisible tracking characters often hidden in copied web text. Detect, visualize, and strip non-printing Unicode characters in real time. 100% client-side, nothing ever leaves your browser.</p>
+  </header>
+
+  <!-- TOOL CARD -->
+  <div class="card">
+    <div class="card-title">
+      <span>&#128269;</span>
+      Detection Workspace
+    </div>
+
+    <!-- PANEL ROW: Input + Overlay Visualizer -->
+    <div class="workspace">
+
+      <!-- Panel 1: Detection Input -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot"></div>
+          Panel 1 - Paste Text to Inspect
+        </div>
+        <div class="panel-body">
+          <textarea
+            id="inputText"
+            placeholder="Paste any text here to scan it for hidden zero-width or non-printing Unicode characters. Results update instantly as you type or paste."
+            oninput="analyzeText()"
+            spellcheck="false"
+          ></textarea>
+          <div class="input-meta">
+            <span id="charCount">0 characters</span>
+            <span id="scanStatus">Awaiting input</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Anomaly Overlay Visualizer -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:var(--amber); box-shadow:0 0 6px var(--amber);"></div>
+          Panel 2 - Anomaly Overlay Visualizer
+        </div>
+        <div class="panel-body">
+          <div id="overlayOutput">
+            <div class="status-indicator">
+              <div class="status-icon">&#128274;</div>
+              <div class="status-label await">Awaiting Input</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- end .workspace -->
+
+    <!-- Panel 3: Telemetry and Sanitizer -->
+    <div class="telemetry-panel">
+      <div class="panel-header">
+        <div class="dot" style="background:#a855f7; box-shadow:0 0 6px #a855f7;"></div>
+        Panel 3 - Telemetry and Sanitizer
+      </div>
+      <div class="telemetry-body">
+
+        <!-- Stat readout -->
+        <div class="telem-grid">
+          <div class="telem-stat">
+            <div class="stat-value clean" id="statTotal">0</div>
+            <div class="stat-label">Total Hidden Characters Found</div>
+          </div>
+          <div class="telem-stat">
+            <div class="stat-value blue" id="statTypes">--</div>
+            <div class="stat-label">Distinct Categories Detected</div>
+          </div>
+          <div class="telem-stat">
+            <div class="stat-value muted" id="statVisible">0</div>
+            <div class="stat-label">Visible Characters (Clean)</div>
+          </div>
+        </div>
+
+        <!-- Findings breakdown -->
+        <div class="findings-section">
+          <div class="findings-title">Character Category Breakdown</div>
+          <div id="findingsList">
+            <div class="no-findings">No hidden characters detected. Paste text above to begin scanning.</div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <button class="btn-strip" id="stripBtn" onclick="stripHidden()" disabled>
+          Strip All Hidden Characters
+        </button>
+        <button class="btn-copy" id="copyBtn" onclick="copyClean()" style="display:none;">
+          Copy Clean Text to Clipboard
+        </button>
+        <div class="strip-feedback" id="stripFeedback"></div>
+
+      </div>
+    </div>
+
+  </div>
+  <!-- end tool card -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <!-- EDUCATIONAL CONTENT -->
+  <div class="edu-wrap">
+
+    <!-- Glossary Card -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Zero-Width Space (ZWSP)</div>
+          <div class="glossary-def">A Unicode character (U+200B) that has zero visual width and is completely invisible on screen. Used as a potential line-break hint in typography, it is also widely inserted into text to embed hidden watermarks that survive copy-pasting.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Unicode</div>
+          <div class="glossary-def">An international standard that assigns a unique numeric code point to every character in every writing system, plus thousands of control, formatting, and symbolic characters, including invisible ones used for text manipulation and tracking.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Non-Printing Character</div>
+          <div class="glossary-def">Any character that occupies no visible glyph on screen or in print. Non-printing characters include control codes, formatting marks, and zero-width characters that affect layout or encoding without being visible to the reader.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Digital Watermarking</div>
+          <div class="glossary-def">The practice of embedding a hidden, often unique identifier into content to enable later verification of its origin or to detect unauthorized distribution. Text watermarking uses invisible Unicode characters to encode user-specific bit patterns inside readable prose.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Text Obfuscation</div>
+          <div class="glossary-def">The deliberate insertion of invisible or misleading characters into text to confuse search engines, content filters, plagiarism detectors, or human readers. Zero-width characters are one of the most common and difficult-to-detect obfuscation techniques.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Sanitization</div>
+          <div class="glossary-def">The process of removing or neutralizing unwanted, unexpected, or potentially harmful content from a string. Text sanitization for Unicode means stripping all non-printing and invisible characters before the string is stored in a database or used in source code.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Hex Code</div>
+          <div class="glossary-def">A hexadecimal (base-16) representation of a character's Unicode code point. For example, the zero-width space is written as U+200B, where 200B is the hex value. Hex codes are the standard notation used to identify and reference specific Unicode characters in documentation and code.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Educational Section -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Hidden Unicode Characters and Text Sanitization</h2>
+      <p class="section-intro">Not everything in a block of text is visible to the human eye. Between the letters and spaces you can read, a string can contain dozens of invisible Unicode characters that affect how the text behaves in code, how it is watermarked for tracking, and whether it will cause silent failures in applications. This tool exposes every one of them instantly.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Paste any text into the Detection Input panel on the left. The scanner reads every character in real time and immediately updates the Anomaly Overlay on the right. If a hidden character is found, it appears at its exact position as a labeled amber badge (for example, [ZWSP] or [ZWJ]) so you can see precisely where it was hiding within the surrounding visible text. Hover over any badge to see the full Unicode name and code point in a tooltip.</p>
+      <p>The Telemetry panel below shows the total count, the number of distinct character categories detected, and a per-category breakdown with exact counts. To remove all detected characters at once, click Strip All Hidden Characters. The input panel updates with the cleaned text, which you can then copy to your clipboard with the Copy Clean Text button.</p>
+
+      <h3>Which Unicode Characters Are Detected</h3>
+      <p>This tool scans for the full spectrum of commonly misused invisible and non-printing Unicode characters:</p>
+
+      <table class="char-table">
+        <thead>
+          <tr>
+            <th>Code Point</th>
+            <th>Name</th>
+            <th>Badge Label</th>
+            <th>Common Use or Misuse</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>U+200B</td>
+            <td>Zero-Width Space</td>
+            <td>[ZWSP]</td>
+            <td>Line-break hints, text watermarking, tracking</td>
+          </tr>
+          <tr>
+            <td>U+200C</td>
+            <td>Zero-Width Non-Joiner</td>
+            <td>[ZWNJ]</td>
+            <td>Arabic/Persian typography, binary watermarking</td>
+          </tr>
+          <tr>
+            <td>U+200D</td>
+            <td>Zero-Width Joiner</td>
+            <td>[ZWJ]</td>
+            <td>Emoji sequences, watermarking, obfuscation</td>
+          </tr>
+          <tr>
+            <td>U+200E</td>
+            <td>Left-to-Right Mark</td>
+            <td>[LRM]</td>
+            <td>Bidirectional text control, steganographic use</td>
+          </tr>
+          <tr>
+            <td>U+200F</td>
+            <td>Right-to-Left Mark</td>
+            <td>[RLM]</td>
+            <td>Bidirectional text control, steganographic use</td>
+          </tr>
+          <tr>
+            <td>U+FEFF</td>
+            <td>Byte-Order Mark / ZWNBS</td>
+            <td>[BOM]</td>
+            <td>File encoding marker, often silently copied from documents</td>
+          </tr>
+          <tr>
+            <td>U+2060</td>
+            <td>Word Joiner</td>
+            <td>[WJ]</td>
+            <td>Prevents line breaks; used to hide text in content scrapers</td>
+          </tr>
+          <tr>
+            <td>U+2061</td>
+            <td>Invisible Function Application</td>
+            <td>[FUNC]</td>
+            <td>Mathematical markup, invisible in plain-text contexts</td>
+          </tr>
+          <tr>
+            <td>U+2062</td>
+            <td>Invisible Times</td>
+            <td>[ITIMES]</td>
+            <td>Mathematical markup, invisible in plain-text contexts</td>
+          </tr>
+          <tr>
+            <td>U+2063</td>
+            <td>Invisible Separator</td>
+            <td>[ISEP]</td>
+            <td>Mathematical markup, invisible in plain-text contexts</td>
+          </tr>
+          <tr>
+            <td>U+2064</td>
+            <td>Invisible Plus</td>
+            <td>[IPLUS]</td>
+            <td>Mathematical markup, invisible in plain-text contexts</td>
+          </tr>
+          <tr>
+            <td>U+180E</td>
+            <td>Mongolian Vowel Separator</td>
+            <td>[MVS]</td>
+            <td>Mongolian script; historically misused as a zero-width alternative</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>How Text Watermarking Uses Invisible Characters</h3>
+      <p>When a publisher or platform wants to identify which specific user leaked a confidential document, they generate a unique bit string for each user account before serving them the page. The bits are encoded by inserting specific zero-width characters between the words of the document. A Zero-Width Space might represent a binary 1, while a Zero-Width Non-Joiner represents a binary 0. Every user sees what appears to be identical text, but each copy carries a unique invisible fingerprint.</p>
+      <p>This technique survives copy-pasting because clipboard operations copy all Unicode code points, including invisible ones. The only defenses are to strip all invisible characters before sharing any text, or to retype the content from scratch. This tool handles the stripping in a single click.</p>
+
+      <h3>Why Hidden Characters Break Code and Databases</h3>
+      <p>A very common source of frustrating, hard-to-reproduce bugs is copying a value from a webpage, PDF, or documentation site into source code, a config file, or a form field. An API key that looks correct will fail authentication if it contains a single zero-width space that the developer cannot see in the editor. A database query will silently return zero results because the string comparison fails. A JSON property key copied from documentation will not match the expected field name, causing the entire object to be ignored at runtime.</p>
+      <p>Pasting any copied value through this detector before using it in code eliminates this entire class of invisible-character bug. Developers who work frequently with copied API keys, environment variable values, and configuration strings will find this tool especially useful as a mandatory sanitation step.</p>
+
+      <h3>FAQ: Invisible Unicode Characters and Zero-Width Spaces</h3>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is a zero-width space and why is it used?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          A zero-width space (U+200B) is a Unicode character that occupies no visible width and renders as nothing on screen. It is legitimately used in some languages and typesetting systems to indicate potential line-break points where a space character would look wrong. However, it is also placed inside text by some websites and content management systems to act as a hidden watermark or tracking token, allowing the original source of a leaked document or copied content to be traced back to a specific user or session.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How can invisible characters be used for tracking or watermarking text?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Publishers and platforms can encode a unique binary fingerprint by placing different combinations of zero-width characters at specific positions in a document. For example, a Zero-Width Space might represent a binary 1 and a Zero-Width Non-Joiner might represent a binary 0. By varying which invisible characters appear between each word, a unique identifier can be embedded that survives copy-pasting. When the text later appears online, the original source can decode the hidden pattern and identify the specific user or account it was copied from.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Can zero-width spaces cause errors in code or database entries?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Yes. Zero-width and other non-printing Unicode characters are a frequent source of hard-to-debug errors in software. If a developer copies a variable name, API key, URL, or JSON key from a webpage or PDF and a hidden character is present, the string will look correct in the editor but will fail string comparisons, key lookups, and URL parsing at runtime. Database queries can also fail silently if a primary key or field value contains an invisible character that was not present in the original schema. This tool lets you sanitize any pasted text before using it in code.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How does this tool detect characters that are invisible to the eye?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          The detector iterates through every character in your pasted text and checks each character's Unicode code point value against a list of known non-printing characters. These include the range U+200B through U+200F (zero-width space, non-joiner, joiner, left-to-right mark, and right-to-left mark), as well as U+FEFF (the byte-order mark), U+2060 through U+2064 (word joiner and invisible math operators), and U+180E (Mongolian vowel separator). When a match is found, the tool inserts a labeled amber badge at the exact position in the output visualizer so you can see precisely where each hidden character was hiding.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Is it safe to copy and paste text from untrusted websites?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Copied text from untrusted websites can carry hidden Unicode characters that range from harmless formatting artifacts to intentional tracking watermarks or even obfuscated code snippets designed to look like safe text. Best practice is to paste any copied text into this detector before using it in emails, documents, source code, or database fields. The Strip All Hidden Characters button removes every detected non-printing character and returns a clean string you can safely use anywhere.
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Privacy Notice:</strong> This tool runs entirely in your browser. No text you paste is ever transmitted to any server or stored outside your current browser session. All character analysis, detection, and sanitization happens locally on your device.
+      </div>
+
+    </div>
+
+  </div>
+  <!-- end .edu-wrap -->
+
+</main>
+<!-- end #main -->
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  Advertisement
+</div>
+
+<script>
+  /* ================================================================
+     HIDDEN CHARACTER DEFINITIONS
+     Full spectrum: ZWSP, ZWNJ, ZWJ, LRM, RLM, BOM, WJ,
+     invisible math operators (2061-2064), Mongolian Vowel Separator
+  ================================================================ */
+  const HIDDEN_CHARS = [
+    { code: 0x200B, label: 'ZWSP',   name: 'Zero-Width Space'              },
+    { code: 0x200C, label: 'ZWNJ',   name: 'Zero-Width Non-Joiner'         },
+    { code: 0x200D, label: 'ZWJ',    name: 'Zero-Width Joiner'             },
+    { code: 0x200E, label: 'LRM',    name: 'Left-to-Right Mark'            },
+    { code: 0x200F, label: 'RLM',    name: 'Right-to-Left Mark'            },
+    { code: 0xFEFF, label: 'BOM',    name: 'Byte-Order Mark (ZWNBS)'       },
+    { code: 0x2060, label: 'WJ',     name: 'Word Joiner'                   },
+    { code: 0x2061, label: 'FUNC',   name: 'Invisible Function Application'},
+    { code: 0x2062, label: 'ITIMES', name: 'Invisible Times'               },
+    { code: 0x2063, label: 'ISEP',   name: 'Invisible Separator'           },
+    { code: 0x2064, label: 'IPLUS',  name: 'Invisible Plus'                },
+    { code: 0x180E, label: 'MVS',    name: 'Mongolian Vowel Separator'     }
+  ];
+
+  /* Code point to definition lookup */
+  const CHAR_MAP = {};
+  HIDDEN_CHARS.forEach(function(c) { CHAR_MAP[c.code] = c; });
+
+  /* Regex covering all detected characters (Unicode escape sequences for reliability) */
+  var STRIP_RE = /[\u200B\u200C\u200D\u200E\u200F\uFEFF\u2060\u2061\u2062\u2063\u2064\u180E]/g;
+
+  /* Session state */
+  var lastInput  = '';
+  var totalFound = 0;
+
+  /* ================================================================
+     MAIN ANALYSIS ENGINE - fires on every oninput event
+  ================================================================ */
+  function analyzeText() {
+    var raw = document.getElementById('inputText').value;
+    lastInput = raw;
+    var len   = raw.length;
+
+    document.getElementById('charCount').textContent =
+      len.toLocaleString() + ' character' + (len === 1 ? '' : 's');
+
+    if (len === 0) {
+      resetUI();
+      return;
+    }
+
+    /* Iterate code points and count hidden chars by type */
+    var counts = {};
+    var total  = 0;
+    var visible = 0;
+
+    for (var i = 0; i < raw.length; i++) {
+      var cp = raw.codePointAt(i);
+      if (cp > 0xFFFF) i++; /* skip low surrogate of surrogate pair */
+
+      if (CHAR_MAP[cp] !== undefined) {
+        counts[cp] = (counts[cp] || 0) + 1;
+        total++;
+      } else {
+        visible++;
+      }
+    }
+
+    totalFound = total;
+
+    /* Update telemetry stats */
+    var totalEl = document.getElementById('statTotal');
+    totalEl.textContent = total.toLocaleString();
+    totalEl.className   = 'stat-value' + (total > 0 ? '' : ' clean');
+
+    var typeKeys = Object.keys(counts);
+    document.getElementById('statTypes').textContent =
+      typeKeys.length > 0 ? typeKeys.length : '--';
+    document.getElementById('statVisible').textContent = visible.toLocaleString();
+
+    document.getElementById('scanStatus').textContent =
+      total > 0
+        ? total + ' hidden char' + (total === 1 ? '' : 's') + ' detected'
+        : 'Text is clean';
+
+    renderFindings(counts);
+    renderOverlay(raw, total > 0);
+
+    document.getElementById('stripBtn').disabled = (total === 0);
+    document.getElementById('copyBtn').style.display = total === 0 ? 'none' : 'block';
+    document.getElementById('stripFeedback').textContent = '';
+  }
+
+  /* ================================================================
+     FINDINGS BREAKDOWN RENDERER
+  ================================================================ */
+  function renderFindings(counts) {
+    var list = document.getElementById('findingsList');
+    var keys = Object.keys(counts);
+
+    if (keys.length === 0) {
+      list.innerHTML =
+        '<div class="no-findings">No hidden characters detected. Text is clean.</div>';
+      return;
+    }
+
+    var html = '';
+    keys.forEach(function(cp) {
+      var def   = CHAR_MAP[parseInt(cp, 10)];
+      if (!def) return;
+      var hex   = parseInt(cp, 10).toString(16).toUpperCase();
+      while (hex.length < 4) hex = '0' + hex;
+      html += '<div class="finding-row">' +
+        '<span class="finding-name">[' + def.label + '] ' + def.name + '</span>' +
+        '<span class="finding-code">U+' + hex + '</span>' +
+        '<span class="finding-count">' + counts[cp] + '</span>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+  }
+
+  /* ================================================================
+     ANOMALY OVERLAY VISUALIZER RENDERER
+     Each hidden character is replaced with a labeled amber badge.
+     Visible characters are HTML-escaped and rendered inline.
+  ================================================================ */
+  function renderOverlay(text, hasHidden) {
+    var container = document.getElementById('overlayOutput');
+
+    if (!hasHidden) {
+      container.innerHTML =
+        '<div class="status-indicator">' +
+        '<div class="status-icon">&#9989;</div>' +
+        '<div class="status-label secure">Text is Secure - No Hidden Characters Found</div>' +
+        '</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < text.length; i++) {
+      var cp = text.codePointAt(i);
+      if (cp > 0xFFFF) i++; /* advance past low surrogate */
+
+      if (CHAR_MAP[cp] !== undefined) {
+        var def = CHAR_MAP[cp];
+        var hex = cp.toString(16).toUpperCase();
+        while (hex.length < 4) hex = '0' + hex;
+        html += '<span class="zwchar" title="U+' + hex + ' ' + def.name + '">' +
+                '[' + def.label + ']</span>';
+      } else {
+        var ch = text[i];
+        if      (ch === '<') html += '&lt;';
+        else if (ch === '>') html += '&gt;';
+        else if (ch === '&') html += '&amp;';
+        else                 html += ch;
+      }
+    }
+
+    container.innerHTML = html;
+  }
+
+  /* ================================================================
+     ONE-CLICK STRIP: remove all hidden chars from input,
+     then re-run analysis to confirm clean state
+  ================================================================ */
+  function stripHidden() {
+    if (!lastInput) return;
+    var stripped = lastInput.replace(STRIP_RE, '');
+    document.getElementById('inputText').value = stripped;
+    analyzeText();
+
+    if (totalFound === 0) {
+      document.getElementById('stripFeedback').textContent =
+        'All hidden characters removed. Text is now clean.';
+    }
+  }
+
+  /* ================================================================
+     COPY CLEAN TEXT TO CLIPBOARD
+  ================================================================ */
+  function copyClean() {
+    var text    = document.getElementById('inputText').value.replace(STRIP_RE, '');
+    var btn     = document.getElementById('copyBtn');
+    var feedback = document.getElementById('stripFeedback');
+
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = 'Copied to Clipboard';
+      setTimeout(function() {
+        btn.textContent = 'Copy Clean Text to Clipboard';
+      }, 2200);
+    }).catch(function() {
+      feedback.textContent =
+        'Clipboard access denied. Select the text in the input panel and copy manually.';
+    });
+  }
+
+  /* ================================================================
+     RESET UI TO INITIAL STATE
+  ================================================================ */
+  function resetUI() {
+    document.getElementById('charCount').textContent  = '0 characters';
+    document.getElementById('scanStatus').textContent = 'Awaiting input';
+
+    var totalEl = document.getElementById('statTotal');
+    totalEl.textContent = '0';
+    totalEl.className   = 'stat-value clean';
+
+    document.getElementById('statTypes').textContent   = '--';
+    document.getElementById('statVisible').textContent = '0';
+
+    document.getElementById('findingsList').innerHTML =
+      '<div class="no-findings">No hidden characters detected. Paste text above to begin scanning.</div>';
+
+    document.getElementById('overlayOutput').innerHTML =
+      '<div class="status-indicator">' +
+      '<div class="status-icon">&#128274;</div>' +
+      '<div class="status-label await">Awaiting Input</div>' +
+      '</div>';
+
+    document.getElementById('stripBtn').disabled          = true;
+    document.getElementById('copyBtn').style.display      = 'none';
+    document.getElementById('stripFeedback').textContent  = '';
+
+    totalFound = 0;
+  }
+
+  /* ================================================================
+     FAQ ACCORDION TOGGLE
+  ================================================================ */
+  function toggleFaq(btn) {
+    var answer   = btn.nextElementSibling;
+    var expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    answer.style.display = expanded ? 'none' : 'block';
+  }
+</script>
+
+</body>
+</html>

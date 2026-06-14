@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Choice Spinner: Select Items Fairly from Any List | AxiomApe</title>
+  <meta name="description" content="Free random choice spinner tool. Paste any list of items and spin a visual wheel to pick a fair winner using cryptographic randomness. Supports weighted probability, remove-winner mode, and spin history. 100% private and browser-based." />
+  <meta name="keywords" content="random choice spinner, decision wheel, random item picker, spin the wheel, weighted random, name picker wheel, random list picker, fair random selector, giveaway spinner, group selection tool, randomizer wheel, choice generator" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://axiomape.com/random-choice-item-spinner/" />
+
+  <meta property="og:title" content="Random Choice Spinner: Select Items Fairly from Any List" />
+  <meta property="og:description" content="Spin a visual wheel to pick from any list of items. Cryptographically fair, supports weighted probability, and runs 100% in your browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://axiomape.com/random-choice-item-spinner/" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Random Choice Spinner",
+        "description": "Free random choice spinner tool. Paste any list of items and spin a visual wheel to pick a fair winner using cryptographic randomness. Supports weighted probability, remove-winner mode, and spin history. 100% private and browser-based.",
+        "url": "https://axiomape.com/random-choice-item-spinner/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does this tool ensure the selection is truly fair?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This spinner uses window.crypto.getRandomValues(), a cryptographically secure random number generator built into your browser. Unlike Math.random(), which uses a predictable algorithm, crypto.getRandomValues() draws from the operating system's entropy pool. Every item in your list has a mathematically equal probability of being selected, assuming equal weights."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between simple random selection and weighted probability?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Simple random selection gives every item an equal chance of being chosen. Weighted probability lets you assign a relative importance to each item. For example, if Item A has weight 2 and Item B has weight 1, Item A is twice as likely to be selected. This is useful for raffles where some participants have earned multiple entries."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is cryptographic randomness better than standard pseudo-random number generators?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard pseudo-random number generators like Math.random() use a deterministic algorithm seeded from a predictable value. Given the same seed, they produce the same sequence. Cryptographic random number generators draw from system-level entropy sources like hardware noise, making the output statistically indistinguishable from true randomness and impossible to predict or reproduce."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use this tool for high-stakes decision-making?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This tool is suitable for fair, casual decision-making such as picking raffle winners, assigning group roles, or resolving friendly disputes. For decisions with legal, financial, or safety consequences, we recommend consulting a professional and using formally audited randomization procedures appropriate for the context."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I adjust the weight of specific items in the spin?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Enable the Weighted Probability toggle below the item list. A weight input field appears next to each item. Enter any positive number as a relative weight. Items with higher weights occupy larger slices on the wheel and are proportionally more likely to be chosen. Leave all weights at 1 for equal probability across all items."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --magenta:      #D946EF;
+      --magenta-dim:  #9d2bb0;
+      --magenta-glow: rgba(217, 70, 239, 0.25);
+      --teal:         #14B8A6;
+      --teal-dim:     #0e8a7c;
+      --teal-glow:    rgba(20, 184, 166, 0.22);
+      --bg:           #0f172a;
+      --panel:        #1e293b;
+      --panel-alt:    #162032;
+      --border:       #334155;
+      --border-light: #475569;
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+      --radius:       12px;
+      --radius-sm:    8px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.6);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       LEGACY NAV (hidden by site-chrome)
+    ============================================================ */
+    .site-nav { display: none; }
+
+    /* ============================================================
+       WRAPPER
+    ============================================================ */
+    .wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      padding: 38px 0 30px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.45rem, 3.8vw, 2.3rem);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 0.97rem;
+      max-width: 620px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .header-icon {
+      font-size: 2.4rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    /* ============================================================
+       THREE-PANEL DASHBOARD
+    ============================================================ */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 320px 1fr 280px;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel-spinner { grid-column: 1 / -1; order: -1; }
+    }
+    @media (max-width: 600px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .panel-spinner { order: -1; }
+    }
+
+    /* ============================================================
+       PANEL BASE
+    ============================================================ */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+
+    /* ============================================================
+       PANEL 1 - LIST MANAGEMENT
+    ============================================================ */
+    .panel-list { display: flex; flex-direction: column; gap: 14px; }
+
+    .list-textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      padding: 10px 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+    .list-textarea:focus { border-color: var(--magenta); box-shadow: 0 0 0 3px var(--magenta-glow); }
+    .list-textarea::placeholder { color: var(--text-dim); }
+
+    .item-count-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .item-count-num {
+      font-weight: 700;
+      color: var(--teal);
+    }
+
+    .bulk-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .bulk-btn:hover { border-color: var(--magenta); color: var(--magenta); }
+
+    /* toggles */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .toggle-label { flex: 1; }
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.25s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--magenta); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+    /* weight inputs table */
+    .weight-table {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .weight-table.visible { display: flex; }
+    .weight-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+    }
+    .weight-name {
+      flex: 1;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .weight-input {
+      width: 60px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 4px 8px;
+      text-align: right;
+      outline: none;
+    }
+    .weight-input:focus { border-color: var(--teal); }
+
+    /* spin button */
+    .spin-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--magenta), #a21caf);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 18px var(--magenta-glow);
+    }
+    .spin-btn:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 24px var(--magenta-glow); }
+    .spin-btn:active:not(:disabled) { transform: translateY(0); }
+    .spin-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    /* ============================================================
+       PANEL 2 - SPINNER VISUALIZER
+    ============================================================ */
+    .panel-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .spinner-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1;
+    }
+
+    #spinCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      filter: drop-shadow(0 0 24px var(--magenta-glow));
+    }
+
+    /* pointer arrow pointing down from top center */
+    .spinner-pointer {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 28px solid var(--magenta);
+      filter: drop-shadow(0 2px 6px var(--magenta-glow));
+      z-index: 2;
+    }
+
+    /* center hub */
+    .spinner-hub {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px; height: 36px;
+      background: var(--bg);
+      border: 3px solid var(--magenta);
+      border-radius: 50%;
+      z-index: 3;
+    }
+
+    .winner-badge {
+      text-align: center;
+      min-height: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .winner-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .winner-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--magenta);
+      text-shadow: 0 0 18px var(--magenta-glow);
+      word-break: break-word;
+      text-align: center;
+    }
+    .winner-name.idle { color: var(--text-dim); font-size: 0.9rem; font-weight: 400; text-shadow: none; }
+
+    .winner-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .act-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .act-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* ============================================================
+       PANEL 3 - WINNER HISTORY AND METRICS
+    ============================================================ */
+    .panel-history { display: flex; flex-direction: column; gap: 14px; }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .metric-box {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .metric-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--teal);
+      line-height: 1;
+    }
+    .metric-lbl {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 100px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.83rem;
+      animation: fadeIn 0.35s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    .history-rank {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--teal);
+      min-width: 20px;
+      text-align: right;
+    }
+    .history-name {
+      flex: 1;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-empty {
+      color: var(--text-dim);
+      font-size: 0.83rem;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .clear-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* ============================================================
+       AD PLACEMENTS (classes provided by site-chrome)
+    ============================================================ */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px;
+      margin: 0 0 28px;
+      background: var(--panel);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    /* ============================================================
+       GLOSSARY AND EDUCATIONAL CARDS
+    ============================================================ */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 22px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .glossary-item {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+
+    .edu-h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+
+    .edu-p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    .faq-list { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: var(--panel-alt);
+      border: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+    .faq-q:hover { background: #253047; }
+    .faq-q::after {
+      content: '+';
+      font-size: 1.2rem;
+      color: var(--magenta);
+      flex-shrink: 0;
+      transition: transform 0.25s;
+    }
+    .faq-item.open .faq-q::after { transform: rotate(45deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 16px 14px;
+      color: var(--text-muted);
+      font-size: 0.87rem;
+      line-height: 1.7;
+      background: var(--panel-alt);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--teal);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 40px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 9999;
+    }
+    .copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--panel-alt); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 480px) {
+      .winner-name { font-size: 1.15rem; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="wrapper" id="main">
+
+  <header class="page-header">
+    <span class="header-icon" aria-hidden="true">🎡</span>
+    <h1>Random Choice Spinner: Select Items Fairly from Any List</h1>
+    <p>Paste your options, spin the weighted wheel, and let cryptographically secure randomness decide. Every spin is mathematically fair and runs 100% in your browser.</p>
+  </header>
+
+  <!-- THREE-PANEL DASHBOARD -->
+  <div class="dashboard" role="region" aria-label="Random Choice Spinner Dashboard">
+
+    <!-- PANEL 1: LIST MANAGEMENT -->
+    <section class="panel panel-list" aria-label="List Management">
+      <div class="panel-label">List Management</div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label for="itemsInput" style="font-size:0.83rem;color:var(--text-muted);">Items to spin (one per line)</label>
+          <button class="bulk-btn" id="bulkImportBtn" type="button">Bulk Import</button>
+        </div>
+        <textarea
+          id="itemsInput"
+          class="list-textarea"
+          placeholder="Alice&#10;Bob&#10;Charlie&#10;Diana&#10;Evan&#10;&#10;Paste any list here, one item per line."
+          spellcheck="false"
+          aria-label="Enter items for the spinner, one per line"
+        ></textarea>
+        <div class="item-count-bar" style="margin-top:6px;">
+          <span>Items detected: <span class="item-count-num" id="itemCount">0</span></span>
+          <button class="bulk-btn" id="clearListBtn" type="button">Clear List</button>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="toggle-row">
+        <span class="toggle-label">Remove Winner After Spin</span>
+        <label class="toggle-switch" aria-label="Remove winner after each spin">
+          <input type="checkbox" id="removeWinnerToggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">Weighted Probability</span>
+        <label class="toggle-switch" aria-label="Enable weighted probability">
+          <input type="checkbox" id="weightedToggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- Weight editor (shown when Weighted Probability is on) -->
+      <div class="weight-table" id="weightTable" aria-label="Item weight editor">
+        <div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:4px;">Higher weight = larger slice and greater chance of selection.</div>
+      </div>
+
+      <button class="spin-btn" id="spinBtn" type="button" disabled aria-label="Spin the wheel">
+        Spin the Wheel
+      </button>
+    </section>
+
+    <!-- PANEL 2: SPINNER VISUALIZER -->
+    <section class="panel panel-spinner" aria-label="Spinner Wheel Visualizer">
+      <div class="panel-label">Spinner Visualizer</div>
+
+      <div class="spinner-wrap" id="spinnerWrap">
+        <canvas id="spinCanvas" width="400" height="400" aria-label="Visual spinning wheel showing all items as colored slices"></canvas>
+        <div class="spinner-pointer" aria-hidden="true"></div>
+        <div class="spinner-hub" aria-hidden="true"></div>
+      </div>
+
+      <div class="winner-badge" aria-live="polite" aria-atomic="true">
+        <div class="winner-label" id="winnerLabel" style="display:none;">Winner</div>
+        <div class="winner-name idle" id="winnerName">Spin to reveal a winner</div>
+      </div>
+
+      <div class="winner-actions">
+        <button class="act-btn" id="copyResultBtn" type="button" aria-label="Copy winner to clipboard">Copy Result</button>
+        <button class="act-btn" id="spinAgainBtn" type="button" disabled aria-label="Spin again">Spin Again</button>
+      </div>
+    </section>
+
+    <!-- PANEL 3: HISTORY AND METRICS -->
+    <section class="panel panel-history" aria-label="Winner History and Metrics">
+      <div class="panel-label">History and Metrics</div>
+
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="metric-val" id="totalSpins">0</div>
+          <div class="metric-lbl">Total Spins</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val" id="itemsLeft">0</div>
+          <div class="metric-lbl">Items Left</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:8px;">Last 5 winners (most recent first)</div>
+        <div class="history-list" id="historyList">
+          <div class="history-empty" id="historyEmpty">No spins yet. Add items and spin!</div>
+        </div>
+      </div>
+
+      <button class="clear-btn" id="clearHistoryBtn" type="button" aria-label="Clear all spin history">Clear History</button>
+    </section>
+
+  </div><!-- end .dashboard -->
+
+  <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only) -->
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- GLOSSARY -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Uniform Distribution</div>
+        <div class="glossary-def">A probability distribution in which every possible outcome has an equal chance of occurring. When all weights are equal, this spinner produces a uniform distribution across all items.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Cryptographic Randomness</div>
+        <div class="glossary-def">Randomness generated from hardware-level entropy sources via the operating system. It is statistically indistinguishable from true randomness and cannot be predicted or reproduced by an attacker.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Probability Weighting</div>
+        <div class="glossary-def">Assigning relative importance values to items so that higher-weighted items occupy proportionally larger wheel slices and are selected more often over many spins.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Spin Dynamics</div>
+        <div class="glossary-def">The mathematical description of how a spinning wheel decelerates over time due to friction. This tool simulates that behavior using a cubic ease-out curve to create natural, satisfying deceleration.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Momentum</div>
+        <div class="glossary-def">In physics, momentum is the product of an object's mass and velocity. In the context of this spinner, it refers to the visual simulation of a wheel that gradually loses rotational energy and slows to a stop.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Entropy Pool</div>
+        <div class="glossary-def">The operating system's reservoir of unpredictable data collected from hardware events such as keyboard timing, mouse movements, and disk activity. It feeds the cryptographic random number generator.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Rejection Sampling</div>
+        <div class="glossary-def">A technique used to eliminate modulo bias when generating random integers. By discarding values that fall in a biased tail of the distribution, it ensures every outcome has exactly equal probability.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Ease-Out Cubic</div>
+        <div class="glossary-def">An animation timing function defined as f(t) = 1 - (1 - t) cubed. The wheel starts fast and decelerates rapidly at the end, mimicking the natural friction of a physical spinning wheel.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">CSPRNG</div>
+        <div class="glossary-def">Cryptographically Secure Pseudo-Random Number Generator. The class of algorithm used by window.crypto.getRandomValues(). Suitable for security-sensitive applications because its output cannot be practically predicted.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATIONAL SECTION -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Fair Random Selection and Decision Spinners</h2>
+
+    <p class="section-intro">
+      Whether you need to pick a raffle winner, assign tasks to team members, choose tonight's dinner restaurant, or run a classroom activity, a random choice spinner gives every option a provably fair shot. This guide explains how to get the most from this tool and why the underlying randomness technology matters.
+    </p>
+
+    <h3 class="edu-h3">How to Use This Tool</h3>
+    <p class="edu-p">
+      Start by typing or pasting your list of items into the List Management panel on the left. Each item goes on its own line. The wheel automatically updates to show one colored slice per item as you type. Press <strong>Spin the Wheel</strong> to launch the animation. A pointer at the top of the wheel indicates the winning slice after the wheel slows to a stop.
+    </p>
+    <p class="edu-p">
+      Toggle <strong>Remove Winner After Spin</strong> to run elimination-style draws where each winner is removed from the pool before the next spin. Toggle <strong>Weighted Probability</strong> to reveal individual weight inputs for each item. Enter any positive number as a relative weight: an item with weight 3 will be selected approximately three times as often as an item with weight 1 over many spins.
+    </p>
+    <p class="edu-p">
+      Use <strong>Copy Result</strong> to copy the current winner to your clipboard, or <strong>Clear History</strong> to reset the session log. The metrics panel tracks total spins and remaining items at a glance.
+    </p>
+
+    <h3 class="edu-h3">Why Cryptographic Randomness Matters for Fair Selection</h3>
+    <p class="edu-p">
+      Most web-based tools rely on JavaScript's Math.random(). While adequate for games and simulations, Math.random() uses a deterministic algorithm (typically an xorshift variant) seeded by a value derived from the system clock. The output can be predicted if the seed is known, and the distribution has subtle biases at scale.
+    </p>
+    <p class="edu-p">
+      This tool uses <code>window.crypto.getRandomValues()</code>, which is mandated by the W3C Web Cryptography API standard and is implemented in every modern browser. It pulls entropy directly from the operating system's randomness pool, which is continuously refilled by hardware events. The result is a statistically indistinguishable-from-true-random number that no script, extension, or observer can predict.
+    </p>
+
+    <h3 class="edu-h3">How Weighted Probability Changes Your Odds</h3>
+    <p class="edu-p">
+      Weighted selection works by mapping each item to a proportional segment of a total probability range. If you have items A (weight 3), B (weight 2), and C (weight 1), the total weight is 6. Item A covers the range 0-3, Item B covers 3-5, and Item C covers 5-6. A random number is generated in the range 0 to 6, and the item whose range contains that number is selected. The visual wheel reflects this directly: each slice's arc angle is proportional to its weight.
+    </p>
+
+    <h3 class="edu-h3">The Physics of Deceleration: Spin Dynamics Explained</h3>
+    <p class="edu-p">
+      The spinner animation uses a cubic ease-out function to simulate realistic momentum loss. A real wheel loses kinetic energy to friction at a rate that decelerates the rotation more slowly at first and more rapidly near the end. The cubic formula f(t) = 1 - (1 - t)^3 closely approximates this behavior, producing a visually satisfying spin that feels physical rather than digital. The minimum spin count is set to six full rotations to ensure genuine visual excitement on every draw.
+    </p>
+
+    <h3 class="edu-h3">Practical Use Cases for a Random Choice Spinner</h3>
+    <p class="edu-p">
+      Random choice spinners are used in classrooms to call on students without bias, in offices to assign rotating duties or meeting facilitators, at parties for game decisions and dares, in content creation to decide topics or formats from a backlog, and in fantasy sports drafts to determine pick order. The Remove Winner mode is especially useful for any scenario where you need to draw multiple winners from a single pool without repetition.
+    </p>
+
+    <h3 class="edu-h3">Frequently Asked Questions</h3>
+    <div class="faq-list" role="list">
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          How does this tool ensure the selection is truly fair?
+        </button>
+        <div class="faq-a">
+          This spinner uses <code>window.crypto.getRandomValues()</code>, a cryptographically secure random number generator built into your browser. Unlike Math.random(), which uses a predictable algorithm, crypto.getRandomValues() draws from the operating system's entropy pool. Every item in your list has a mathematically equal probability of being selected, assuming equal weights.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the difference between simple random selection and weighted probability?
+        </button>
+        <div class="faq-a">
+          Simple random selection gives every item an equal chance of being chosen. Weighted probability lets you assign a relative importance to each item. For example, if Item A has weight 2 and Item B has weight 1, Item A is twice as likely to be selected. This is useful for raffles where some participants have earned multiple entries.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Why is cryptographic randomness better than standard pseudo-random number generators?
+        </button>
+        <div class="faq-a">
+          Standard pseudo-random number generators like Math.random() use a deterministic algorithm seeded from a predictable value. Given the same seed, they produce the same sequence. Cryptographic random number generators draw from system-level entropy sources like hardware noise, making the output statistically indistinguishable from true randomness and impossible to predict or reproduce.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          Can I use this tool for high-stakes decision-making?
+        </button>
+        <div class="faq-a">
+          This tool is suitable for fair, casual decision-making such as picking raffle winners, assigning group roles, or resolving friendly disputes. For decisions with legal, financial, or safety consequences, we recommend consulting a professional and using formally audited randomization procedures appropriate for the context.
+        </div>
+      </div>
+
+      <div class="faq-item" role="listitem">
+        <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+          How can I adjust the weight of specific items in the spin?
+        </button>
+        <div class="faq-a">
+          Enable the Weighted Probability toggle below the item list. A weight input field appears next to each item. Enter any positive number as a relative weight. Items with higher weights occupy larger slices on the wheel and are proportionally more likely to be chosen. Leave all weights at 1 for equal probability across all items.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- AD PLACEMENT 2: Mobile Sticky Anchor (mobile only) -->
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<!-- TOAST -->
+<div class="copy-toast" id="copyToast" role="status" aria-live="polite">Copied to clipboard!</div>
+
+<script>
+/* ============================================================
+   CONSTANTS AND STATE
+============================================================ */
+const SLICE_COLORS = [
+  '#D946EF','#14B8A6','#F97316','#6366F1','#EAB308',
+  '#10B981','#EC4899','#3B82F6','#F43F5E','#22C55E',
+  '#8B5CF6','#06B6D4','#FB923C','#A3E635','#E879F9'
+];
+
+let items        = [];         // array of { name, weight }
+let currentAngle = 0;          // wheel's current rotation (radians)
+let isSpinning   = false;
+let totalSpins   = 0;
+let history      = [];         // last 5 winners
+let lastWinner   = null;
+let animFrame    = null;
+
+/* ============================================================
+   DOM REFS
+============================================================ */
+const textarea      = document.getElementById('itemsInput');
+const spinBtn       = document.getElementById('spinBtn');
+const spinAgainBtn  = document.getElementById('spinAgainBtn');
+const clearListBtn  = document.getElementById('clearListBtn');
+const clearHistBtn  = document.getElementById('clearHistoryBtn');
+const copyResultBtn = document.getElementById('copyResultBtn');
+const bulkBtn       = document.getElementById('bulkImportBtn');
+const itemCountEl   = document.getElementById('itemCount');
+const winnerNameEl  = document.getElementById('winnerName');
+const winnerLabelEl = document.getElementById('winnerLabel');
+const totalSpinsEl  = document.getElementById('totalSpins');
+const itemsLeftEl   = document.getElementById('itemsLeft');
+const historyListEl = document.getElementById('historyList');
+const historyEmpty  = document.getElementById('historyEmpty');
+const weightTable   = document.getElementById('weightTable');
+const weightedToggle= document.getElementById('weightedToggle');
+const removeToggle  = document.getElementById('removeWinnerToggle');
+const canvas        = document.getElementById('spinCanvas');
+const ctx           = canvas.getContext('2d');
+const toast         = document.getElementById('copyToast');
+
+/* ============================================================
+   CRYPTO RNG HELPER
+   Returns a uniform float in [0, 1) using CSPRNG.
+============================================================ */
+function cryptoRandom() {
+  const arr = new Uint32Array(1);
+  window.crypto.getRandomValues(arr);
+  return arr[0] / 0x100000000;
+}
+
+/* ============================================================
+   PARSE TEXTAREA INTO ITEMS ARRAY
+============================================================ */
+function parseItems() {
+  const lines = textarea.value
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  // Preserve existing weights if weighted mode is on
+  const oldMap = {};
+  items.forEach(it => { oldMap[it.name] = it.weight; });
+
+  items = lines.map(name => ({
+    name,
+    weight: oldMap[name] !== undefined ? oldMap[name] : 1
+  }));
+
+  itemCountEl.textContent = items.length;
+  itemsLeftEl.textContent = items.length;
+  spinBtn.disabled = items.length < 2;
+  spinAgainBtn.disabled = true;
+
+  renderWeightTable();
+  drawWheel();
+}
+
+/* ============================================================
+   RENDER WEIGHT TABLE
+============================================================ */
+function renderWeightTable() {
+  // Keep only the first hint div
+  const hint = weightTable.querySelector('div');
+  weightTable.innerHTML = '';
+  if (hint) weightTable.appendChild(hint);
+
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'weight-row';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'weight-name';
+    nameEl.title = item.name;
+    nameEl.textContent = item.name;
+
+    const inp = document.createElement('input');
+    inp.type  = 'number';
+    inp.className = 'weight-input';
+    inp.min   = '0.1';
+    inp.step  = '0.1';
+    inp.value = item.weight;
+    inp.setAttribute('aria-label', 'Weight for ' + item.name);
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      items[i].weight = (isNaN(v) || v <= 0) ? 1 : v;
+      drawWheel();
+    });
+
+    row.appendChild(nameEl);
+    row.appendChild(inp);
+    weightTable.appendChild(row);
+  });
+}
+
+/* ============================================================
+   DRAW WHEEL
+============================================================ */
+function drawWheel() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const R  = W / 2 - 4;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (items.length === 0) {
+    // Empty state
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Add items to see the wheel', cx, cy);
+    return;
+  }
+
+  const totalWeight = items.reduce((s, it) => s + it.weight, 0);
+  let startAngle = currentAngle - Math.PI / 2;
+
+  items.forEach((item, i) => {
+    const sliceAngle = (item.weight / totalWeight) * 2 * Math.PI;
+    const endAngle   = startAngle + sliceAngle;
+    const midAngle   = startAngle + sliceAngle / 2;
+
+    // Slice fill
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = SLICE_COLORS[i % SLICE_COLORS.length];
+    ctx.fill();
+
+    // Slice border
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    const labelR = R * 0.65;
+    const lx = cx + Math.cos(midAngle) * labelR;
+    const ly = cy + Math.sin(midAngle) * labelR;
+
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.rotate(midAngle + Math.PI / 2);
+
+    const maxLen = 14;
+    const label  = item.name.length > maxLen
+      ? item.name.slice(0, maxLen - 1) + '…'
+      : item.name;
+
+    const fontSize = Math.max(9, Math.min(14, Math.floor(R * sliceAngle / (label.length * 1.4))));
+    ctx.font       = '700 ' + fontSize + 'px Inter, sans-serif';
+    ctx.fillStyle  = '#fff';
+    ctx.textAlign  = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur  = 3;
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+
+    startAngle = endAngle;
+  });
+
+  // Rim
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#D946EF';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+/* ============================================================
+   WEIGHTED RANDOM SELECTION (crypto RNG)
+============================================================ */
+function pickWinner() {
+  const totalWeight = items.reduce((s, it) => s + it.weight, 0);
+  const r = cryptoRandom() * totalWeight;
+  let cumulative = 0;
+  for (let i = 0; i < items.length; i++) {
+    cumulative += items[i].weight;
+    if (r < cumulative) return i;
+  }
+  return items.length - 1;
+}
+
+/* ============================================================
+   COMPUTE TARGET ROTATION FOR WINNING SLICE
+============================================================ */
+function computeTargetAngle(winnerIndex) {
+  const totalWeight = items.reduce((s, it) => s + it.weight, 0);
+  let startFrac = 0;
+  for (let i = 0; i < winnerIndex; i++) {
+    startFrac += items[i].weight / totalWeight;
+  }
+  const midFrac  = startFrac + (items[winnerIndex].weight / totalWeight) / 2;
+  // The slice midpoint in the un-rotated wheel (starting from top, clockwise):
+  // Un-rotated: startAngle starts at -PI/2 (top), increasing clockwise.
+  // So midpoint canvas angle = -PI/2 + midFrac * 2 * PI
+  // After rotation R, that midpoint is at: -PI/2 + midFrac*2*PI + R
+  // We want the top (pointer) = 0 difference in screen terms.
+  // Actually: the drawn slice starts at currentAngle - PI/2 cumulatively.
+  // Midpoint in wheel-local coords: -PI/2 + midFrac * 2*PI
+  const localMid = -Math.PI / 2 + midFrac * 2 * Math.PI;
+
+  // We want localMid + targetAngle to equal -PI/2 (pointing straight up)
+  // => targetAngle = -PI/2 - localMid + k*2*PI
+  const rawTarget = -Math.PI / 2 - localMid;
+
+  // Ensure we spin at least 6 full rotations forward
+  const minSpins = 6;
+  const forward  = rawTarget - currentAngle;
+  const k = Math.ceil((forward - minSpins * 2 * Math.PI) / (-2 * Math.PI));
+  return rawTarget + k * 2 * Math.PI;
+}
+
+/* ============================================================
+   SPIN ANIMATION (ease-out cubic)
+============================================================ */
+function spinTo(targetAngle, winnerIndex, winnerName) {
+  const startAngle = currentAngle;
+  const delta      = targetAngle - startAngle;
+  const duration   = 4200; // ms
+  const startTime  = performance.now();
+
+  isSpinning = true;
+  spinBtn.disabled = true;
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // Ease-out cubic
+    const eased = 1 - Math.pow(1 - t, 3);
+    currentAngle = startAngle + delta * eased;
+    drawWheel();
+
+    if (t < 1) {
+      animFrame = requestAnimationFrame(step);
+    } else {
+      currentAngle = targetAngle;
+      drawWheel();
+      isSpinning = false;
+      onSpinComplete(winnerIndex, winnerName);
+    }
+  }
+
+  animFrame = requestAnimationFrame(step);
+}
+
+/* ============================================================
+   SPIN BUTTON HANDLER
+============================================================ */
+function doSpin() {
+  if (isSpinning || items.length < 1) return;
+
+  const winIdx  = pickWinner();
+  const winName = items[winIdx].name;
+  const target  = computeTargetAngle(winIdx);
+
+  totalSpins++;
+  totalSpinsEl.textContent = totalSpins;
+  lastWinner = winName;
+
+  // Reset winner display while spinning
+  winnerLabelEl.style.display = 'none';
+  winnerNameEl.className = 'winner-name idle';
+  winnerNameEl.textContent = 'Spinning...';
+  spinAgainBtn.disabled = true;
+
+  spinTo(target, winIdx, winName);
+}
+
+/* ============================================================
+   ON SPIN COMPLETE
+============================================================ */
+function onSpinComplete(winnerIndex, winnerName) {
+  // Winner display
+  winnerLabelEl.style.display = 'block';
+  winnerNameEl.className = 'winner-name';
+  winnerNameEl.textContent = winnerName;
+
+  // History
+  history.unshift(winnerName);
+  if (history.length > 5) history.pop();
+  renderHistory();
+
+  // Remove winner if toggle is on
+  if (removeToggle.checked) {
+    items.splice(winnerIndex, 1);
+    // Update textarea to reflect removal
+    textarea.value = items.map(it => it.name).join('\n');
+    itemCountEl.textContent = items.length;
+    itemsLeftEl.textContent = items.length;
+    renderWeightTable();
+    drawWheel();
+  }
+
+  spinBtn.disabled  = items.length < (removeToggle.checked ? 1 : 2);
+  spinAgainBtn.disabled = items.length < 2;
+}
+
+/* ============================================================
+   RENDER HISTORY
+============================================================ */
+function renderHistory() {
+  historyListEl.innerHTML = '';
+  if (history.length === 0) {
+    historyListEl.appendChild(historyEmpty);
+    return;
+  }
+  history.forEach((name, i) => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.innerHTML =
+      '<span class="history-rank">#' + (i + 1) + '</span>' +
+      '<span class="history-name" title="' + escHtml(name) + '">' + escHtml(name) + '</span>';
+    historyListEl.appendChild(el);
+  });
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============================================================
+   COPY TO CLIPBOARD
+============================================================ */
+function showToast(msg) {
+  toast.textContent = msg || 'Copied to clipboard!';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+copyResultBtn.addEventListener('click', () => {
+  if (!lastWinner) return;
+  navigator.clipboard.writeText(lastWinner).then(() => showToast('Winner copied!')).catch(() => {
+    const tmp = document.createElement('textarea');
+    tmp.value = lastWinner;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand('copy');
+    document.body.removeChild(tmp);
+    showToast('Winner copied!');
+  });
+});
+
+/* ============================================================
+   BULK IMPORT (example data)
+============================================================ */
+bulkBtn.addEventListener('click', () => {
+  const sample = 'Alice\nBob\nCharlie\nDiana\nEvan\nFiona\nGeorge\nHannah';
+  textarea.value = sample;
+  parseItems();
+});
+
+/* ============================================================
+   CLEAR BUTTONS
+============================================================ */
+clearListBtn.addEventListener('click', () => {
+  textarea.value = '';
+  items = [];
+  itemCountEl.textContent = '0';
+  itemsLeftEl.textContent = '0';
+  spinBtn.disabled = true;
+  spinAgainBtn.disabled = true;
+  winnerNameEl.className = 'winner-name idle';
+  winnerNameEl.textContent = 'Spin to reveal a winner';
+  winnerLabelEl.style.display = 'none';
+  lastWinner = null;
+  renderWeightTable();
+  drawWheel();
+});
+
+clearHistBtn.addEventListener('click', () => {
+  history = [];
+  totalSpins = 0;
+  totalSpinsEl.textContent = '0';
+  renderHistory();
+});
+
+/* ============================================================
+   TOGGLES
+============================================================ */
+weightedToggle.addEventListener('change', () => {
+  if (weightedToggle.checked) {
+    weightTable.classList.add('visible');
+  } else {
+    weightTable.classList.remove('visible');
+    items.forEach(it => { it.weight = 1; });
+    renderWeightTable();
+    drawWheel();
+  }
+});
+
+removeToggle.addEventListener('change', () => {
+  spinBtn.disabled = items.length < (removeToggle.checked ? 1 : 2);
+});
+
+/* ============================================================
+   TEXTAREA INPUT
+============================================================ */
+textarea.addEventListener('input', parseItems);
+
+/* ============================================================
+   SPIN BUTTONS
+============================================================ */
+spinBtn.addEventListener('click', doSpin);
+spinAgainBtn.addEventListener('click', doSpin);
+
+/* ============================================================
+   FAQ ACCORDION
+============================================================ */
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(el => {
+    el.classList.remove('open');
+    el.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+parseItems();
+drawWheel();
+</script>
+</body>
+</html>

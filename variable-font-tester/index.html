@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Variable Font Feature Axis Tester: Adjust Dynamic Properties Across Modern Fonts | AxiomApe</title>
+  <meta name="description" content="Free browser-based variable font tester. Adjust weight, width, slant, italic, and optical size axes in real time. Toggle OpenType features like ligatures and tabular figures. Copy the generated CSS instantly. 100% client-side." />
+  <meta name="keywords" content="variable font tester, font-variation-settings, OpenType axis tester, css variable font, font-feature-settings, wght wdth slnt opsz ital, web typography tool, variable font preview, opentype ligatures, tabular figures css, font axis slider, css font tool, web font tester, variable font css generator, google fonts variable" />
+  <link rel="canonical" href="https://axiomape.com/variable-font-tester/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Variable Font Feature Axis Tester",
+        "description": "Free browser-based variable font tester. Adjust weight, width, slant, italic, and optical size axes in real time. Toggle OpenType features like ligatures and tabular figures. Copy the generated CSS instantly. 100% client-side.",
+        "url": "https://axiomape.com/variable-font-tester/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a variable font and how does it differ from traditional static fonts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A variable font is a single font file that encodes an entire design space of typographic variations using interpolation math. Traditional static fonts are separate files for each style: one file for regular, one for bold, one for italic, and so on. A variable font replaces all of those with a single file that the browser can smoothly animate or set to any supported position along each registered axis. For example, a single variable font file can represent any weight from 100 (thin) to 900 (black) rather than requiring nine separate weight files. This dramatically reduces HTTP requests and often reduces total file size when you need more than two or three styles."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between standard (registered) axes and custom axes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The OpenType specification defines a set of registered axes that have standardized four-letter tags and agreed-upon value ranges. The five most common registered axes are: wght (weight, 1 to 1000), wdth (width, expressed as a percentage of normal), slnt (slant, in degrees), ital (italic, 0 for upright or 1 for italic), and opsz (optical size, in points). Because these axes are standardized, browsers also expose CSS properties that map to them: font-weight maps to wght, font-style maps to slnt and ital, and font-optical-sizing maps to opsz. Custom axes use uppercase four-letter tags by convention (for example GRAD for grade or YOPQ for y-opaque) and have no standardized CSS property mapping, so they must always be set via font-variation-settings."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I correctly apply variable font styles using standard modern CSS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "To use a variable font in CSS, first declare it with @font-face using a format hint of woff2-variations or truetype-variations to tell the browser it is a variable font. Then apply it with font-family as normal. For registered axes, you can use the high-level CSS properties: font-weight: 350 sets the wght axis, font-style: oblique -10deg sets the slnt axis, and font-optical-sizing: auto lets the browser set opsz automatically based on font size. For any axis not covered by a high-level property, or when you want explicit control over registered axes, use font-variation-settings: 'wght' 350, 'wdth' 90 and so on. Be aware that font-variation-settings does not inherit smoothly during CSS transitions unless both states use the same axis list."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should I use font-variation-settings versus dedicated properties like font-weight?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The high-level CSS properties (font-weight, font-style, font-stretch) are preferred for registered axes because they inherit correctly, work with @media and @supports queries, and are well-understood by assistive technologies. However, font-variation-settings gives you two advantages: it is the only way to access custom axes (like GRAD or YOPQ) that have no dedicated CSS property, and it lets you set multiple axes in a single declaration for brevity. The main trade-off is that font-variation-settings does not participate in CSS value interpolation the same way font-weight does, so transitions between two font-variation-settings declarations require matching axis lists. Best practice is to use high-level properties for registered axes and reserve font-variation-settings for custom axes or when consolidating many axis values at once."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does loading a single variable web font save bandwidth compared to multiple traditional font weights?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It depends on how many styles your design actually uses. A single variable font file is larger than one static weight file because it must encode all the interpolation data for every supported axis. However, it is almost always smaller than two or more static files combined. If your design uses only one weight (say, regular 400), a static file is slightly smaller. If your design uses three or more styles, a variable font almost always wins. For example, three static Roboto files (regular, bold, italic) might total 120 KB, while a single Roboto Flex variable file is around 160 KB but covers the entire design space of weight, width, and slant with a single HTTP request. The real gain is also in HTTP request count: one request versus three or more, which meaningfully improves page speed on slow connections."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f1117;
+      --surface:    #1a1d2b;
+      --surface2:   #222535;
+      --surface3:   #282c40;
+      --border:     #2d3148;
+      --border2:    #3a3f5c;
+      --magenta:    #D946EF;
+      --cyan:       #06B6D4;
+      --magenta-dim: rgba(217,70,239,0.12);
+      --cyan-dim:    rgba(6,182,212,0.12);
+      --magenta-glow: 0 0 14px rgba(217,70,239,0.45);
+      --cyan-glow:    0 0 14px rgba(6,182,212,0.45);
+      --text:       #e2e8f0;
+      --muted:      #8892a4;
+      --green:      #10b981;
+      --radius:     12px;
+      --radius-sm:  8px;
+      --shadow:     0 4px 28px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .top-nav { display: none; }
+
+    /* =============================================
+       PAGE WRAPPER
+    ============================================= */
+    .page-wrapper {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--magenta), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       TOOL CARD
+    ============================================= */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    /* =============================================
+       THREE-COLUMN LAYOUT
+    ============================================= */
+    .three-col {
+      display: grid;
+      grid-template-columns: 270px 1fr 260px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1050px) {
+      .three-col {
+        grid-template-columns: 1fr 1fr;
+      }
+      .col-canvas {
+        grid-column: 1 / -1;
+        order: -1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .three-col {
+        grid-template-columns: 1fr;
+      }
+      .col-canvas { order: 0; }
+    }
+
+    /* =============================================
+       COLUMN 1: CONTROLS PANEL
+    ============================================= */
+    .col-controls {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .ctrl-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+
+    /* Font preset selector */
+    .preset-select {
+      width: 100%;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2306B6D4' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+      transition: border-color 0.2s;
+    }
+    .preset-select:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: var(--cyan-glow);
+    }
+
+    /* Custom URL input */
+    .custom-url-wrap {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .custom-url-wrap input {
+      flex: 1;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 0.82rem;
+      transition: border-color 0.2s;
+    }
+    .custom-url-wrap input:focus {
+      outline: none;
+      border-color: var(--magenta);
+      box-shadow: var(--magenta-glow);
+    }
+    .custom-url-wrap input::placeholder { color: var(--muted); }
+    .btn-load {
+      background: var(--magenta);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .btn-load:hover { opacity: 0.85; }
+
+    /* Axis sliders */
+    .axis-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .axis-row:last-child { margin-bottom: 0; }
+    .axis-label {
+      font-size: 0.8rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .axis-tag {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.7rem;
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      border: 1px solid rgba(6,182,212,0.3);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    .axis-val {
+      font-size: 0.8rem;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      color: var(--magenta);
+      font-weight: 600;
+      text-align: right;
+      min-width: 44px;
+    }
+    .axis-slider {
+      grid-column: 1 / -1;
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border2);
+      outline: none;
+      cursor: pointer;
+    }
+    .axis-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--magenta);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(217,70,239,0.6);
+      transition: box-shadow 0.2s;
+    }
+    .axis-slider::-webkit-slider-thumb:hover {
+      box-shadow: var(--magenta-glow);
+    }
+    .axis-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--magenta);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 6px rgba(217,70,239,0.6);
+    }
+    .axis-slider::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    /* OpenType toggles */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .feature-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.2s;
+    }
+    .feature-row:hover { border-color: var(--cyan); }
+    .feature-row.active { border-color: var(--magenta); background: var(--magenta-dim); }
+    .feature-name {
+      font-size: 0.75rem;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .feature-tag {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      display: block;
+    }
+    .toggle-switch {
+      width: 32px;
+      height: 18px;
+      background: var(--border2);
+      border-radius: 9px;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .feature-row.active .toggle-switch {
+      background: var(--magenta-dim);
+      border: 1px solid var(--magenta);
+    }
+    .feature-row.active .toggle-switch::after {
+      transform: translateX(14px);
+      background: var(--magenta);
+    }
+
+    /* =============================================
+       COLUMN 2: LIVE CANVAS
+    ============================================= */
+    .col-canvas {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .canvas-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+    .canvas-top label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .canvas-top .axis-slider { flex: 1; }
+    .canvas-top .axis-val { min-width: 50px; }
+
+    .canvas-frame {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    #preview-text {
+      width: 100%;
+      min-height: 80px;
+      outline: none;
+      line-height: 1.45;
+      color: var(--text);
+      word-break: break-word;
+      caret-color: var(--cyan);
+      transition: font-variation-settings 0.05s, font-size 0.05s;
+    }
+    #preview-text:empty::before {
+      content: 'Click to edit this preview text...';
+      color: var(--muted);
+      pointer-events: none;
+    }
+    #preview-text:focus {
+      box-shadow: inset 0 0 0 1px rgba(6,182,212,0.2);
+      border-radius: 6px;
+    }
+
+    /* =============================================
+       COLUMN 3: CSS OUTPUT
+    ============================================= */
+    .col-output {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .output-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--magenta);
+    }
+
+    #css-output {
+      background: #0d0f18;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text);
+      min-height: 140px;
+    }
+
+    .css-prop  { color: #7dd3fc; }   /* sky blue - property name */
+    .css-punct { color: var(--muted); }
+    .css-tag   { color: var(--magenta); }  /* axis tag like 'wght' */
+    .css-num   { color: #86efac; }    /* green - numbers */
+    .css-kw    { color: var(--cyan); } /* cyan - keyword values */
+
+    .btn-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(6,182,212,0.4);
+      border-radius: var(--radius-sm);
+      color: var(--cyan);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-copy:hover {
+      background: rgba(6,182,212,0.22);
+      border-color: var(--cyan);
+    }
+    .btn-copy.copied {
+      background: rgba(16,185,129,0.15);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* Live metrics row */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .metric-chip {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .metric-chip .mc-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .metric-chip .mc-val {
+      font-size: 0.88rem;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+      color: var(--cyan);
+      margin-top: 2px;
+    }
+
+    /* =============================================
+       AD PLACEMENTS
+    ============================================= */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 8px 0;
+      margin: 20px 0;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      margin: 10px 0;
+    }
+
+    /* =============================================
+       EDUCATIONAL CONTENT
+    ============================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--magenta);
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .section-intro {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface2);
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .faq-q:hover { background: var(--surface3); }
+    .faq-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: transform 0.25s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* =============================================
+       RESPONSIVE TWEAKS
+    ============================================= */
+    @media (max-width: 640px) {
+      .tool-card { padding: 14px; }
+      .canvas-frame { padding: 16px 12px; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Variable Font Feature Axis Tester</h1>
+    <p>Adjust dynamic properties across supported modern fonts. Tune weight, width, slant, optical size, and OpenType features live, then copy the generated CSS.</p>
+  </header>
+
+  <!-- TOOL CARD -->
+  <div class="tool-card">
+    <div class="three-col">
+
+      <!-- ========== COLUMN 1: CONTROLS ========== -->
+      <div class="col-controls">
+
+        <!-- Font Preset Selector -->
+        <div>
+          <div class="ctrl-section-label">Font Selection</div>
+          <select class="preset-select" id="font-preset" onchange="onPresetChange(this.value)">
+            <option value="Roboto Flex">Roboto Flex (Full Axis Range)</option>
+            <option value="Inter">Inter Variable (Weight Axis)</option>
+            <option value="Playfair Display">Playfair Display (Weight Axis)</option>
+            <option value="custom">Load Custom Web Font via URL...</option>
+          </select>
+          <div class="custom-url-wrap" id="custom-url-row" style="display:none">
+            <input type="url" id="custom-url" placeholder=".woff2 or .ttf URL" />
+            <button class="btn-load" onclick="loadCustomFont()">Load</button>
+          </div>
+        </div>
+
+        <!-- Variation Axes -->
+        <div>
+          <div class="ctrl-section-label">Variation Axes</div>
+
+          <div class="axis-row">
+            <div class="axis-label"><span class="axis-tag">wght</span> Weight</div>
+            <div class="axis-val" id="val-wght">400</div>
+            <input type="range" class="axis-slider" id="sl-wght" min="100" max="1000" step="1" value="400"
+              oninput="onAxis('wght', this.value, 'val-wght')" />
+          </div>
+
+          <div class="axis-row">
+            <div class="axis-label"><span class="axis-tag">wdth</span> Width %</div>
+            <div class="axis-val" id="val-wdth">100</div>
+            <input type="range" class="axis-slider" id="sl-wdth" min="25" max="151" step="1" value="100"
+              oninput="onAxis('wdth', this.value, 'val-wdth')" />
+          </div>
+
+          <div class="axis-row">
+            <div class="axis-label"><span class="axis-tag">slnt</span> Slant deg</div>
+            <div class="axis-val" id="val-slnt">0</div>
+            <input type="range" class="axis-slider" id="sl-slnt" min="-15" max="0" step="1" value="0"
+              oninput="onAxis('slnt', this.value, 'val-slnt')" />
+          </div>
+
+          <div class="axis-row">
+            <div class="axis-label"><span class="axis-tag">ital</span> Italic</div>
+            <div class="axis-val" id="val-ital">0</div>
+            <input type="range" class="axis-slider" id="sl-ital" min="0" max="1" step="0.01" value="0"
+              oninput="onAxis('ital', this.value, 'val-ital')" />
+          </div>
+
+          <div class="axis-row">
+            <div class="axis-label"><span class="axis-tag">opsz</span> Optical Size</div>
+            <div class="axis-val" id="val-opsz">14</div>
+            <input type="range" class="axis-slider" id="sl-opsz" min="6" max="144" step="1" value="14"
+              oninput="onAxis('opsz', this.value, 'val-opsz')" />
+          </div>
+        </div>
+
+        <!-- OpenType Feature Toggles -->
+        <div>
+          <div class="ctrl-section-label">OpenType Features</div>
+          <div class="feature-grid">
+            <div class="feature-row" id="ft-liga" onclick="onFeature('liga')">
+              <span class="feature-name">Standard Ligatures<span class="feature-tag">liga</span></span>
+              <span class="toggle-switch"></span>
+            </div>
+            <div class="feature-row" id="ft-dlig" onclick="onFeature('dlig')">
+              <span class="feature-name">Discretionary Lig.<span class="feature-tag">dlig</span></span>
+              <span class="toggle-switch"></span>
+            </div>
+            <div class="feature-row" id="ft-tnum" onclick="onFeature('tnum')">
+              <span class="feature-name">Tabular Figures<span class="feature-tag">tnum</span></span>
+              <span class="toggle-switch"></span>
+            </div>
+            <div class="feature-row" id="ft-zero" onclick="onFeature('zero')">
+              <span class="feature-name">Slashed Zero<span class="feature-tag">zero</span></span>
+              <span class="toggle-switch"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- end col-controls -->
+
+      <!-- ========== COLUMN 2: LIVE CANVAS ========== -->
+      <div class="col-canvas">
+
+        <!-- Font Size Slider -->
+        <div class="canvas-top">
+          <label for="sl-fsize">Size</label>
+          <input type="range" class="axis-slider" id="sl-fsize" min="12" max="144" step="1" value="36"
+            oninput="onFontSize(this.value)" />
+          <div class="axis-val" id="val-fsize">36px</div>
+        </div>
+
+        <!-- Preview Canvas -->
+        <div class="canvas-frame">
+          <span class="canvas-hint">Click text to edit</span>
+          <div id="preview-text"
+            contenteditable="true"
+            spellcheck="false"
+            aria-label="Live font preview. Edit this text to test the font.">Variable fonts adapt: weight, width, and optical size all flow without separate font files. AaBbCc 0123456789</div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="metrics-row">
+          <div class="metric-chip">
+            <div class="mc-label">Weight</div>
+            <div class="mc-val" id="m-wght">400</div>
+          </div>
+          <div class="metric-chip">
+            <div class="mc-label">Width</div>
+            <div class="mc-val" id="m-wdth">100%</div>
+          </div>
+          <div class="metric-chip">
+            <div class="mc-label">Slant</div>
+            <div class="mc-val" id="m-slnt">0deg</div>
+          </div>
+          <div class="metric-chip">
+            <div class="mc-label">Opt. Size</div>
+            <div class="mc-val" id="m-opsz">14pt</div>
+          </div>
+        </div>
+
+      </div>
+      <!-- end col-canvas -->
+
+      <!-- ========== COLUMN 3: CSS OUTPUT ========== -->
+      <div class="col-output">
+        <div class="output-label">Generated CSS</div>
+        <pre id="css-output" aria-label="Generated CSS declarations" aria-live="polite"></pre>
+        <button class="btn-copy" id="btn-copy" onclick="copyCSS()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy CSS
+        </button>
+        <div style="font-size:0.72rem;color:var(--muted);line-height:1.5;">
+          Paste into any CSS rule. Axes not supported by the chosen font are silently ignored by the browser.
+        </div>
+      </div>
+      <!-- end col-output -->
+
+    </div>
+    <!-- end three-col -->
+  </div>
+  <!-- end tool-card -->
+
+  <!-- ================================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ================================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ================================================================
+       GLOSSARY
+  ================================================================ -->
+  <div class="card">
+    <div class="card-title">Key Typography Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Variable Font</div>
+        <div class="glossary-def">A single OpenType font file that encodes a continuous design space of typographic variations using interpolation, replacing multiple static font files.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">OpenType Axis</div>
+        <div class="glossary-def">A named dimension of typographic variation within a variable font, such as weight or width. Each axis has a four-letter tag, a minimum, a maximum, and a default value.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Design Space</div>
+        <div class="glossary-def">The full range of typographic variants accessible within a single variable font, defined by all its supported axes and their allowable ranges combined.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">font-variation-settings</div>
+        <div class="glossary-def">A CSS property that sets one or more OpenType axis values directly using their four-letter tags and numeric values, for example: font-variation-settings: 'wght' 600, 'wdth' 85.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">font-feature-settings</div>
+        <div class="glossary-def">A CSS property that enables or disables OpenType typographic features such as ligatures, tabular numbers, and slashed zeros using their four-letter tags.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Optical Sizing (opsz)</div>
+        <div class="glossary-def">A registered axis that adjusts stroke contrast, spacing, and letterform weight to remain visually consistent across very small and very large display sizes.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Registered Axis</div>
+        <div class="glossary-def">An OpenType axis with a standardized lowercase four-letter tag (wght, wdth, slnt, ital, opsz) defined by the OpenType specification with agreed-upon value ranges.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Custom Axis</div>
+        <div class="glossary-def">A non-standard axis defined by the font designer using an uppercase four-letter tag. Custom axes have no dedicated CSS property and must always be set via font-variation-settings.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Tabular Figures (tnum)</div>
+        <div class="glossary-def">An OpenType feature that assigns equal horizontal width to all digits, ensuring columns of numbers align vertically in tables and financial displays.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Ligature</div>
+        <div class="glossary-def">A single glyph that replaces two or more adjacent characters whose forms would otherwise collide or look awkward, such as fi, fl, or ff in Latin text.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       EDUCATIONAL SECTION
+  ================================================================ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to CSS Variable Fonts and OpenType Feature Control</h2>
+    <p class="section-intro">Variable fonts are one of the most practical advances in web typography since web fonts themselves. A single file replaces an entire family of static weights, widths, and styles, and CSS gives you direct access to every axis. This guide covers how variable fonts work, how to use this tester effectively, and how to write production-ready CSS for any modern browser.</p>
+
+    <h3>How to Use This Tester</h3>
+    <p>Select a font preset from Column 1 or paste a direct URL to any .woff2 or .ttf variable font file and click Load. The font loads via the browser's FontFace API entirely on your device - no file is uploaded to any server. Then drag any axis slider and watch the canvas in Column 2 update instantly. Column 3 always shows the exact CSS you need to replicate the current state. Click Copy CSS and paste it directly into your stylesheet.</p>
+    <p>The preview canvas is fully editable. Click anywhere in the text and type your own words or numbers to test ligatures, tabular figure alignment, and how the font handles your actual content at your chosen axis settings.</p>
+
+    <h3>Understanding the Five Registered Axes</h3>
+    <p>The <strong>wght</strong> (weight) axis is the most widely supported, ranging from 100 (thin) to 1000 (ultra-black). Most variable fonts include at least this axis. The <strong>wdth</strong> (width) axis scales letterforms horizontally as a percentage of their default width, from condensed around 50 to expanded around 150. The <strong>slnt</strong> (slant) axis leans glyphs without switching to a separately drawn italic, using negative degree values. The <strong>ital</strong> (italic) axis switches between the upright design (0) and the full italic design (1), and some fonts support fractional values for gradual transitions. The <strong>opsz</strong> (optical size) axis adjusts contrast and spacing to remain readable from small caption sizes to large display headlines.</p>
+    <p>Not every font supports all five axes. When an axis in your font-variation-settings declaration is not supported by the loaded font, the browser silently ignores that axis and applies the others without error.</p>
+
+    <h3>OpenType Feature Settings in Practice</h3>
+    <p>Standard ligatures (<code>liga</code>) are enabled by default in most browsers. Turning them off can be useful in code or tabular contexts where fi or fl ligatures might confuse character recognition. Discretionary ligatures (<code>dlig</code>) include decorative combinations the designer considered optional, such as st or ct ligatures, and are off by default. Tabular figures (<code>tnum</code>) assign each digit the same advance width, essential for aligning columns of numbers in financial tables. The slashed zero (<code>zero</code>) replaces the digit 0 with a visually distinguished slashed form to prevent confusion with the uppercase letter O, useful in code and serial numbers.</p>
+
+    <h3>Performance and Loading Strategy</h3>
+    <p>Preload your variable font with a link tag using rel="preload" and as="font" and type="font/woff2" to ensure it loads as early as possible. Add crossorigin="anonymous" even for same-origin fonts, because the browser's font loader always uses CORS. Use the unicode-range descriptor in your @font-face block to limit the font to the character sets you actually use - this allows browsers to download only the subsets needed for the current page. For Google Fonts variable fonts, the API URL syntax uses ranges like wght@100..900 to request the full axis range.</p>
+
+    <h3>CSS Animation and Transitions with Variable Fonts</h3>
+    <p>Variable font axes can be smoothly animated with CSS transitions or keyframes. For high-level properties like font-weight, transitions work exactly as expected. For font-variation-settings, the browser interpolates between two values only if both declarations contain identical axis lists in the same order. If the axis lists differ, the browser snaps rather than interpolates. A practical pattern is to set all axes in a single font-variation-settings declaration and transition that property, ensuring consistent interpolation across all axes simultaneously.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item" id="faq-0">
+      <div class="faq-q" onclick="toggleFaq('faq-0')">
+        What is a variable font and how does it differ from traditional static fonts?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">
+        A variable font is a single OpenType font file that encodes an entire design space of typographic variations using interpolation math. Traditional static fonts are separate files for each style: one file for regular, one for bold, one for italic, and so on. A variable font replaces all of those with a single file that the browser can smoothly animate or set to any supported position along each registered axis. For example, a single variable font file can represent any weight from 100 (thin) to 900 (black) rather than requiring nine separate weight files. This dramatically reduces HTTP requests and often reduces total file size when you need more than two or three styles.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq-1">
+      <div class="faq-q" onclick="toggleFaq('faq-1')">
+        What is the difference between standard (registered) axes and custom axes?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">
+        The OpenType specification defines a set of registered axes that have standardized four-letter tags and agreed-upon value ranges. The five most common registered axes are: wght (weight, 1 to 1000), wdth (width, expressed as a percentage of normal), slnt (slant, in degrees), ital (italic, 0 for upright or 1 for italic), and opsz (optical size, in points). Because these axes are standardized, browsers also expose CSS properties that map to them: font-weight maps to wght, font-style maps to slnt and ital, and font-optical-sizing maps to opsz. Custom axes use uppercase four-letter tags by convention (for example GRAD for grade or YOPQ for y-opaque) and have no standardized CSS property mapping, so they must always be set via font-variation-settings.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq-2">
+      <div class="faq-q" onclick="toggleFaq('faq-2')">
+        How do I correctly apply variable font styles using standard modern CSS?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">
+        To use a variable font in CSS, first declare it with @font-face using a format hint of woff2-variations or truetype-variations to tell the browser it is a variable font. Then apply it with font-family as normal. For registered axes, you can use the high-level CSS properties: font-weight: 350 sets the wght axis, font-style: oblique -10deg sets the slnt axis, and font-optical-sizing: auto lets the browser set opsz automatically based on font size. For any axis not covered by a high-level property, or when you want explicit control over registered axes, use font-variation-settings: 'wght' 350, 'wdth' 90 and so on. Be aware that font-variation-settings does not inherit smoothly during CSS transitions unless both states use the same axis list.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq-3">
+      <div class="faq-q" onclick="toggleFaq('faq-3')">
+        Why should I use font-variation-settings versus dedicated properties like font-weight?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">
+        The high-level CSS properties (font-weight, font-style, font-stretch) are preferred for registered axes because they inherit correctly, work with @media and @supports queries, and are well-understood by assistive technologies. However, font-variation-settings gives you two advantages: it is the only way to access custom axes (like GRAD or YOPQ) that have no dedicated CSS property, and it lets you set multiple axes in a single declaration for brevity. The main trade-off is that font-variation-settings does not participate in CSS value interpolation the same way font-weight does, so transitions between two font-variation-settings declarations require matching axis lists. Best practice is to use high-level properties for registered axes and reserve font-variation-settings for custom axes or when consolidating many axis values at once.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq-4">
+      <div class="faq-q" onclick="toggleFaq('faq-4')">
+        Does loading a single variable web font save bandwidth compared to multiple traditional font weights?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-a">
+        It depends on how many styles your design actually uses. A single variable font file is larger than one static weight file because it must encode all the interpolation data for every supported axis. However, it is almost always smaller than two or more static files combined. If your design uses only one weight (say, regular 400), a static file is slightly smaller. If your design uses three or more styles, a variable font almost always wins. For example, three static Roboto files (regular, bold, italic) might total 120 KB, while a single Roboto Flex variable file is around 160 KB but covers the entire design space of weight, width, and slant with a single HTTP request. The real gain is also in HTTP request count: one request versus three or more, which meaningfully improves page speed on slow connections.
+      </div>
+    </div>
+
+  </div>
+  <!-- end edu-section -->
+
+</main>
+<!-- end main -->
+
+<!-- ================================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+================================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =============================================
+     STATE
+  ============================================= */
+  var state = {
+    fontFamily: 'Roboto Flex',
+    wght: 400,
+    wdth: 100,
+    slnt: 0,
+    ital: 0,
+    opsz: 14,
+    fontSize: 36,
+    liga: 1,
+    dlig: 0,
+    tnum: 0,
+    zero: 0
+  };
+
+  /* =============================================
+     FONT PRESETS
+  ============================================= */
+  var FONT_URLS = {
+    'Roboto Flex': 'https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..900&display=swap',
+    'Inter':       'https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap',
+    'Playfair Display': 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400..900&display=swap'
+  };
+
+  function loadGoogleFont(name, url) {
+    var existing = document.getElementById('dyn-font-link');
+    if (existing) existing.remove();
+    var link = document.createElement('link');
+    link.id = 'dyn-font-link';
+    link.rel = 'stylesheet';
+    link.href = url;
+    document.head.appendChild(link);
+    state.fontFamily = name;
+    render();
+  }
+
+  /* Called when preset selector changes */
+  window.onPresetChange = function (val) {
+    var customRow = document.getElementById('custom-url-row');
+    if (val === 'custom') {
+      customRow.style.display = 'flex';
+    } else {
+      customRow.style.display = 'none';
+      if (FONT_URLS[val]) {
+        loadGoogleFont(val, FONT_URLS[val]);
+      }
+    }
+  };
+
+  /* Load custom URL via FontFace API */
+  window.loadCustomFont = function () {
+    var url = document.getElementById('custom-url').value.trim();
+    if (!url) return;
+    var ff = new FontFace('AxiomCustomVF', 'url(' + url + ')');
+    ff.load().then(function (loaded) {
+      document.fonts.add(loaded);
+      state.fontFamily = 'AxiomCustomVF';
+      render();
+    }).catch(function () {
+      alert('Could not load the font. Check that the URL is a direct link to a .woff2, .ttf, or .otf file and that the server allows CORS.');
+    });
+  };
+
+  /* =============================================
+     AXIS HANDLERS
+  ============================================= */
+  window.onAxis = function (axis, rawVal, displayId) {
+    var v;
+    if (axis === 'ital') {
+      v = Math.round(parseFloat(rawVal) * 100) / 100;
+    } else {
+      v = Math.round(parseFloat(rawVal));
+    }
+    state[axis] = v;
+    document.getElementById(displayId).textContent = v;
+    render();
+  };
+
+  window.onFontSize = function (val) {
+    state.fontSize = Math.round(parseFloat(val));
+    document.getElementById('val-fsize').textContent = state.fontSize + 'px';
+    render();
+  };
+
+  /* =============================================
+     FEATURE TOGGLE HANDLER
+  ============================================= */
+  window.onFeature = function (feat) {
+    state[feat] = state[feat] === 1 ? 0 : 1;
+    var el = document.getElementById('ft-' + feat);
+    if (state[feat] === 1) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+    render();
+  };
+
+  /* =============================================
+     RENDER: apply settings to preview + CSS out
+  ============================================= */
+  function render() {
+    var preview = document.getElementById('preview-text');
+    var wght = state.wght;
+    var wdth = state.wdth;
+    var slnt = state.slnt;
+    var ital = state.ital;
+    var opsz = state.opsz;
+
+    var varSettings = "'wght' " + wght + ", 'wdth' " + wdth + ", 'slnt' " + slnt + ", 'ital' " + ital + ", 'opsz' " + opsz;
+    var featSettings = "'liga' " + state.liga + ", 'dlig' " + state.dlig + ", 'tnum' " + state.tnum + ", 'zero' " + state.zero;
+
+    preview.style.fontFamily = "'" + state.fontFamily + "', system-ui, sans-serif";
+    preview.style.fontVariationSettings = varSettings;
+    preview.style.fontFeatureSettings = featSettings;
+    preview.style.fontSize = state.fontSize + 'px';
+
+    updateMetrics(wdth, slnt, opsz);
+    updateCSSOutput(varSettings, featSettings);
+  }
+
+  function updateMetrics(wdth, slnt, opsz) {
+    document.getElementById('m-wght').textContent = state.wght;
+    document.getElementById('m-wdth').textContent = wdth + '%';
+    document.getElementById('m-slnt').textContent = slnt + 'deg';
+    document.getElementById('m-opsz').textContent = opsz + 'pt';
+  }
+
+  /* =============================================
+     CSS OUTPUT with syntax highlighting
+  ============================================= */
+  function updateCSSOutput(varSettings, featSettings) {
+    var lines = [
+      'font-family: \'' + state.fontFamily + '\', system-ui, sans-serif;',
+      'font-variation-settings: ' + varSettings + ';',
+      'font-feature-settings: ' + featSettings + ';',
+      'font-size: ' + state.fontSize + 'px;'
+    ];
+    var out = document.getElementById('css-output');
+    out.innerHTML = lines.map(function (line) { return highlightLine(line); }).join('\n');
+  }
+
+  function highlightLine(line) {
+    /* Split on first colon */
+    var colonIdx = line.indexOf(':');
+    if (colonIdx < 0) return escHtml(line);
+    var prop = line.substring(0, colonIdx);
+    var rest = line.substring(colonIdx);  /* includes ':' */
+    var coloredRest = rest
+      /* Axis/feature tags like 'wght' */
+      .replace(/'([a-zA-Z]{4})'/g, function (m, tag) {
+        return "'<span class=\"css-tag\">" + escHtml(tag) + "</span>'";
+      })
+      /* Numbers (with optional px/pt/deg/%) */
+      .replace(/\b(\d+(?:\.\d+)?)(px|pt|deg|%)?(?=[\s,;'])/g, function (m, num, unit) {
+        return '<span class="css-num">' + num + (unit || '') + '</span>';
+      })
+      /* Font family string in quotes */
+      .replace(/'([^']+)'(?=[,;]|\s*$)/g, function (m, fam) {
+        if (fam.length > 4) {  /* skip already-tagged 4-char axis tags */
+          return "'<span class=\"css-kw\">" + escHtml(fam) + "</span>'";
+        }
+        return m;
+      });
+    return '<span class="css-prop">' + escHtml(prop) + '</span><span class="css-punct">:</span>' + coloredRest;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* =============================================
+     COPY CSS BUTTON
+  ============================================= */
+  window.copyCSS = function () {
+    var pre = document.getElementById('css-output');
+    var text = pre.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { showCopied(); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopied();
+    }
+  };
+
+  function showCopied() {
+    var btn = document.getElementById('btn-copy');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function () {
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy CSS';
+      btn.classList.remove('copied');
+    }, 2000);
+  }
+
+  /* =============================================
+     FAQ ACCORDION
+  ============================================= */
+  window.toggleFaq = function (id) {
+    var item = document.getElementById(id);
+    if (item) item.classList.toggle('open');
+  };
+
+  /* =============================================
+     INIT
+  ============================================= */
+  function init() {
+    /* Load initial font (Roboto Flex) */
+    loadGoogleFont('Roboto Flex', FONT_URLS['Roboto Flex']);
+    /* Set liga as active by default since state.liga = 1 */
+    document.getElementById('ft-liga').classList.add('active');
+    /* Initial render */
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+}());
+</script>
+
+</body>
+</html>

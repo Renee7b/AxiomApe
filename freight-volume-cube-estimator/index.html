@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freight Cargo Volume Cube Estimator: CBM Calculator and Bin Packing Optimizer | AxiomApe</title>
+  <meta name="description" content="Free freight cargo volume cube estimator. Calculate how many boxes or pallets fit inside a shipping container or storage unit. Instant CBM calculator with weight-out vs cube-out detection, orientation engine, and load plan generator." />
+  <meta name="keywords" content="freight volume estimator, CBM calculator, cubic meter calculator, bin packing calculator, shipping container capacity, cargo cube estimator, pallet loading calculator, container load calculator, cubing out calculator, weigh out calculator, 20ft container capacity, 40ft container capacity, cargo space optimizer, freight calculator, box packing estimator" />
+  <link rel="canonical" href="https://axiomape.com/freight-volume-cube-estimator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Freight Cargo Volume Cube Estimator",
+        "description": "Free freight cargo volume cube estimator. Calculate how many boxes or pallets fit inside a shipping container or storage unit. Instant CBM calculator with weight-out vs cube-out detection, orientation engine, and load plan generator.",
+        "url": "https://axiomape.com/freight-volume-cube-estimator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between weighing out and cubing out a shipping container?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Cubing out means the physical volume of the container is completely filled before its maximum weight capacity is reached. Weighing out means the container hits its maximum payload weight limit before all available volume is used. Lightweight but bulky cargo (like foam or empty bottles) tends to cube out. Heavy but compact cargo (like steel parts or machinery) tends to weigh out. The limiting factor determines your true shipping capacity and cost per unit."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is CBM (Cubic Meters) calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CBM stands for Cubic Meters and is calculated by multiplying the length, width, and height of a shipment in meters: CBM = Length (m) x Width (m) x Height (m). For a box measuring 50cm x 40cm x 30cm, convert to meters first (0.5 x 0.4 x 0.3) to get 0.06 CBM. To find total shipment CBM, multiply single-unit CBM by the number of units. Freight carriers use CBM to calculate dimensional weight and determine shipping charges."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can I not utilize 100% of a container's internal volume?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In practice, 100% volume utilization is impossible because uniform rectangular boxes cannot tessellate perfectly inside a container whose internal dimensions are not exact multiples of the box dimensions. The remaining gap space is called dunnage space. Additionally, containers require dunnage materials (airbags, foam, strapping) to prevent cargo shifting, reducing usable space further. A realistic target for well-optimized cargo is 85 to 95% volume utilization. This tool calculates the mathematically optimal integer fit using floor division, which reflects real-world packing behavior."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does palletizing my cargo reduce my total shipping capacity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, palletizing cargo reduces the total number of individual boxes you can ship per container, because the pallet itself occupies volume and adds weight. A standard GMA pallet (48in x 40in x 5.5in) adds roughly 0.08 CBM and 20 to 25 kg (44 to 55 lbs) per pallet. However, palletizing significantly reduces handling time, labor cost, and damage rates. The tradeoff is usually worth it for most freight operations, but this tool lets you compare palletized versus floor-loaded quantities directly by adjusting the box dimensions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does box orientation and keeping boxes upright change the total yield?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because a container's internal dimensions are rarely perfect multiples of a box's dimensions in every direction, rotating a box to a different orientation can produce a better integer fit along each axis. For example, a box that is 14 inches tall might fit 5 times across a 72-inch container height (5 x 14 = 70), but if rotated to its 12-inch side it fits 6 times (6 x 12 = 72 exactly). The Keep Upright toggle restricts orientation to cases where the box's original height axis always points up, which is required for fragile or liquid cargo. Allowing all 6 rotations finds the mathematical maximum possible yield."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #22263a;
+      --border:      #2e3347;
+      --text:        #e8eaf0;
+      --muted:       #8b90a8;
+      --orange:      #F97316;
+      --orange-dim:  rgba(249,115,22,0.15);
+      --orange-glow: rgba(249,115,22,0.35);
+      --blue:        #0369A1;
+      --blue-bright: #0ea5e9;
+      --blue-dim:    rgba(3,105,161,0.18);
+      --green:       #22c55e;
+      --green-dim:   rgba(34,197,94,0.15);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.15);
+      --radius:      12px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue-bright); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* site-chrome hides .site-topbar automatically */
+    .site-topbar { display: none; }
+
+    /* =======================================
+       PAGE HEADER
+    ======================================= */
+    .page-header {
+      background: linear-gradient(135deg, #0a0c12 0%, #1a1d27 60%, #1e2235 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 820px;
+      margin: 0 auto 16px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .page-header h1 span { color: var(--orange); }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* =======================================
+       MAIN WRAPPER
+    ======================================= */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* =======================================
+       CARDS
+    ======================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--orange);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 1.1rem; }
+
+    /* =======================================
+       DUAL-COLUMN INPUT DASHBOARD
+    ======================================= */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 700px) { .dashboard { grid-template-columns: 1fr; } }
+
+    .panel-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* =======================================
+       FORM ELEMENTS
+    ======================================= */
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      margin-top: 12px;
+    }
+    label:first-of-type { margin-top: 0; }
+
+    input[type="number"], select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    input[type="number"]:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px var(--orange-dim);
+    }
+    select { cursor: pointer; }
+    select option { background: var(--surface2); }
+
+    /* =======================================
+       UNIT TOGGLE
+    ======================================= */
+    .unit-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      width: fit-content;
+    }
+    .unit-toggle button {
+      padding: 7px 18px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.15s, color 0.15s;
+    }
+    .unit-toggle button.active {
+      background: var(--orange);
+      color: #fff;
+    }
+
+    /* =======================================
+       UPRIGHT TOGGLE
+    ======================================= */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--orange);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .toggle-row .toggle-label {
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+      line-height: 1.3;
+    }
+    .toggle-row .toggle-label strong { color: var(--orange); }
+
+    /* =======================================
+       DIVIDER
+    ======================================= */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 18px 0;
+    }
+
+    /* =======================================
+       HERO RESULT
+    ======================================= */
+    .hero-result {
+      text-align: center;
+      padding: 28px 20px 22px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+    }
+    .hero-number {
+      font-size: clamp(2.8rem, 8vw, 4.5rem);
+      font-weight: 900;
+      color: var(--orange);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .hero-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .load-badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 5px 16px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .badge-cubed {
+      background: var(--blue-dim);
+      color: var(--blue-bright);
+      border: 1px solid rgba(14,165,233,0.35);
+    }
+    .badge-weighed {
+      background: var(--red-dim);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.35);
+    }
+    .badge-empty {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    /* =======================================
+       PROGRESS BARS
+    ======================================= */
+    .progress-bars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 560px) { .progress-bars { grid-template-columns: 1fr; } }
+
+    .progress-block { }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .progress-meta .pct { color: var(--text); font-weight: 700; }
+    .progress-track {
+      height: 10px;
+      background: var(--surface2);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+    .fill-volume { background: linear-gradient(90deg, var(--blue), var(--blue-bright)); }
+    .fill-weight { background: linear-gradient(90deg, #d97706, var(--orange)); }
+
+    /* =======================================
+       STACK CONFIG CARD
+    ======================================= */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 500px) { .config-grid { grid-template-columns: 1fr 1fr; } }
+
+    .config-cell {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .config-cell .cfg-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--blue-bright);
+      line-height: 1;
+    }
+    .config-cell .cfg-lbl {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    .copy-btn {
+      display: block;
+      width: 100%;
+      padding: 11px 20px;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s, transform 0.1s;
+      text-align: center;
+    }
+    .copy-btn:hover { background: #ea6a08; }
+    .copy-btn:active { transform: scale(0.98); }
+    .copy-btn.copied { background: var(--green); }
+
+    .plan-text {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      font-size: 0.9rem;
+    }
+
+    /* =======================================
+       AD PLACEMENTS
+    ======================================= */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* =======================================
+       EDUCATIONAL SECTION
+    ======================================= */
+    .edu-section { }
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-size: 0.97rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--orange);
+      margin: 22px 0 8px;
+    }
+    .edu-section p, .edu-section li {
+      color: var(--muted);
+      font-size: 0.93rem;
+      margin-bottom: 8px;
+    }
+    .edu-section ol, .edu-section ul {
+      padding-left: 20px;
+    }
+
+    /* =======================================
+       GLOSSARY
+    ======================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--orange);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* =======================================
+       FAQ ACCORDION
+    ======================================= */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface2);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: #2a2f47; }
+    .faq-q .faq-chevron {
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* =======================================
+       DISCLAIMER
+    ======================================= */
+    .tool-disclaimer {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header" style="margin: 0 -16px; border-radius: 0;">
+    <h1>Freight Cargo <span>Volume Cube</span> Estimator</h1>
+    <p>Optimize shipping pallets and boxes inside any storage container or dry van. Instant CBM calculator with orientation engine, weight vs. volume limit detection, and copy-ready load plan.</p>
+  </header>
+
+  <!-- =============================================
+       PANEL 1: CONTAINER AND CARGO INPUTS
+  ============================================== -->
+  <div class="card" style="margin-top: 28px;">
+    <div class="card-title"><span class="icon">&#x1F4E6;</span> Container and Cargo Inputs</div>
+
+    <div style="margin-bottom: 16px;">
+      <div class="unit-toggle" id="unitToggle">
+        <button class="active" onclick="setUnit('imperial')">in / lbs</button>
+        <button onclick="setUnit('metric')">cm / kg</button>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <!-- LEFT: Container Specs -->
+      <div>
+        <div class="panel-label">Container Specs</div>
+
+        <label for="containerPreset">Container Preset</label>
+        <select id="containerPreset" onchange="applyPreset()">
+          <option value="custom">Custom Dimensions</option>
+          <option value="20std">20ft Standard (ISO TEU)</option>
+          <option value="40std">40ft Standard (ISO)</option>
+          <option value="40hc">40ft High Cube (HC)</option>
+          <option value="45hc">45ft High Cube (HC)</option>
+          <option value="53dv">53ft Dry Van (Domestic)</option>
+          <option value="48dv">48ft Dry Van (Domestic)</option>
+          <option value="pallet4840">Standard Pallet Bay (48 x 40 in)</option>
+        </select>
+
+        <label for="cL">Container Interior Length (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="cL" min="1" step="0.1" placeholder="e.g. 239" oninput="recalc()" />
+
+        <label for="cW">Container Interior Width (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="cW" min="1" step="0.1" placeholder="e.g. 92" oninput="recalc()" />
+
+        <label for="cH">Container Interior Height (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="cH" min="1" step="0.1" placeholder="e.g. 95" oninput="recalc()" />
+
+        <label for="cMaxWeight">Max Payload Capacity (<span class="weight-lbl">lbs</span>)</label>
+        <input type="number" id="cMaxWeight" min="1" step="1" placeholder="e.g. 47900" oninput="recalc()" />
+      </div>
+
+      <!-- RIGHT: Cargo / Box Specs -->
+      <div>
+        <div class="panel-label">Cargo Box / Pallet Specs</div>
+
+        <label for="bL">Box Length (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="bL" min="0.1" step="0.1" placeholder="e.g. 24" oninput="recalc()" />
+
+        <label for="bW">Box Width (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="bW" min="0.1" step="0.1" placeholder="e.g. 18" oninput="recalc()" />
+
+        <label for="bH">Box Height (<span class="unit-lbl">in</span>)</label>
+        <input type="number" id="bH" min="0.1" step="0.1" placeholder="e.g. 12" oninput="recalc()" />
+
+        <label for="bWeight">Box Weight (<span class="weight-lbl">lbs</span>)</label>
+        <input type="number" id="bWeight" min="0" step="0.1" placeholder="e.g. 22" oninput="recalc()" />
+
+        <div class="toggle-row">
+          <input type="checkbox" id="keepUpright" onchange="recalc()" />
+          <label for="keepUpright" class="toggle-label" style="margin: 0;">
+            <strong>Keep Upright (Do Not Tip)</strong> - restricts to 2 floor orientations. Required for fragile, liquid, or labeled-side-up cargo.
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================
+       PANEL 2: CAPACITY AND YIELD OUTPUT
+  ============================================== -->
+  <div class="card">
+    <div class="card-title"><span class="icon">&#x1F4CA;</span> Capacity and Yield Output</div>
+
+    <div class="hero-result" id="heroResult">
+      <div class="hero-number" id="heroNum">--</div>
+      <div class="hero-label">Total Boxes / Units That Fit</div>
+      <span class="load-badge badge-empty" id="loadBadge">Enter dimensions above to calculate</span>
+    </div>
+
+    <div class="progress-bars">
+      <div class="progress-block">
+        <div class="progress-meta">
+          <span>Volume Utilization (CBM %)</span>
+          <span class="pct" id="volPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill fill-volume" id="volBar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="progress-block">
+        <div class="progress-meta">
+          <span>Weight Utilization (%)</span>
+          <span class="pct" id="wtPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill fill-weight" id="wtBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="statsRow" style="display:grid; grid-template-columns: repeat(3,1fr); gap:10px;">
+      <div class="config-cell">
+        <div class="cfg-val" id="statCBM">--</div>
+        <div class="cfg-lbl">Container CBM</div>
+      </div>
+      <div class="config-cell">
+        <div class="cfg-val" id="statBoxCBM">--</div>
+        <div class="cfg-lbl">Box CBM Each</div>
+      </div>
+      <div class="config-cell">
+        <div class="cfg-val" id="statTotalWt">--</div>
+        <div class="cfg-lbl" id="statTotalWtLbl">Total Cargo Weight (lbs)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================
+       PANEL 3: LOADING CONFIGURATION CARD
+  ============================================== -->
+  <div class="card">
+    <div class="card-title"><span class="icon">&#x1F9EE;</span> Optimal Loading Configuration</div>
+
+    <div id="loadingConfig">
+      <div class="empty-state">Enter container and box dimensions above to generate your load plan.</div>
+    </div>
+  </div>
+
+  <!-- =============================================
+       AD PLACEMENT 1: In-Content Leaderboard
+       Google AdSense 728x90 - desktop/tablet only
+  ============================================== -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- =============================================
+       GLOSSARY
+  ============================================== -->
+  <div class="card">
+    <div class="card-title"><span class="icon">&#x1F4D6;</span> Key Freight and Logistics Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">CBM (Cubic Meters)</div>
+        <div class="glossary-def">The standard international unit for freight volume. One CBM equals one cubic meter (100cm x 100cm x 100cm). Carriers use CBM to quote LCL rates and calculate dimensional weight charges.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">TEU</div>
+        <div class="glossary-def">Twenty-foot Equivalent Unit. The global standard measure for container capacity. One TEU equals one 20ft ISO container (roughly 33 CBM of usable space). A 40ft container equals 2 TEU.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Cubing Out</div>
+        <div class="glossary-def">When a container's physical volume is completely filled before reaching its maximum weight limit. Common with low-density, bulky cargo like foam, packaging, or apparel.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Weighing Out</div>
+        <div class="glossary-def">When cargo hits the container's maximum payload weight before all available volume is used. Common with dense cargo like steel, machinery, or liquids. Extra space goes unused.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Payload Capacity</div>
+        <div class="glossary-def">The maximum allowable cargo weight a container can legally carry, separate from the container's own structural weight (tare weight). Exceeding payload capacity is a DOT violation.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Tare Weight</div>
+        <div class="glossary-def">The weight of the empty container itself, not including cargo. A standard 20ft ISO container has a tare weight of roughly 2,200 kg (4,850 lbs). Gross weight = tare + payload.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Dimensional Weight (DIM)</div>
+        <div class="glossary-def">A pricing method where carriers charge based on volume rather than actual weight when a shipment is unusually large but light. DIM weight = (L x W x H) divided by a carrier-specific divisor.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Dunnage</div>
+        <div class="glossary-def">Materials used to fill empty space in a container and prevent cargo from shifting during transit. Includes airbags, foam, wood blocking, and strapping. Dunnage reduces usable volume.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================
+       EDUCATIONAL SECTION
+  ============================================== -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Freight Volume, CBM Calculation, and Container Loading</h2>
+    <p class="section-intro">Whether you are a freight broker quoting an LCL shipment, a warehouse manager planning a full container load (FCL), or an e-commerce seller comparing shipping options, understanding how to calculate and optimize cargo volume is a core operational skill. This guide covers everything you need to go from raw box dimensions to a production-ready load plan.</p>
+
+    <h3>How to Use This CBM and Bin Packing Tool</h3>
+    <p>1. Select your container type from the preset dropdown, or choose "Custom Dimensions" and enter interior measurements manually.</p>
+    <p>2. Enter your box or pallet dimensions and the weight per unit.</p>
+    <p>3. Toggle "Keep Upright" on if your cargo cannot be tipped or rotated (fragile items, liquids, labeled-side-up requirements). Leave it off to allow all 6 rotations and find the absolute maximum unit count.</p>
+    <p>4. Results update instantly. The hero card shows the total units that fit, constrained by both volume and weight. The progress bars show how close each limit is. The Loading Configuration card provides the exact stacking breakdown you can pass to a warehouse team.</p>
+    <p>5. Click "Copy Load Plan" to copy the full configuration text to your clipboard for use in emails, WMS entries, or logistics docs.</p>
+
+    <h3>The Mathematics Behind the Orientation Engine</h3>
+    <p>A rectangular box has 3 pairs of dimensions, producing 6 distinct physical orientations (which face is on the floor x which face points to the front). When "Keep Upright" is off, this tool tests all 6 orientations and selects the one that maximizes the integer count of boxes fitting along the container's length, width, and height axes simultaneously, using strict floor division (Math.floor) to ensure no fractional boxes are ever counted.</p>
+    <p>When "Keep Upright" is on, only 2 orientations are evaluated: the box placed with its original L x W footprint on the floor, and the box rotated 90 degrees horizontally (W x L footprint). The height of the box is always fixed as the vertical dimension in upright mode.</p>
+
+    <h3>Why Volume Utilization Rarely Reaches 100%</h3>
+    <p>Integer packing limits mean that unless each container dimension is a perfect multiple of the corresponding box dimension, some space will always remain unused. This gap is called the dunnage space. In practice, a well-optimized load achieves 85 to 95 percent volume utilization. Stacking patterns, pallet overhang, and required clearance for doors and forklifts further reduce theoretical maxima in real operations.</p>
+
+    <h3>Cube Out vs. Weigh Out: Which Limits Your Load?</h3>
+    <p>Your true container capacity is always the lower of two independent constraints: how many boxes physically fit (the volume limit), and how many boxes the container can legally carry (the weight limit). High-density cargo like steel, automotive parts, or packaged liquids will almost always weigh out before cubing out. Low-density cargo like foam products, clothing, or empty bottles will cube out long before approaching the weight limit. Knowing which constraint you are hitting in advance lets you negotiate better freight rates, split shipments correctly, and avoid DOT overweight citations.</p>
+
+    <h3>Container Interior Dimension Reference</h3>
+    <p>Published container exterior dimensions are always larger than usable interior dimensions. Common interior measurements:</p>
+    <p>20ft Standard: 232 in L x 92 in W x 91 in H (5,895 x 2,340 x 2,311 mm), approx. 33 CBM usable.</p>
+    <p>40ft Standard: 474 in L x 92 in W x 91 in H (12,032 x 2,340 x 2,311 mm), approx. 67 CBM usable.</p>
+    <p>40ft High Cube: 474 in L x 92 in W x 103 in H (12,032 x 2,340 x 2,698 mm), approx. 76 CBM usable.</p>
+    <p>53ft Dry Van (domestic): 636 in L x 100 in W x 110 in H, approx. 123 CBM usable.</p>
+
+    <hr class="divider" />
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item" id="faq1">
+      <div class="faq-q" onclick="toggleFaq('faq1')">
+        What is the difference between weighing out and cubing out a shipping container?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Cubing out means the physical volume of the container is completely filled before its maximum weight capacity is reached. Weighing out means the container hits its maximum payload weight limit before all available volume is used. Lightweight but bulky cargo (like foam or empty bottles) tends to cube out. Heavy but compact cargo (like steel parts or machinery) tends to weigh out. The limiting factor determines your true shipping capacity and cost per unit.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq2">
+      <div class="faq-q" onclick="toggleFaq('faq2')">
+        How is CBM (Cubic Meters) calculated?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        CBM stands for Cubic Meters and is calculated by multiplying the length, width, and height of a shipment in meters: CBM = Length (m) x Width (m) x Height (m). For a box measuring 50cm x 40cm x 30cm, convert to meters first (0.5 x 0.4 x 0.3) to get 0.06 CBM. To find total shipment CBM, multiply single-unit CBM by the number of units. Freight carriers use CBM to calculate dimensional weight and determine shipping charges.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq3">
+      <div class="faq-q" onclick="toggleFaq('faq3')">
+        Why can I not utilize 100% of a container's internal volume?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        In practice, 100% volume utilization is impossible because uniform rectangular boxes cannot tessellate perfectly inside a container whose internal dimensions are not exact multiples of the box dimensions. The remaining gap space is called dunnage space. Additionally, containers require dunnage materials (airbags, foam, strapping) to prevent cargo shifting, reducing usable space further. A realistic target for well-optimized cargo is 85 to 95% volume utilization. This tool calculates the mathematically optimal integer fit using floor division, which reflects real-world packing behavior.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq4">
+      <div class="faq-q" onclick="toggleFaq('faq4')">
+        Does palletizing my cargo reduce my total shipping capacity?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Yes, palletizing cargo reduces the total number of individual boxes you can ship per container, because the pallet itself occupies volume and adds weight. A standard GMA pallet (48in x 40in x 5.5in) adds roughly 0.08 CBM and 20 to 25 kg (44 to 55 lbs) per pallet. However, palletizing significantly reduces handling time, labor cost, and damage rates. The tradeoff is usually worth it for most freight operations, but this tool lets you compare palletized versus floor-loaded quantities directly by adjusting the box dimensions.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq5">
+      <div class="faq-q" onclick="toggleFaq('faq5')">
+        Why does box orientation and keeping boxes upright change the total yield?
+        <span class="faq-chevron">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Because a container's internal dimensions are rarely perfect multiples of a box's dimensions in every direction, rotating a box to a different orientation can produce a better integer fit along each axis. For example, a box that is 14 inches tall might fit 5 times across a 72-inch container height (5 x 14 = 70), but if rotated to its 12-inch side it fits 6 times (6 x 12 = 72 exactly). The Keep Upright toggle restricts orientation to cases where the box's original height axis always points up, which is required for fragile or liquid cargo. Allowing all 6 rotations finds the mathematical maximum possible yield.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tool-specific disclaimer -->
+  <div class="tool-disclaimer">
+    <strong>Estimation Only:</strong> Results from this freight cargo volume cube estimator are mathematical approximations based on uniform box packing using integer floor division. Real-world container loading is affected by dunnage requirements, cargo fragility, moisture barriers, door swing clearance, and forklift access lanes. Always verify load plans with your freight forwarder, 3PL, or logistics engineer before tendering a shipment. Weight limits shown are for reference only - consult the actual container placard and carrier requirements for legal compliance.
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  // =======================================================
+  //  UNIT SYSTEM
+  // =======================================================
+  let unit = 'imperial'; // 'imperial' = inches/lbs, 'metric' = cm/kg
+
+  function setUnit(u) {
+    unit = u;
+    document.querySelectorAll('.unit-lbl').forEach(el => el.textContent = u === 'imperial' ? 'in' : 'cm');
+    document.querySelectorAll('.weight-lbl').forEach(el => el.textContent = u === 'imperial' ? 'lbs' : 'kg');
+    document.getElementById('statTotalWtLbl').textContent = 'Total Cargo Weight (' + (u === 'imperial' ? 'lbs' : 'kg') + ')';
+    document.querySelectorAll('#unitToggle button').forEach((btn, i) => {
+      btn.classList.toggle('active', (i === 0 && u === 'imperial') || (i === 1 && u === 'metric'));
+    });
+    // Update presets label text in the selected preset
+    applyPreset();
+  }
+
+  // =======================================================
+  //  CONTAINER PRESETS (all in inches and lbs internally)
+  // =======================================================
+  const PRESETS = {
+    '20std':   { L: 232,  W: 92,  H: 91,  maxW: 47900 },
+    '40std':   { L: 474,  W: 92,  H: 91,  maxW: 58000 },
+    '40hc':    { L: 474,  W: 92,  H: 103, maxW: 58600 },
+    '45hc':    { L: 535,  W: 92,  H: 103, maxW: 57900 },
+    '53dv':    { L: 636,  W: 100, H: 110, maxW: 45000 },
+    '48dv':    { L: 576,  W: 98,  H: 108, maxW: 45000 },
+    'pallet4840': { L: 48, W: 40,  H: 60,  maxW: 2500 },
+    'custom':  null
+  };
+
+  // Conversion factors
+  const IN_TO_CM = 2.54;
+  const LB_TO_KG = 0.453592;
+
+  function applyPreset() {
+    const key = document.getElementById('containerPreset').value;
+    const preset = PRESETS[key];
+    if (!preset) return; // custom - do not overwrite
+
+    const toDisplay = (inches) => unit === 'metric'
+      ? parseFloat((inches * IN_TO_CM).toFixed(1))
+      : inches;
+    const toDisplayW = (lbs) => unit === 'metric'
+      ? parseFloat((lbs * LB_TO_KG).toFixed(1))
+      : lbs;
+
+    document.getElementById('cL').value = toDisplay(preset.L);
+    document.getElementById('cW').value = toDisplay(preset.W);
+    document.getElementById('cH').value = toDisplay(preset.H);
+    document.getElementById('cMaxWeight').value = toDisplayW(preset.maxW);
+    recalc();
+  }
+
+  // =======================================================
+  //  CORE PACKING MATH
+  // =======================================================
+
+  // Returns how many boxes of (bl x bw x bh) fit in (cL x cW x cH)
+  // using strict Math.floor per axis. No floating point box counts.
+  function fitCount(cL, cW, cH, bl, bw, bh) {
+    if (bl <= 0 || bw <= 0 || bh <= 0 || cL <= 0 || cW <= 0 || cH <= 0) return 0;
+    return Math.floor(cL / bl) * Math.floor(cW / bw) * Math.floor(cH / bh);
+  }
+
+  function fitDetail(cL, cW, cH, bl, bw, bh) {
+    if (bl <= 0 || bw <= 0 || bh <= 0 || cL <= 0 || cW <= 0 || cH <= 0) return null;
+    return {
+      along: Math.floor(cL / bl),
+      across: Math.floor(cW / bw),
+      high: Math.floor(cH / bh),
+      count: Math.floor(cL / bl) * Math.floor(cW / bw) * Math.floor(cH / bh)
+    };
+  }
+
+  // All 6 rotations of (L, W, H). Each is [floor-dim, left-dim, up-dim]
+  function getOrientations(bL, bW, bH, keepUpright) {
+    if (keepUpright) {
+      // Only 2 orientations: original footprint or rotated 90deg horizontally.
+      // Height (bH) must always be vertical.
+      return [
+        [bL, bW, bH], // L along container length, W across, H up
+        [bW, bL, bH]  // W along container length, L across, H up
+      ];
+    }
+    // All 6 distinct orientations (3 choices for vertical axis x 2 floor rotations)
+    return [
+      [bL, bW, bH],
+      [bW, bL, bH],
+      [bL, bH, bW],
+      [bH, bL, bW],
+      [bW, bH, bL],
+      [bH, bW, bL]
+    ];
+  }
+
+  // Returns the orientation that maximizes total unit count
+  function bestOrientation(cL, cW, cH, bL, bW, bH, keepUpright) {
+    const orientations = getOrientations(bL, bW, bH, keepUpright);
+    let best = null;
+    let bestCount = -1;
+    for (const [ol, ow, oh] of orientations) {
+      const detail = fitDetail(cL, cW, cH, ol, ow, oh);
+      if (detail && detail.count > bestCount) {
+        bestCount = detail.count;
+        best = { ol, ow, oh, ...detail };
+      }
+    }
+    return best;
+  }
+
+  // Convert display value to canonical inches (for imperial) or keep as cm
+  // The math works in whatever unit the user is using consistently
+  function getNum(id) {
+    return parseFloat(document.getElementById(id).value) || 0;
+  }
+
+  // =======================================================
+  //  MAIN RECALCULATION
+  // =======================================================
+  function recalc() {
+    const cL = getNum('cL');
+    const cW = getNum('cW');
+    const cH = getNum('cH');
+    const cMaxW = getNum('cMaxWeight');
+    const bL = getNum('bL');
+    const bW = getNum('bW');
+    const bH = getNum('bH');
+    const bWt = getNum('bWeight');
+    const keepUpright = document.getElementById('keepUpright').checked;
+
+    const heroNum = document.getElementById('heroNum');
+    const loadBadge = document.getElementById('loadBadge');
+    const volBar = document.getElementById('volBar');
+    const wtBar = document.getElementById('wtBar');
+    const volPct = document.getElementById('volPct');
+    const wtPct = document.getElementById('wtPct');
+    const statCBM = document.getElementById('statCBM');
+    const statBoxCBM = document.getElementById('statBoxCBM');
+    const statTotalWt = document.getElementById('statTotalWt');
+    const loadingConfig = document.getElementById('loadingConfig');
+
+    // Need at minimum container + box dimensions
+    if (cL <= 0 || cW <= 0 || cH <= 0 || bL <= 0 || bW <= 0 || bH <= 0) {
+      heroNum.textContent = '--';
+      loadBadge.className = 'load-badge badge-empty';
+      loadBadge.textContent = 'Enter dimensions above to calculate';
+      volBar.style.width = '0%'; volPct.textContent = '0%';
+      wtBar.style.width = '0%'; wtPct.textContent = '0%';
+      statCBM.textContent = '--'; statBoxCBM.textContent = '--'; statTotalWt.textContent = '--';
+      loadingConfig.innerHTML = '<div class="empty-state">Enter container and box dimensions above to generate your load plan.</div>';
+      return;
+    }
+
+    // Find optimal orientation
+    const best = bestOrientation(cL, cW, cH, bL, bW, bH, keepUpright);
+
+    if (!best || best.count === 0) {
+      heroNum.textContent = '0';
+      loadBadge.className = 'load-badge badge-empty';
+      loadBadge.textContent = 'Box is too large for this container';
+      volBar.style.width = '0%'; volPct.textContent = '0%';
+      wtBar.style.width = '0%'; wtPct.textContent = '0%';
+      statCBM.textContent = '--'; statBoxCBM.textContent = '--'; statTotalWt.textContent = '--';
+      loadingConfig.innerHTML = '<div class="empty-state">The box dimensions exceed the container interior. Please check your inputs.</div>';
+      return;
+    }
+
+    const volumeLimit = best.count;
+
+    // Weight constraint (if weight inputs provided)
+    let weightLimit = Infinity;
+    let weightLimitActive = false;
+    if (cMaxW > 0 && bWt > 0) {
+      weightLimit = Math.floor(cMaxW / bWt);
+      weightLimitActive = true;
+    }
+
+    const finalCount = Math.min(volumeLimit, weightLimit);
+    const cubesOut = volumeLimit <= weightLimit;
+
+    // CBM calculations - convert to meters if using metric (cm), or to meters if using imperial (in)
+    // For display we show CBM regardless of input unit
+    let containerVolM3, boxVolM3;
+    if (unit === 'metric') {
+      // input is in cm
+      containerVolM3 = (cL * cW * cH) / 1000000;
+      boxVolM3 = (bL * bW * bH) / 1000000;
+    } else {
+      // input is in inches - convert to meters (1 in = 0.0254 m)
+      containerVolM3 = (cL * 0.0254) * (cW * 0.0254) * (cH * 0.0254);
+      boxVolM3 = (bL * 0.0254) * (bW * 0.0254) * (bH * 0.0254);
+    }
+
+    const usedVol = boxVolM3 * finalCount;
+    const volUtilPct = containerVolM3 > 0 ? Math.min(100, (usedVol / containerVolM3) * 100) : 0;
+
+    const totalCargoWt = bWt > 0 ? finalCount * bWt : null;
+    const wtUtilPct = (weightLimitActive && cMaxW > 0 && totalCargoWt !== null)
+      ? Math.min(100, (totalCargoWt / cMaxW) * 100)
+      : 0;
+
+    // Update hero
+    heroNum.textContent = finalCount.toLocaleString();
+
+    if (finalCount === 0) {
+      loadBadge.className = 'load-badge badge-empty';
+      loadBadge.textContent = 'No boxes fit';
+    } else if (!weightLimitActive) {
+      loadBadge.className = 'load-badge badge-cubed';
+      loadBadge.textContent = 'Cubed Out (no weight limit set)';
+    } else if (cubesOut) {
+      loadBadge.className = 'load-badge badge-cubed';
+      loadBadge.textContent = 'Cubed Out - Volume is the limiting factor';
+    } else {
+      loadBadge.className = 'load-badge badge-weighed';
+      loadBadge.textContent = 'Weighed Out - Payload capacity is the limiting factor';
+    }
+
+    // Progress bars
+    volBar.style.width = volUtilPct.toFixed(1) + '%';
+    volPct.textContent = volUtilPct.toFixed(1) + '%';
+    wtBar.style.width = wtUtilPct.toFixed(1) + '%';
+    wtPct.textContent = weightLimitActive ? wtUtilPct.toFixed(1) + '%' : 'N/A';
+
+    // Stats
+    statCBM.textContent = containerVolM3.toFixed(3) + ' m3';
+    statBoxCBM.textContent = boxVolM3.toFixed(4) + ' m3';
+    if (totalCargoWt !== null) {
+      const weightUnit = unit === 'metric' ? 'kg' : 'lbs';
+      statTotalWt.textContent = totalCargoWt.toLocaleString(undefined, {maximumFractionDigits: 1}) + ' ' + weightUnit;
+    } else {
+      statTotalWt.textContent = 'N/A';
+    }
+
+    // Determine orientation description
+    function orientName(ol, ow, oh, bL, bW, bH) {
+      // Map back to which axis is which
+      const dims = { L: bL, W: bW, H: bH };
+      function label(val) {
+        if (val === bL) return 'L';
+        if (val === bW) return 'W';
+        return 'H';
+      }
+      return label(ol) + ' x ' + label(ow) + ' x ' + label(oh);
+    }
+
+    const orientDesc = orientName(best.ol, best.ow, best.oh, bL, bW, bH);
+    const dimUnit = unit === 'metric' ? 'cm' : 'in';
+    const weightUnit2 = unit === 'metric' ? 'kg' : 'lbs';
+
+    // Build load plan
+    let planLines = [];
+    planLines.push('=== Optimal Load Plan ===');
+    planLines.push('');
+    planLines.push('Container: ' + cL + dimUnit + ' (L) x ' + cW + dimUnit + ' (W) x ' + cH + dimUnit + ' (H)');
+    planLines.push('Max Payload: ' + (cMaxW > 0 ? cMaxW.toLocaleString() + ' ' + weightUnit2 : 'Not set'));
+    planLines.push('');
+    planLines.push('Box Dimensions: ' + bL + dimUnit + ' (L) x ' + bW + dimUnit + ' (W) x ' + bH + dimUnit + ' (H)');
+    planLines.push('Box Weight: ' + (bWt > 0 ? bWt + ' ' + weightUnit2 : 'Not set'));
+    planLines.push('Orientation Used: ' + orientDesc + ' axis arrangement');
+    planLines.push('Keep Upright: ' + (keepUpright ? 'Yes' : 'No'));
+    planLines.push('');
+    planLines.push('--- Stacking Configuration ---');
+    planLines.push(best.along + ' boxes along the length');
+    planLines.push(best.across + ' boxes across the width');
+    planLines.push(best.high + ' boxes stacked high');
+    planLines.push('');
+    planLines.push('Volume capacity:  ' + volumeLimit.toLocaleString() + ' units');
+    if (weightLimitActive) {
+      planLines.push('Weight capacity:  ' + weightLimit.toLocaleString() + ' units (at ' + bWt + ' ' + weightUnit2 + '/unit)');
+    }
+    planLines.push('');
+    planLines.push('>>> TOTAL UNITS LOADED: ' + finalCount.toLocaleString() + ' <<<');
+    planLines.push('Load Type: ' + (weightLimitActive ? (cubesOut ? 'Cubed Out' : 'Weighed Out') : 'Cubed Out (no weight limit)'));
+    planLines.push('Volume Utilization: ' + volUtilPct.toFixed(1) + '%  (' + usedVol.toFixed(3) + ' m3 of ' + containerVolM3.toFixed(3) + ' m3)');
+    if (weightLimitActive && totalCargoWt !== null) {
+      planLines.push('Weight Utilization: ' + wtUtilPct.toFixed(1) + '%  (' + totalCargoWt.toLocaleString(undefined, {maximumFractionDigits:1}) + ' ' + weightUnit2 + ' of ' + cMaxW.toLocaleString() + ' ' + weightUnit2 + ')');
+    }
+    planLines.push('');
+    planLines.push('Generated by AxiomApe Freight Volume Cube Estimator');
+    planLines.push('https://axiomape.com/freight-volume-cube-estimator/');
+
+    const planText = planLines.join('\n');
+    window._planText = planText;
+
+    loadingConfig.innerHTML = `
+      <div class="config-grid">
+        <div class="config-cell">
+          <div class="cfg-val">${best.along}</div>
+          <div class="cfg-lbl">Boxes Along Length</div>
+        </div>
+        <div class="config-cell">
+          <div class="cfg-val">${best.across}</div>
+          <div class="cfg-lbl">Boxes Across Width</div>
+        </div>
+        <div class="config-cell">
+          <div class="cfg-val">${best.high}</div>
+          <div class="cfg-lbl">Boxes Stacked High</div>
+        </div>
+        <div class="config-cell">
+          <div class="cfg-val" style="color:var(--orange)">${best.ol}${dimUnit}</div>
+          <div class="cfg-lbl">Box Dim Along L</div>
+        </div>
+        <div class="config-cell">
+          <div class="cfg-val" style="color:var(--orange)">${best.ow}${dimUnit}</div>
+          <div class="cfg-lbl">Box Dim Across W</div>
+        </div>
+        <div class="config-cell">
+          <div class="cfg-val" style="color:var(--orange)">${best.oh}${dimUnit}</div>
+          <div class="cfg-lbl">Box Dim Up H</div>
+        </div>
+      </div>
+      <div class="plan-text" id="planTextDisplay">${planText}</div>
+      <button class="copy-btn" id="copyBtn" onclick="copyPlan()">Copy Load Plan to Clipboard</button>
+    `;
+  }
+
+  // =======================================================
+  //  COPY LOAD PLAN
+  // =======================================================
+  function copyPlan() {
+    if (!window._planText) return;
+    navigator.clipboard.writeText(window._planText).then(() => {
+      const btn = document.getElementById('copyBtn');
+      if (btn) {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Load Plan to Clipboard';
+          btn.classList.remove('copied');
+        }, 2200);
+      }
+    }).catch(() => {
+      // Fallback for non-HTTPS
+      const ta = document.createElement('textarea');
+      ta.value = window._planText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  // =======================================================
+  //  FAQ ACCORDION
+  // =======================================================
+  function toggleFaq(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+  }
+
+  // =======================================================
+  //  INIT: load a sensible default (20ft Standard, imperial)
+  // =======================================================
+  (function init() {
+    document.getElementById('containerPreset').value = '20std';
+    applyPreset();
+  })();
+</script>
+
+</body>
+</html>

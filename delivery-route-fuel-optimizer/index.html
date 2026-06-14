@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delivery Route Fuel Optimizer: Sort Multi-Stop Routes for Maximum Fuel Savings | AxiomApe</title>
+  <meta name="description" content="Free multi-stop delivery route optimizer. Enter your stops as X/Y coordinates, set your vehicle MPG and fuel price, and our TSP heuristic algorithm instantly sorts your route to minimize total distance and cut fuel costs." />
+  <meta name="keywords" content="delivery route optimizer, multi-stop fuel calculator, TSP solver, route optimization, fleet fuel efficiency, nearest neighbor algorithm, 2-opt route, fuel savings calculator, logistics route planner, traveling salesperson problem" />
+  <link rel="canonical" href="https://axiomape.com/delivery-route-fuel-optimizer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Delivery Route Fuel Optimizer",
+        "description": "Free multi-stop delivery route optimizer. Enter your stops as X/Y coordinates, set your vehicle MPG and fuel price, and our TSP heuristic algorithm instantly sorts your route to minimize total distance and cut fuel costs.",
+        "url": "https://axiomape.com/delivery-route-fuel-optimizer/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the Traveling Salesperson Problem in logistics?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Traveling Salesperson Problem (TSP) is the challenge of finding the shortest possible route that visits a set of locations exactly once and returns to the starting point. In logistics, it applies directly to delivery routing: given a list of delivery stops, what order minimizes total distance driven? The TSP is mathematically NP-hard, meaning an exact solution becomes computationally impossible as stop counts grow large. For practical fleet routing, heuristic algorithms like Nearest Neighbor combined with 2-Opt swapping produce near-optimal routes in milliseconds."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can't I just use standard GPS for a multi-stop delivery route?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard GPS navigation follows the route you give it in the exact order you entered the stops. It does not automatically reorder your stops to find the shortest or cheapest path. If you have 8 delivery stops entered in the order they came in, a GPS will route through all 8 in that exact sequence, even if a completely different order would cut 30% off your mileage. A route optimizer solves the sequencing problem first, then you enter the optimized order into any GPS app."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does optimizing route order reduce fuel consumption?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Fuel consumption scales directly with distance driven. Every extra mile in your route burns fuel at your vehicle's MPG rate multiplied by the current fuel price. A randomly ordered set of delivery stops often backtracks, crosses its own path, or creates wide loops. A TSP heuristic eliminates this waste by sequencing stops so each leg of the journey is as short as possible. On a 10-stop route, reordering alone commonly reduces total distance by 15 to 40 percent, which translates directly into proportional fuel cost savings."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between Euclidean distance and actual driving distance?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Euclidean distance (also called straight-line or as-the-crow-flies distance) is the direct geometric distance between two points on a flat plane, calculated using the Pythagorean theorem. Actual driving distance follows roads, turns, and traffic patterns, and is almost always longer. This tool uses a 2D Cartesian grid and Euclidean distances for its optimization engine, which gives an excellent relative comparison between route orderings. The optimized order that minimizes Euclidean distance almost always also minimizes real driving distance for the same set of stops."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can a computer find the perfect route for an infinite number of stops?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. The TSP is NP-hard, meaning computation time grows exponentially with stop count. For 10 stops there are over 3.6 million possible orderings; for 20 stops, more than 2 quintillion. This tool uses a Nearest Neighbor heuristic to build a fast initial route, then applies 2-Opt swapping to iteratively improve it by reversing sub-segments whenever doing so reduces total distance. This approach finds routes typically within 5 to 15 percent of the true optimum in milliseconds, making it practical for real fleet operations."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET AND BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:        #0f172a;
+      --navy-mid:    #1e3a5f;
+      --navy-light:  #1d4ed8;
+      --blue:        #0284C7;
+      --blue-dim:    #0369a1;
+      --blue-light:  #e0f2fe;
+      --green:       #16A34A;
+      --green-dim:   #15803d;
+      --green-light: #dcfce7;
+      --bg:          #f0f4f8;
+      --card:        #ffffff;
+      --border:      #dde3ea;
+      --text:        #1c2b3a;
+      --muted:       #6b7c8d;
+      --row-alt:     #f8fafc;
+      --shadow:      0 4px 24px rgba(15,23,42,0.10);
+      --radius:      12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--blue-dim); }
+
+    /* ===================================================
+       PAGE HEADER (sibling before main - no role="banner")
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: #fff;
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.3rem);
+      font-weight: 800;
+      line-height: 1.3;
+      max-width: 760px;
+      margin: 0 auto 14px;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: #93c5fd;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .card { padding: 18px 14px; }
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    /* ===================================================
+       THREE-PANEL DASHBOARD
+    =================================================== */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: auto auto;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 840px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+
+    /* Panel 1: Fleet Setup */
+    .panel-setup {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Panel 2: Canvas */
+    .panel-canvas {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Panel 3: Telemetry (full width row) */
+    .panel-telemetry {
+      grid-column: 1 / -1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    /* ===================================================
+       SECTION LABELS
+    =================================================== */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ===================================================
+       INPUT FIELDS
+    =================================================== */
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .field-row label {
+      font-size: 0.87rem;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      min-width: 68px;
+    }
+    .field-row input[type="number"],
+    .field-row input[type="text"] {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 0.91rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-width: 0;
+      background: #fff;
+    }
+    .field-row input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(2,132,199,0.12);
+    }
+    .field-suffix {
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ===================================================
+       STOP MANIFEST TABLE
+    =================================================== */
+    .manifest-header {
+      display: grid;
+      grid-template-columns: 1fr 52px 52px 30px;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0 2px 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+
+    #stop-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .stop-row {
+      display: grid;
+      grid-template-columns: 1fr 52px 52px 30px;
+      gap: 5px;
+      align-items: center;
+    }
+    .stop-row input {
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 7px;
+      font-size: 0.84rem;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+      min-width: 0;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+    .stop-row input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(2,132,199,0.1);
+    }
+    .remove-btn {
+      width: 27px; height: 27px;
+      border: none;
+      background: #fee2e2;
+      color: #b91c1c;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .remove-btn:hover { background: #fca5a5; }
+
+    /* ===================================================
+       BUTTONS
+    =================================================== */
+    .btn {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-blue:hover { background: var(--blue-dim); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { background: var(--green-dim); }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-danger { background: transparent; border: 1.5px solid #fca5a5; color: #b91c1c; }
+    .btn-danger:hover { background: #fee2e2; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    /* ===================================================
+       CANVAS
+    =================================================== */
+    #route-canvas {
+      width: 100%;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: #0f172a;
+      display: block;
+      flex: 1;
+    }
+
+    .canvas-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-swatch {
+      width: 22px; height: 3px; border-radius: 2px;
+    }
+    .swatch-orig { background: #475569; opacity: 0.8; }
+    .swatch-opt  { background: #16A34A; box-shadow: 0 0 5px rgba(22,163,74,0.7); }
+
+    /* ===================================================
+       TELEMETRY METRICS
+    =================================================== */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric-card {
+      border-radius: 10px;
+      padding: 15px 16px;
+      border: 1px solid var(--border);
+    }
+    .metric-card.orig { background: #f8fafc; }
+    .metric-card.opt  { background: #f0fdf4; border-color: #bbf7d0; }
+    .metric-card.hero {
+      background: linear-gradient(135deg, #064e3b 0%, #14532d 100%);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .metric-card.hero .metric-label { color: #86efac; }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.15;
+    }
+    .metric-card.opt  .metric-value { color: var(--green); }
+    .metric-card.hero .metric-value { color: #fff; font-size: 2rem; }
+
+    .metric-sub {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .metric-card.hero .metric-sub { color: #a7f3d0; }
+
+    /* ===================================================
+       OPTIMIZED MANIFEST READ-OUT
+    =================================================== */
+    .telemetry-manifest {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .telemetry-manifest h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    .optimized-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .optimized-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    .stop-num {
+      width: 22px; height: 22px;
+      background: var(--green);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stop-coords {
+      margin-left: auto;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    /* ===================================================
+       EMPTY STATE
+    =================================================== */
+    .empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ===================================================
+       DISCLAIMER
+    =================================================== */
+    .disclaimer-box {
+      background: var(--blue-light);
+      border-left: 4px solid var(--blue);
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-size: 0.82rem;
+      color: #1e40af;
+      margin-bottom: 28px;
+      line-height: 1.55;
+    }
+
+    /* ===================================================
+       AD PLACEMENTS (site-chrome.js handles visibility)
+    =================================================== */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 16px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 28px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .glossary-item {
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--navy);
+      font-size: 0.86rem;
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: 0.81rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    .section-intro {
+      font-size: 0.98rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1.03rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 24px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.92rem;
+      color: #374151;
+      margin-bottom: 10px;
+      line-height: 1.75;
+    }
+
+    /* ===================================================
+       FAQ ACCORDION
+    =================================================== */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 13px 16px;
+      font-weight: 600;
+      font-size: 0.91rem;
+      color: var(--navy);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--row-alt);
+      user-select: none;
+      gap: 12px;
+    }
+    .faq-q:hover { background: var(--blue-light); }
+    .faq-arrow { font-size: 1rem; transition: transform 0.2s; flex-shrink: 0; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 13px 16px;
+      font-size: 0.87rem;
+      color: #374151;
+      line-height: 1.75;
+      background: #fff;
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ===================================================
+       COPY TOAST
+    =================================================== */
+    #toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 0.87rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 9999;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE HEADER: sibling before main, no role="banner" (site-chrome injects the banner) -->
+  <header class="page-header">
+    <h1>Delivery Route Fuel Optimizer</h1>
+    <p>Sort multi-stop delivery routes into the most fuel-efficient order using a browser-based TSP heuristic engine. Enter your stops, set your MPG and fuel price, and see your savings instantly.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         THREE-PANEL INTERACTIVE DASHBOARD
+    ============================================================ -->
+    <div class="dashboard">
+
+      <!-- PANEL 1: Fleet Setup and Stop Manifest -->
+      <div class="panel-setup">
+        <div class="card-title">Fleet Setup and Stop Manifest</div>
+
+        <div class="section-label">Vehicle Specs</div>
+
+        <div class="field-row">
+          <label for="mpg">Average MPG</label>
+          <input type="number" id="mpg" value="22" min="1" max="999" step="0.1"
+            oninput="recalculate()" aria-label="Vehicle miles per gallon" />
+        </div>
+        <div class="field-row">
+          <label for="fuel-price">Fuel Price</label>
+          <input type="number" id="fuel-price" value="3.49" min="0.01" max="99" step="0.01"
+            oninput="recalculate()" aria-label="Fuel price per gallon in dollars" />
+          <span class="field-suffix">$/gal</span>
+        </div>
+
+        <div class="section-label" style="margin-top:18px">Stop Manifest (X/Y Coordinates)</div>
+
+        <div class="manifest-header">
+          <span>Stop Name</span><span style="text-align:center">X</span><span style="text-align:center">Y</span><span></span>
+        </div>
+        <div id="stop-list" role="list" aria-label="Delivery stop manifest"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-blue" onclick="addStop()" aria-label="Add a new stop to the manifest">+ Add Stop</button>
+          <button class="btn btn-outline" onclick="loadSample()">Load Sample Route</button>
+          <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Live Route Canvas -->
+      <div class="panel-canvas">
+        <div class="card-title">Live Route Map</div>
+        <canvas id="route-canvas" aria-label="Visual route map showing original and optimized delivery paths"></canvas>
+        <div class="canvas-legend">
+          <div class="legend-item">
+            <div class="legend-swatch swatch-orig"></div>
+            Original order (dashed)
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch swatch-opt"></div>
+            Optimized route
+          </div>
+          <span style="margin-left:auto;font-size:0.73rem;color:var(--muted)">Units are relative X/Y grid coordinates</span>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Telemetry and Savings (full-width row) -->
+      <div class="panel-telemetry">
+        <div class="card-title">Route Telemetry and Fuel Savings</div>
+        <div id="telemetry-content">
+          <div class="empty-state">Add at least 2 stops with X/Y coordinates to see route telemetry and fuel savings.</div>
+        </div>
+        <div id="copy-btn-row" class="btn-row" style="display:none">
+          <button class="btn btn-green" onclick="copyManifest()">Copy Optimized Manifest</button>
+        </div>
+      </div>
+
+    </div><!-- /.dashboard -->
+
+    <!-- TOOL DISCLAIMER -->
+    <div class="disclaimer-box" role="note" aria-label="Tool disclaimer">
+      This tool uses a 2D Cartesian coordinate grid and Euclidean (straight-line) distances. Results are directional estimates for route sequencing comparison only and do not account for actual road layouts, traffic, or turn restrictions. Verify with a live mapping service before dispatching any vehicle.
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Traveling Salesperson Problem (TSP)</div>
+          <div class="glossary-def">A classic optimization challenge: find the shortest route visiting every stop exactly once. NP-hard for large inputs, so real-world tools use fast heuristics instead of brute-force search.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Nearest Neighbor Algorithm</div>
+          <div class="glossary-def">A greedy TSP heuristic. Starting from the first stop, always travel to the closest unvisited stop next. Fast and usually within 20 to 25 percent of the true optimum before improvement passes.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">2-Opt Swapping</div>
+          <div class="glossary-def">A route improvement method. Repeatedly reverse sub-segments of the route whenever doing so reduces total distance, until no further improvement is possible. Often closes crossing paths left by Nearest Neighbor.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Euclidean Distance</div>
+          <div class="glossary-def">Straight-line distance between two points on a flat plane, calculated as the square root of ((x2 minus x1) squared plus (y2 minus y1) squared). The basis of all calculations in this tool.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Heuristic</div>
+          <div class="glossary-def">An algorithm designed to find a good solution quickly rather than a guaranteed perfect one. Essential for NP-hard problems like TSP where exact solvers are computationally infeasible at scale.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Route Optimization</div>
+          <div class="glossary-def">The process of reordering delivery stops to minimize total travel distance, time, or cost. Even modest improvements in stop sequence yield significant fuel savings compounded across a full work week.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">MPG (Miles Per Gallon)</div>
+          <div class="glossary-def">A fuel efficiency measure: how many miles a vehicle travels per gallon consumed. Higher MPG means lower fuel cost per unit distance. Enter your vehicle's real-world average, not its EPA rating.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Fleet Efficiency</div>
+          <div class="glossary-def">A measure of how effectively a fleet uses fuel and time across all vehicles. Route optimization is one of the highest-ROI levers available - no hardware upgrades or vehicle replacements required.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Multi-Stop Delivery Route Optimization</h2>
+      <p class="section-intro">
+        If you manage even a single delivery vehicle, the order in which you visit your stops has a larger impact on your fuel bill than almost any other variable you can control today. This guide explains how the math works, how this tool solves it, and what you can do with the result in your actual workflow.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <p>
+        Start in the Fleet Setup panel on the left. Set your vehicle's average MPG and the current fuel price per gallon. These two values convert raw grid distances into real dollar amounts so you can see the financial impact of route ordering directly.
+      </p>
+      <p>
+        Next, build your Stop Manifest. Each stop needs a name and an X/Y coordinate pair. Think of the coordinate grid as a flat local map where each unit equals one city block, one mile, or any consistent unit you choose. What matters is that the relative spacing between stops reflects the real-world layout. If your delivery zone is 10 miles wide and 8 miles tall, set your westernmost stop at X=0 and your easternmost at X=10.
+      </p>
+      <p>
+        Not sure where to start? Click "Load Sample Route" to populate a 10-stop test route and explore the tool immediately. The Live Route Map and Telemetry panels update in real time as you add, move, or remove stops. There is no submit button and no page reload.
+      </p>
+
+      <h3>What the TSP Engine Is Doing</h3>
+      <p>
+        This tool runs a two-phase heuristic entirely inside your browser. No data ever leaves your device.
+      </p>
+      <p>
+        Phase 1 applies the Nearest Neighbor algorithm. Starting from the first stop in your manifest (index 0), the engine always moves to the closest unvisited stop, building a complete route greedily in order. This is fast and often produces a reasonable route, but it frequently leaves some long back-crossing segments because it only looks one step ahead.
+      </p>
+      <p>
+        Phase 2 applies 2-Opt improvement. The algorithm examines every possible pair of route segments and asks: if I remove these two edges and reconnect the route by reversing the sub-path between them, does total distance go down? If yes, it makes the swap and restarts. This continues until no swap can reduce distance further. The result is a route that is typically within 5 to 15 percent of the mathematically perfect solution, produced in under a millisecond regardless of stop count.
+      </p>
+
+      <h3>Why Stop Sequence Matters More Than You Think</h3>
+      <p>
+        Consider a driver with 8 stops entered in the order calls came in. They hit each stop in that sequence. Now consider the same 8 stops, sorted by an optimizer. Real-world fleet studies consistently find that naive stop ordering adds 20 to 40 percent extra mileage versus an optimized sequence.
+      </p>
+      <p>
+        At $3.50 per gallon and 20 MPG, an extra 30 miles per day costs $1.75 per driver per day. For a 10-truck fleet running 250 days per year, that is $4,375 in unnecessary fuel spend annually - just from stop order, not from driving style, traffic, or vehicle type. Route optimization addresses the problem with zero capital expenditure.
+      </p>
+
+      <h3>Interpreting the Canvas Visualization</h3>
+      <p>
+        The dark canvas maps your X/Y coordinates to a scaled display grid. The dashed gray line traces your stops in their original entered order, showing all the backtracking and crossings that exist before optimization. The glowing green line shows the algorithm's result. Direction arrows on the green path show travel order. The blue node is your starting depot (index 0); all other stops are shown in green.
+      </p>
+      <p>
+        If the optimized route does not look dramatically different from the original, it is because your original order happened to be reasonably efficient already - which does happen when stops are added in a natural geographic sweep. The Telemetry panel gives you the exact numbers so you can judge the improvement objectively rather than visually.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq1">
+        <div class="faq-q" onclick="toggleFaq('faq1')">
+          What is the Traveling Salesperson Problem in logistics?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          The Traveling Salesperson Problem (TSP) is the challenge of finding the shortest possible route that visits a set of locations exactly once and returns to the starting point. In logistics, it applies directly to delivery routing: given a list of delivery stops, what order minimizes total distance driven? The TSP is mathematically NP-hard, meaning an exact solution becomes computationally impossible as stop counts grow large. For practical fleet routing, heuristic algorithms like Nearest Neighbor combined with 2-Opt swapping produce near-optimal routes in milliseconds.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <div class="faq-q" onclick="toggleFaq('faq2')">
+          Why can't I just use standard GPS for a multi-stop delivery route?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Standard GPS navigation follows the route you give it in the exact order you entered the stops. It does not automatically reorder your stops to find the shortest or cheapest path. If you have 8 delivery stops entered in the order they came in, a GPS will route through all 8 in that exact sequence, even if a completely different order would cut 30% off your mileage. A route optimizer like this one solves the sequencing problem first, then you enter the optimized order into any GPS or navigation app.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <div class="faq-q" onclick="toggleFaq('faq3')">
+          How does optimizing route order reduce fuel consumption?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Fuel consumption scales directly with distance driven. Every extra mile in your route burns fuel at your vehicle's MPG rate multiplied by the current fuel price. A randomly ordered set of delivery stops often backtracks, crosses its own path, or creates wide geographic loops. A TSP heuristic eliminates this waste by sequencing stops so each leg of the journey is as short as possible. On a 10-stop route, reordering alone commonly reduces total distance by 15 to 40 percent, which translates directly into proportional fuel cost savings.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <div class="faq-q" onclick="toggleFaq('faq4')">
+          What is the difference between Euclidean distance and actual driving distance?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Euclidean distance (also called straight-line or as-the-crow-flies distance) is the direct geometric distance between two points on a flat plane, calculated using the Pythagorean theorem. Actual driving distance follows roads, turns, and traffic patterns, and is almost always longer. This tool uses a 2D Cartesian grid and Euclidean distances for its optimization engine, which gives an excellent relative comparison between route orderings. The optimized order that minimizes Euclidean distance almost always also minimizes real driving distance for the same set of stops, making the optimization valid for real-world planning.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <div class="faq-q" onclick="toggleFaq('faq5')">
+          Can a computer find the perfect route for an infinite number of stops?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          No. The TSP is NP-hard, meaning computation time grows exponentially with stop count. For 10 stops there are over 3.6 million possible orderings; for 20 stops, more than 2 quintillion. This tool uses a Nearest Neighbor heuristic to build a fast initial route, then applies 2-Opt swapping to iteratively improve it by reversing sub-segments whenever doing so reduces total distance. This approach finds routes typically within 5 to 15 percent of the true mathematical optimum in milliseconds, making it practical for real fleet operations without requiring a supercomputer or paid API.
+        </div>
+      </div>
+
+    </div><!-- /.edu-section.card -->
+
+  </main><!-- /.page-wrapper -->
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    var stops = [];
+    var optimizedOrder = [];
+    var stopIdCounter = 0;
+
+    // ============================================================
+    // UTILITY
+    // ============================================================
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function() { t.classList.remove('show'); }, 2500);
+    }
+
+    // ============================================================
+    // STOP MANAGEMENT
+    // ============================================================
+    function addStop(name, x, y) {
+      var id = stopIdCounter++;
+      stops.push({
+        id: id,
+        name: name !== undefined ? name : '',
+        x: x !== undefined ? x : '',
+        y: y !== undefined ? y : ''
+      });
+      renderManifest();
+      recalculate();
+    }
+
+    function removeStop(id) {
+      stops = stops.filter(function(s) { return s.id !== id; });
+      renderManifest();
+      recalculate();
+    }
+
+    function updateStop(id, field, value) {
+      var stop = null;
+      for (var i = 0; i < stops.length; i++) {
+        if (stops[i].id === id) { stop = stops[i]; break; }
+      }
+      if (!stop) return;
+      if (field === 'x' || field === 'y') {
+        stop[field] = value === '' ? '' : parseFloat(value);
+      } else {
+        stop[field] = value;
+      }
+      recalculate();
+    }
+
+    function renderManifest() {
+      var list = document.getElementById('stop-list');
+      list.innerHTML = '';
+      stops.forEach(function(stop, idx) {
+        var row = document.createElement('div');
+        row.className = 'stop-row';
+        row.setAttribute('role', 'listitem');
+        row.innerHTML =
+          '<input type="text" placeholder="Stop ' + (idx + 1) + '" value="' + escHtml(stop.name) + '"' +
+          ' oninput="updateStop(' + stop.id + ', \'name\', this.value)"' +
+          ' aria-label="Name for stop ' + (idx + 1) + '" />' +
+          '<input type="number" placeholder="X" value="' + (stop.x !== '' ? stop.x : '') + '"' +
+          ' oninput="updateStop(' + stop.id + ', \'x\', this.value)" step="any"' +
+          ' aria-label="X coordinate for stop ' + (idx + 1) + '" />' +
+          '<input type="number" placeholder="Y" value="' + (stop.y !== '' ? stop.y : '') + '"' +
+          ' oninput="updateStop(' + stop.id + ', \'y\', this.value)" step="any"' +
+          ' aria-label="Y coordinate for stop ' + (idx + 1) + '" />' +
+          '<button class="remove-btn" onclick="removeStop(' + stop.id + ')"' +
+          ' aria-label="Remove stop ' + (idx + 1) + '">x</button>';
+        list.appendChild(row);
+      });
+    }
+
+    function clearAll() {
+      stops = [];
+      stopIdCounter = 0;
+      renderManifest();
+      recalculate();
+    }
+
+    function loadSample() {
+      stops = [];
+      stopIdCounter = 0;
+      var sample = [
+        { name: 'Depot',   x: 5, y: 5 },
+        { name: 'Stop A',  x: 1, y: 8 },
+        { name: 'Stop B',  x: 9, y: 9 },
+        { name: 'Stop C',  x: 3, y: 2 },
+        { name: 'Stop D',  x: 7, y: 1 },
+        { name: 'Stop E',  x: 2, y: 6 },
+        { name: 'Stop F',  x: 8, y: 4 },
+        { name: 'Stop G',  x: 4, y: 9 },
+        { name: 'Stop H',  x: 6, y: 3 },
+        { name: 'Stop I',  x: 1, y: 3 }
+      ];
+      sample.forEach(function(s) {
+        stops.push({ id: stopIdCounter++, name: s.name, x: s.x, y: s.y });
+      });
+      renderManifest();
+      recalculate();
+    }
+
+    // ============================================================
+    // TSP ENGINE - NEAREST NEIGHBOR + 2-OPT
+    // ============================================================
+    function dist(a, b) {
+      var dx = a.x - b.x, dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function totalDist(pts, order) {
+      var d = 0;
+      for (var i = 0; i < order.length - 1; i++) {
+        d += dist(pts[order[i]], pts[order[i + 1]]);
+      }
+      return d;
+    }
+
+    function nearestNeighbor(pts) {
+      var n = pts.length;
+      var visited = new Array(n).fill(false);
+      var route = [0];
+      visited[0] = true;
+      for (var step = 1; step < n; step++) {
+        var last = route[route.length - 1];
+        var bestDist = Infinity, bestIdx = -1;
+        for (var i = 0; i < n; i++) {
+          if (!visited[i]) {
+            var d = dist(pts[last], pts[i]);
+            if (d < bestDist) { bestDist = d; bestIdx = i; }
+          }
+        }
+        visited[bestIdx] = true;
+        route.push(bestIdx);
+      }
+      return route;
+    }
+
+    function twoOpt(pts, route) {
+      var n = route.length;
+      var improved = true;
+      while (improved) {
+        improved = false;
+        for (var i = 0; i < n - 1; i++) {
+          for (var j = i + 2; j < n; j++) {
+            var a = pts[route[i]], b = pts[route[i + 1]];
+            var c = pts[route[j]];
+            var d = (j + 1 < n) ? pts[route[j + 1]] : null;
+            var before = dist(a, b) + (d ? dist(c, d) : 0);
+            var after  = dist(a, c) + (d ? dist(b, d) : 0);
+            if (after < before - 1e-10) {
+              // Reverse the sub-segment from i+1 to j
+              var l = i + 1, r = j;
+              while (l < r) {
+                var tmp = route[l]; route[l] = route[r]; route[r] = tmp;
+                l++; r--;
+              }
+              improved = true;
+            }
+          }
+        }
+      }
+      return route;
+    }
+
+    function getValidStops() {
+      return stops.filter(function(s) {
+        return s.x !== '' && s.y !== '' && !isNaN(parseFloat(s.x)) && !isNaN(parseFloat(s.y));
+      });
+    }
+
+    // ============================================================
+    // MAIN RECALCULATE
+    // ============================================================
+    function recalculate() {
+      var valid = getValidStops();
+      if (valid.length < 2) {
+        optimizedOrder = [];
+        renderTelemetry(null);
+        drawCanvas([], null, null);
+        return;
+      }
+
+      var pts = valid.map(function(s) {
+        return { x: parseFloat(s.x), y: parseFloat(s.y), name: s.name || '?' };
+      });
+
+      var originalOrder = pts.map(function(_, i) { return i; });
+      var nnRoute  = nearestNeighbor(pts);
+      var optRoute = twoOpt(pts, nnRoute.slice());
+      optimizedOrder = optRoute;
+
+      var mpg       = parseFloat(document.getElementById('mpg').value) || 22;
+      var fuelPrice = parseFloat(document.getElementById('fuel-price').value) || 3.49;
+
+      var origDist = totalDist(pts, originalOrder);
+      var optDist  = totalDist(pts, optRoute);
+      var origCost = (origDist / mpg) * fuelPrice;
+      var optCost  = (optDist  / mpg) * fuelPrice;
+      var savings  = origCost - optCost;
+      var pctSaved = origDist > 0 ? ((origDist - optDist) / origDist * 100) : 0;
+
+      renderTelemetry({
+        pts: pts,
+        optRoute: optRoute,
+        origDist: origDist,
+        optDist: optDist,
+        origCost: origCost,
+        optCost: optCost,
+        savings: savings,
+        pctSaved: pctSaved,
+        mpg: mpg,
+        fuelPrice: fuelPrice
+      });
+      drawCanvas(pts, originalOrder, optRoute);
+    }
+
+    // ============================================================
+    // TELEMETRY RENDER
+    // ============================================================
+    function renderTelemetry(data) {
+      var el      = document.getElementById('telemetry-content');
+      var copyRow = document.getElementById('copy-btn-row');
+
+      if (!data) {
+        el.innerHTML = '<div class="empty-state">Add at least 2 stops with X/Y coordinates to see route telemetry and fuel savings.</div>';
+        copyRow.style.display = 'none';
+        return;
+      }
+
+      var distSaved = data.origDist - data.optDist;
+      var pctLabel  = data.pctSaved.toFixed(1) + '% shorter';
+
+      var manifestHtml = data.optRoute.map(function(idx, pos) {
+        var pt = data.pts[idx];
+        return '<li>' +
+          '<span class="stop-num">' + (pos + 1) + '</span>' +
+          '<span>' + escHtml(pt.name) + '</span>' +
+          '<span class="stop-coords">(' + pt.x + ', ' + pt.y + ')</span>' +
+          '</li>';
+      }).join('');
+
+      el.innerHTML =
+        '<div class="telemetry-grid">' +
+          '<div class="metric-card orig">' +
+            '<div class="metric-label">Original Distance</div>' +
+            '<div class="metric-value">' + data.origDist.toFixed(1) + '</div>' +
+            '<div class="metric-sub">units, entered order</div>' +
+          '</div>' +
+          '<div class="metric-card opt">' +
+            '<div class="metric-label">Optimized Distance</div>' +
+            '<div class="metric-value">' + data.optDist.toFixed(1) + '</div>' +
+            '<div class="metric-sub">' + pctLabel + '</div>' +
+          '</div>' +
+          '<div class="metric-card orig">' +
+            '<div class="metric-label">Original Fuel Cost</div>' +
+            '<div class="metric-value">$' + data.origCost.toFixed(2) + '</div>' +
+            '<div class="metric-sub">at $' + data.fuelPrice.toFixed(2) + '/gal</div>' +
+          '</div>' +
+          '<div class="metric-card opt">' +
+            '<div class="metric-label">Optimized Fuel Cost</div>' +
+            '<div class="metric-value">$' + data.optCost.toFixed(2) + '</div>' +
+            '<div class="metric-sub">' + data.mpg.toFixed(0) + ' MPG vehicle</div>' +
+          '</div>' +
+          '<div class="metric-card hero">' +
+            '<div class="metric-label">Total Estimated Savings</div>' +
+            '<div class="metric-value">$' + data.savings.toFixed(2) + '</div>' +
+            '<div class="metric-sub">' + distSaved.toFixed(1) + ' fewer units traveled</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="telemetry-manifest">' +
+          '<h3>Optimized Stop Order</h3>' +
+          '<ol class="optimized-list">' + manifestHtml + '</ol>' +
+        '</div>';
+
+      copyRow.style.display = 'flex';
+    }
+
+    // ============================================================
+    // CANVAS DRAWING
+    // ============================================================
+    function drawCanvas(pts, origOrder, optOrder) {
+      var canvas = document.getElementById('route-canvas');
+      var ctx    = canvas.getContext('2d');
+      var W      = canvas.offsetWidth || 400;
+      canvas.width  = W;
+      canvas.height = Math.max(240, Math.round(W * 0.56));
+      var H = canvas.height;
+
+      // Background
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, W, H);
+
+      if (!pts || pts.length < 2) {
+        ctx.fillStyle = '#334155';
+        ctx.font = '13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Add at least 2 stops to see the route map', W / 2, H / 2);
+        return;
+      }
+
+      var margin = 40;
+      var xs = pts.map(function(p) { return p.x; });
+      var ys = pts.map(function(p) { return p.y; });
+      var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+      var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+      var rangeX = maxX - minX || 1;
+      var rangeY = maxY - minY || 1;
+
+      function toCanvas(x, y) {
+        return [
+          margin + ((x - minX) / rangeX) * (W - margin * 2),
+          H - margin - ((y - minY) / rangeY) * (H - margin * 2)
+        ];
+      }
+
+      // Background grid
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      var gridLines = 8;
+      for (var g = 0; g <= gridLines; g++) {
+        var gx = margin + (g / gridLines) * (W - margin * 2);
+        var gy = margin + (g / gridLines) * (H - margin * 2);
+        ctx.beginPath(); ctx.moveTo(gx, margin); ctx.lineTo(gx, H - margin); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(margin, gy); ctx.lineTo(W - margin, gy); ctx.stroke();
+      }
+
+      // Original route - dashed and dim
+      if (origOrder && origOrder.length > 1) {
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 5]);
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath();
+        origOrder.forEach(function(idx, i) {
+          var c = toCanvas(pts[idx].x, pts[idx].y);
+          if (i === 0) ctx.moveTo(c[0], c[1]);
+          else ctx.lineTo(c[0], c[1]);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+
+      // Optimized route - glowing green
+      if (optOrder && optOrder.length > 1) {
+        ctx.shadowColor = '#16A34A';
+        ctx.shadowBlur  = 12;
+        ctx.strokeStyle = '#16A34A';
+        ctx.lineWidth   = 2.5;
+        ctx.beginPath();
+        optOrder.forEach(function(idx, i) {
+          var c = toCanvas(pts[idx].x, pts[idx].y);
+          if (i === 0) ctx.moveTo(c[0], c[1]);
+          else ctx.lineTo(c[0], c[1]);
+        });
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Direction arrows on midpoints
+        ctx.fillStyle  = '#4ade80';
+        ctx.globalAlpha = 0.75;
+        for (var ai = 0; ai < optOrder.length - 1; ai++) {
+          var c1 = toCanvas(pts[optOrder[ai]].x, pts[optOrder[ai]].y);
+          var c2 = toCanvas(pts[optOrder[ai + 1]].x, pts[optOrder[ai + 1]].y);
+          var mx = (c1[0] + c2[0]) / 2;
+          var my = (c1[1] + c2[1]) / 2;
+          var angle = Math.atan2(c2[1] - c1[1], c2[0] - c1[0]);
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.moveTo(5, 0); ctx.lineTo(-5, -3.5); ctx.lineTo(-5, 3.5);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Stop nodes and labels
+      pts.forEach(function(pt, idx) {
+        var c = toCanvas(pt.x, pt.y);
+        var isDepot = (idx === (optOrder ? optOrder[0] : 0));
+
+        ctx.shadowColor = isDepot ? '#0284C7' : '#16A34A';
+        ctx.shadowBlur  = 10;
+        ctx.fillStyle   = isDepot ? '#0284C7' : '#16A34A';
+        ctx.beginPath();
+        ctx.arc(c[0], c[1], isDepot ? 7 : 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // White ring
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(c[0], c[1], isDepot ? 7 : 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // Label
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        var label = pt.name.length > 9 ? pt.name.slice(0, 8) + '.' : pt.name;
+        ctx.fillText(label, c[0], c[1] - 10);
+      });
+    }
+
+    // ============================================================
+    // FAQ TOGGLE
+    // ============================================================
+    function toggleFaq(id) {
+      var el = document.getElementById(id);
+      el.classList.toggle('open');
+    }
+
+    // ============================================================
+    // COPY OPTIMIZED MANIFEST
+    // ============================================================
+    function copyManifest() {
+      var valid = getValidStops();
+      if (!optimizedOrder.length || !valid.length) return;
+      var mpg  = document.getElementById('mpg').value;
+      var fp   = document.getElementById('fuel-price').value;
+      var lines = ['Optimized Delivery Manifest', ''];
+      optimizedOrder.forEach(function(idx, pos) {
+        var pt = valid[idx];
+        lines.push((pos + 1) + '. ' + (pt.name || 'Stop ' + (idx + 1)) + ' (X: ' + pt.x + ', Y: ' + pt.y + ')');
+      });
+      lines.push('');
+      lines.push('Vehicle: ' + mpg + ' MPG | Fuel Price: $' + fp + '/gal');
+      lines.push('Generated by AxiomApe Delivery Route Fuel Optimizer');
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lines.join('\n')).then(function() {
+          showToast('Copied to clipboard!');
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = lines.join('\n');
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Copied to clipboard!');
+      }
+    }
+
+    // ============================================================
+    // RESIZE HANDLER
+    // ============================================================
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(recalculate, 100);
+    });
+
+    // ============================================================
+    // INIT: load sample route on page load
+    // ============================================================
+    loadSample();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secret Santa Name Match Assignment Engine: Private Gift Exchange Picker | AxiomApe</title>
+  <meta name="description" content="Free Secret Santa name assignment engine with guaranteed derangement shuffle. No one draws themselves. Add couple exclusions, click to reveal your match privately, and auto-relock after 10 seconds. 100% browser-based, nothing stored or sent." />
+  <meta name="keywords" content="secret santa generator, gift exchange name picker, anonymous gift draw, holiday party name matcher, derangement shuffle, secret santa exclusions, private name draw, christmas gift exchange organizer, secure gift exchange, random name picker" />
+  <link rel="canonical" href="https://axiomape.com/secret-santa-match-engine/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Secret Santa Name Match Assignment Engine",
+        "description": "Free Secret Santa name assignment engine with guaranteed derangement shuffle. No one draws themselves. Add couple exclusions, click to reveal your match privately, and auto-relock after 10 seconds. 100% browser-based, nothing stored or sent.",
+        "url": "https://axiomape.com/secret-santa-match-engine/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does this engine prevent people from drawing themselves?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The engine uses a mathematical derangement algorithm built on top of a Fisher-Yates shuffle. After every shuffle, it checks whether any participant was assigned to themselves. If even one self-match is found, the entire shuffle is discarded and a new one is generated. This repeats automatically until a valid derangement is found, guaranteeing zero self-assignments every time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a derangement in mathematics?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A derangement is a permutation of a set in which no element appears in its original position. For a gift exchange, this means every participant is guaranteed to give a gift to someone other than themselves. The mathematical subfactorial notation !n counts the number of valid derangements for a group of n people."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I ensure the gift exchange is fair for everyone?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Fisher-Yates shuffle algorithm produces a statistically uniform random permutation, meaning every valid assignment is equally likely. This is the gold standard for algorithmic fairness in random draws. Each participant has an equal probability of being matched with any eligible recipient, subject only to the derangement and exclusion constraints you define."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is an offline-only tool safer for Secret Santa assignments?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When a server handles Secret Santa assignments, the matches exist on that server and could theoretically be accessed by the server owner, a data breach, or a technical error. This engine runs entirely in your browser. Names are never sent to any server, never stored in a database, and vanish the moment you close the tab. The only people who can see the matches are the participants themselves, one at a time, via the click-to-reveal interface."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I handle exclusions for couples or family members?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use the Add Exclusion Pairs section to enter pairs of names who should not be matched with each other. The engine treats each exclusion as a two-way block: if you exclude Alice and Bob, Alice will not draw Bob and Bob will not draw Alice. The derangement algorithm retries the shuffle until all exclusion constraints are satisfied alongside the no-self-match guarantee."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =============================================
+       RESET AND BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f172a;
+      --surface:      #1e293b;
+      --surface-2:    #263347;
+      --border:       #334155;
+      --text:         #f1f5f9;
+      --text-muted:   #94a3b8;
+      --red:          #DC2626;
+      --red-hover:    #b91c1c;
+      --red-glow:     rgba(220,38,38,0.22);
+      --green:        #16A34A;
+      --green-hover:  #15803d;
+      --green-glow:   rgba(22,163,74,0.22);
+      --gold:         #F59E0B;
+      --gold-dim:     rgba(245,158,11,0.12);
+      --radius:       10px;
+      --font:         'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =============================================
+       PAGE WRAPPER
+    ============================================= */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      width: 100%;
+    }
+
+    /* =============================================
+       PAGE HEADER
+    ============================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.45rem, 4vw, 2.1rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =============================================
+       TOOL CARD
+    ============================================= */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: none;
+      letter-spacing: 0;
+      color: #fff;
+    }
+    .badge-green  { background: var(--green); }
+    .badge-red    { background: var(--red); }
+    .badge-gold   { background: var(--gold); color: #111; }
+
+    /* =============================================
+       STEP 1: NAME INPUT
+    ============================================= */
+    .input-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    textarea#names-input {
+      width: 100%;
+      min-height: 150px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      padding: 12px 14px;
+      resize: vertical;
+      line-height: 1.8;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    textarea#names-input:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+    textarea#names-input::placeholder { color: #4a6080; }
+
+    .name-count-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .count-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .min-warn {
+      color: var(--red);
+      font-weight: 600;
+      font-size: 0.78rem;
+      display: none;
+    }
+
+    /* =============================================
+       STEP 1: EXCLUSIONS
+    ============================================= */
+    .excl-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 9px 16px;
+      cursor: pointer;
+      margin-top: 16px;
+      margin-bottom: 16px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .excl-toggle-btn:hover,
+    .excl-toggle-btn.active { border-color: var(--gold); color: var(--gold); }
+
+    .excl-section {
+      display: none;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .excl-section.open { display: block; }
+
+    .excl-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    .excl-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .excl-row select {
+      flex: 1;
+      min-width: 130px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    .excl-row select:focus { outline: none; border-color: var(--gold); }
+
+    .excl-sep {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .btn-rm-excl {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-rm-excl:hover { background: var(--red); color: #fff; }
+
+    .btn-add-excl {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gold-dim);
+      border: 1px dashed var(--gold);
+      color: var(--gold);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.15s;
+      font-family: var(--font);
+    }
+    .btn-add-excl:hover { background: rgba(245,158,11,0.2); }
+
+    .excl-empty-note {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* =============================================
+       DRAW BUTTON
+    ============================================= */
+    .btn-draw {
+      width: 100%;
+      background: var(--green);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 14px 20px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: var(--font);
+    }
+    .btn-draw:hover:not(:disabled) { background: var(--green-hover); }
+    .btn-draw:active:not(:disabled) { transform: scale(0.98); }
+    .btn-draw:disabled {
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: not-allowed;
+    }
+
+    /* =============================================
+       MESSAGE BOX
+    ============================================= */
+    .msg-box {
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-top: 14px;
+      line-height: 1.5;
+      display: none;
+    }
+    .msg-box.show { display: block; }
+    .msg-box.is-error {
+      background: rgba(220,38,38,0.1);
+      border: 1px solid var(--red);
+      color: #fca5a5;
+    }
+    .msg-box.is-success {
+      background: rgba(22,163,74,0.1);
+      border: 1px solid var(--green);
+      color: #86efac;
+    }
+
+    /* =============================================
+       STEP 2: SECRET VAULT
+    ============================================= */
+    #vault-section { display: none; }
+    #vault-section.visible { display: block; }
+
+    .vault-intro {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      line-height: 1.55;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+    .vault-intro strong { color: var(--text); }
+
+    .vault-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+
+    .gift-box {
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 12px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      user-select: none;
+      outline: none;
+    }
+    .gift-box:hover,
+    .gift-box:focus {
+      border-color: var(--red);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px var(--red-glow);
+    }
+    .gift-box.revealed {
+      border-color: var(--green);
+      box-shadow: 0 0 18px var(--green-glow);
+      cursor: default;
+    }
+    .gift-box.revealed:hover { transform: none; }
+
+    .gift-icon-wrap {
+      font-size: 2.4rem;
+      display: block;
+      margin-bottom: 10px;
+      line-height: 1;
+      transition: transform 0.2s;
+    }
+    .gift-box:hover .gift-icon-wrap { transform: scale(1.1) rotate(-5deg); }
+    .gift-box.revealed .gift-icon-wrap { transform: none; }
+
+    .gift-pname {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .gift-lock-status {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .gift-box.revealed .gift-lock-status { color: var(--green); }
+
+    .vault-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .vault-stat {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .vault-stat span { color: var(--green); font-weight: 700; }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: var(--font);
+    }
+    .btn-reset:hover { background: rgba(220,38,38,0.1); }
+
+    /* =============================================
+       REVEAL MODAL
+    ============================================= */
+    #reveal-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #reveal-modal.open { display: flex; }
+
+    .reveal-card {
+      background: var(--surface);
+      border: 2px solid var(--green);
+      border-radius: 14px;
+      max-width: 440px;
+      width: 100%;
+      padding: 36px 30px 28px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 60px var(--green-glow);
+      animation: pop-in 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.8); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .reveal-giver-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .reveal-giver-name {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .reveal-arrow {
+      font-size: 1.8rem;
+      color: var(--red);
+      margin: 0 0 12px;
+      display: block;
+    }
+    .reveal-recipient-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .reveal-recipient-name {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--green);
+      line-height: 1.1;
+      margin-bottom: 22px;
+      text-shadow: 0 0 20px var(--green-glow);
+    }
+    .reveal-timer-bar-wrap {
+      background: var(--surface-2);
+      border-radius: 4px;
+      height: 4px;
+      width: 100%;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .reveal-timer-bar {
+      height: 100%;
+      background: var(--red);
+      border-radius: 4px;
+      width: 100%;
+      transition: width 1s linear;
+    }
+    .reveal-countdown-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+    .reveal-countdown-text strong { color: var(--red); }
+
+    .btn-lock-now {
+      background: var(--red);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 11px 28px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: var(--font);
+    }
+    .btn-lock-now:hover { background: var(--red-hover); }
+
+    .reveal-privacy-note {
+      font-size: 0.72rem;
+      color: #4a6080;
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    /* =============================================
+       GENERIC CARD (glossary, edu)
+    ============================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+
+    /* =============================================
+       GLOSSARY
+    ============================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.81rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* =============================================
+       EDUCATIONAL SECTION
+    ============================================= */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--green);
+      margin: 22px 0 8px;
+    }
+    .section-intro,
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+      margin-bottom: 10px;
+    }
+
+    /* FAQ Accordion */
+    .faq-block { margin-top: 8px; }
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 14px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: color 0.15s;
+    }
+    .faq-question:hover { color: var(--green); }
+    .faq-chevron {
+      font-size: 0.7rem;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      padding-bottom: 14px;
+    }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 580px) {
+      .vault-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+      .reveal-card { padding: 28px 18px 22px; }
+      .reveal-recipient-name { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Secret Santa Name Match Assignment Engine</h1>
+    <p>Distribute party assignments privately without leaking matches. Guaranteed derangement shuffle, couple exclusions, and a click-to-reveal vault that auto-relocks in 10 seconds. Nothing ever leaves your browser.</p>
+  </header>
+
+  <!-- ============================================
+       PANEL 1: PARTICIPANT SETUP
+  ============================================= -->
+  <div class="tool-card" id="setup-panel">
+    <div class="panel-label">
+      <span>Step 1: Add Participants</span>
+      <span class="badge badge-green">Setup</span>
+    </div>
+
+    <label class="input-label" for="names-input">
+      Enter one name per line. The engine updates the participant pool in real time.
+    </label>
+    <textarea
+      id="names-input"
+      placeholder="Alice&#10;Bob&#10;Carol&#10;Dave&#10;Eve&#10;Frank"
+      oninput="onNamesChange()"
+      aria-label="Participant names, one per line"
+    ></textarea>
+
+    <div class="name-count-row">
+      <span class="min-warn" id="min-warn">Minimum 3 participants required</span>
+      <span style="flex:1"></span>
+      <span class="count-chip"><span id="name-count">0</span> participants</span>
+    </div>
+
+    <!-- Exclusion Toggle -->
+    <button
+      type="button"
+      class="excl-toggle-btn"
+      id="excl-toggle-btn"
+      onclick="toggleExclSection()"
+      aria-expanded="false"
+    >
+      <span id="excl-toggle-icon">+</span>
+      Add Exclusion Pairs (couples, family members)
+      <span class="badge badge-gold" style="margin-left:4px;">Optional</span>
+    </button>
+
+    <div class="excl-section" id="excl-section" aria-label="Exclusion pairs">
+      <div class="excl-section-title">Exclusion Pairs: these two people will not draw each other</div>
+      <div id="excl-rows-container">
+        <p class="excl-empty-note" id="excl-empty-note">No exclusion pairs added yet.</p>
+      </div>
+      <button type="button" class="btn-add-excl" onclick="addExclRow()">
+        + Add Exclusion Pair
+      </button>
+    </div>
+
+    <!-- Draw Button -->
+    <button
+      type="button"
+      class="btn-draw"
+      id="btn-draw"
+      onclick="drawNames()"
+      disabled
+      aria-label="Draw secret Santa names"
+    >
+      <span>&#127877;</span> Draw Secret Names
+    </button>
+
+    <div class="msg-box" id="msg-box" role="alert"></div>
+  </div>
+
+  <!-- ============================================
+       PANEL 2: SECRET VAULT
+  ============================================= -->
+  <div class="tool-card" id="vault-section">
+    <div class="panel-label">
+      <span>Step 2: The Secret Vault</span>
+      <span class="badge badge-red">Private</span>
+    </div>
+
+    <div class="vault-intro">
+      <strong>Pass the device around, one person at a time.</strong> Each participant clicks only their own name to see who they are giving to. The match is visible for 10 seconds only, then the box automatically relocks. Nobody else can see a result unless they tap their own name.
+    </div>
+
+    <div class="vault-grid" id="vault-grid" role="list" aria-label="Secret Santa gift boxes"></div>
+
+    <div class="vault-footer">
+      <div class="vault-stat">
+        Revealed: <span id="reveal-count">0</span> / <span id="total-count">0</span>
+      </div>
+      <button type="button" class="btn-reset" onclick="resetEngine()">
+        &#8635; Reset and Start Over
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================
+       REVEAL MODAL
+  ============================================= -->
+  <div id="reveal-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="reveal-card">
+      <div class="reveal-giver-label" id="modal-title">You are</div>
+      <div class="reveal-giver-name" id="modal-giver"></div>
+      <span class="reveal-arrow">&#8659;</span>
+      <div class="reveal-recipient-label">Your secret gift recipient is</div>
+      <div class="reveal-recipient-name" id="modal-recipient"></div>
+      <div class="reveal-timer-bar-wrap">
+        <div class="reveal-timer-bar" id="reveal-bar"></div>
+      </div>
+      <div class="reveal-countdown-text">
+        Auto-locking in <strong id="modal-countdown">10</strong> seconds
+      </div>
+      <button type="button" class="btn-lock-now" onclick="closeReveal()">
+        &#128274; Lock Now
+      </button>
+      <div class="reveal-privacy-note">
+        This match is visible only to you. No data is stored or sent anywhere. Closing this window permanently hides the result from anyone watching the screen.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================= -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <!-- ============================================
+       GLOSSARY
+  ============================================= -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Derangement</div>
+        <div class="glossary-def">A permutation where no element appears in its original position. In a gift exchange, this guarantees no participant is ever matched with themselves.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Fisher-Yates Shuffle</div>
+        <div class="glossary-def">An unbiased algorithm that randomizes an array so every permutation is exactly equally probable. The gold standard for fair random draws.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Algorithmic Fairness</div>
+        <div class="glossary-def">The property that every eligible assignment has an equal probability of selection. No participant is systematically favored or penalized by the engine.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Random Permutation</div>
+        <div class="glossary-def">A rearrangement of a set in random order. A Secret Santa draw is a constrained random permutation, specifically a derangement.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Subfactorial (!n)</div>
+        <div class="glossary-def">The count of valid derangements for a set of n items. For 4 people, !4 equals 9 possible valid Secret Santa assignment maps.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Exclusion Constraint</div>
+        <div class="glossary-def">A rule that prevents two specific participants from being matched. Commonly used for couples or close family who already exchange gifts.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Click-to-Reveal</div>
+        <div class="glossary-def">A privacy interface where each assignment is hidden until the correct participant taps their own name. Prevents accidental exposure to onlookers.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Client-Side Processing</div>
+        <div class="glossary-def">All computation runs in your browser's JavaScript runtime. No server receives participant names or match data at any point in the process.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       EDUCATIONAL SECTION
+  ============================================= -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Secure Secret Santa Name Assignment</h2>
+
+    <p class="section-intro">
+      Organizing a Secret Santa exchange sounds simple, but doing it fairly and privately is harder than it looks. Paper slips can be peeked at, email-based services store participant lists on remote servers, and a casual phone-shuffle often lands someone with their own name. This engine solves all three problems using proven mathematical algorithms and a fully browser-based privacy architecture.
+    </p>
+
+    <h3>How to Use This Tool</h3>
+    <p>
+      Type each participant's name on a separate line in the input box at the top. The engine updates the participant count in real time as you type. If you have couples or family members who already buy gifts for each other independently, click "Add Exclusion Pairs" and select the names that should never be matched together. When the group is ready, click "Draw Secret Names." The Secret Vault appears below with a locked gift box for every participant.
+    </p>
+    <p>
+      Pass the device around the room to each person one at a time. Each person finds their own name on the grid and taps it. Their match appears for exactly 10 seconds, then the box automatically relocks. Once the device is passed to the next person, the previous result is completely hidden from view.
+    </p>
+
+    <h3>Why the Derangement Algorithm Matters</h3>
+    <p>
+      A naive shuffle might assign Alice to Alice or Bob to Bob. The technical term for a permutation where no element lands in its original position is a "derangement." The probability that any given random shuffle produces a valid derangement approaches 1/e (approximately 36.8%) as group size grows. Rather than leaving this to chance, this engine detects any self-match and discards the entire shuffle, then immediately regenerates. This continues automatically until zero self-assignments remain, no matter how many attempts are needed.
+    </p>
+
+    <h3>Fisher-Yates Shuffle: Why It Beats the Alternatives</h3>
+    <p>
+      Sorting by random values (such as attaching Math.random() to each name) produces non-uniform distributions where some permutations appear more frequently than others. This introduces hidden bias into the draw. The Fisher-Yates algorithm avoids this entirely by walking backward through the participant list and swapping each name with a randomly chosen earlier position. The mathematical result is that every permutation of the list is exactly equally probable, making it the correct algorithm for a genuinely fair gift exchange.
+    </p>
+
+    <h3>Privacy by Architecture</h3>
+    <p>
+      Many popular Secret Santa web services process participant names on their own servers. This means a database entry exists containing every assignment, and an administrator could theoretically access the full results. This engine processes everything inside your browser's JavaScript runtime only. No name, no assignment, and no event metadata ever leaves your device. Closing the tab or clearing the page destroys all match data permanently, with no recovery path.
+    </p>
+
+    <h3>How to Handle Exclusions Without Breaking the Draw</h3>
+    <p>
+      Adding too many exclusion pairs in a small group can make it mathematically impossible to find a valid derangement. If no valid assignment exists after an extended search, the engine reports a failure rather than silently returning a broken result. As a practical guideline, avoid excluding more than one-third of all possible pairs in groups smaller than 6 people. Adding one or two more participants is almost always the simplest fix when the engine cannot find a valid draw.
+    </p>
+
+    <!-- FAQ Accordion -->
+    <h3 style="margin-top: 30px;">Frequently Asked Questions</h3>
+    <div class="faq-block">
+
+      <div class="faq-item" id="faq-0">
+        <button type="button" class="faq-question" onclick="toggleFaq('faq-0')">
+          How does this engine prevent people from drawing themselves?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          The engine uses a mathematical derangement algorithm built on top of a Fisher-Yates shuffle. After every shuffle, it checks whether any participant was assigned to themselves. If even one self-match is found, the entire shuffle is discarded and a new one is generated. This repeats automatically until a valid derangement is found, guaranteeing zero self-assignments every time.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-1">
+        <button type="button" class="faq-question" onclick="toggleFaq('faq-1')">
+          What is a derangement in mathematics?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          A derangement is a permutation of a set in which no element appears in its original position. For a gift exchange, this means every participant is guaranteed to give a gift to someone other than themselves. The mathematical subfactorial notation !n counts the number of valid derangements for a group of n people.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-2">
+        <button type="button" class="faq-question" onclick="toggleFaq('faq-2')">
+          How can I ensure the gift exchange is fair for everyone?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          The Fisher-Yates shuffle algorithm produces a statistically uniform random permutation, meaning every valid assignment is equally likely. This is the gold standard for algorithmic fairness in random draws. Each participant has an equal probability of being matched with any eligible recipient, subject only to the derangement and exclusion constraints you define.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-3">
+        <button type="button" class="faq-question" onclick="toggleFaq('faq-3')">
+          Why is an offline-only tool safer for Secret Santa assignments?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          When a server handles Secret Santa assignments, the matches exist on that server and could theoretically be accessed by the server owner, a data breach, or a technical error. This engine runs entirely in your browser. Names are never sent to any server, never stored in a database, and vanish the moment you close the tab. The only people who can see the matches are the participants themselves, one at a time, via the click-to-reveal interface.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-4">
+        <button type="button" class="faq-question" onclick="toggleFaq('faq-4')">
+          How do I handle exclusions for couples or family members?
+          <span class="faq-chevron">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Use the Add Exclusion Pairs section to enter pairs of names who should not be matched with each other. The engine treats each exclusion as a two-way block: if you exclude Alice and Bob, Alice will not draw Bob and Bob will not draw Alice. The derangement algorithm retries the shuffle until all exclusion constraints are satisfied alongside the no-self-match guarantee.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================= -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  Advertisement
+</div>
+
+<script>
+  /* =============================================
+     STATE
+  ============================================= */
+  var assignments    = {};   // { name: recipientName }
+  var nameOrder      = [];   // ordered array of names from last draw
+  var revealTimerId  = null;
+  var currentRevIdx  = -1;   // index into nameOrder of the currently revealed box
+  var revealedSet    = new Set(); // tracks which names have been revealed this session
+
+  /* =============================================
+     NAME PARSING
+  ============================================= */
+  function parseNames() {
+    var raw = document.getElementById('names-input').value;
+    return raw.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+  }
+
+  function onNamesChange() {
+    var names = parseNames();
+    document.getElementById('name-count').textContent = names.length;
+    document.getElementById('min-warn').style.display = (names.length > 0 && names.length < 3) ? 'inline' : 'none';
+    document.getElementById('btn-draw').disabled = names.length < 3;
+    if (document.getElementById('excl-section').classList.contains('open')) {
+      refreshExclDropdowns();
+    }
+  }
+
+  /* =============================================
+     EXCLUSION PAIRS
+  ============================================= */
+  var exclRows = [];
+  var exclCounter = 0;
+
+  function toggleExclSection() {
+    var sec = document.getElementById('excl-section');
+    var btn = document.getElementById('excl-toggle-btn');
+    var ico = document.getElementById('excl-toggle-icon');
+    var isOpen = sec.classList.contains('open');
+    sec.classList.toggle('open', !isOpen);
+    btn.classList.toggle('active', !isOpen);
+    btn.setAttribute('aria-expanded', String(!isOpen));
+    ico.textContent = isOpen ? '+' : String.fromCharCode(8722);
+    if (!isOpen) refreshExclDropdowns();
+  }
+
+  function addExclRow() {
+    var id = ++exclCounter;
+    exclRows.push({ id: id, a: '', b: '' });
+    renderExclRows();
+  }
+
+  function removeExclRow(id) {
+    exclRows = exclRows.filter(function(r){ return r.id !== id; });
+    renderExclRows();
+  }
+
+  function onExclSelChange(id, field, val) {
+    var row = exclRows.find(function(r){ return r.id === id; });
+    if (row) row[field] = val;
+  }
+
+  function renderExclRows() {
+    var container = document.getElementById('excl-rows-container');
+    var names = parseNames();
+    container.innerHTML = '';
+
+    if (exclRows.length === 0) {
+      var note = document.createElement('p');
+      note.className = 'excl-empty-note';
+      note.id = 'excl-empty-note';
+      note.textContent = 'No exclusion pairs added yet.';
+      container.appendChild(note);
+      return;
+    }
+
+    exclRows.forEach(function(row) {
+      var div = document.createElement('div');
+      div.className = 'excl-row';
+
+      var selA = makeSelect(names, row.a, function(v){ onExclSelChange(row.id, 'a', v); });
+      var sep = document.createElement('span');
+      sep.className = 'excl-sep';
+      sep.textContent = 'will not draw';
+      var selB = makeSelect(names, row.b, function(v){ onExclSelChange(row.id, 'b', v); });
+
+      var rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.className = 'btn-rm-excl';
+      rmBtn.title = 'Remove this pair';
+      rmBtn.innerHTML = '&#10005;';
+      rmBtn.onclick = (function(rid){ return function(){ removeExclRow(rid); }; })(row.id);
+
+      div.appendChild(selA);
+      div.appendChild(sep);
+      div.appendChild(selB);
+      div.appendChild(rmBtn);
+      container.appendChild(div);
+    });
+  }
+
+  function makeSelect(names, currentVal, onChange) {
+    var sel = document.createElement('select');
+    sel.onchange = function(){ onChange(sel.value); };
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Select name --';
+    placeholder.disabled = true;
+    if (currentVal === '') placeholder.selected = true;
+    sel.appendChild(placeholder);
+
+    names.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      if (name === currentVal) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
+
+  function refreshExclDropdowns() {
+    if (exclRows.length > 0) renderExclRows();
+  }
+
+  function getExclPairs() {
+    return exclRows
+      .filter(function(r){ return r.a && r.b && r.a !== r.b; })
+      .map(function(r){ return [r.a, r.b]; });
+  }
+
+  /* =============================================
+     DERANGEMENT ENGINE
+     Fisher-Yates shuffle, retry until valid.
+  ============================================= */
+  function fisherYates(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  function generateDerangement(names, exclPairs) {
+    var MAX = 5000;
+    for (var attempt = 0; attempt < MAX; attempt++) {
+      var shuffled = fisherYates(names);
+
+      // Check derangement: no self-match
+      var selfMatch = false;
+      for (var i = 0; i < names.length; i++) {
+        if (shuffled[i] === names[i]) { selfMatch = true; break; }
+      }
+      if (selfMatch) continue;
+
+      // Check exclusions (two-way: a cannot draw b, b cannot draw a)
+      var exclViolation = false;
+      for (var e = 0; e < exclPairs.length; e++) {
+        var a = exclPairs[e][0];
+        var b = exclPairs[e][1];
+        var idxA = names.indexOf(a);
+        var idxB = names.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) {
+          if (shuffled[idxA] === b || shuffled[idxB] === a) {
+            exclViolation = true; break;
+          }
+        }
+      }
+      if (exclViolation) continue;
+
+      // Valid derangement found: build assignment map
+      var result = {};
+      names.forEach(function(name, idx){ result[name] = shuffled[idx]; });
+      return result;
+    }
+    return null; // constraints unsatisfiable
+  }
+
+  /* =============================================
+     DRAW NAMES
+  ============================================= */
+  function drawNames() {
+    var names = parseNames();
+    var excls = getExclPairs();
+
+    // Validate uniqueness
+    var seen = {};
+    var hasDuplicate = false;
+    names.forEach(function(n){
+      if (seen[n]) hasDuplicate = true;
+      seen[n] = true;
+    });
+    if (hasDuplicate) {
+      showMsg('is-error', 'Duplicate names detected. Each participant name must be unique. Please check your list and remove any duplicates.');
+      return;
+    }
+    if (names.length < 3) {
+      showMsg('is-error', 'At least 3 participants are required for a valid Secret Santa draw.');
+      return;
+    }
+
+    var result = generateDerangement(names, excls);
+    if (!result) {
+      showMsg('is-error', 'Could not find a valid assignment after an exhaustive search. Your exclusion rules are likely too restrictive for this group size. Try removing some exclusion pairs or adding more participants.');
+      return;
+    }
+
+    assignments = result;
+    nameOrder   = names.slice();
+    revealedSet = new Set();
+
+    renderVault(names);
+
+    var vaultEl = document.getElementById('vault-section');
+    vaultEl.classList.add('visible');
+    vaultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    showMsg('is-success', 'Names drawn. The vault is ready. Pass the device to each participant so they can tap their own name to reveal their secret match.');
+  }
+
+  function showMsg(type, text) {
+    var box = document.getElementById('msg-box');
+    box.className = 'msg-box ' + type + ' show';
+    box.textContent = text;
+  }
+
+  function hideMsg() {
+    document.getElementById('msg-box').className = 'msg-box';
+  }
+
+  /* =============================================
+     VAULT RENDERING
+  ============================================= */
+  function renderVault(names) {
+    var grid = document.getElementById('vault-grid');
+    grid.innerHTML = '';
+
+    document.getElementById('total-count').textContent  = names.length;
+    document.getElementById('reveal-count').textContent = '0';
+
+    names.forEach(function(name, idx) {
+      var box = document.createElement('div');
+      box.className = 'gift-box';
+      box.setAttribute('role', 'listitem');
+      box.setAttribute('tabindex', '0');
+      box.setAttribute('aria-label', name + ': tap to reveal your secret match');
+      box.dataset.idx = idx;
+      box.onclick    = function(){ revealBox(idx); };
+      box.onkeydown  = function(e){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); revealBox(idx); } };
+
+      box.innerHTML =
+        '<span class="gift-icon-wrap">&#127873;</span>' +
+        '<div class="gift-pname">' + escHtml(name) + '</div>' +
+        '<div class="gift-lock-status">&#128274; Tap to Reveal</div>';
+
+      grid.appendChild(box);
+    });
+  }
+
+  function escHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* =============================================
+     REVEAL LOGIC
+  ============================================= */
+  function revealBox(idx) {
+    if (!nameOrder[idx]) return;
+    // If already timing a reveal, close it first
+    if (revealTimerId !== null) closeReveal();
+
+    var giverName = nameOrder[idx];
+    var recipientName = assignments[giverName];
+    if (!recipientName) return;
+
+    currentRevIdx = idx;
+
+    document.getElementById('modal-giver').textContent     = giverName;
+    document.getElementById('modal-recipient').textContent = recipientName;
+    document.getElementById('modal-countdown').textContent = '10';
+
+    var bar = document.getElementById('reveal-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+
+    var modal = document.getElementById('reveal-modal');
+    modal.classList.add('open');
+
+    // Force reflow then start the bar animation
+    void bar.offsetWidth;
+    bar.style.transition = 'width 10s linear';
+    bar.style.width = '0%';
+
+    var secs = 10;
+    revealTimerId = setInterval(function() {
+      secs--;
+      var cdEl = document.getElementById('modal-countdown');
+      if (cdEl) cdEl.textContent = String(secs);
+      if (secs <= 0) closeReveal();
+    }, 1000);
+
+    // Mark this box as revealed in the grid
+    var allBoxes = document.querySelectorAll('.gift-box');
+    allBoxes.forEach(function(b){ b.classList.remove('revealed'); });
+    var box = document.querySelector('.gift-box[data-idx="' + idx + '"]');
+    if (box) {
+      box.classList.add('revealed');
+      box.querySelector('.gift-lock-status').innerHTML = '&#10003; Revealed';
+    }
+
+    // Track revealed participants
+    revealedSet.add(giverName);
+    document.getElementById('reveal-count').textContent = revealedSet.size;
+  }
+
+  function closeReveal() {
+    clearInterval(revealTimerId);
+    revealTimerId = null;
+
+    var modal = document.getElementById('reveal-modal');
+    modal.classList.remove('open');
+
+    // Relock the box in the grid
+    if (currentRevIdx >= 0) {
+      var box = document.querySelector('.gift-box[data-idx="' + currentRevIdx + '"]');
+      if (box) {
+        box.classList.remove('revealed');
+        box.querySelector('.gift-lock-status').innerHTML = '&#128274; Tap to Reveal';
+      }
+      currentRevIdx = -1;
+    }
+  }
+
+  /* =============================================
+     RESET
+  ============================================= */
+  function resetEngine() {
+    closeReveal();
+    assignments  = {};
+    nameOrder    = [];
+    revealedSet  = new Set();
+    currentRevIdx = -1;
+
+    document.getElementById('vault-section').classList.remove('visible');
+    document.getElementById('vault-grid').innerHTML = '';
+    hideMsg();
+
+    document.getElementById('setup-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* =============================================
+     FAQ ACCORDION
+  ============================================= */
+  function toggleFaq(id) {
+    var item = document.getElementById(id);
+    if (item) item.classList.toggle('open');
+  }
+
+  /* =============================================
+     INIT
+  ============================================= */
+  onNamesChange();
+</script>
+
+</body>
+</html>

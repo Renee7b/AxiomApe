@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slugified File Name Batch Standardizer: Convert Any String to a Safe File Name | AxiomApe</title>
+  <meta name="description" content="Free bulk file name standardizer. Paste a list of file names or titles and instantly convert them to URL-safe, SEO-friendly slugs. Strips accents, removes special characters, and supports hyphen or underscore separators with live output." />
+  <meta name="keywords" content="file name standardizer, slug generator, bulk slug converter, url slug generator, text to slug, file name cleaner, seo friendly filename, batch file rename, slugify tool, url safe file name, diacritic remover, accent stripper, underscore to hyphen, file name formatter, safe file name converter" />
+  <link rel="canonical" href="https://axiomape.com/slugified-file-name-standardizer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Slugified File Name Batch Standardizer",
+        "description": "Free bulk file name standardizer. Paste a list of file names or titles and instantly convert them to URL-safe, SEO-friendly slugs. Strips accents, removes special characters, and supports hyphen or underscore separators with live output.",
+        "url": "https://axiomape.com/slugified-file-name-standardizer/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a URL slug and why is it important for SEO?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A URL slug is the human-readable part of a web address that identifies a specific page, for example the 'best-running-shoes' portion of 'https://example.com/best-running-shoes'. Slugs matter for SEO because Google reads them to understand page content. A clean, keyword-rich slug signals relevance, earns higher click-through rates in search results, and creates links that are easy to share and remember. Short, descriptive, lowercase slugs separated by hyphens are the universally accepted best practice."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why should I use hyphens instead of underscores for web file names?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Google officially treats hyphens as word separators but historically treated underscores as joining characters, meaning 'file_name' was read as one word 'filename' while 'file-name' was read as two words. Using hyphens means search engines correctly index both 'file' and 'name' as individual keywords. For developer contexts such as Python variable naming, underscores are standard, so this tool lets you choose whichever separator fits your workflow."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does this tool handle accents and special characters?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "This tool uses Unicode Normalization Form D (NFD), which decomposes accented letters into their base character plus a separate combining accent mark. A regular expression then strips only the accent marks while keeping the base letter. For example, the French 'e' with an acute accent becomes a plain 'e', the Spanish 'n' with a tilde becomes 'n', and the German 'o' with an umlaut becomes 'o'. Characters with no ASCII equivalent, such as Chinese or Arabic script, are removed entirely. This conversion happens entirely in your browser with no data ever sent to a server."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do spaces break file paths on servers and the internet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Spaces are not valid in URLs without encoding. A browser or command-line tool must replace each space with '%20', turning 'My Resume.pdf' into 'My%20Resume.pdf'. While browsers often handle this automatically, many server environments, shell scripts, and APIs do not, causing broken links, failed uploads, and script errors. Replacing spaces with hyphens or underscores at the source eliminates these problems completely and keeps file paths clean across every system."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it necessary to lowercase all file names?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "On Linux and Unix servers, file names are case-sensitive, meaning 'Image.PNG', 'image.png', and 'IMAGE.PNG' are three different files. A link to 'image.png' will return a 404 error if the file was saved as 'Image.PNG'. Lowercase-only file names eliminate this class of bug entirely. They also improve SEO consistency, since Google treats URLs as case-sensitive. The lowercase setting is the recommended default for any file destined for a web server or version-controlled repository."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface-2:    #22263a;
+      --border:       #2e3350;
+      --green:        #22C55E;
+      --green-dim:    rgba(34,197,94,0.12);
+      --blue:         #3B82F6;
+      --blue-dim:     rgba(59,130,246,0.12);
+      --text:         #e2e8f0;
+      --text-muted:   #8892a4;
+      --radius:       10px;
+      --radius-sm:    6px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--green); }
+    a:hover { text-decoration: underline; }
+
+    /* ============================================================
+       PAGE HEADER (title block inside main, not role=banner)
+    ============================================================ */
+    .page-header {
+      background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+    }
+
+    .page-header h1 span { color: var(--green); }
+
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 18px;
+    }
+
+    .see-also {
+      display: inline-block;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+    }
+
+    .see-also a { color: var(--blue); font-weight: 600; }
+
+    /* ============================================================
+       MAIN CONTENT WRAPPER
+    ============================================================ */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ============================================================
+       THREE-PANEL DASHBOARD
+    ============================================================ */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Controls span full width above the two text panels */
+    .controls-panel {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+
+    .controls-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .controls-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-group-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .opt-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .opt-btn:hover {
+      border-color: var(--blue);
+      color: var(--text);
+    }
+
+    .opt-btn.active-green {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .opt-btn.active-blue {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* Toggle for file extension */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      cursor: pointer;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      top: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--green-dim);
+      border-color: var(--green);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+      background: var(--green);
+    }
+
+    .toggle-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    /* Input and output panels */
+    .io-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .io-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .io-panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .line-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    textarea {
+      width: 100%;
+      flex: 1;
+      min-height: 280px;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      resize: vertical;
+      padding: 14px 16px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      outline: none;
+    }
+
+    textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    #input-area:focus {
+      box-shadow: inset 0 0 0 2px var(--blue);
+    }
+
+    #output-area {
+      color: var(--green);
+      background: var(--green-dim);
+      cursor: default;
+    }
+
+    /* Telemetry / actions panel */
+    .telemetry-panel {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      justify-content: space-between;
+    }
+
+    .metrics {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-copy {
+      background: var(--green);
+      color: #000;
+    }
+
+    .btn-copy:hover { background: #16a34a; }
+    .btn-copy:active { transform: scale(0.97); }
+
+    .btn-download {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-download:hover { border-color: var(--blue); color: var(--blue); }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .btn-clear:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* Copy confirmation */
+    .copy-confirm {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .copy-confirm.show { display: flex; }
+
+    /* ============================================================
+       AD PLACEMENTS (classes provided by site-chrome.js)
+    ============================================================ */
+
+    /* ============================================================
+       EDUCATIONAL SECTION STYLES
+    ============================================================ */
+    .edu-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+
+    .section-intro {
+      font-size: 0.97rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+
+    .edu-section p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    .edu-section ul {
+      margin: 8px 0 12px 20px;
+    }
+
+    .edu-section ul li {
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 5px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--surface-2);
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .faq-q:hover { background: var(--border); }
+
+    .faq-q .arrow {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .faq-item.open .faq-q .arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+    }
+
+    .faq-item.open .faq-a { display: block; }
+
+    /* Tool-specific disclaimer */
+    .tool-disclaimer {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin: 0 auto 20px;
+      max-width: 1100px;
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 700px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .controls-panel { grid-column: 1; }
+      .telemetry-panel { grid-column: 1; }
+      textarea { min-height: 180px; }
+      .metrics { gap: 18px; }
+      .card { padding: 20px 16px; }
+      .glossary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Slugified File Name <span>Batch Standardizer</span></h1>
+    <p>Paste any list of file names or titles. Instantly convert them to URL-safe, SEO-friendly slugs with full Unicode diacritic support and live output.</p>
+    <span class="see-also">Related: <a href="/url-slug-generator/">URL Slug Generator</a> - optimize blog post titles for SEO</span>
+  </header>
+
+  <!-- ============================================================
+       THREE-PANEL TOOL DASHBOARD
+  ============================================================ -->
+  <section aria-label="File Name Standardizer Tool" style="margin-bottom:20px;">
+
+    <!-- Panel: Controls -->
+    <div class="dashboard">
+      <div class="controls-panel">
+        <div class="controls-title">Configuration Settings</div>
+        <div class="controls-grid">
+
+          <!-- Casing -->
+          <div class="control-group">
+            <div class="control-group-label">Casing</div>
+            <div class="btn-group" role="group" aria-label="Casing option">
+              <button class="opt-btn active-green" id="case-lower" onclick="setOption('case','lower')" title="Recommended for web servers and SEO">Lowercase</button>
+              <button class="opt-btn" id="case-upper" onclick="setOption('case','upper')">Uppercase</button>
+              <button class="opt-btn" id="case-preserve" onclick="setOption('case','preserve')">Preserve</button>
+            </div>
+          </div>
+
+          <!-- Separator -->
+          <div class="control-group">
+            <div class="control-group-label">Separator</div>
+            <div class="btn-group" role="group" aria-label="Separator option">
+              <button class="opt-btn active-green" id="sep-hyphen" onclick="setOption('sep','hyphen')" title="SEO standard - Google prefers hyphens">Hyphen ( - )</button>
+              <button class="opt-btn" id="sep-underscore" onclick="setOption('sep','underscore')" title="Developer standard for scripts and databases">Underscore ( _ )</button>
+              <button class="opt-btn" id="sep-none" onclick="setOption('sep','none')">None</button>
+            </div>
+          </div>
+
+          <!-- File Extensions -->
+          <div class="control-group">
+            <div class="control-group-label">File Extensions</div>
+            <div class="toggle-wrap">
+              <label class="toggle" title="Preserve file extensions as-is, converting extension to lowercase">
+                <input type="checkbox" id="ext-toggle" checked onchange="processAll()" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">Preserve File Extensions</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Panel 1: Raw Input -->
+      <div class="io-panel">
+        <div class="io-panel-header">
+          <span class="io-panel-label">Raw Input - Paste File Names (one per line)</span>
+          <span class="line-count" id="input-count">0 lines</span>
+        </div>
+        <textarea
+          id="input-area"
+          spellcheck="false"
+          placeholder="My Resume 2024.PDF&#10;Photo Album - Summer Vacation!.jpg&#10;Cafe Brasserie Menu.DOCX&#10;naiv -- resume final FINAL (2).pdf&#10;Fichier de donnees.xlsx&#10;Renee's Project Brief #3.pptx"
+          oninput="processAll()"
+          aria-label="Paste file names or titles here, one per line"
+        ></textarea>
+      </div>
+
+      <!-- Panel 2: Live Output -->
+      <div class="io-panel">
+        <div class="io-panel-header">
+          <span class="io-panel-label">Standardized File Name Output</span>
+          <span class="line-count" id="output-count">0 lines</span>
+        </div>
+        <textarea
+          id="output-area"
+          readonly
+          spellcheck="false"
+          placeholder="Standardized file names will appear here in real time..."
+          aria-label="Standardized file name output, read-only"
+        ></textarea>
+      </div>
+
+      <!-- Panel 3: Telemetry and Actions -->
+      <div class="telemetry-panel">
+        <div class="metrics" role="status" aria-live="polite" aria-label="Processing statistics">
+          <div class="metric">
+            <div class="metric-value" id="stat-lines">0</div>
+            <div class="metric-label">Total Lines Processed</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="stat-chars">0</div>
+            <div class="metric-label">Invalid Characters Removed</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="stat-converted">0</div>
+            <div class="metric-label">Diacritics Converted</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <span class="copy-confirm" id="copy-confirm" aria-live="polite">Copied!</span>
+          <button class="action-btn btn-copy" onclick="copyAll()" aria-label="Copy all standardized file names to clipboard">
+            Copy All Slugs
+          </button>
+          <button class="action-btn btn-download" onclick="downloadTxt()" aria-label="Download standardized file names as a .txt file">
+            Download .txt
+          </button>
+          <button class="action-btn btn-clear" onclick="clearAll()" aria-label="Clear all input and output">
+            Clear
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL CONTENT
+  ============================================================ -->
+  <div class="edu-wrap">
+
+    <!-- Glossary -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Slug</div>
+          <div class="glossary-def">The URL-safe portion of a web address identifying a page or file. Lowercase letters, numbers, and hyphens only. Example: "my-image.png".</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">URL-Safe</div>
+          <div class="glossary-def">A string containing only characters that can appear in a URL without percent-encoding. Letters (a-z), digits (0-9), hyphens, underscores, periods, and tildes are safe by definition.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Unicode Normalization</div>
+          <div class="glossary-def">A process that converts Unicode text into a standard form. This tool uses NFD (Normalization Form D), which splits accented letters into a base letter and a separate combining accent so the accent can be removed cleanly.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Regex (Regular Expression)</div>
+          <div class="glossary-def">A pattern-matching language used to search and replace text. This tool uses regex to identify and strip all non-alphanumeric characters after Unicode normalization, leaving only clean, safe characters.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">File Extension</div>
+          <div class="glossary-def">The suffix at the end of a file name that identifies its format, for example ".pdf", ".jpg", or ".docx". Preserving extensions ensures renamed files remain openable by their native applications.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Diacritic</div>
+          <div class="glossary-def">An accent mark added to a letter to change its pronunciation, such as the acute accent in "e", the tilde in "n", or the umlaut in "o". This tool converts them to their plain ASCII base letter automatically.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">White Space</div>
+          <div class="glossary-def">Spaces, tabs, and other invisible characters between words. White space must be replaced in file names and URLs because it either breaks paths or requires percent-encoding (%20).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">SEO-Friendly URL</div>
+          <div class="glossary-def">A URL structured to include relevant keywords, use lowercase letters, separate words with hyphens, and avoid special characters. Search engines use URL structure as a ranking signal for page relevance.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational guide -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Safe, SEO-Friendly File Naming</h2>
+
+      <p class="section-intro">
+        Whether you are uploading assets to a web server, organizing a local design library, or committing files to a version-controlled repository, naming your files correctly from the start saves you from broken links, failed scripts, and wasted debugging time. This guide explains exactly why file name standards exist and how to apply them at scale.
+      </p>
+
+      <h3>How to Use This Batch Standardizer</h3>
+      <p>
+        Paste any list of raw file names or blog post titles into the left panel, one entry per line. The tool processes every line in real time and outputs a cleaned slug directly opposite in the right panel, so you can verify the 1-to-1 conversion at a glance. The counter at the bottom tracks how many lines were processed and how many invalid characters or diacritics were stripped.
+      </p>
+      <ul>
+        <li>Choose Lowercase for web servers and SEO (the default and strongly recommended).</li>
+        <li>Choose Hyphen as your separator for all public-facing files and URLs. Switch to Underscore for Python variables or database identifiers.</li>
+        <li>Enable "Preserve File Extensions" to keep ".pdf", ".jpg", and ".docx" intact while slugifying only the base name.</li>
+        <li>Use "Copy All Slugs" to paste the results directly into a rename script, CMS, or spreadsheet. Use "Download .txt" to save the output as a reference file.</li>
+      </ul>
+
+      <h3>Why File Names Matter More Than You Think</h3>
+      <p>
+        A file named "My Case Study Report (FINAL v2).PDF" creates three separate problems before it is ever opened by a user. First, the spaces require percent-encoding in any URL, producing the unreadable string "My%20Case%20Study%20Report%20(FINAL%20v2).PDF". Second, the parentheses are not valid URL characters and will break on some servers without encoding. Third, the uppercase ".PDF" extension will cause a 404 error on Linux servers if the link references ".pdf" in lowercase. Renaming it "my-case-study-report-final-v2.pdf" eliminates all three problems at once.
+      </p>
+
+      <h3>Unicode and Diacritic Handling: The Technical Picture</h3>
+      <p>
+        Accented characters such as "e" with an acute accent, "n" with a tilde, or "o" with an umlaut are stored in Unicode as composed glyphs. Running <code>String.prototype.normalize('NFD')</code> decomposes each glyph into its base letter plus a separate Unicode combining mark. A regex targeting the Unicode category "Mn" (Mark, Nonspacing) then removes only the combining marks, leaving the base letter untouched. This means "Cafe Brasserie" becomes "cafe-brasserie" rather than "caf-brasserie", and "Munchen" with an umlaut becomes "munchen" rather than "mnchen". No data ever leaves your browser during this process.
+      </p>
+
+      <h3>Hyphens vs. Underscores: Choosing the Right Separator</h3>
+      <p>
+        Google's own documentation recommends hyphens as word separators in URLs because Google's indexer treats a hyphen as a space between words. An underscore, by contrast, has historically been treated as a joining character, so "file_name" might be indexed as the single keyword "filename". For any file that will be served over the web, the hyphen setting is the correct choice. The underscore option exists for developers who follow Python naming conventions (PEP 8), database column naming standards, or internal build systems that forbid hyphens.
+      </p>
+
+      <h3>Bulk Renaming in Practice</h3>
+      <p>
+        Once you have your standardized list of slugs, you can apply them in batch using a shell loop. For example, on macOS or Linux, you can pair the input and output lists line by line and call <code>mv</code> on each pair. On Windows, PowerShell's <code>Rename-Item</code> cmdlet handles the same task. Most CMS platforms such as WordPress and Webflow also accept bulk file name imports through their media library or asset manager, making this tool a natural first step in any large-scale asset migration workflow.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq-1">
+        <div class="faq-q" onclick="toggleFaq('faq-1')" role="button" tabindex="0" aria-expanded="false">
+          What is a URL slug and why is it important for SEO?
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          A URL slug is the human-readable part of a web address that identifies a specific page, for example the "best-running-shoes" portion of "https://example.com/best-running-shoes". Slugs matter for SEO because Google reads them to understand page content. A clean, keyword-rich slug signals relevance, earns higher click-through rates in search results, and creates links that are easy to share and remember. Short, descriptive, lowercase slugs separated by hyphens are the universally accepted best practice.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-2">
+        <div class="faq-q" onclick="toggleFaq('faq-2')" role="button" tabindex="0" aria-expanded="false">
+          Why should I use hyphens instead of underscores for web file names?
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Google officially treats hyphens as word separators but historically treated underscores as joining characters, meaning "file_name" was read as one word "filename" while "file-name" was read as two words. Using hyphens means search engines correctly index both "file" and "name" as individual keywords. For developer contexts such as Python variable naming, underscores are standard, so this tool lets you choose whichever separator fits your workflow.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-3">
+        <div class="faq-q" onclick="toggleFaq('faq-3')" role="button" tabindex="0" aria-expanded="false">
+          How does this tool handle accents and special characters?
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          This tool uses Unicode Normalization Form D (NFD), which decomposes accented letters into their base character plus a separate combining accent mark. A regular expression then strips only the accent marks while keeping the base letter. For example, the French "e" with an acute accent becomes a plain "e", the Spanish "n" with a tilde becomes "n", and the German "o" with an umlaut becomes "o". Characters with no ASCII equivalent, such as Chinese or Arabic script, are removed entirely. This conversion happens entirely in your browser with no data ever sent to a server.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-4">
+        <div class="faq-q" onclick="toggleFaq('faq-4')" role="button" tabindex="0" aria-expanded="false">
+          Why do spaces break file paths on servers and the internet?
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          Spaces are not valid in URLs without encoding. A browser or command-line tool must replace each space with "%20", turning "My Resume.pdf" into "My%20Resume.pdf". While browsers often handle this automatically, many server environments, shell scripts, and APIs do not, causing broken links, failed uploads, and script errors. Replacing spaces with hyphens or underscores at the source eliminates these problems completely and keeps file paths clean across every system.
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq-5">
+        <div class="faq-q" onclick="toggleFaq('faq-5')" role="button" tabindex="0" aria-expanded="false">
+          Is it necessary to lowercase all file names?
+          <span class="arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          On Linux and Unix servers, file names are case-sensitive, meaning "Image.PNG", "image.png", and "IMAGE.PNG" are three different files. A link to "image.png" will return a 404 error if the file was saved as "Image.PNG". Lowercase-only file names eliminate this class of bug entirely. They also improve SEO consistency, since Google treats URLs as case-sensitive. The lowercase setting is the recommended default for any file destined for a web server or version-controlled repository.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <p class="tool-disclaimer">
+    This tool processes all text locally in your browser. No file names, titles, or any other input data are transmitted to external servers. The slugified output is for renaming reference only - always verify results before executing bulk rename operations on production files.
+  </p>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  Advertisement
+</div>
+
+<script>
+  /* ============================================================
+     STATE
+  ============================================================ */
+  const state = {
+    caseMode: 'lower',   // 'lower' | 'upper' | 'preserve'
+    sepMode:  'hyphen',  // 'hyphen' | 'underscore' | 'none'
+  };
+
+  /* ============================================================
+     OPTION SETTERS
+  ============================================================ */
+  function setOption(type, value) {
+    if (type === 'case') {
+      state.caseMode = value;
+      ['case-lower','case-upper','case-preserve'].forEach(id => {
+        document.getElementById(id).className = 'opt-btn';
+      });
+      document.getElementById('case-' + value).className = 'opt-btn active-green';
+    } else if (type === 'sep') {
+      state.sepMode = value;
+      ['sep-hyphen','sep-underscore','sep-none'].forEach(id => {
+        document.getElementById(id).className = 'opt-btn';
+      });
+      document.getElementById('sep-' + value).className = 'opt-btn active-blue';
+    }
+    processAll();
+  }
+
+  /* ============================================================
+     CORE SLUG ENGINE
+  ============================================================ */
+  function slugifyLine(raw, caseMode, sepMode, preserveExt) {
+    if (!raw || !raw.trim()) return '';
+
+    let base = raw.trim();
+    let ext   = '';
+
+    // Preserve file extension before processing
+    if (preserveExt) {
+      // Match trailing .ext (2-5 chars, alphanumeric only)
+      const extMatch = base.match(/(\.[a-zA-Z0-9]{2,5})$/);
+      if (extMatch) {
+        ext  = extMatch[1].toLowerCase();
+        base = base.slice(0, base.length - extMatch[1].length);
+      }
+    }
+
+    // 1. Unicode NFD decomposition to separate diacritics from base letters
+    const beforeNormLen = base.length;
+    base = base.normalize('NFD');
+    // 2. Strip combining diacritic marks (Unicode category Mn)
+    base = base.replace(/[̀-ͯ]/g, '');
+    const diacriticsRemoved = beforeNormLen - base.length;
+
+    // 3. Apply casing BEFORE removing characters so preserve mode is accurate
+    if (caseMode === 'lower') {
+      base = base.toLowerCase();
+    } else if (caseMode === 'upper') {
+      base = base.toUpperCase();
+    }
+    // 'preserve' leaves casing as-is
+
+    // 4. Replace characters that are not alphanumeric or a simple separator
+    //    Track how many non-alphanumeric characters are replaced
+    const sep = sepMode === 'hyphen' ? '-' : sepMode === 'underscore' ? '_' : '';
+    let invalidCount = 0;
+
+    if (sep) {
+      // Replace each non-alphanum char with the separator
+      base = base.replace(/[^a-zA-Z0-9]+/g, function(match) {
+        invalidCount += match.length;
+        return sep;
+      });
+      // Collapse multiple separators into one
+      const sepEscaped = sep === '-' ? '-' : '_';
+      base = base.replace(new RegExp('[' + sepEscaped + ']{2,}', 'g'), sep);
+      // Trim separator from start and end
+      base = base.replace(new RegExp('^[' + sepEscaped + ']+|[' + sepEscaped + ']+$', 'g'), '');
+    } else {
+      // No separator: strip all non-alphanumeric characters entirely
+      base = base.replace(/[^a-zA-Z0-9]+/g, function(match) {
+        invalidCount += match.length;
+        return '';
+      });
+    }
+
+    return {
+      slug: base + ext,
+      invalidCount: invalidCount,
+      diacriticsRemoved: diacriticsRemoved
+    };
+  }
+
+  /* ============================================================
+     PROCESS ALL LINES
+  ============================================================ */
+  function processAll() {
+    const inputEl       = document.getElementById('input-area');
+    const outputEl      = document.getElementById('output-area');
+    const inputCountEl  = document.getElementById('input-count');
+    const outputCountEl = document.getElementById('output-count');
+    const statLines     = document.getElementById('stat-lines');
+    const statChars     = document.getElementById('stat-chars');
+    const statConverted = document.getElementById('stat-converted');
+    const preserveExt   = document.getElementById('ext-toggle').checked;
+
+    const lines = inputEl.value.split('\n');
+    const nonEmpty = lines.filter(l => l.trim() !== '');
+
+    inputCountEl.textContent  = lines.length + ' line' + (lines.length !== 1 ? 's' : '');
+    outputCountEl.textContent = nonEmpty.length + ' line' + (nonEmpty.length !== 1 ? 's' : '');
+
+    let totalInvalid    = 0;
+    let totalDiacritics = 0;
+
+    const outputLines = lines.map(function(line) {
+      if (!line.trim()) return '';
+      const result = slugifyLine(line, state.caseMode, state.sepMode, preserveExt);
+      totalInvalid    += result.invalidCount;
+      totalDiacritics += result.diacriticsRemoved;
+      return result.slug;
+    });
+
+    outputEl.value = outputLines.join('\n');
+
+    statLines.textContent     = nonEmpty.length;
+    statChars.textContent     = totalInvalid;
+    statConverted.textContent = totalDiacritics;
+  }
+
+  /* ============================================================
+     COPY ALL
+  ============================================================ */
+  function copyAll() {
+    const text = document.getElementById('output-area').value;
+    if (!text.trim()) return;
+
+    navigator.clipboard.writeText(text).then(function() {
+      const el = document.getElementById('copy-confirm');
+      el.classList.add('show');
+      setTimeout(function() { el.classList.remove('show'); }, 2000);
+    }).catch(function() {
+      // Fallback for environments where clipboard API is restricted
+      const ta = document.getElementById('output-area');
+      ta.select();
+      document.execCommand('copy');
+    });
+  }
+
+  /* ============================================================
+     DOWNLOAD AS .TXT
+  ============================================================ */
+  function downloadTxt() {
+    const text = document.getElementById('output-area').value;
+    if (!text.trim()) return;
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'standardized-file-names.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ============================================================
+     CLEAR
+  ============================================================ */
+  function clearAll() {
+    document.getElementById('input-area').value  = '';
+    document.getElementById('output-area').value = '';
+    document.getElementById('stat-lines').textContent     = '0';
+    document.getElementById('stat-chars').textContent     = '0';
+    document.getElementById('stat-converted').textContent = '0';
+    document.getElementById('input-count').textContent    = '0 lines';
+    document.getElementById('output-count').textContent   = '0 lines';
+  }
+
+  /* ============================================================
+     FAQ ACCORDION
+  ============================================================ */
+  function toggleFaq(id) {
+    const item = document.getElementById(id);
+    const isOpen = item.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-item').forEach(function(el) {
+      el.classList.remove('open');
+      const q = el.querySelector('.faq-q');
+      if (q) q.setAttribute('aria-expanded', 'false');
+    });
+    // Open clicked if it was closed
+    if (!isOpen) {
+      item.classList.add('open');
+      const q = item.querySelector('.faq-q');
+      if (q) q.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  // Keyboard accessibility for FAQ
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const t = e.target;
+      if (t && t.classList.contains('faq-q')) {
+        e.preventDefault();
+        t.click();
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

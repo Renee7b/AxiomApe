@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free WCAG Contrast Ratio Grid Accessibility Analyzer. Paste a color palette and instantly generate a full contrast matrix showing AA, AAA, and Large Text pass/fail ratings for every foreground and background combination. 100% client-side." />
+  <meta name="keywords" content="wcag contrast ratio checker, color contrast matrix, accessibility color grid, contrast ratio calculator, wcag aa checker, wcag aaa checker, color accessibility tester, ada web compliance color, ui color contrast tool, foreground background contrast, text readability checker, wcag 2.1 contrast, hex color contrast, color palette accessibility, design system accessibility, contrast ratio grid" />
+  <title>Contrast Ratio Grid Accessibility Analyzer: Full WCAG Color Matrix | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/contrast-ratio-grid/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Contrast Ratio Grid Accessibility Analyzer",
+        "description": "Free WCAG Contrast Ratio Grid Accessibility Analyzer. Paste a color palette and instantly generate a full contrast matrix showing AA, AAA, and Large Text pass/fail ratings for every foreground and background combination. 100% client-side.",
+        "url": "https://axiomape.com/contrast-ratio-grid/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a good contrast ratio for web accessibility?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For normal-sized body text, WCAG 2.1 requires a minimum contrast ratio of 4.5:1 to meet AA compliance and 7:1 for AAA (enhanced) compliance. For large text (18pt or 14pt bold and above) and non-decorative UI components such as buttons and form inputs, the minimum drops to 3:1 for AA compliance. A ratio of 4.5:1 is considered the baseline for most projects targeting legal ADA compliance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between WCAG AA and WCAG AAA compliance?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "WCAG AA (Level AA) is the standard most organizations target for legal ADA and Section 508 compliance. It requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text and UI components. WCAG AAA (Level AAA) is the enhanced, stricter standard requiring 7:1 for normal text and 4.5:1 for large text. AAA is not required by most accessibility laws but is recommended for high-readability applications such as government portals, healthcare platforms, and content aimed at older or visually impaired users."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do large text and UI components have lower contrast requirements?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Larger text is physically easier to read even at lower contrast because the letterforms occupy more pixels and the eye can resolve the edges more easily. Similarly, UI components like buttons and form borders convey meaning through shape and position, not just color contrast, so a slightly lower threshold is acceptable. WCAG defines large text as 18pt (24px) or larger, or 14pt (approximately 18.67px) when bold. Anything smaller than these thresholds uses the stricter 4.5:1 normal-text requirement."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is the WCAG contrast ratio actually calculated mathematically?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The WCAG 2.1 contrast ratio formula is (L1 + 0.05) divided by (L2 + 0.05), where L1 is the relative luminance of the lighter color and L2 is the relative luminance of the darker color. Relative luminance is calculated by first converting each sRGB channel (R, G, B) from 0-255 to a 0-1 range, then linearizing each channel using the formula: if the value is less than or equal to 0.03928 divide by 12.92, otherwise raise (value + 0.055) / 1.055 to the power of 2.4. The three linearized channels are then weighted: 0.2126 times R plus 0.7152 times G plus 0.0722 times B. The resulting luminance values are plugged into the contrast ratio formula, producing a ratio between 1:1 (no contrast) and 21:1 (pure black on pure white)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do some color combinations look readable to me but fail the accessibility test?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Human perception of contrast is non-linear and highly dependent on context, screen brightness, and individual vision differences. Two colors that appear to have strong contrast based on their hue (for example, red text on a green background) can still have a very low luminance contrast ratio because their brightness levels are similar. Color blindness affects approximately 8 percent of men and 0.5 percent of women, and many common color pairs that seem readable to people with standard color vision become nearly invisible to those with red-green color blindness. The WCAG luminance formula strips out hue information entirely and measures only perceived brightness, which is why it sometimes disagrees with subjective impressions."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* AxiomApe dark theme */
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface-2:    #22263a;
+      --surface-3:    #2a2f45;
+      --border:       #2e3347;
+      --border-hover: #3d4260;
+
+      /* Accessibility accent palette */
+      --blue:         #2563EB;
+      --blue-light:   #3b82f6;
+      --blue-dim:     rgba(37,99,235,0.18);
+      --green:        #16A34A;
+      --green-light:  #22c55e;
+      --green-dim:    rgba(22,163,74,0.15);
+      --red:          #DC2626;
+      --red-light:    #ef4444;
+      --red-dim:      rgba(220,38,38,0.15);
+      --amber:        #d97706;
+
+      /* Text */
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+
+      /* Misc */
+      --radius:       14px;
+      --radius-sm:    8px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+      --ease:         0.15s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blue-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Tool header ───────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0a0d1a 0%, #0f1528 45%, #0d1a2e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 20px 36px;
+      text-align: center;
+    }
+    .tool-header h1 {
+      font-size: clamp(20px, 4vw, 30px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tool-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── Page layout ───────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    /* ── Two-panel layout ──────────────────────────────────────── */
+    .tool-panels {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 820px) {
+      .tool-panels {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--blue-light);
+      margin-bottom: 14px;
+    }
+
+    /* ── Input panel ───────────────────────────────────────────── */
+    .input-panel .card { margin-bottom: 0; }
+
+    .palette-textarea {
+      width: 100%;
+      min-height: 160px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Inter', monospace;
+      font-size: 13px;
+      padding: 10px 12px;
+      resize: vertical;
+      transition: border-color var(--ease);
+      outline: none;
+      line-height: 1.7;
+    }
+    .palette-textarea:focus { border-color: var(--blue); }
+    .palette-textarea::placeholder { color: var(--text-dim); }
+
+    .sample-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--blue-light);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+    }
+    .sample-link:hover { color: #93c5fd; }
+
+    /* ── Standard toggle ───────────────────────────────────────── */
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 16px;
+    }
+    .toggle-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: border-color var(--ease), background var(--ease);
+      text-align: left;
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+    }
+    .toggle-btn:hover { border-color: var(--border-hover); }
+    .toggle-btn.active {
+      border-color: var(--blue);
+      background: var(--blue-dim);
+    }
+    .toggle-btn-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--border-hover);
+      flex-shrink: 0;
+      transition: background var(--ease), border-color var(--ease);
+    }
+    .toggle-btn.active .toggle-btn-dot {
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+    .toggle-btn-text { font-size: 12px; color: var(--text); line-height: 1.3; }
+    .toggle-btn-ratio {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .toggle-btn.active .toggle-btn-ratio { color: var(--blue-light); }
+
+    /* ── Stats bar ─────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .stat-chip.pass { background: var(--green-dim); border-color: var(--green); color: var(--green-light); }
+    .stat-chip.fail { background: var(--red-dim); border-color: var(--red); color: var(--red-light); }
+    .stat-chip.total { background: var(--surface-2); color: var(--text-muted); }
+
+    /* ── Matrix panel ──────────────────────────────────────────── */
+    .matrix-panel { overflow: auto; }
+
+    .matrix-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      color: var(--text-dim);
+      text-align: center;
+      gap: 12px;
+    }
+    .matrix-empty-icon { font-size: 36px; opacity: 0.5; }
+    .matrix-empty p { font-size: 13px; line-height: 1.6; }
+
+    /* ── Grid table ────────────────────────────────────────────── */
+    .matrix-scroll { overflow-x: auto; }
+
+    .matrix-table {
+      border-collapse: collapse;
+      min-width: 100%;
+      font-size: 12px;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      border: 1px solid var(--border);
+      min-width: 90px;
+      max-width: 120px;
+    }
+
+    /* corner cell */
+    .corner-cell {
+      background: var(--surface-2);
+      min-width: 90px;
+      padding: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-dim);
+    }
+
+    /* column headers (Background colors) */
+    .col-header {
+      background: var(--surface-2);
+      padding: 8px 6px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .col-header-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      margin: 0 auto 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .col-header-hex {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: 0.03em;
+    }
+
+    /* row headers (Foreground/text colors) */
+    .row-header {
+      background: var(--surface-2);
+      padding: 8px;
+      vertical-align: middle;
+    }
+    .row-header-inner {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .row-header-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .row-header-hex {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: 0.03em;
+    }
+
+    /* data cells */
+    .matrix-cell {
+      padding: 0;
+      text-align: center;
+      vertical-align: middle;
+      cursor: default;
+      transition: outline var(--ease);
+    }
+    .matrix-cell.same-color {
+      background: var(--surface-3);
+    }
+    .cell-inner {
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: 72px;
+    }
+    .cell-sample {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .cell-ratio {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: monospace;
+      margin-top: 2px;
+    }
+    .cell-badge {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 1px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .badge-pass {
+      background: var(--green-dim);
+      color: var(--green-light);
+      border: 1px solid rgba(22,163,74,0.4);
+    }
+    .badge-fail {
+      background: var(--red-dim);
+      color: var(--red-light);
+      border: 1px solid rgba(220,38,38,0.4);
+    }
+
+    /* hover row/col highlighting */
+    .matrix-table tbody tr:hover .row-header,
+    .matrix-table tbody tr.row-highlight .row-header {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+    }
+    .col-header.col-highlight {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+    }
+    .matrix-cell.col-highlight:not(.same-color) {
+      outline: 1px solid var(--blue);
+    }
+    .matrix-cell:hover:not(.same-color) {
+      outline: 2px solid var(--blue-light);
+      z-index: 2;
+    }
+
+    /* same-color diagonal visual */
+    .same-color .cell-inner {
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.03) 3px,
+        rgba(255,255,255,0.03) 6px
+      );
+    }
+    .same-color .cell-ratio { color: var(--text-dim); }
+
+    /* ── Glossary ──────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--blue-light);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ───────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ── FAQ accordion ─────────────────────────────────────────── */
+    .faq-list { margin-top: 16px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 16px;
+      cursor: pointer;
+      background: var(--surface-2);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+      transition: background var(--ease);
+    }
+    .faq-question:hover { background: var(--surface-3); }
+    .faq-chevron {
+      font-size: 11px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .faq-answer {
+      display: none;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* ── Utility ───────────────────────────────────────────────── */
+    .section-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+    .standard-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--blue-dim);
+      border: 1px solid var(--blue);
+      color: var(--blue-light);
+      margin-bottom: 14px;
+    }
+
+    /* ── Color contrast scale legend ───────────────────────────── */
+    .scale-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .scale-chip {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+    .scale-chip.excellent { background: rgba(22,163,74,0.2); border-color: var(--green); color: var(--green-light); }
+    .scale-chip.good { background: rgba(37,99,235,0.2); border-color: var(--blue); color: var(--blue-light); }
+    .scale-chip.marginal { background: rgba(217,119,6,0.2); border-color: var(--amber); color: #fbbf24; }
+    .scale-chip.fail { background: var(--red-dim); border-color: var(--red); color: var(--red-light); }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="tool-header">
+    <h1>Contrast Ratio Grid Accessibility Analyzer</h1>
+    <p>Paste any color palette and instantly generate a full WCAG 2.1 contrast matrix. Check every foreground and background combination for AA, AAA, and Large Text compliance in one view.</p>
+  </header>
+
+  <div class="page-wrap">
+
+    <!-- ============================================================
+         TWO-PANEL TOOL LAYOUT
+    ============================================================ -->
+    <div class="tool-panels">
+
+      <!-- Panel 1: Palette Input and Controls -->
+      <div class="input-panel">
+        <div class="card">
+          <div class="card-title">Color Palette Input</div>
+
+          <label for="palette-input" style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Paste HEX, RGB, or HSL codes (one per line or comma-separated)</label>
+          <textarea
+            id="palette-input"
+            class="palette-textarea"
+            placeholder="#1a1d27&#10;#2563EB&#10;#16A34A&#10;#DC2626&#10;#e2e8f0&#10;#ffffff"
+            oninput="rebuildMatrix()"
+            spellcheck="false"
+            aria-label="Paste your color palette here, one color per line or comma-separated"
+          ></textarea>
+
+          <button class="sample-link" onclick="loadSamplePalette()" aria-label="Load a sample brand color palette for demonstration">
+            Load Sample Brand Palette
+          </button>
+
+          <div class="section-sep"></div>
+
+          <!-- WCAG Standard Toggle -->
+          <div class="toggle-label">WCAG Compliance Standard</div>
+          <div class="toggle-group" role="radiogroup" aria-label="Select WCAG compliance standard">
+
+            <button class="toggle-btn active" id="btn-aa" onclick="setStandard('aa')" role="radio" aria-checked="true" aria-label="WCAG AA Normal Text, minimum 4.5 to 1">
+              <span class="toggle-btn-dot"></span>
+              <span class="toggle-btn-text">
+                <strong style="display:block;font-size:12px;color:var(--text);">WCAG AA - Normal Text</strong>
+                <span style="font-size:11px;color:var(--text-dim);">Standard compliance for most sites and ADA requirements</span>
+              </span>
+              <span class="toggle-btn-ratio">4.5:1</span>
+            </button>
+
+            <button class="toggle-btn" id="btn-aaa" onclick="setStandard('aaa')" role="radio" aria-checked="false" aria-label="WCAG AAA Normal Text, minimum 7 to 1">
+              <span class="toggle-btn-dot"></span>
+              <span class="toggle-btn-text">
+                <strong style="display:block;font-size:12px;color:var(--text);">WCAG AAA - Normal Text</strong>
+                <span style="font-size:11px;color:var(--text-dim);">Enhanced accessibility for government and healthcare</span>
+              </span>
+              <span class="toggle-btn-ratio">7:1</span>
+            </button>
+
+            <button class="toggle-btn" id="btn-large" onclick="setStandard('large')" role="radio" aria-checked="false" aria-label="Large Text and UI Components, minimum 3 to 1">
+              <span class="toggle-btn-dot"></span>
+              <span class="toggle-btn-text">
+                <strong style="display:block;font-size:12px;color:var(--text);">Large Text / UI Components</strong>
+                <span style="font-size:11px;color:var(--text-dim);">18pt+, 14pt bold, buttons, and form borders</span>
+              </span>
+              <span class="toggle-btn-ratio">3:1</span>
+            </button>
+
+          </div>
+
+          <!-- Pass/Fail stats bar -->
+          <div class="stats-bar" id="stats-bar" aria-live="polite" aria-label="Contrast check summary"></div>
+        </div>
+      </div><!-- /input-panel -->
+
+      <!-- Panel 2: Interactive Matrix Grid -->
+      <div class="matrix-panel">
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+            <div class="card-title" style="margin-bottom:0;">Contrast Ratio Matrix</div>
+            <div id="active-standard-badge" class="standard-badge">
+              <span>AA</span><span style="font-weight:400;color:var(--text-muted);">4.5:1 threshold active</span>
+            </div>
+          </div>
+
+          <div id="matrix-container">
+            <div class="matrix-empty">
+              <div class="matrix-empty-icon">&#9638;</div>
+              <p>Paste your color palette in the input panel to generate the contrast ratio grid. Each cell shows the calculated ratio with a Pass or Fail badge for the selected WCAG standard.</p>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /matrix-panel -->
+
+    </div><!-- /tool-panels -->
+
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Accessibility Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">WCAG (Web Content Accessibility Guidelines)</div>
+          <div class="glossary-def">The international standard published by the W3C that defines how to make web content accessible to people with disabilities, including visual, auditory, and cognitive impairments. The current standard is WCAG 2.1.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Contrast Ratio</div>
+          <div class="glossary-def">A numerical measure of how different two colors appear from one another in terms of perceived brightness. Expressed as a ratio such as 4.5:1, where a higher number means greater contrast. The maximum is 21:1 (pure black on pure white).</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Relative Luminance</div>
+          <div class="glossary-def">The normalized brightness value of a color in the linear sRGB color space, ranging from 0 (pure black) to 1 (pure white). Luminance accounts for the fact that human eyes are more sensitive to green than red or blue.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">AA Standard</div>
+          <div class="glossary-def">The WCAG Level AA requirement: a minimum contrast ratio of 4.5:1 for normal text (below 18pt or 14pt bold) and 3:1 for large text and UI components. This is the baseline for ADA and Section 508 legal compliance.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">AAA Standard</div>
+          <div class="glossary-def">The WCAG Level AAA enhanced requirement: 7:1 for normal text and 4.5:1 for large text. Not legally required for most sites, but recommended for maximum accessibility, especially in healthcare and government applications.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Large Text Requirement</div>
+          <div class="glossary-def">WCAG defines large text as 18pt (24px) or larger, or 14pt (approximately 18.67px) when the font is bold. Large text and non-decorative UI components like buttons require a minimum contrast ratio of 3:1 under WCAG AA.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">ADA Compliance</div>
+          <div class="glossary-def">The Americans with Disabilities Act requires that websites serving the public be accessible to people with disabilities. U.S. courts and the Department of Justice have consistently interpreted ADA requirements to align with WCAG 2.1 Level AA standards.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">sRGB Color Space</div>
+          <div class="glossary-def">The standard color space used for most web content and computer displays. sRGB values are gamma-encoded, which means they must be linearized (gamma-expanded) before calculating relative luminance for WCAG contrast ratio formulas.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to WCAG Color Contrast and Accessibility Compliance</h2>
+
+      <p class="section-intro">Choosing accessible colors is one of the most impactful steps a designer or developer can take to make a website usable for the estimated 253 million people worldwide who live with some form of visual impairment. The contrast ratio between text and its background directly determines whether words are readable for users with low vision, color blindness, or aging eyesight. This guide explains the WCAG 2.1 contrast system, how to use this tool effectively, and the mathematical foundations behind every number in the matrix above.</p>
+
+      <h3>How to Use the Contrast Ratio Grid Analyzer</h3>
+      <p>Paste your brand or design system color palette into the input field on the left. You can enter colors as HEX codes (with or without the # prefix, both 3-digit and 6-digit formats are accepted), RGB values such as rgb(37, 99, 235), or HSL values such as hsl(221, 83%, 53%). Separate multiple colors with commas or line breaks. The grid regenerates instantly as you type.</p>
+      <p>Once the matrix appears, each row represents a foreground (text) color and each column represents a background color. The intersecting cell shows the calculated WCAG contrast ratio, a text sample rendered with that exact foreground and background combination, and a Pass or Fail badge based on the standard selected in the toggle. Use the hover effect to track a specific row or column across a large palette.</p>
+
+      <h3>Reading the Contrast Scale</h3>
+      <div class="scale-legend" style="margin-bottom:12px;">
+        <span class="scale-chip excellent">7:1+ Excellent (AAA)</span>
+        <span class="scale-chip good">4.5:1 to 6.99:1 Good (AA)</span>
+        <span class="scale-chip marginal">3:1 to 4.49:1 Marginal (Large Text only)</span>
+        <span class="scale-chip fail">Below 3:1 Fail</span>
+      </div>
+      <p>A ratio of 7:1 or higher means the color pair passes WCAG AAA and is excellent for all text sizes. Ratios between 4.5:1 and 6.99:1 pass WCAG AA for normal text. Ratios between 3:1 and 4.49:1 are only acceptable for large text (18pt or 14pt bold) and non-text UI components. Anything below 3:1 fails all WCAG standards for meaningful content.</p>
+
+      <h3>The WCAG 2.1 Contrast Ratio Formula Explained</h3>
+      <p>The WCAG contrast ratio is calculated as (L1 + 0.05) / (L2 + 0.05), where L1 is the relative luminance of the lighter color and L2 is the relative luminance of the darker color. This formula was derived from psychophysical research on human contrast sensitivity and ensures a consistent measurement independent of the display device.</p>
+      <p>Relative luminance is not the same as raw brightness. It corrects for the non-linear way sRGB encodes light. Each RGB channel is first normalized from a 0-255 integer to a 0-1 decimal. Values at or below 0.03928 are divided by 12.92 (the linear segment). Values above 0.03928 use the formula ((value + 0.055) / 1.055) raised to the power of 2.4. The three linearized channels are then combined as: 0.2126 times R plus 0.7152 times G plus 0.0722 times B. The green channel carries the most weight because the human eye contains far more green-sensitive cone cells than red or blue.</p>
+
+      <h3>Why Color Alone Is Not Enough</h3>
+      <p>WCAG contrast ratios measure luminance contrast only, which strips hue information entirely. This is intentional: approximately 8 percent of men and 0.5 percent of women have some form of color vision deficiency (color blindness). A red button on a green background may appear to have strong contrast to a trichromat viewer but is nearly invisible to someone with deuteranopia (the most common form of red-green color blindness). The luminance formula catches these cases because the luminance values of typical reds and greens are often very similar despite appearing dramatically different in hue.</p>
+      <p>This means passing the WCAG luminance contrast test is necessary but not sufficient for full accessibility. Supplementary measures include not relying on color alone to convey meaning, adding visible text labels or icons, and testing designs in grayscale to verify structure remains clear.</p>
+
+      <hr class="section-sep" />
+
+      <!-- FAQ accordion -->
+      <h3 style="margin-top:0;">Frequently Asked Questions</h3>
+      <div class="faq-list" id="faq-list">
+
+        <div class="faq-item" id="faq-0">
+          <div class="faq-question" onclick="toggleFaq(0)" role="button" tabindex="0" aria-expanded="false" aria-controls="faq-answer-0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(0)">
+            <span>What is a good contrast ratio for web accessibility?</span>
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </div>
+          <div class="faq-answer" id="faq-answer-0" role="region">
+            For normal-sized body text, WCAG 2.1 requires a minimum contrast ratio of 4.5:1 to meet AA compliance and 7:1 for AAA (enhanced) compliance. For large text (18pt or 14pt bold and above) and non-decorative UI components such as buttons and form inputs, the minimum drops to 3:1 for AA compliance. A ratio of 4.5:1 is the baseline for most projects targeting legal ADA compliance. Ratios above 7:1 are considered excellent and ensure readability in poor lighting, on low-quality screens, and for users with low vision.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-1">
+          <div class="faq-question" onclick="toggleFaq(1)" role="button" tabindex="0" aria-expanded="false" aria-controls="faq-answer-1" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(1)">
+            <span>What is the difference between WCAG AA and WCAG AAA compliance?</span>
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </div>
+          <div class="faq-answer" id="faq-answer-1" role="region">
+            WCAG AA (Level AA) is the standard most organizations target for legal ADA and Section 508 compliance. It requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text and UI components. WCAG AAA (Level AAA) is the enhanced, stricter standard requiring 7:1 for normal text and 4.5:1 for large text. AAA is not required by most accessibility laws, but is recommended for applications serving older users, users with low vision, or high-stakes contexts like government portals and healthcare platforms. Many design systems adopt AAA as an aspirational target for their primary text combinations.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-2">
+          <div class="faq-question" onclick="toggleFaq(2)" role="button" tabindex="0" aria-expanded="false" aria-controls="faq-answer-2" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(2)">
+            <span>Why do large text and UI components have lower contrast requirements?</span>
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </div>
+          <div class="faq-answer" id="faq-answer-2" role="region">
+            Larger text is physically easier to read even at lower contrast because the letterforms occupy more pixels and the eye can resolve the edges more easily. Similarly, UI components like buttons and form borders convey meaning through shape, position, and interaction cues in addition to color, so a slightly lower luminance contrast threshold is acceptable. WCAG defines large text as 18pt (24px) or larger, or 14pt (approximately 18.67px) when the font weight is bold. Anything smaller than these thresholds uses the stricter 4.5:1 normal-text requirement.
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-3">
+          <div class="faq-question" onclick="toggleFaq(3)" role="button" tabindex="0" aria-expanded="false" aria-controls="faq-answer-3" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(3)">
+            <span>How is the WCAG contrast ratio actually calculated mathematically?</span>
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </div>
+          <div class="faq-answer" id="faq-answer-3" role="region">
+            The WCAG 2.1 contrast ratio formula is (L1 + 0.05) divided by (L2 + 0.05), where L1 is the relative luminance of the lighter color and L2 is the relative luminance of the darker color. Relative luminance is calculated by first converting each sRGB channel (R, G, B) from the 0-255 range to a 0-1 decimal. Each channel is then linearized: if the value is 0.03928 or less, divide by 12.92; otherwise compute ((value + 0.055) / 1.055) to the power of 2.4. The three linearized channels are combined using perceptual weights: 0.2126 times red, 0.7152 times green, and 0.0722 times blue. The contrast ratio ranges from 1:1 (identical colors, no contrast) up to 21:1 (pure black against pure white, the maximum possible contrast).
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-4">
+          <div class="faq-question" onclick="toggleFaq(4)" role="button" tabindex="0" aria-expanded="false" aria-controls="faq-answer-4" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(4)">
+            <span>Why do some color combinations look readable to me but fail the accessibility test?</span>
+            <span class="faq-chevron" aria-hidden="true">&#9660;</span>
+          </div>
+          <div class="faq-answer" id="faq-answer-4" role="region">
+            Human perception of contrast is highly influenced by hue, context, surrounding colors, and individual screen brightness, all of which the WCAG formula deliberately ignores. Two colors with different hues (for example, a vivid red on a medium green) can appear to have strong contrast based on their color difference, but if their luminance (brightness) values are similar, the ratio will be low. This is intentional: the WCAG formula measures only luminance contrast because that is what fails for people with color vision deficiency. Approximately 8 percent of men have some form of red-green color blindness, and to them a red-on-green combination can be nearly invisible regardless of how vivid it appears to trichromat eyes. Testing in grayscale or running a color blindness simulation alongside the contrast ratio check provides the most complete picture.
+          </div>
+        </div>
+
+      </div><!-- /faq-list -->
+    </div><!-- /edu-section -->
+
+  </div><!-- /page-wrap -->
+
+</main><!-- /#main -->
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+
+<script>
+  /* ============================================================
+     WCAG 2.1 CONTRAST RATIO MATH
+  ============================================================ */
+
+  /* Linearize a single sRGB channel (0-255 integer input) */
+  function linearizeChannel(c8bit) {
+    var c = c8bit / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  /* Relative Luminance per WCAG 2.1 (result: 0 to 1) */
+  function relativeLuminance(r, g, b) {
+    return 0.2126 * linearizeChannel(r) +
+           0.7152 * linearizeChannel(g) +
+           0.0722 * linearizeChannel(b);
+  }
+
+  /* Contrast ratio, strictly rounded to 2 decimal places */
+  function contrastRatio(lum1, lum2) {
+    var lighter = Math.max(lum1, lum2);
+    var darker  = Math.min(lum1, lum2);
+    return Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100;
+  }
+
+  /* ============================================================
+     COLOR PARSING - HEX, RGB, HSL
+  ============================================================ */
+
+  function hexToRgb(hex) {
+    hex = hex.replace(/^#/, '');
+    if (hex.length === 3) {
+      hex = hex[0]+hex[0] + hex[1]+hex[1] + hex[2]+hex[2];
+    }
+    if (hex.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+    var n = parseInt(hex, 16);
+    return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff, hex: '#' + hex.toLowerCase() };
+  }
+
+  function parseRgbString(str) {
+    var m = str.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+    if (!m) return null;
+    var r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+    if (r > 255 || g > 255 || b > 255) return null;
+    return { r: r, g: g, b: b, hex: rgbToHex(r, g, b) };
+  }
+
+  function parseHslString(str) {
+    var m = str.match(/hsla?\s*\(\s*(\d{1,3})\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?/i);
+    if (!m) return null;
+    var h = parseInt(m[1]) % 360;
+    var s = parseFloat(m[2]) / 100;
+    var l = parseFloat(m[3]) / 100;
+    var rgb = hslToRgb(h, s, l);
+    return { r: rgb.r, g: rgb.g, b: rgb.b, hex: rgbToHex(rgb.r, rgb.g, rgb.b) };
+  }
+
+  function hslToRgb(h, s, l) {
+    var c = (1 - Math.abs(2 * l - 1)) * s;
+    var x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    var m = l - c / 2;
+    var r1, g1, b1;
+    if      (h < 60)  { r1 = c; g1 = x; b1 = 0; }
+    else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+    else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+    else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+    else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+    else              { r1 = c; g1 = 0; b1 = x; }
+    return {
+      r: Math.round((r1 + m) * 255),
+      g: Math.round((g1 + m) * 255),
+      b: Math.round((b1 + m) * 255)
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(function(v) {
+      return ('0' + v.toString(16)).slice(-2);
+    }).join('');
+  }
+
+  function parseColor(raw) {
+    var s = raw.trim();
+    if (!s) return null;
+    /* Try RGB */
+    if (/^rgba?\s*\(/i.test(s)) return parseRgbString(s);
+    /* Try HSL */
+    if (/^hsla?\s*\(/i.test(s)) return parseHslString(s);
+    /* Try HEX (strip leading # if present) */
+    return hexToRgb(s.replace(/^#/, ''));
+  }
+
+  function parseAllColors(text) {
+    /* Split on commas, semicolons, or newlines */
+    var tokens = text.split(/[\n,;]+/);
+    var results = [];
+    var seen = {};
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i].trim();
+      if (!t) continue;
+      var col = parseColor(t);
+      if (col && !seen[col.hex]) {
+        seen[col.hex] = true;
+        results.push(col);
+      }
+    }
+    return results;
+  }
+
+  /* ============================================================
+     STATE
+  ============================================================ */
+  var currentStandard = 'aa';
+  var currentColors   = [];
+
+  var thresholds = { aa: 4.5, aaa: 7.0, large: 3.0 };
+  var standardLabels = {
+    aa:    { label: 'AA', desc: '4.5:1 threshold active' },
+    aaa:   { label: 'AAA', desc: '7:1 threshold active' },
+    large: { label: 'Large Text', desc: '3:1 threshold active' }
+  };
+
+  /* ============================================================
+     STANDARD TOGGLE
+  ============================================================ */
+  function setStandard(key) {
+    currentStandard = key;
+    ['aa','aaa','large'].forEach(function(k) {
+      var btn = document.getElementById('btn-' + k);
+      btn.classList.toggle('active', k === key);
+      btn.setAttribute('aria-checked', k === key ? 'true' : 'false');
+    });
+    /* Update active badge */
+    var sl = standardLabels[key];
+    document.getElementById('active-standard-badge').innerHTML =
+      '<span>' + sl.label + '</span><span style="font-weight:400;color:var(--text-muted);">' + sl.desc + '</span>';
+    renderMatrix();
+  }
+
+  /* ============================================================
+     MAIN REBUILD (called on input)
+  ============================================================ */
+  function rebuildMatrix() {
+    var raw = document.getElementById('palette-input').value;
+    currentColors = parseAllColors(raw);
+    renderMatrix();
+  }
+
+  /* ============================================================
+     RENDER MATRIX GRID
+  ============================================================ */
+  function renderMatrix() {
+    var container = document.getElementById('matrix-container');
+    var colors    = currentColors;
+    var threshold = thresholds[currentStandard];
+
+    if (colors.length < 2) {
+      container.innerHTML =
+        '<div class="matrix-empty">' +
+        '<div class="matrix-empty-icon">&#9638;</div>' +
+        '<p>Paste at least 2 colors in the input panel to generate the contrast matrix.<br>Try the "Load Sample Brand Palette" link to see an example.</p>' +
+        '</div>';
+      document.getElementById('stats-bar').innerHTML = '';
+      return;
+    }
+
+    /* Pre-compute luminance values */
+    var lums = colors.map(function(c) { return relativeLuminance(c.r, c.g, c.b); });
+
+    /* Build the table */
+    var html = '<div class="matrix-scroll"><table class="matrix-table" role="grid" aria-label="WCAG contrast ratio matrix">';
+
+    /* --- Header row: Background colors --- */
+    html += '<thead><tr>';
+    html += '<th class="corner-cell" scope="col" aria-label="Foreground rows vs Background columns"><span style="color:var(--text-dim);font-size:9px;line-height:1.2;display:block;">FG &darr;<br>BG &rarr;</span></th>';
+    for (var ci = 0; ci < colors.length; ci++) {
+      html += '<th class="col-header" id="col-hdr-' + ci + '" scope="col" aria-label="Background color ' + colors[ci].hex + '">' +
+        '<div class="col-header-swatch" style="background:' + colors[ci].hex + ';"></div>' +
+        '<div class="col-header-hex">' + colors[ci].hex + '</div>' +
+        '</th>';
+    }
+    html += '</tr></thead>';
+
+    /* --- Data rows: Foreground (text) colors --- */
+    var passCount = 0;
+    var failCount = 0;
+    html += '<tbody>';
+    for (var ri = 0; ri < colors.length; ri++) {
+      html += '<tr data-row="' + ri + '" ' +
+        'onmouseover="highlightRow(' + ri + ')" ' +
+        'onmouseout="clearHighlight()">';
+
+      /* Row header */
+      html += '<th class="row-header" scope="row" aria-label="Foreground color ' + colors[ri].hex + '">' +
+        '<div class="row-header-inner">' +
+        '<div class="row-header-swatch" style="background:' + colors[ri].hex + ';"></div>' +
+        '<div class="row-header-hex">' + colors[ri].hex + '</div>' +
+        '</div></th>';
+
+      /* Data cells */
+      for (var ci2 = 0; ci2 < colors.length; ci2++) {
+        var ratio    = contrastRatio(lums[ri], lums[ci2]);
+        var isSame   = (ri === ci2);
+        var passes   = !isSame && ratio >= threshold;
+        var fails    = !isSame && ratio < threshold;
+
+        if (!isSame) {
+          if (passes) passCount++;
+          else failCount++;
+        }
+
+        if (isSame) {
+          html += '<td class="matrix-cell same-color" aria-label="Same color, not applicable">' +
+            '<div class="cell-inner">' +
+            '<span class="cell-sample" style="color:' + colors[ri].hex + ';background:' + colors[ci2].hex + ';padding:2px 4px;border-radius:3px;">Ag</span>' +
+            '<span class="cell-ratio" style="color:var(--text-dim);">1:1</span>' +
+            '<span class="cell-badge" style="background:var(--surface-3);color:var(--text-dim);border:1px solid var(--border);">Same</span>' +
+            '</div></td>';
+        } else {
+          var badgeClass = passes ? 'badge-pass' : 'badge-fail';
+          var badgeText  = passes ? 'Pass' : 'Fail';
+          var ratioLabel = ratio.toFixed(2) + ':1';
+          html += '<td class="matrix-cell" data-col="' + ci2 + '" ' +
+            'aria-label="Foreground ' + colors[ri].hex + ' on background ' + colors[ci2].hex + ': ' + ratioLabel + ', ' + badgeText + '">' +
+            '<div class="cell-inner" style="background:' + colors[ci2].hex + ';">' +
+            '<span class="cell-sample" style="color:' + colors[ri].hex + ';">Ag</span>' +
+            '<span class="cell-ratio" style="color:' + colors[ri].hex + ';opacity:0.85;">' + ratioLabel + '</span>' +
+            '<span class="cell-badge ' + badgeClass + '">' + badgeText + '</span>' +
+            '</div></td>';
+        }
+      }
+
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+
+    container.innerHTML = html;
+
+    /* Update stats bar */
+    var total = passCount + failCount;
+    var pct   = total > 0 ? Math.round((passCount / total) * 100) : 0;
+    document.getElementById('stats-bar').innerHTML =
+      '<span class="stat-chip pass">&#10003; ' + passCount + ' Pass</span>' +
+      '<span class="stat-chip fail">&#10007; ' + failCount + ' Fail</span>' +
+      '<span class="stat-chip total">' + pct + '% passing</span>';
+  }
+
+  /* ============================================================
+     ROW / COLUMN HOVER HIGHLIGHT
+  ============================================================ */
+  var _lastRow = -1;
+
+  function highlightRow(rowIdx) {
+    clearHighlight();
+    _lastRow = rowIdx;
+    /* Highlight column headers */
+    var allColHdrs = document.querySelectorAll('.col-header');
+    for (var i = 0; i < allColHdrs.length; i++) {
+      allColHdrs[i].classList.toggle('col-highlight', i === rowIdx);
+    }
+    /* Highlight cells in that column */
+    var allCells = document.querySelectorAll('.matrix-cell[data-col="' + rowIdx + '"]');
+    for (var j = 0; j < allCells.length; j++) {
+      allCells[j].classList.add('col-highlight');
+    }
+  }
+
+  function clearHighlight() {
+    if (_lastRow < 0) return;
+    _lastRow = -1;
+    document.querySelectorAll('.col-highlight').forEach(function(el) {
+      el.classList.remove('col-highlight');
+    });
+  }
+
+  /* ============================================================
+     FAQ ACCORDION
+  ============================================================ */
+  function toggleFaq(idx) {
+    var item = document.getElementById('faq-' + idx);
+    if (!item) return;
+    var isOpen = item.classList.contains('open');
+    item.classList.toggle('open', !isOpen);
+    var q = item.querySelector('.faq-question');
+    if (q) q.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+  }
+
+  /* ============================================================
+     SAMPLE BRAND PALETTE LOADER
+  ============================================================ */
+  function loadSamplePalette() {
+    document.getElementById('palette-input').value =
+      '#0f172a\n#1e293b\n#2563EB\n#16A34A\n#DC2626\n#f59e0b\n#e2e8f0\n#ffffff';
+    rebuildMatrix();
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free Glycemic Load Calculator: add individual meal ingredients, enter their Glycemic Index and Net Carbs, and instantly see each item's isolated GL plus the aggregate meal Glycemic Load score to predict your blood sugar impact." />
+  <meta name="keywords" content="glycemic load calculator, glycemic index vs glycemic load, meal GL calculator, blood sugar impact calculator, insulin response calculator, net carbs glycemic load, GI GL meal tracker, aggregate glycemic load, food blood sugar spike, low glycemic meal planner, diabetes meal calculator, glycemic load per meal" />
+  <title>Glycemic Load Evaluator: Calculate Your Meal's Blood Sugar Impact | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/glycemic-load-evaluator/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Glycemic Load Evaluator",
+        "description": "Free Glycemic Load Calculator: add individual meal ingredients, enter their Glycemic Index and Net Carbs, and instantly see each item's isolated GL plus the aggregate meal Glycemic Load score to predict your blood sugar impact.",
+        "url": "https://axiomape.com/glycemic-load-evaluator/",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between Glycemic Index (GI) and Glycemic Load (GL)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Glycemic Index (GI) ranks how quickly a carbohydrate food raises blood sugar on a scale of 0 to 100, but it ignores how much of that food you actually eat. Glycemic Load (GL) fixes this by multiplying the GI by the actual grams of Net Carbs in your serving and dividing by 100. A food can have a high GI but a low GL if the serving contains few carbohydrates, for example watermelon has a GI of 72 but a typical serving has a GL of only 4 because it is mostly water."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is Glycemic Load calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Glycemic Load (GL) = (Glycemic Index x Net Carbs in grams) / 100. Net Carbs equals total carbohydrates minus dietary fiber. For a full meal, add the individual GL values for every ingredient to get the Total Meal Glycemic Load."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is considered a Low, Medium, and High Glycemic Load for a single meal?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For an individual food serving: a GL of 10 or less is Low, 11 to 19 is Medium, and 20 or more is High. For a complete meal (the sum of all ingredients), many dietitians consider a total meal GL under 20 to be low-impact, 20 to 40 moderate, and above 40 high-impact. The thresholds used in this tool apply the standard per-serving ranges to the aggregate meal score."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does adding fat or protein to a meal lower its Glycemic Load?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Fat and protein do not directly reduce the calculated Glycemic Load of a meal because GL is based only on carbohydrate content. However, they do slow gastric emptying and blunt the real-world blood sugar spike beyond what the GL number alone predicts. This is why a mixed meal often causes a smaller blood sugar rise than an equivalent-GL meal of pure carbohydrates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do some high GI foods like watermelon have a low GL?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because watermelon is about 92% water. A standard 120g serving contains only around 6g of Net Carbs. Using the formula: GL = (72 x 6) / 100 = 4.3, which is firmly in the Low range. GI measures the speed of the blood sugar response, but GL accounts for how little carbohydrate is actually present in a realistic serving."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Brand */
+      --gl-red:        #EF4444;
+      --gl-red-bg:     #fef2f2;
+      --gl-red-border: #fecaca;
+      --gl-yellow:     #F59E0B;
+      --gl-yellow-bg:  #fffbeb;
+      --gl-yellow-border: #fde68a;
+      --gl-green:      #22c55e;
+      --gl-green-bg:   #f0fdf4;
+      --gl-green-border:#bbf7d0;
+
+      /* Neutrals */
+      --bg:        #0f172a;
+      --surface:   #1e293b;
+      --surface-2: #273449;
+      --border:    #334155;
+      --border-2:  #475569;
+      --text:      #f1f5f9;
+      --text-muted:#94a3b8;
+      --text-dim:  #64748b;
+      --white:     #ffffff;
+
+      /* Tokens */
+      --radius:    14px;
+      --radius-sm: 9px;
+      --shadow:    0 4px 20px rgba(0,0,0,.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Tool header ───────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #1a0a0a 0%, #2d1515 40%, #1a0a0a 100%);
+      border-bottom: 1px solid #3d1515;
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: -.02em;
+    }
+
+    .tool-header h1 span { color: var(--gl-red); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .main-content { padding: 32px 0 56px; }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 520px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -.01em;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    /* ── Panel 1: Aggregate Dashboard ──────────────────────────── */
+    .dashboard {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: border-color .3s ease;
+    }
+
+    .dashboard.state-low    { border-color: var(--gl-green); }
+    .dashboard.state-medium { border-color: var(--gl-yellow); }
+    .dashboard.state-high   { border-color: var(--gl-red); }
+
+    .dashboard-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .gl-hero {
+      font-size: clamp(56px, 14vw, 88px);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1;
+      color: var(--text-muted);
+      transition: color .3s ease;
+      margin-bottom: 10px;
+    }
+
+    .gl-hero.state-low    { color: var(--gl-green); }
+    .gl-hero.state-medium { color: var(--gl-yellow); }
+    .gl-hero.state-high   { color: var(--gl-red); }
+
+    .gl-hero-unit {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-left: 4px;
+    }
+
+    .gl-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 18px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      transition: all .3s ease;
+    }
+
+    .gl-badge.state-low    { background: var(--gl-green-bg);  color: #166534; border-color: var(--gl-green-border); }
+    .gl-badge.state-medium { background: var(--gl-yellow-bg); color: #92400e; border-color: var(--gl-yellow-border); }
+    .gl-badge.state-high   { background: var(--gl-red-bg);    color: #991b1b; border-color: var(--gl-red-border); }
+
+    .gl-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .gl-interpretation {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ── Panel 2: Meal Builder ─────────────────────────────────── */
+    .builder-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .col-labels {
+      display: grid;
+      grid-template-columns: 1fr 90px 90px 70px 36px;
+      gap: 8px;
+      padding: 0 0 8px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+
+    .col-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-dim);
+    }
+
+    .col-label.right { text-align: right; }
+
+    @media (max-width: 600px) {
+      .col-labels { grid-template-columns: 1fr 72px 72px 54px 32px; gap: 5px; }
+    }
+
+    @media (max-width: 460px) {
+      .col-labels { display: none; }
+    }
+
+    /* ── Ingredient Row ────────────────────────────────────────── */
+    #ingredient-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .ingredient-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 90px 70px 36px;
+      gap: 8px;
+      align-items: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .ingredient-row:focus-within {
+      border-color: var(--gl-red);
+      box-shadow: 0 0 0 2px rgba(239,68,68,.15);
+    }
+
+    .ingredient-row.high-impact {
+      border-color: var(--gl-red);
+      box-shadow: 0 0 0 2px rgba(239,68,68,.12);
+    }
+
+    @media (max-width: 600px) {
+      .ingredient-row { grid-template-columns: 1fr 72px 72px 54px 32px; gap: 5px; }
+    }
+
+    @media (max-width: 460px) {
+      .ingredient-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 8px;
+      }
+      .ingredient-row .row-name  { grid-column: 1 / 3; }
+      .ingredient-row .row-gi    { grid-column: 1 / 2; }
+      .ingredient-row .row-carbs { grid-column: 2 / 3; }
+      .ingredient-row .row-gl    { grid-column: 1 / 2; }
+      .ingredient-row .row-del   { grid-column: 2 / 3; text-align: right; }
+    }
+
+    .row-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color .2s ease;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .row-input::-webkit-outer-spin-button,
+    .row-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .row-input:focus { border-color: var(--gl-red); }
+
+    .row-input::placeholder { color: var(--text-dim); font-weight: 400; }
+
+    /* GL output badge per row */
+    .row-gl-display {
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dim);
+      transition: color .2s ease;
+      padding-right: 2px;
+    }
+
+    .row-gl-display.gl-low    { color: var(--gl-green); }
+    .row-gl-display.gl-medium { color: var(--gl-yellow); }
+    .row-gl-display.gl-high   { color: var(--gl-red); }
+
+    /* Delete button */
+    .btn-del {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 16px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s, color .2s, border-color .2s;
+      flex-shrink: 0;
+    }
+
+    .btn-del:hover { background: var(--gl-red-bg); color: var(--gl-red); border-color: var(--gl-red); }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--gl-red);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      box-shadow: 0 3px 12px rgba(239,68,68,.35);
+    }
+
+    .btn-add:hover  { background: #dc2626; }
+    .btn-add:active { transform: scale(.97); }
+
+    /* ── Panel 3: Analysis Output ──────────────────────────────── */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 480px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+    .stat-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+    }
+
+    .stat-box .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .stat-box .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .stat-box .stat-unit {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 3px;
+    }
+
+    /* Highest impact ingredient highlight */
+    .peak-box {
+      background: var(--gl-red-bg);
+      border: 1px solid var(--gl-red-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .peak-box .peak-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #991b1b;
+      margin-bottom: 4px;
+    }
+
+    .peak-box .peak-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gl-red);
+    }
+
+    .peak-box .peak-detail {
+      font-size: 12px;
+      color: #991b1b;
+      margin-top: 3px;
+    }
+
+    /* Copy button */
+    .btn-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .btn-copy:hover { border-color: var(--gl-yellow); color: var(--gl-yellow); }
+    .btn-copy.copied { border-color: var(--gl-green); color: var(--gl-green); }
+
+    /* ── GL Range Reference ────────────────────────────────────── */
+    .range-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .range-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .range-pill.low    { background: var(--gl-green-bg);  color: #166534; border: 1px solid var(--gl-green-border); }
+    .range-pill.medium { background: var(--gl-yellow-bg); color: #92400e; border: 1px solid var(--gl-yellow-border); }
+    .range-pill.high   { background: var(--gl-red-bg);    color: #991b1b; border: 1px solid var(--gl-red-border); }
+
+    .range-pill .pip {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* ── Divider ───────────────────────────────────────────────── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+    /* ── Educational section ───────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+      letter-spacing: -.02em;
+    }
+
+    .edu-section h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+
+    .edu-section p:last-child { margin-bottom: 0; }
+
+    /* ── Glossary ──────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gl-yellow);
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ── FAQ Accordion ─────────────────────────────────────────── */
+    .faq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+    .faq-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .faq-q {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+      transition: background .2s;
+    }
+
+    .faq-q:hover { background: rgba(239,68,68,.06); }
+
+    .faq-q[aria-expanded="true"] { color: var(--gl-red); }
+
+    .faq-icon {
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--text-dim);
+      transition: transform .25s ease;
+    }
+
+    .faq-q[aria-expanded="true"] .faq-icon {
+      transform: rotate(45deg);
+      color: var(--gl-red);
+    }
+
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-a.open { display: block; }
+
+    /* ── Utility ───────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap; }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .range-pills { gap: 6px; }
+      .analysis-grid { grid-template-columns: 1fr; }
+      .dashboard { padding: 22px 16px; }
+      .gl-hero { font-size: 64px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="tool-header">
+    <h1>Glycemic Load <span>Meal Evaluator</span></h1>
+    <p>Add ingredients, enter Glycemic Index and Net Carbs, and instantly see the aggregate blood sugar impact of your full meal.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- =========================================================
+           PANEL 1: Aggregate Meal Glycemic Load Dashboard
+           ========================================================= -->
+      <div class="dashboard" id="dashboard" aria-live="polite" aria-atomic="true">
+        <div class="dashboard-label">Total Meal Glycemic Load</div>
+        <div class="gl-hero" id="gl-hero">--<span class="gl-hero-unit">GL</span></div>
+        <div class="gl-badge" id="gl-badge" role="status">
+          <span class="dot"></span>
+          <span id="gl-badge-text">Add ingredients below to begin</span>
+        </div>
+        <p class="gl-interpretation" id="gl-interpretation">Enter at least one ingredient in the Meal Builder to calculate your aggregate Glycemic Load.</p>
+
+        <!-- GL range reference pills -->
+        <div class="range-pills" style="justify-content:center;">
+          <span class="range-pill low"><span class="pip"></span>Low: GL 10 or less</span>
+          <span class="range-pill medium"><span class="pip"></span>Medium: GL 11 to 19</span>
+          <span class="range-pill high"><span class="pip"></span>High: GL 20 or more</span>
+        </div>
+      </div>
+
+
+      <!-- =========================================================
+           PANEL 2: Meal Builder
+           ========================================================= -->
+      <div class="card" aria-labelledby="builder-heading">
+        <div class="builder-header">
+          <div>
+            <div class="card-title" id="builder-heading">Meal Builder</div>
+            <div class="card-subtitle">Enter each ingredient's Glycemic Index (GI) and Net Carbs (g) to isolate its blood sugar contribution.</div>
+          </div>
+          <button class="btn-add" onclick="addRow()" aria-label="Add ingredient row">
+            <span aria-hidden="true">+</span> Add Ingredient
+          </button>
+        </div>
+
+        <!-- Column labels -->
+        <div class="col-labels" aria-hidden="true">
+          <span class="col-label">Food Name</span>
+          <span class="col-label">GI Value</span>
+          <span class="col-label">Net Carbs (g)</span>
+          <span class="col-label right">GL</span>
+          <span class="col-label"></span>
+        </div>
+
+        <div id="ingredient-list" role="list" aria-label="Ingredient rows"></div>
+
+        <p id="empty-msg" style="text-align:center;color:var(--text-dim);font-size:14px;padding:24px 0;">
+          No ingredients yet. Click <strong style="color:var(--gl-red);">+ Add Ingredient</strong> to start building your meal.
+        </p>
+      </div>
+
+
+      <!-- =========================================================
+           PANEL 3: Analysis Output
+           ========================================================= -->
+      <div class="card" aria-labelledby="analysis-heading">
+        <div class="card-title" id="analysis-heading">Meal Analysis</div>
+        <div class="card-subtitle">Real-time aggregate breakdown of your meal's glycemic impact.</div>
+
+        <!-- Highest impact ingredient -->
+        <div class="peak-box" id="peak-box">
+          <div class="peak-label">Highest Impact Ingredient</div>
+          <div class="peak-name" id="peak-name">-</div>
+          <div class="peak-detail" id="peak-detail"></div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="analysis-grid">
+          <div class="stat-box">
+            <div class="stat-label">Total Net Carbs</div>
+            <div class="stat-value" id="stat-carbs">--<span class="stat-unit">g</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Total Glycemic Load</div>
+            <div class="stat-value" id="stat-gl">--<span class="stat-unit">GL</span></div>
+          </div>
+        </div>
+
+        <!-- Copy button -->
+        <button class="btn-copy" id="btn-copy" onclick="copyAnalysis()" aria-label="Copy meal analysis to clipboard">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+          </svg>
+          Copy Meal Analysis
+        </button>
+      </div>
+
+
+      <!-- =========================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet)
+           ========================================================= -->
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        Advertisement
+      </div>
+
+
+      <!-- =========================================================
+           GLOSSARY
+           ========================================================= -->
+      <div class="card edu-section" aria-labelledby="glossary-heading">
+        <h2 id="glossary-heading">Key Terms Explained</h2>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Glycemic Load (GL)</div>
+            <div class="glossary-def">A score that combines both the speed and the quantity of blood sugar impact. Formula: (GI x Net Carbs) / 100. The true measure of a meal's real-world effect on blood sugar.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Glycemic Index (GI)</div>
+            <div class="glossary-def">A ranking from 0 to 100 indicating how rapidly a carbohydrate food raises blood glucose compared to pure glucose. Measures speed, not quantity.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Net Carbs</div>
+            <div class="glossary-def">Total carbohydrates minus dietary fiber. Fiber is not digested and does not raise blood sugar, so it is subtracted before calculating GL.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Blood Sugar Spike</div>
+            <div class="glossary-def">A rapid rise in blood glucose after eating. High-GL meals cause sharper spikes, which trigger a stronger insulin response and often lead to energy crashes.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Insulin Response</div>
+            <div class="glossary-def">The release of insulin by the pancreas to move glucose from the bloodstream into cells. High-GL meals demand a larger insulin output, stressing the pancreas over time.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Complex Carbohydrates</div>
+            <div class="glossary-def">Long-chain carbs (starches and fiber) digested more slowly than simple sugars, generally producing a lower, steadier blood sugar rise and a lower GL value.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Satiety</div>
+            <div class="glossary-def">The feeling of fullness after eating. Low-GL foods high in fiber and protein tend to sustain satiety longer by avoiding the rapid glucose crash that follows high-GL meals.</div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- =========================================================
+           EDUCATIONAL FAQ
+           ========================================================= -->
+      <div class="card edu-section" aria-labelledby="edu-heading">
+        <h2 id="edu-heading">The Complete Guide to Glycemic Load and Blood Sugar Impact</h2>
+
+        <p class="section-intro">
+          Tracking calories and macros tells you what went in. Tracking Glycemic Load tells you how your body will react. Whether you are managing type 2 diabetes, insulin resistance, energy levels, or simply want to make smarter food choices, understanding GL is one of the most powerful, yet underused, tools in nutrition science.
+        </p>
+
+        <h3>How to use this Glycemic Load Evaluator</h3>
+        <p>
+          Click <strong>Add Ingredient</strong> for each food item in your meal. Enter the food name (for your own reference), its Glycemic Index (GI) value, and the Net Carbs in grams for your specific serving size. The tool instantly calculates each ingredient's individual GL and updates the Aggregate Meal GL in real time. You do not need to click a submit button at any point. Use a nutrition database or the package label to find GI and Net Carb values, and use the analysis panel to identify which single ingredient is contributing the most to your meal's blood sugar impact.
+        </p>
+
+        <h3>Understanding the Glycemic Load formula</h3>
+        <p>
+          The formula is: GL = (Glycemic Index x Net Carbs in grams) / 100. For a full meal, the Total Meal GL is simply the sum of each individual ingredient's GL. This tool rounds each row to one decimal place before summing, preventing floating-point accumulation errors that would otherwise inflate the total over a long ingredient list.
+        </p>
+
+        <h3>Why GL beats GI for real-world meal planning</h3>
+        <p>
+          GI measures only the speed of blood sugar impact using a standardized 50g carbohydrate serving - a serving size no one actually eats. GL accounts for the actual amount of carbohydrates in the portion you are eating. A small serving of a high-GI food may have a lower GL than a large serving of a medium-GI food. This is why this tool asks for both: GI for speed, Net Carbs for quantity.
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+        <div class="faq-list" role="list">
+
+          <div class="faq-item" role="listitem">
+            <div class="faq-q" role="button" tabindex="0" aria-expanded="false"
+                 onclick="toggleFaq(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(this)">
+              <span>What is the difference between Glycemic Index (GI) and Glycemic Load (GL)?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </div>
+            <div class="faq-a" role="region">
+              Glycemic Index (GI) ranks how quickly a carbohydrate food raises blood sugar on a scale of 0 to 100, but it ignores how much of that food you actually eat. Glycemic Load (GL) fixes this by multiplying the GI by the actual grams of Net Carbs in your serving and dividing by 100. A food can have a high GI but a low GL if the serving contains few carbohydrates. For example, watermelon has a GI of 72 but a typical serving has a GL of only 4 because it is mostly water.
+            </div>
+          </div>
+
+          <div class="faq-item" role="listitem">
+            <div class="faq-q" role="button" tabindex="0" aria-expanded="false"
+                 onclick="toggleFaq(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(this)">
+              <span>How is Glycemic Load calculated?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </div>
+            <div class="faq-a" role="region">
+              GL = (Glycemic Index x Net Carbs in grams) / 100. Net Carbs equals total carbohydrates minus dietary fiber. For a full meal, add the individual GL values for every ingredient to get the Total Meal Glycemic Load. This calculator performs both steps automatically as you type.
+            </div>
+          </div>
+
+          <div class="faq-item" role="listitem">
+            <div class="faq-q" role="button" tabindex="0" aria-expanded="false"
+                 onclick="toggleFaq(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(this)">
+              <span>What is considered a Low, Medium, and High Glycemic Load for a single meal?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </div>
+            <div class="faq-a" role="region">
+              For an individual food serving: a GL of 10 or less is Low, 11 to 19 is Medium, and 20 or more is High. For a complete meal (the sum of all ingredients), many dietitians consider a total meal GL under 20 to be low-impact, 20 to 40 moderate, and above 40 high-impact. The thresholds in this tool apply the standard per-serving ranges to the aggregate meal score to give you a straightforward rating.
+            </div>
+          </div>
+
+          <div class="faq-item" role="listitem">
+            <div class="faq-q" role="button" tabindex="0" aria-expanded="false"
+                 onclick="toggleFaq(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(this)">
+              <span>Does adding fat or protein to a meal lower its Glycemic Load?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </div>
+            <div class="faq-a" role="region">
+              Fat and protein do not directly reduce the calculated Glycemic Load because GL is based only on carbohydrate content. However, they do slow gastric emptying and blunt the real-world blood sugar spike beyond what the GL number alone predicts. This is why a mixed meal often causes a smaller blood sugar rise than an equivalent-GL meal of pure carbohydrates. GL is a useful predictor but not the entire picture when fat and protein are present.
+            </div>
+          </div>
+
+          <div class="faq-item" role="listitem">
+            <div class="faq-q" role="button" tabindex="0" aria-expanded="false"
+                 onclick="toggleFaq(this)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleFaq(this)">
+              <span>Why do some high GI foods like watermelon have a low GL?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </div>
+            <div class="faq-a" role="region">
+              Because watermelon is about 92% water. A standard 120g serving contains only around 6g of Net Carbs. Using the formula: GL = (72 x 6) / 100 = 4.3, which is firmly in the Low range. GI measures the speed of the blood sugar response per gram of carbohydrate consumed, but GL accounts for how little carbohydrate is actually present in a realistic serving. This is the central insight that makes GL more practical than GI for planning real meals.
+            </div>
+          </div>
+
+        </div>
+
+        <hr class="divider" />
+
+        <aside style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 18px;font-size:13px;color:var(--text-muted);line-height:1.6;">
+          <strong style="color:var(--text);">Note:</strong> This tool is for informational and educational purposes only. It is not a substitute for personalized medical or nutritional advice. People with diabetes, insulin resistance, or other metabolic conditions should consult a registered dietitian or physician before making dietary changes based on Glycemic Load values.
+        </aside>
+      </div>
+
+
+    </div><!-- end .container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+
+  <script>
+    /* ============================================================
+       STATE
+       rows: array of row objects { id, name, gi, carbs, gl }
+       rowCount: incrementing ID
+    ============================================================ */
+    let rows = [];
+    let rowCount = 0;
+
+    /* ============================================================
+       GL FORMULA
+       GL = round((GI * NetCarbs) / 100, 1 decimal)
+       Rounding at the row level prevents floating-point accumulation.
+    ============================================================ */
+    function calcGL(gi, carbs) {
+      if (!gi || !carbs || isNaN(gi) || isNaN(carbs)) return null;
+      const raw = (gi * carbs) / 100;
+      return Math.round(raw * 10) / 10;
+    }
+
+    /* ============================================================
+       GL CATEGORY HELPERS
+    ============================================================ */
+    function glCategory(gl) {
+      if (gl === null) return 'none';
+      if (gl <= 10)  return 'low';
+      if (gl <= 19)  return 'medium';
+      return 'high';
+    }
+
+    function glLabel(gl) {
+      const cat = glCategory(gl);
+      if (cat === 'low')    return 'Low Impact: Minimal blood sugar response expected.';
+      if (cat === 'medium') return 'Medium Impact: Moderate blood sugar rise likely.';
+      if (cat === 'high')   return 'High Impact: Likely to cause a significant blood sugar spike.';
+      return 'Add ingredients to see your meal\'s blood sugar impact.';
+    }
+
+    function glBadgeText(gl) {
+      const cat = glCategory(gl);
+      if (cat === 'low')    return 'Low Glycemic Load';
+      if (cat === 'medium') return 'Medium Glycemic Load';
+      if (cat === 'high')   return 'High Glycemic Load';
+      return 'No data yet';
+    }
+
+    /* ============================================================
+       ADD ROW
+    ============================================================ */
+    function addRow() {
+      const id = ++rowCount;
+      rows.push({ id, name: '', gi: null, carbs: null, gl: null });
+
+      const list = document.getElementById('ingredient-list');
+      const div = document.createElement('div');
+      div.className = 'ingredient-row';
+      div.setAttribute('role', 'listitem');
+      div.id = 'row-' + id;
+
+      div.innerHTML =
+        '<input class="row-input row-name" type="text" placeholder="Food name (e.g. White Rice)"' +
+          ' aria-label="Food name" oninput="updateRowName(' + id + ',this.value)" />' +
+        '<input class="row-input row-gi" type="number" min="0" max="100" step="1" placeholder="GI (0-100)"' +
+          ' aria-label="Glycemic Index" oninput="updateRowGI(' + id + ',this.value)" />' +
+        '<input class="row-input row-carbs" type="number" min="0" step="0.1" placeholder="Net Carbs g"' +
+          ' aria-label="Net Carbs in grams" oninput="updateRowCarbs(' + id + ',this.value)" />' +
+        '<div class="row-gl-display" id="gl-' + id + '" aria-label="Glycemic Load for this ingredient">--</div>' +
+        '<button class="btn-del" onclick="removeRow(' + id + ')" aria-label="Remove ingredient">x</button>';
+
+      list.appendChild(div);
+      document.getElementById('empty-msg').style.display = 'none';
+
+      div.querySelector('.row-name').focus();
+    }
+
+    /* ============================================================
+       REMOVE ROW
+    ============================================================ */
+    function removeRow(id) {
+      rows = rows.filter(r => r.id !== id);
+      const el = document.getElementById('row-' + id);
+      if (el) el.remove();
+      if (rows.length === 0) {
+        document.getElementById('empty-msg').style.display = '';
+      }
+      recalcAll();
+    }
+
+    /* ============================================================
+       UPDATE ROW FIELDS
+    ============================================================ */
+    function updateRowName(id, val) {
+      const row = rows.find(r => r.id === id);
+      if (row) { row.name = val.trim(); recalcAll(); }
+    }
+
+    function updateRowGI(id, val) {
+      const row = rows.find(r => r.id === id);
+      if (!row) return;
+      const n = parseFloat(val);
+      row.gi = (!isNaN(n) && n >= 0 && n <= 100) ? n : null;
+      updateRowGL(row);
+      recalcAll();
+    }
+
+    function updateRowCarbs(id, val) {
+      const row = rows.find(r => r.id === id);
+      if (!row) return;
+      const n = parseFloat(val);
+      row.carbs = (!isNaN(n) && n >= 0) ? n : null;
+      updateRowGL(row);
+      recalcAll();
+    }
+
+    /* ============================================================
+       UPDATE SINGLE ROW GL DISPLAY
+    ============================================================ */
+    function updateRowGL(row) {
+      row.gl = calcGL(row.gi, row.carbs);
+      const el = document.getElementById('gl-' + row.id);
+      if (!el) return;
+      const cat = glCategory(row.gl);
+      el.className = 'row-gl-display' + (cat !== 'none' ? ' gl-' + cat : '');
+      el.textContent = row.gl !== null ? row.gl.toFixed(1) : '--';
+
+      const rowEl = document.getElementById('row-' + row.id);
+      if (rowEl) {
+        rowEl.classList.toggle('high-impact', cat === 'high');
+      }
+    }
+
+    /* ============================================================
+       RECALCULATE AGGREGATE
+    ============================================================ */
+    function recalcAll() {
+      const validRows = rows.filter(r => r.gl !== null);
+
+      if (validRows.length === 0) {
+        setDashboard(null);
+        setAnalysis(null);
+        return;
+      }
+
+      /* Sum individual GL values (each already rounded to 1 dp).
+         Final total is also rounded to 1 dp to present cleanly. */
+      const totalGL = Math.round(
+        validRows.reduce((acc, r) => acc + r.gl, 0) * 10
+      ) / 10;
+
+      const totalCarbs = Math.round(
+        rows.filter(r => r.carbs !== null).reduce((acc, r) => acc + r.carbs, 0) * 10
+      ) / 10;
+
+      setDashboard(totalGL);
+      setAnalysis(totalGL, totalCarbs, validRows);
+    }
+
+    /* ============================================================
+       SET DASHBOARD (Panel 1)
+    ============================================================ */
+    function setDashboard(totalGL) {
+      const hero  = document.getElementById('gl-hero');
+      const badge = document.getElementById('gl-badge');
+      const badgeTxt = document.getElementById('gl-badge-text');
+      const interp   = document.getElementById('gl-interpretation');
+      const dashboard= document.getElementById('dashboard');
+
+      const cat = glCategory(totalGL);
+
+      /* Hero number */
+      if (totalGL === null) {
+        hero.innerHTML = '--<span class="gl-hero-unit">GL</span>';
+        hero.className = 'gl-hero';
+      } else {
+        hero.innerHTML = totalGL.toFixed(1) + '<span class="gl-hero-unit">GL</span>';
+        hero.className = 'gl-hero' + (cat !== 'none' ? ' state-' + cat : '');
+      }
+
+      /* Badge */
+      badge.className = 'gl-badge' + (cat !== 'none' ? ' state-' + cat : '');
+      badgeTxt.textContent = glBadgeText(totalGL);
+
+      /* Interpretation text */
+      interp.textContent = totalGL !== null
+        ? glLabel(totalGL)
+        : 'Enter at least one ingredient in the Meal Builder to calculate your aggregate Glycemic Load.';
+
+      /* Dashboard border */
+      dashboard.className = 'dashboard' + (cat !== 'none' ? ' state-' + cat : '');
+    }
+
+    /* ============================================================
+       SET ANALYSIS (Panel 3)
+    ============================================================ */
+    function setAnalysis(totalGL, totalCarbs, validRows) {
+      const carbEl = document.getElementById('stat-carbs');
+      const glEl   = document.getElementById('stat-gl');
+      const peakBox= document.getElementById('peak-box');
+      const peakName= document.getElementById('peak-name');
+      const peakDetail= document.getElementById('peak-detail');
+
+      if (totalGL === null) {
+        carbEl.innerHTML = '--<span class="stat-unit">g</span>';
+        glEl.innerHTML   = '--<span class="stat-unit">GL</span>';
+        peakBox.style.display = 'none';
+        return;
+      }
+
+      carbEl.innerHTML = totalCarbs.toFixed(1) + '<span class="stat-unit">g</span>';
+      glEl.innerHTML   = totalGL.toFixed(1) + '<span class="stat-unit">GL</span>';
+
+      /* Highest impact ingredient */
+      const peak = validRows.reduce((max, r) => r.gl > max.gl ? r : max, validRows[0]);
+      peakBox.style.display = 'block';
+      peakName.textContent = peak.name || '(Unnamed ingredient)';
+      peakDetail.textContent =
+        'GI: ' + (peak.gi !== null ? peak.gi : '--') +
+        '  |  Net Carbs: ' + (peak.carbs !== null ? peak.carbs + 'g' : '--') +
+        '  |  GL: ' + peak.gl.toFixed(1) +
+        ' (' + glCategory(peak.gl).charAt(0).toUpperCase() + glCategory(peak.gl).slice(1) + ')';
+    }
+
+    /* ============================================================
+       COPY ANALYSIS
+    ============================================================ */
+    function copyAnalysis() {
+      const validRows = rows.filter(r => r.gl !== null);
+      if (validRows.length === 0) {
+        alert('Add at least one complete ingredient before copying.');
+        return;
+      }
+
+      const totalGL    = Math.round(validRows.reduce((a, r) => a + r.gl, 0) * 10) / 10;
+      const totalCarbs = Math.round(
+        rows.filter(r => r.carbs !== null).reduce((a, r) => a + r.carbs, 0) * 10
+      ) / 10;
+      const peak = validRows.reduce((m, r) => r.gl > m.gl ? r : m, validRows[0]);
+      const cat  = glCategory(totalGL);
+
+      let txt = 'Meal Glycemic Load Analysis (via AxiomApe)\n';
+      txt += '='.repeat(44) + '\n\n';
+      txt += 'INGREDIENTS\n';
+      txt += '-'.repeat(44) + '\n';
+
+      rows.forEach(r => {
+        const name  = r.name || '(Unnamed)';
+        const gi    = r.gi    !== null ? r.gi    : '-';
+        const carbs = r.carbs !== null ? r.carbs + 'g' : '-';
+        const gl    = r.gl    !== null ? r.gl.toFixed(1) : '-';
+        txt += name + ': GI ' + gi + ', Net Carbs ' + carbs + ', GL ' + gl + '\n';
+      });
+
+      txt += '\nSUMMARY\n';
+      txt += '-'.repeat(44) + '\n';
+      txt += 'Total Net Carbs: ' + totalCarbs + 'g\n';
+      txt += 'Aggregate Meal GL: ' + totalGL.toFixed(1) + ' (' + cat.charAt(0).toUpperCase() + cat.slice(1) + ' Impact)\n';
+      txt += 'Highest Impact Ingredient: ' + (peak.name || '(Unnamed)') + ' (GL ' + peak.gl.toFixed(1) + ')\n';
+
+      navigator.clipboard.writeText(txt).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.classList.add('copied');
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy Meal Analysis';
+        }, 2000);
+      }).catch(() => {
+        /* Fallback for browsers that block clipboard without user gesture */
+        alert('Copy failed. Please select and copy the text manually.');
+      });
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling;
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      answer.classList.toggle('open', !isOpen);
+    }
+
+    /* ============================================================
+       INIT: start with two empty rows for a better first impression
+    ============================================================ */
+    addRow();
+    addRow();
+
+  </script>
+
+</body>
+</html>
