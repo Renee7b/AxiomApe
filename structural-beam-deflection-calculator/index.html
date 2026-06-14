@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Structural Beam Deflection Calculator: Estimate Bending Tolerances for Loaded Materials | AxiomApe</title>
+  <meta name="description" content="Free structural beam deflection calculator using Euler-Bernoulli beam theory. Compute maximum bending deflection for simply supported and cantilever beams under point loads or uniform distributed loads. Checks L/240 and L/360 tolerance limits. 100% client-side." />
+  <meta name="keywords" content="beam deflection calculator, structural beam bending calculator, cantilever deflection calculator, simply supported beam calculator, Euler-Bernoulli beam calculator, area moment of inertia calculator, elastic modulus beam bending, L/360 deflection limit, L/240 deflection limit, structural bending estimator, beam bending formula, UDL beam deflection, point load deflection, steel beam deflection, aluminum beam deflection, wood beam deflection, bending tolerance calculator" />
+  <link rel="canonical" href="https://axiomape.com/structural-beam-deflection-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Structural Beam Deflection Calculator",
+        "description": "Free structural beam deflection calculator using Euler-Bernoulli beam theory. Compute maximum bending deflection for simply supported and cantilever beams under point loads or uniform distributed loads. Checks L/240 and L/360 tolerance limits. 100% client-side.",
+        "url": "https://axiomape.com/structural-beam-deflection-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the Area Moment of Inertia and why is beam height so important?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Area Moment of Inertia (I) is a geometric property of a cross-section that measures how its area is distributed around the neutral axis. For a solid rectangle, I equals b times h-cubed divided by 12, where b is the width and h is the height. Because h is raised to the third power, doubling the height of a beam increases its bending stiffness by a factor of 8 - far more than doubling its width, which only doubles stiffness linearly. This is why floor joists and I-beams are tall and narrow rather than short and wide: orienting a beam with maximum height in the direction of loading provides dramatically more resistance to bending deflection per unit of material used."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the Modulus of Elasticity affect structural bending?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Modulus of Elasticity (E), also called Young's Modulus, measures a material's resistance to elastic deformation. A higher E value means the material is stiffer and deflects less under the same load. Structural steel has E of approximately 200 GPa (29,000 ksi), which is about 3 times stiffer than aluminum (69 GPa) and about 18 times stiffer than structural timber (11 GPa). Because E appears in the denominator of all Euler-Bernoulli deflection formulas, a material with half the stiffness will deflect exactly twice as much under identical loads, spans, and cross-section geometry. Selecting a higher-modulus material is a direct lever for controlling deflection in structural applications."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a cantilever and a simply supported beam?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A simply supported beam rests on two supports at its ends (one pin and one roller), allowing the ends to rotate freely while preventing vertical displacement. The maximum deflection occurs at the midpoint for symmetric loading. A cantilever beam is fixed rigidly at one end and completely free at the other. The fixed end cannot rotate or translate, concentrating bending stress there, while the free end deflects freely. For the same span, load, and cross-section, a cantilever deflects 16 times more than a simply supported beam under the equivalent center point load - comparing P times L-cubed divided by 3 times E times I versus P times L-cubed divided by 48 times E times I. This explains why cantilever structures like balconies require much stiffer beams than equivalent simply supported spans."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do engineers determine an acceptable deflection limit like L/360?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Deflection limits such as L/360 or L/240 are serviceability criteria that define how much a beam may visibly bow under load without causing damage, discomfort, or aesthetic problems. The L in these ratios refers to the beam's clear span. L/360 (approximately 1/4 inch per 7.5 feet of span) is used for floor beams supporting brittle finishes like plaster ceilings or ceramic tile, where excessive movement would cause cracking. L/240 is a looser limit applied to roofs with non-brittle coverings or where cosmetic deflection is acceptable. These ratios are codified in standards such as AISC, IBC, and ACI, and structural engineers verify both the strength limit state (the beam will not break) and the serviceability limit state (the beam will not bend too much) during design."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do beams with the same cross-sectional area bend differently depending on orientation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Bending stiffness depends on the Area Moment of Inertia (I), which measures how far the cross-sectional area is distributed from the neutral bending axis - not just the total area. For a 50mm by 150mm rectangle standing tall, I is approximately 14,062,500 mm to the fourth. The same rectangle laid flat has I of approximately 1,562,500 mm to the fourth - nine times less stiffness. Both have identical cross-sectional area of 7,500 mm squared, but the tall orientation places more material farther from the neutral axis where it resists bending most efficiently. This principle drives the design of structural I-beams, which concentrate flange material at maximum distance from the neutral axis to achieve very high I values with minimal material weight."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0D1117;
+      --bg-card:      #161B22;
+      --bg-input:     #0D1117;
+      --border:       #30363D;
+      --text:         #E6EDF3;
+      --text-muted:   #8B949E;
+      --text-dim:     #484F58;
+
+      --slate:        #64748B;
+      --slate-dim:    rgba(100,116,139,0.15);
+      --slate-glow:   rgba(100,116,139,0.30);
+      --slate-b:      rgba(100,116,139,0.40);
+
+      --red:          #EF4444;
+      --red-dim:      rgba(239,68,68,0.12);
+      --red-glow:     rgba(239,68,68,0.25);
+
+      --blue:         #3B82F6;
+      --blue-dim:     rgba(59,130,246,0.12);
+      --blue-glow:    rgba(59,130,246,0.25);
+
+      --yellow:       #F59E0B;
+      --yellow-dim:   rgba(245,158,11,0.12);
+
+      --green:        #10B981;
+      --green-dim:    rgba(16,185,129,0.12);
+
+      --sans:   system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --mono:   'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Tool header */
+    .tool-header {
+      background: linear-gradient(135deg, #0D1117 0%, #161B22 55%, #1C2128 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-header::before {
+      content: '';
+      position: absolute;
+      top: -50px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 220px;
+      background: radial-gradient(ellipse at center, rgba(59,130,246,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .tool-header h1 span { color: var(--blue); }
+    .tool-header .subtitle {
+      color: var(--text-muted);
+      font-size: 0.97rem;
+      max-width: 640px;
+      margin: 0 auto 22px;
+      position: relative;
+    }
+
+    /* Unit system toggle */
+    .unit-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+    }
+    .unit-btn {
+      padding: 7px 22px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 0.81rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .unit-btn.active {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* Three-panel dashboard grid */
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(240px,1fr) minmax(300px,1.5fr) minmax(240px,1fr);
+      gap: 16px;
+      padding: 24px 20px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    @media (max-width: 920px) {
+      .dashboard { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.71rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+    .panel-config .card-title { color: var(--slate); }
+    .panel-viz .card-title   { color: var(--blue); }
+    .panel-tele .card-title  { color: var(--blue); }
+
+    /* Labels */
+    label {
+      display: block;
+      font-size: 0.79rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    /* Inputs and selects */
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--slate);
+      box-shadow: 0 0 0 3px var(--slate-glow);
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath fill='%238B949E' d='M5 7L0 0h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+      cursor: pointer;
+    }
+
+    /* Segmented control */
+    .seg {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .seg-btn {
+      flex: 1;
+      padding: 7px 4px;
+      background: var(--bg-input);
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .seg-btn:last-child { border-right: none; }
+    .seg-btn.active {
+      background: var(--slate-dim);
+      color: var(--slate);
+    }
+
+    /* I mode toggle */
+    .imode {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .imode-btn {
+      flex: 1;
+      padding: 7px 6px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .imode-btn.active {
+      background: var(--slate-dim);
+      border-color: var(--slate);
+      color: var(--slate);
+    }
+
+    /* Inline row */
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Divider */
+    hr.div {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    /* Computed I display */
+    .i-computed {
+      background: var(--slate-dim);
+      border: 1px solid var(--slate-b);
+      border-radius: var(--radius-sm);
+      padding: 7px 11px;
+      font-size: 0.79rem;
+      color: var(--slate);
+      font-weight: 700;
+      margin-bottom: 12px;
+      font-family: var(--mono, monospace);
+    }
+
+    /* SVG panel */
+    .viz-bg {
+      background: #080C12;
+      border: 1px solid #1C2128;
+      border-radius: var(--radius-sm);
+      padding: 10px 8px 8px;
+    }
+    #beam-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .viz-note {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 9px;
+    }
+
+    /* Telemetry panel */
+    .delta-hero {
+      font-size: 2.6rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      margin-bottom: 3px;
+      transition: color 0.3s;
+    }
+    .delta-hero.safe { color: var(--blue); }
+    .delta-hero.warn { color: var(--yellow); }
+    .delta-hero.fail { color: var(--red); }
+
+    .delta-unit {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .tol-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 13px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .tol-row.pass {
+      background: var(--blue-dim);
+      border-color: rgba(59,130,246,0.35);
+    }
+    .tol-row.fail {
+      background: var(--red-dim);
+      border-color: rgba(239,68,68,0.35);
+    }
+    .tol-label {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .tol-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .tol-badge {
+      font-size: 0.73rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 3px 11px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .tol-badge.pass { background: rgba(59,130,246,0.18); color: var(--blue); }
+    .tol-badge.fail { background: rgba(239,68,68,0.18); color: var(--red); }
+
+    .prop-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.81rem;
+      gap: 8px;
+    }
+    .prop-row:last-child { border-bottom: none; }
+    .prop-key { color: var(--text-muted); flex-shrink: 0; }
+    .prop-val {
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .warn-box {
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: var(--radius-sm);
+      padding: 9px 13px;
+      font-size: 0.79rem;
+      color: var(--red);
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .warn-box.show { display: block; }
+
+    .copy-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.40);
+      border-radius: var(--radius-sm);
+      color: var(--blue);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .copy-btn:hover { background: var(--blue); color: #fff; }
+
+    /* Section heading labels */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin: 14px 0 10px;
+    }
+
+    /* Formula display */
+    .formula-block {
+      background: #080C12;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 16px;
+      font-family: var(--mono, monospace);
+      font-size: 0.82rem;
+      color: var(--blue);
+      margin: 8px 0 14px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    /* Educational content */
+    .edu-wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 20px 48px;
+    }
+    .edu-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .edu-card-title {
+      font-size: 0.71rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: 0.79rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Educational text */
+    .edu-h2 {
+      font-size: 1.22rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .edu-h3 {
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 8px;
+    }
+    .edu-p {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.72;
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 9px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      background: var(--bg-input);
+      border: none;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.87rem;
+      font-weight: 600;
+      padding: 13px 17px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.2s;
+    }
+    .faq-q:hover { background: #1C2128; }
+    .faq-arrow {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      transition: transform 0.22s;
+      flex-shrink: 0;
+    }
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 0 17px 13px;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.72;
+      background: var(--bg-card);
+    }
+    .faq-a.open { display: block; }
+
+    /* Disclaimer */
+    .disclaimer {
+      background: rgba(100,116,139,0.07);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 17px;
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="tool-header">
+    <h1>Structural Beam Deflection <span>Calculator</span></h1>
+    <p class="subtitle">Estimate bending tolerances for loaded materials using Euler-Bernoulli beam theory. Select a support type, apply a load, and instantly compute maximum deflection with L/240 and L/360 industry tolerance checks.</p>
+    <div class="unit-bar">
+      <button class="unit-btn active" onclick="setUnit(this,'metric')">Metric (m / kN / GPa)</button>
+      <button class="unit-btn" onclick="setUnit(this,'imperial')">Imperial (ft / lbf / ksi)</button>
+    </div>
+  </header>
+
+  <!-- THREE-PANEL DASHBOARD -->
+  <div class="dashboard">
+
+    <!-- PANEL 1: Beam Configuration -->
+    <div class="card panel-config">
+      <div class="card-title">Beam Configuration</div>
+
+      <label>Support Type</label>
+      <div class="seg" id="seg-support">
+        <button class="seg-btn active" onclick="setSeg('seg-support',this); supportType='simply'; recalc();">Simply Supported</button>
+        <button class="seg-btn" onclick="setSeg('seg-support',this); supportType='cantilever'; recalc();">Cantilever</button>
+      </div>
+
+      <label>Load Type</label>
+      <div class="seg" id="seg-load">
+        <button class="seg-btn active" onclick="setSeg('seg-load',this); setLoadType('point');">Center Point Load</button>
+        <button class="seg-btn" onclick="setSeg('seg-load',this); setLoadType('udl');">Uniform Distributed Load</button>
+      </div>
+
+      <hr class="div" />
+
+      <label for="sel-material">Material Selection</label>
+      <select id="sel-material" onchange="setMaterial(this.value)">
+        <option value="steel">Structural Steel - 200 GPa / 29,000 ksi</option>
+        <option value="aluminum">Aluminum Alloy - 69 GPa / 10,000 ksi</option>
+        <option value="wood">Structural Timber - 11 GPa / 1,600 ksi</option>
+        <option value="custom">Custom Elastic Modulus (E)</option>
+      </select>
+
+      <div id="custom-e-wrap" style="display:none">
+        <label id="lbl-e">Elastic Modulus E (GPa)</label>
+        <input type="number" id="inp-e" value="200" min="0.001" step="0.1" oninput="recalc()" />
+      </div>
+
+      <hr class="div" />
+
+      <label id="lbl-length">Beam Span Length (m)</label>
+      <input type="number" id="inp-length" value="5" min="0.01" step="0.1" oninput="recalc()" />
+
+      <div id="point-wrap">
+        <label id="lbl-load">Applied Point Load P (kN)</label>
+        <input type="number" id="inp-load" value="10" min="0" step="0.1" oninput="recalc()" />
+      </div>
+
+      <div id="udl-wrap" style="display:none">
+        <label id="lbl-udl">Distributed Load w (kN/m)</label>
+        <input type="number" id="inp-udl" value="5" min="0" step="0.1" oninput="recalc()" />
+      </div>
+
+      <hr class="div" />
+
+      <label>Cross-Section Area Moment of Inertia (I)</label>
+      <div class="imode">
+        <button class="imode-btn active" onclick="setIMode(this,'calc')">Calculate from Dimensions</button>
+        <button class="imode-btn" onclick="setIMode(this,'custom')">Enter Custom I Value</button>
+      </div>
+
+      <div id="dims-wrap">
+        <div class="row2">
+          <div>
+            <label id="lbl-width">Width b (cm)</label>
+            <input type="number" id="inp-width" value="10" min="0.01" step="0.1" oninput="recalc()" />
+          </div>
+          <div>
+            <label id="lbl-height">Height h (cm)</label>
+            <input type="number" id="inp-height" value="20" min="0.01" step="0.1" oninput="recalc()" />
+          </div>
+        </div>
+        <div class="i-computed" id="i-display">I = b x h&#179; / 12 = -- cm&#8308;</div>
+      </div>
+
+      <div id="custom-i-wrap" style="display:none">
+        <label id="lbl-custom-i">Custom Moment of Inertia I (cm&#8308;)</label>
+        <input type="number" id="inp-custom-i" value="6666.7" min="0.001" step="1" oninput="recalc()" />
+      </div>
+
+    </div>
+    <!-- END PANEL 1 -->
+
+    <!-- PANEL 2: Bending Visualizer -->
+    <div class="card panel-viz">
+      <div class="card-title">Bending Visualizer - Elastic Deflection Diagram</div>
+      <div class="viz-bg">
+        <svg id="beam-svg" viewBox="0 0 520 185" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="Structural beam elastic deflection diagram showing bending curve and applied loads"></svg>
+      </div>
+      <p class="viz-note">Deflection curve is exaggerated for visual clarity. Actual structural deflections are far smaller relative to span length.</p>
+    </div>
+    <!-- END PANEL 2 -->
+
+    <!-- PANEL 3: Telemetry and Tolerance Limits -->
+    <div class="card panel-tele">
+      <div class="card-title">Maximum Deflection Telemetry</div>
+
+      <div class="warn-box" id="warn-box">Invalid inputs. Verify all values are positive numbers.</div>
+
+      <div class="delta-hero safe" id="delta-hero">0.0000</div>
+      <div class="delta-unit" id="delta-unit">mm (maximum deflection)</div>
+
+      <hr class="div" />
+      <div class="section-label">Industry Tolerance Limits</div>
+
+      <div class="tol-row pass" id="tol-row-240">
+        <div>
+          <div class="tol-label">L / 240 Serviceability Limit</div>
+          <div class="tol-sub" id="tol-sub-240">Allowable: --</div>
+        </div>
+        <span class="tol-badge pass" id="tol-badge-240">PASS</span>
+      </div>
+
+      <div class="tol-row pass" id="tol-row-360">
+        <div>
+          <div class="tol-label">L / 360 Precision Limit</div>
+          <div class="tol-sub" id="tol-sub-360">Allowable: --</div>
+        </div>
+        <span class="tol-badge pass" id="tol-badge-360">PASS</span>
+      </div>
+
+      <hr class="div" />
+      <div class="section-label">Beam Properties Summary</div>
+
+      <div class="prop-row">
+        <span class="prop-key">Elastic Modulus E</span>
+        <span class="prop-val" id="out-e">--</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-key">Moment of Inertia I</span>
+        <span class="prop-val" id="out-i">--</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-key">Span Length L</span>
+        <span class="prop-val" id="out-l">--</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-key">Applied Load</span>
+        <span class="prop-val" id="out-p">--</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-key">Configuration</span>
+        <span class="prop-val" id="out-cfg">--</span>
+      </div>
+
+      <button class="copy-btn" onclick="copyReport()">Copy Engineering Report</button>
+    </div>
+    <!-- END PANEL 3 -->
+
+  </div>
+  <!-- END DASHBOARD -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- EDUCATIONAL CONTENT -->
+  <div class="edu-wrap">
+
+    <!-- Glossary card -->
+    <div class="edu-card">
+      <div class="edu-card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div>
+          <div class="glossary-term">Modulus of Elasticity (E)</div>
+          <div class="glossary-def">Also called Young's Modulus. A material property measuring stiffness: how much stress is required to produce a unit of strain. Higher E means less bending under the same load.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Area Moment of Inertia (I)</div>
+          <div class="glossary-def">A geometric property of a cross-section describing how its area is distributed around the neutral bending axis. Larger I means dramatically greater resistance to deflection.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Cantilever Beam</div>
+          <div class="glossary-def">A beam fixed rigidly at one end and completely free at the other. The fixed end resists both vertical force and rotation. Maximum deflection occurs at the free end.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Simply Supported Beam</div>
+          <div class="glossary-def">A beam resting on a pin support and a roller support at its ends. Both ends can rotate freely but cannot displace vertically. Maximum deflection occurs at midspan for symmetric loads.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Uniformly Distributed Load (UDL)</div>
+          <div class="glossary-def">A load spread evenly over the entire beam length, measured in force per unit length (kN/m or lbf/ft). Common for beam self-weight, floor loading, and snow loads on roofs.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Euler-Bernoulli Beam Theory</div>
+          <div class="glossary-def">A classical structural model assuming plane cross-sections remain plane after bending and deflections are small relative to span. Valid for slender beams with span-to-depth ratios above roughly 10.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Deflection Limit</div>
+          <div class="glossary-def">A serviceability criterion expressed as a fraction of the span (L/240, L/360). Sets the maximum acceptable mid-span sag to prevent cracking of finishes, perceptible bounce, or visual sag.</div>
+        </div>
+        <div>
+          <div class="glossary-term">Neutral Axis</div>
+          <div class="glossary-def">The horizontal plane through a beam cross-section where bending stress is exactly zero. Material above the neutral axis is in compression, material below is in tension under downward loads.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational section -->
+    <div class="edu-card">
+      <h2 class="edu-h2">The Complete Guide to Structural Beam Deflection and Bending Tolerances</h2>
+      <p class="section-intro">Whether you are sizing a floor joist, checking a cantilever balcony, or selecting a material for a loaded shelf, beam deflection is the critical serviceability check that separates a functioning structure from one that sags, cracks, or makes occupants uncomfortable. This guide explains the Euler-Bernoulli formulas behind this calculator, how to interpret industry tolerance limits, and the engineering decisions that most powerfully affect bending performance.</p>
+
+      <h3 class="edu-h3">How to Use This Beam Deflection Calculator</h3>
+      <p class="edu-p">Start by selecting a support type (Simply Supported or Cantilever) and a load type (Center Point Load or Uniform Distributed Load). Choose a material from the preset dropdown to automatically populate the Elastic Modulus, or select "Custom" to enter your own E value. Input the beam span length and the applied load magnitude. Under the cross-section settings, enter the rectangular width and height to auto-calculate the Area Moment of Inertia, or switch to "Enter Custom I Value" for non-rectangular sections like I-beams, hollow sections, or engineered lumber (enter I in cm4 for metric or in4 for imperial). Every field uses real-time oninput updates - results appear immediately without pressing any submit button. The telemetry panel reports the maximum deflection and compares it against L/240 and L/360 thresholds with clear PASS or FAIL badges.</p>
+
+      <h3 class="edu-h3">The Three Euler-Bernoulli Deflection Formulas</h3>
+      <p class="edu-p">This calculator implements three standard closed-form solutions for maximum deflection under the most common structural loading conditions. In each formula, P is the applied point load (N or lbf), w is the distributed load per unit length (N/m or lbf/in), L is the beam span, E is the Elastic Modulus, and I is the Area Moment of Inertia.</p>
+      <div class="formula-block">Simply Supported + Center Point Load:   delta = P x L^3 / (48 x E x I)</div>
+      <div class="formula-block">Simply Supported + Uniform Distributed Load: delta = (5 x w x L^4) / (384 x E x I)</div>
+      <div class="formula-block">Cantilever + End Point Load:             delta = P x L^3 / (3 x E x I)</div>
+
+      <p class="edu-p">Notice that span length L is raised to the third or fourth power in the numerator. This makes span the single most sensitive variable: doubling the span increases deflection by 8 times for a point load and 16 times for a distributed load. Quadrupling the beam height (which raises I by a factor of 64) is far more efficient than quadrupling the width when you need to reduce deflection. The 48 vs. 3 in the denominators of the two point-load formulas directly reveals that a cantilever deflects 16 times more than a simply supported beam of the same span, load, and section.</p>
+
+      <h3 class="edu-h3">Unit Normalization: How This Calculator Avoids Catastrophic Errors</h3>
+      <p class="edu-p">Structural deflection calculations are notoriously error-prone when units are mixed carelessly. In Metric mode, this calculator converts all inputs to SI base units before applying any formula: span to meters, point load to Newtons (from kN), distributed load to N/m (from kN/m), Elastic Modulus to Pascals (from GPa, multiplying by 1,000,000,000), and Moment of Inertia to m4 (from cm4, multiplying by 1e-8, since 1 cm4 equals 0.00000001 m4). The result in meters is then multiplied by 1,000 for millimeter display. In Imperial mode, span converts from feet to inches (multiply by 12), E converts from ksi to psi (multiply by 1,000), and distributed load converts from lbf/ft to lbf/in (divide by 12). Moment of Inertia remains in in4. The final result is reported directly in inches. Switching between unit systems recalculates with the correct numeric conversions - it is not just a label change.</p>
+
+      <h3 class="edu-h3">Understanding L/240 and L/360 Tolerance Limits</h3>
+      <p class="edu-p">The numbers 240 and 360 come from building codes and engineering standards that have been refined over decades. L/360 means the allowable maximum deflection equals the span divided by 360. For a 5-meter (500 cm) beam, L/360 is 500/360, or roughly 13.9 mm. For a 20-foot (240-inch) span, L/360 allows 240/360 = 0.667 inches. The L/360 limit is most commonly applied to floor beams supporting brittle finishes (ceramic tile, stone, or plaster ceilings) where excessive deflection causes cracking. L/240 is roughly 50 percent more permissive and is typically used for roofs with flexible coverings, beams supporting non-brittle partitions, or applications where aesthetic sag rather than finish cracking governs. Some high-precision floors use limits as strict as L/480 or L/600. The code of reference (AISC, NDS for wood, IBC, AS 1170, Eurocode 3) determines which limit applies to a given project.</p>
+
+      <h3 class="edu-h3">FAQ: Frequently Asked Questions About Beam Deflection</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is the Area Moment of Inertia and why is beam height so important?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          The Area Moment of Inertia (I) is a geometric property of a cross-section that measures how its area is distributed around the neutral bending axis. For a solid rectangular cross-section, I = b times h-cubed divided by 12, where b is the section width and h is the section height. Because the height h is raised to the third power, doubling the height multiplies the stiffness by 8 while doubling the width only doubles it. This is why structural floor joists and I-beams are tall and narrow rather than short and wide: you get far more bending resistance per kilogram of material by orienting the cross-section with maximum height in the direction of loading. A 10 cm wide by 20 cm tall rectangle has I = 10 x (20 cubed) / 12 = 6,667 cm to the fourth. Rotate it 90 degrees to 20 cm wide by 10 cm tall, and I drops to 20 x (10 cubed) / 12 = 1,667 cm to the fourth. Identical material, but the tall orientation is four times stiffer in bending.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does the Modulus of Elasticity affect structural bending?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          The Modulus of Elasticity (E), also called Young's Modulus, measures a material's resistance to elastic (recoverable) deformation under stress. A higher E means the material is stiffer: it requires more force to stretch or compress a unit length by a unit amount. Structural steel at 200 GPa is approximately three times stiffer than aluminum (69 GPa) and about eighteen times stiffer than structural timber (11 GPa). In the Euler-Bernoulli deflection formulas, E appears in the denominator, so a material with twice the E deflects exactly half as much under identical conditions of load, span, and cross-section. Replacing a timber beam with a steel beam of the same geometry would reduce deflection by a factor of about 18. However, because steel is much denser, engineers usually consider the stiffness-to-weight ratio alongside the raw E value when optimizing structural designs.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between a cantilever and a simply supported beam?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          A simply supported beam rests on two supports at its ends, one pin (prevents horizontal and vertical movement but allows rotation) and one roller (prevents vertical movement and allows horizontal sliding and rotation). Both ends can freely rotate, and maximum deflection occurs at midspan for symmetric loading. A cantilever beam is fixed rigidly at one end - neither translation nor rotation is permitted at the wall - and the other end is completely free. This fixed boundary condition concentrates the bending moment at the support and allows the free tip to deflect freely. Under a tip point load P, the cantilever formula is delta = P times L-cubed divided by (3 times E times I), while the simply supported center-load formula uses 48 in the denominator instead of 3. This factor of 16 difference explains why balconies, canopies, and signage brackets require much heavier cross-sections than beams spanning the same distance between two supports. A cantilever also generates a large reaction moment at the fixed end, which must be designed into the connection and wall structure.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How do engineers determine an acceptable deflection limit like L/360?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          Deflection limits like L/360 or L/240 are serviceability criteria codified in building standards (AISC, IBC, NDS, Eurocode 3, AS 1170) based on decades of field experience with what causes problems in buildings. The number represents the denominator in a ratio of deflection to span: L/360 means the allowable sag equals the span divided by 360. A 6-meter span allows L/360 = 6000/360 = 16.7 mm of deflection. L/360 is strict enough to prevent cracking in brittle floor finishes like ceramic tile, stone, or gypsum plaster and is the most common limit for occupied floor systems. L/240 is about 50 percent more permissive and applies to roofs without plaster ceilings, beams supporting non-brittle partitions, or conditions where visual sag rather than cracking governs. Separate limits often exist for live load only (L/360) versus total load including dead load (L/240). Some precision applications, such as hospital operating rooms, computer floors, or museum storage, use limits as tight as L/480 or L/600. Engineers check both the strength limit state (ultimate failure) and the serviceability limit state (excessive deflection, vibration) - a beam might be strong enough to carry the load but still unacceptable because it deflects too much.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why do beams with the same cross-sectional area bend differently depending on orientation?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-a">
+          Bending stiffness is governed by the Area Moment of Inertia (I), which depends not on the total area but on how far that area is distributed from the neutral bending axis. A rectangle 50 mm wide by 150 mm tall has I = 50 x (150 cubed) / 12 = 14,062,500 mm to the fourth power. Rotate it to 150 mm wide by 50 mm tall and I = 150 x (50 cubed) / 12 = 1,562,500 mm to the fourth. Cross-sectional area is the same (7,500 mm squared) but the tall orientation is 9 times stiffer in bending. The reason is that the material in the top and bottom flanges (farthest from the neutral axis) contributes the most to resisting bending: stress is proportional to distance from the neutral axis, and the strain energy stored at the extremes is what opposes the applied moment. The structural I-beam (also called a wide-flange or W-shape in North American practice) is an extreme version of this principle: most of its material is concentrated in the two flanges, far from the neutral axis, while the thin web simply connects them. This geometry provides very high I values for a given weight, making I-beams extremely efficient structural members.
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        This tool is intended for educational estimation and preliminary feasibility checks only. Results are based on idealized Euler-Bernoulli beam theory for linearly elastic, homogeneous, isotropic members under static loading. Real-world structural design must also account for safety and load factors, lateral buckling, shear deformation in deep beams, dynamic and impact loads, connection rigidity, material variability, and applicable building codes. Always consult a licensed professional structural engineer before making construction or safety decisions.
+      </div>
+    </div>
+
+  </div>
+  <!-- END EDUCATIONAL CONTENT -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* ============================================================
+   STRUCTURAL BEAM DEFLECTION CALCULATOR
+   Engine: Euler-Bernoulli beam theory, three configurations
+   Units: Metric (SI) or Imperial (inch-pound-psi)
+   Privacy: 100% client-side, no network calls
+============================================================ */
+
+// === STATE ===
+let unitSys     = 'metric';
+let supportType = 'simply';
+let loadType    = 'point';
+let iMode       = 'calc';
+let matKey      = 'steel';
+
+// Material Elastic Modulus presets
+const MAT = {
+  steel:    { metric: 200,  imperial: 29000 },
+  aluminum: { metric: 69,   imperial: 10000 },
+  wood:     { metric: 11,   imperial: 1600  }
+};
+
+// === UI HELPERS ===
+
+function setSeg(id, btn) {
+  document.getElementById(id).querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setUnit(btn, u) {
+  unitSys = u;
+  document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  refreshLabels();
+  recalc();
+}
+
+function setLoadType(t) {
+  loadType = t;
+  document.getElementById('point-wrap').style.display = (t === 'point') ? '' : 'none';
+  document.getElementById('udl-wrap').style.display   = (t === 'udl')   ? '' : 'none';
+  recalc();
+}
+
+function setMaterial(val) {
+  matKey = val;
+  document.getElementById('custom-e-wrap').style.display = (val === 'custom') ? '' : 'none';
+  recalc();
+}
+
+function setIMode(btn, m) {
+  iMode = m;
+  document.querySelectorAll('.imode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dims-wrap').style.display     = (m === 'calc')   ? '' : 'none';
+  document.getElementById('custom-i-wrap').style.display = (m === 'custom') ? '' : 'none';
+  recalc();
+}
+
+function refreshLabels() {
+  const m = (unitSys === 'metric');
+  document.getElementById('lbl-length').textContent    = m ? 'Beam Span Length (m)'                  : 'Beam Span Length (ft)';
+  document.getElementById('lbl-load').textContent      = m ? 'Applied Point Load P (kN)'             : 'Applied Point Load P (lbf)';
+  document.getElementById('lbl-udl').textContent       = m ? 'Distributed Load w (kN/m)'             : 'Distributed Load w (lbf/ft)';
+  document.getElementById('lbl-width').textContent     = m ? 'Width b (cm)'                          : 'Width b (in)';
+  document.getElementById('lbl-height').textContent    = m ? 'Height h (cm)'                         : 'Height h (in)';
+  document.getElementById('lbl-custom-i').textContent  = m ? 'Custom Moment of Inertia I (cm⁴)' : 'Custom Moment of Inertia I (in⁴)';
+  document.getElementById('lbl-e').textContent         = m ? 'Elastic Modulus E (GPa)'               : 'Elastic Modulus E (ksi)';
+}
+
+// === COMPUTATION ENGINE ===
+
+function getE() {
+  if (matKey === 'custom') {
+    return parseFloat(document.getElementById('inp-e').value) || 0;
+  }
+  return MAT[matKey][unitSys];
+}
+
+function getI() {
+  const iSuffix = unitSys === 'metric' ? 'cm⁴' : 'in⁴';
+  if (iMode === 'custom') {
+    return parseFloat(document.getElementById('inp-custom-i').value) || 0;
+  }
+  const b = parseFloat(document.getElementById('inp-width').value)  || 0;
+  const h = parseFloat(document.getElementById('inp-height').value) || 0;
+  const I = (b * Math.pow(h, 3)) / 12;
+  document.getElementById('i-display').textContent =
+    'I = b x h³ / 12 = ' + I.toFixed(3) + ' ' + iSuffix;
+  return I;
+}
+
+function recalc() {
+  const L_raw    = parseFloat(document.getElementById('inp-length').value) || 0;
+  const E_raw    = getE();
+  const I_raw    = getI();
+  const load_raw = loadType === 'point'
+    ? (parseFloat(document.getElementById('inp-load').value) || 0)
+    : (parseFloat(document.getElementById('inp-udl').value)  || 0);
+
+  const warnBox = document.getElementById('warn-box');
+
+  if (L_raw <= 0 || E_raw <= 0 || I_raw <= 0 || load_raw < 0) {
+    warnBox.classList.add('show');
+    setHeroNA();
+    renderSVG(0);
+    return;
+  }
+  warnBox.classList.remove('show');
+
+  /* ----- Unit normalization to consistent base units ----- */
+  let L_base, E_base, I_base, P_base, w_base;
+  let L_disp, E_disp, I_disp, load_disp, unitLabel;
+
+  if (unitSys === 'metric') {
+    /* All SI base units: m, N, Pa, m^4 */
+    L_base = L_raw;            /* meters */
+    E_base = E_raw * 1e9;      /* GPa -> Pa (N/m^2) */
+    I_base = I_raw * 1e-8;     /* cm^4 -> m^4  (1 cm^4 = 1e-8 m^4) */
+    P_base = load_raw * 1e3;   /* kN -> N */
+    w_base = load_raw * 1e3;   /* kN/m -> N/m */
+    L_disp    = L_raw.toFixed(2)    + ' m';
+    E_disp    = E_raw                + ' GPa';
+    I_disp    = I_raw.toFixed(3)    + ' cm⁴';
+    load_disp = loadType === 'point'
+      ? load_raw.toFixed(2) + ' kN'
+      : load_raw.toFixed(2) + ' kN/m';
+    unitLabel = 'mm';
+  } else {
+    /* Imperial: inches, lbf, psi, in^4 */
+    L_base = L_raw * 12;          /* ft -> in */
+    E_base = E_raw * 1000;        /* ksi -> psi (lbf/in^2) */
+    I_base = I_raw;               /* in^4 (no conversion) */
+    P_base = load_raw;            /* lbf */
+    w_base = load_raw / 12;       /* lbf/ft -> lbf/in */
+    L_disp    = L_raw.toFixed(2)    + ' ft';
+    E_disp    = E_raw.toLocaleString() + ' ksi';
+    I_disp    = I_raw.toFixed(4)    + ' in⁴';
+    load_disp = loadType === 'point'
+      ? load_raw.toFixed(2) + ' lbf'
+      : load_raw.toFixed(2) + ' lbf/ft';
+    unitLabel = 'in';
+  }
+
+  const EI = E_base * I_base;
+  const L3 = Math.pow(L_base, 3);
+  const L4 = Math.pow(L_base, 4);
+
+  if (EI <= 0) { setHeroNA(); return; }
+
+  /* ----- Apply Euler-Bernoulli formula ----- */
+  let delta_base = 0; /* result in base length unit (m or in) */
+
+  if (supportType === 'simply' && loadType === 'point') {
+    /* Simply supported, center point load: delta = P*L^3 / (48*E*I) */
+    delta_base = (P_base * L3) / (48 * EI);
+  } else if (supportType === 'simply' && loadType === 'udl') {
+    /* Simply supported, uniform distributed load: delta = 5*w*L^4 / (384*E*I) */
+    delta_base = (5 * w_base * L4) / (384 * EI);
+  } else if (supportType === 'cantilever' && loadType === 'point') {
+    /* Cantilever, end point load: delta = P*L^3 / (3*E*I) */
+    delta_base = (P_base * L3) / (3 * EI);
+  } else if (supportType === 'cantilever' && loadType === 'udl') {
+    /* Cantilever, uniform distributed load: delta = w*L^4 / (8*E*I) */
+    delta_base = (w_base * L4) / (8 * EI);
+  }
+
+  /* ----- Convert result to display units ----- */
+  let delta_disp;
+  if (unitSys === 'metric') {
+    delta_disp = delta_base * 1000; /* m -> mm */
+  } else {
+    delta_disp = delta_base;        /* already in inches */
+  }
+
+  /* ----- Tolerance limits (use same units as delta_disp) ----- */
+  /* L in display units */
+  const L_tol = (unitSys === 'metric') ? L_raw * 1000 : L_base; /* mm or in */
+  const limit240 = L_tol / 240;
+  const limit360 = L_tol / 360;
+  const pass240  = delta_disp <= limit240;
+  const pass360  = delta_disp <= limit360;
+
+  /* ----- Update Telemetry Panel ----- */
+  const hero = document.getElementById('delta-hero');
+  hero.textContent = isFinite(delta_disp) ? delta_disp.toFixed(4) : 'N/A';
+  hero.className   = 'delta-hero ' + (!pass360 ? 'fail' : !pass240 ? 'warn' : 'safe');
+  document.getElementById('delta-unit').textContent = unitLabel + ' (maximum deflection)';
+
+  setTolRow('240', pass240, limit240, unitLabel);
+  setTolRow('360', pass360, limit360, unitLabel);
+
+  document.getElementById('out-e').textContent   = E_disp;
+  document.getElementById('out-i').textContent   = I_disp;
+  document.getElementById('out-l').textContent   = L_disp;
+  document.getElementById('out-p').textContent   = load_disp;
+  document.getElementById('out-cfg').textContent = configLabel();
+
+  /* Visual: dimensionless deflection ratio for SVG bow scaling */
+  const ratio = (L_base > 0 && isFinite(delta_base)) ? delta_base / L_base : 0;
+  renderSVG(ratio);
+
+  /* Store for copy report */
+  window._rpt = {
+    delta_disp, unitLabel, pass240, pass360,
+    limit240, limit360, E_disp, I_disp, L_disp, load_disp,
+    cfg: configLabel()
+  };
+}
+
+function setHeroNA() {
+  document.getElementById('delta-hero').textContent = 'N/A';
+  document.getElementById('delta-hero').className   = 'delta-hero fail';
+}
+
+function setTolRow(ratio, pass, limit, unitLabel) {
+  const row   = document.getElementById('tol-row-' + ratio);
+  const badge = document.getElementById('tol-badge-' + ratio);
+  const sub   = document.getElementById('tol-sub-' + ratio);
+  row.className   = 'tol-row ' + (pass ? 'pass' : 'fail');
+  badge.className = 'tol-badge ' + (pass ? 'pass' : 'fail');
+  badge.textContent = pass ? 'PASS' : 'FAIL';
+  sub.textContent   = 'Allowable: ' + limit.toFixed(4) + ' ' + unitLabel;
+}
+
+function configLabel() {
+  const s = supportType === 'simply' ? 'Simply Supported' : 'Cantilever';
+  const l = loadType === 'point' ? 'Point Load' : 'UDL';
+  return s + ' + ' + l;
+}
+
+// === SVG BEAM VISUALIZER ===
+
+function renderSVG(deflectionRatio) {
+  const svg = document.getElementById('beam-svg');
+
+  /* Layout constants */
+  const W  = 520, H = 185;
+  const y0 = 82;         /* beam neutral axis baseline y */
+
+  /* Visual bow: at L/360 ratio (0.00278) show 36px; cap at 65px */
+  const REF = 1 / 360;
+  const vd  = Math.min(65, (deflectionRatio / REF) * 36);
+
+  let out = '';
+
+  /* Grid reference line */
+  out += `<line x1="0" y1="${y0}" x2="${W}" y2="${y0}" stroke="#1C2128" stroke-width="1" stroke-dasharray="4,4"/>`;
+
+  if (supportType === 'simply') {
+    const xL = 62, xR = 458;
+    const xM = (xL + xR) / 2;
+
+    /* Pin support (left): triangle + base line */
+    out += tri(xL, y0 + 7, 13, '#64748B');
+    out += `<line x1="${xL-18}" y1="${y0+28}" x2="${xL+18}" y2="${y0+28}" stroke="#64748B" stroke-width="1.5"/>`;
+    out += `<line x1="${xL-22}" y1="${y0+32}" x2="${xL+22}" y2="${y0+32}" stroke="#64748B" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+    /* Roller support (right): triangle + circle + base */
+    out += tri(xR, y0 + 7, 13, '#64748B');
+    out += `<circle cx="${xR}" cy="${y0+32}" r="4" fill="none" stroke="#64748B" stroke-width="1.5"/>`;
+    out += `<line x1="${xR-20}" y1="${y0+38}" x2="${xR+20}" y2="${y0+38}" stroke="#64748B" stroke-width="1"/>`;
+
+    /* Undisplaced beam (dashed reference) */
+    out += `<line x1="${xL}" y1="${y0}" x2="${xR}" y2="${y0}" stroke="#1C2128" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+
+    /* Deflected beam path: symmetric quadratic bow */
+    out += `<path d="M ${xL},${y0} Q ${xM},${y0+vd} ${xR},${y0}" fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>`;
+
+    /* Load indicator */
+    if (loadType === 'point') {
+      out += arrow(xM, y0 - 44, 40, '#F59E0B');
+      out += txt(xM, y0 - 50, 'P', '#F59E0B', 11, 'middle', 700);
+    } else {
+      for (let ax = xL + 18; ax <= xR - 18; ax += 38) {
+        out += arrow(ax, y0 - 30, 26, '#F59E0B');
+      }
+      out += `<line x1="${xL+18}" y1="${y0-30}" x2="${xR-18}" y2="${y0-30}" stroke="#F59E0B" stroke-width="1.5"/>`;
+      out += txt(xM, y0 - 36, 'w', '#F59E0B', 11, 'middle', 700);
+    }
+
+    /* Dimension line */
+    out += dimLine(xL, xR, y0 + 52);
+    out += txt(xM, y0 + 66, 'Span L', '#8B949E', 10, 'middle', 400);
+
+    /* Deflection annotation */
+    if (vd > 5) {
+      out += `<line x1="${xM}" y1="${y0+1}" x2="${xM}" y2="${y0+vd-1}" stroke="#EF4444" stroke-width="1" stroke-dasharray="3,2"/>`;
+      out += txt(xM + 7, y0 + vd / 2 + 4, 'δmax', '#EF4444', 9, 'start', 600);
+    }
+
+  } else {
+    /* CANTILEVER */
+    const xW = 54, xF = 458;
+    const xM = (xW + xF) / 2;
+
+    /* Fixed wall block */
+    out += `<rect x="16" y="${y0-34}" width="38" height="72" rx="2" fill="#1C2128" stroke="#64748B" stroke-width="1.5"/>`;
+    for (let hy = y0 - 29; hy <= y0 + 32; hy += 11) {
+      out += `<line x1="16" y1="${hy}" x2="38" y2="${hy - 18}" stroke="#64748B" stroke-width="1" opacity="0.6"/>`;
+    }
+
+    /* Undisplaced beam (dashed) */
+    out += `<line x1="${xW}" y1="${y0}" x2="${xF}" y2="${y0}" stroke="#1C2128" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+
+    /* Deflected beam: cubic curve (flat at wall, curves to free end) */
+    const cp1x = xW + (xF - xW) * 0.38;
+    const cp2x = xW + (xF - xW) * 0.70;
+    out += `<path d="M ${xW},${y0} C ${cp1x},${y0} ${cp2x},${y0 + vd * 0.55} ${xF},${y0 + vd}"
+               fill="none" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>`;
+
+    /* Load indicator */
+    if (loadType === 'point') {
+      const tipY = y0 + vd;
+      out += arrow(xF, tipY - 44, 40, '#F59E0B');
+      out += txt(xF, tipY - 50, 'P', '#F59E0B', 11, 'middle', 700);
+    } else {
+      for (let ax = xW + 20; ax <= xF - 10; ax += 38) {
+        out += arrow(ax, y0 - 30, 26, '#F59E0B');
+      }
+      out += `<line x1="${xW+20}" y1="${y0-30}" x2="${xF-10}" y2="${y0-30}" stroke="#F59E0B" stroke-width="1.5"/>`;
+      out += txt(xM, y0 - 36, 'w', '#F59E0B', 11, 'middle', 700);
+    }
+
+    /* Dimension line */
+    out += dimLine(xW, xF, y0 + 52);
+    out += txt((xW + xF) / 2, y0 + 66, 'Span L', '#8B949E', 10, 'middle', 400);
+
+    /* Deflection annotation */
+    if (vd > 5) {
+      out += `<line x1="${xF}" y1="${y0+1}" x2="${xF}" y2="${y0+vd-1}" stroke="#EF4444" stroke-width="1" stroke-dasharray="3,2"/>`;
+      out += txt(xF + 7, y0 + vd / 2 + 4, 'δmax', '#EF4444', 9, 'start', 600);
+    }
+  }
+
+  svg.innerHTML = out;
+}
+
+/* SVG drawing helpers */
+function tri(cx, y, r, color) {
+  return `<polygon points="${cx},${y} ${cx-r},${y+r*1.7} ${cx+r},${y+r*1.7}"
+           fill="none" stroke="${color}" stroke-width="1.5"/>`;
+}
+function arrow(cx, y1, len, color) {
+  const y2 = y1 + len;
+  return `<line x1="${cx}" y1="${y1}" x2="${cx}" y2="${y2}" stroke="${color}" stroke-width="1.5"/>
+          <polygon points="${cx},${y2} ${cx-4},${y2-8} ${cx+4},${y2-8}" fill="${color}"/>`;
+}
+function dimLine(x1, x2, y) {
+  return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#484F58" stroke-width="1"/>
+          <line x1="${x1}" y1="${y-5}" x2="${x1}" y2="${y+5}" stroke="#484F58" stroke-width="1"/>
+          <line x1="${x2}" y1="${y-5}" x2="${x2}" y2="${y+5}" stroke="#484F58" stroke-width="1"/>`;
+}
+function txt(x, y, label, color, size, anchor, weight) {
+  return `<text x="${x}" y="${y}" fill="${color}" font-size="${size}"
+          text-anchor="${anchor}" font-weight="${weight}" font-family="system-ui,sans-serif">${label}</text>`;
+}
+
+// === COPY ENGINEERING REPORT ===
+
+function copyReport() {
+  const r = window._rpt;
+  if (!r) { navigator.clipboard.writeText('No results yet. Enter beam parameters above.'); return; }
+
+  const lines = [
+    'STRUCTURAL BEAM DEFLECTION ENGINEERING REPORT',
+    'Generated by AxiomApe Structural Beam Deflection Calculator',
+    'https://axiomape.com/structural-beam-deflection-calculator/',
+    '================================================================',
+    '',
+    'CONFIGURATION',
+    '  Beam Type:           ' + r.cfg,
+    '  Elastic Modulus E:   ' + r.E_disp,
+    '  Moment of Inertia I: ' + r.I_disp,
+    '  Span Length L:       ' + r.L_disp,
+    '  Applied Load:        ' + r.load_disp,
+    '',
+    'RESULTS',
+    '  Maximum Deflection:  ' + r.delta_disp.toFixed(4) + ' ' + r.unitLabel,
+    '',
+    'TOLERANCE CHECKS',
+    '  L/240 Allowable: ' + r.limit240.toFixed(4) + ' ' + r.unitLabel + '   Status: ' + (r.pass240 ? 'PASS' : 'FAIL'),
+    '  L/360 Allowable: ' + r.limit360.toFixed(4) + ' ' + r.unitLabel + '   Status: ' + (r.pass360 ? 'PASS' : 'FAIL'),
+    '',
+    'DISCLAIMER: For educational and preliminary estimation only.',
+    'Verify with a licensed professional structural engineer before construction.',
+  ];
+
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied to Clipboard!';
+    setTimeout(() => { btn.textContent = orig; }, 2200);
+  }).catch(() => { alert('Copy failed. Please copy the results manually.'); });
+}
+
+// === FAQ ACCORDION ===
+
+function toggleFaq(btn) {
+  const ans    = btn.nextElementSibling;
+  const isOpen = ans.classList.contains('open');
+  document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+  if (!isOpen) {
+    ans.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+// === INIT ===
+refreshLabels();
+recalc();
+</script>
+</body>
+</html>

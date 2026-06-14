@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wind Load Structural Pressure Estimator: Calculate Mechanical Force on Flat Walls | AxiomApe</title>
+  <meta name="description" content="Free wind load structural pressure estimator. Calculate dynamic wind pressure and total mechanical force acting on flat walls using the aerodynamic formula P=0.5xrhoxv2xCd. Supports metric and imperial units. 100% client-side, no data sent to servers." />
+  <meta name="keywords" content="wind load calculator, structural pressure estimator, mechanical force calculator, flat wall wind resistance, building wind stress calculator, dynamic wind pressure, aerodynamic force calculator, wind force on wall, drag coefficient calculator, air density wind load, wind pressure formula, P=0.5 rho v2 Cd, structural wind analysis, civil engineering wind calculator, wall wind load estimator, wind shear calculator, building pressure calculator, wind speed pressure calculator" />
+  <link rel="canonical" href="https://axiomape.com/wind-load-pressure-estimator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Wind Load Structural Pressure Estimator",
+        "description": "Free wind load structural pressure estimator. Calculate dynamic wind pressure and total mechanical force acting on flat walls using the aerodynamic formula P=0.5xrhoxv2xCd. Supports metric and imperial units. 100% client-side, no data sent to servers.",
+        "url": "https://axiomape.com/wind-load-pressure-estimator/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does wind speed relate to structural pressure?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Wind pressure scales with the square of wind speed, not linearly. This exponential relationship is captured by the aerodynamic formula P = 0.5 x rho x v2 x Cd, where v is velocity. Doubling the wind speed quadruples the dynamic pressure acting on a wall. This is why a 100 mph storm creates roughly four times the structural load of a 50 mph gale, even though the speed only doubled. Engineers account for this nonlinear scaling when specifying structural load ratings for buildings in high-wind zones."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a drag coefficient and how does it affect flat walls?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The drag coefficient (Cd) is a dimensionless number that quantifies how aerodynamically blunt or streamlined a surface is. For a flat plate oriented perpendicular to airflow, measured Cd values typically range from 1.2 to 2.0 depending on aspect ratio, edge conditions, and turbulence. A perfectly smooth flat wall in steady flow uses roughly 1.28 to 1.3. Walls with parapet edges or surface roughness may approach 2.0. A higher Cd directly multiplies the computed pressure: a wall with Cd 2.0 experiences twice the mechanical force of an otherwise identical wall with Cd 1.0."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is air density important in wind load calculations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Air density (rho) appears as a direct multiplier in the wind pressure formula P = 0.5 x rho x v2 x Cd. At sea level and 15 degrees Celsius, rho is approximately 1.225 kg per cubic meter. At high altitude, where air is thinner, the same wind speed produces meaningfully lower force. A structure at 3,000 m elevation sits in air roughly 30% less dense than sea level, reducing wind loads by that same proportion. Adjusting air density is also important in extreme heat (less dense) or cold (more dense) climates where default values no longer apply."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between wind pressure and total wind force?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Dynamic wind pressure (P) is the force per unit area measured in Pascals (N per m2) or pounds-force per square foot. It describes the intensity of the aerodynamic load at any single point on the surface. Total mechanical force (F) is the integral of that pressure over the entire wall area, computed as F = P x A. A small wall with high pressure and a large wall with low pressure can produce the same total force. Engineers use pressure for material stress analysis and total force for foundation, anchor bolt, and structural connection design."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do civil engineers use these calculations for building safety?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Civil and structural engineers use wind load calculations to verify that walls, cladding panels, anchor bolts, and lateral bracing systems can withstand the forces imposed by design-level wind events. The dynamic pressure from the aerodynamic formula is a starting point. Engineers then apply exposure category adjustments (urban vs. open terrain), importance factors (hospitals require higher safety margins than warehouses), and gust factors to arrive at design pressures for code compliance. Building codes such as ASCE 7 in the United States and Eurocode 1 in Europe define the minimum wind load standards structures must be designed to survive."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #263348;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --cyan: #06B6D4;
+      --cyan-dim: rgba(6,182,212,0.18);
+      --slate: #64748B;
+      --slate-dim: rgba(100,116,139,0.18);
+      --green: #22c55e;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .page-header .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* Unit toggle */
+    .unit-toggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .seg-group {
+      display: inline-flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .seg-group button {
+      padding: 0.45rem 1.3rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .seg-group button.active {
+      background: var(--cyan);
+      color: #0f172a;
+    }
+
+    /* Three-panel layout */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    /* Inputs */
+    .field-group {
+      margin-bottom: 1.1rem;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .field-group label span.unit-badge {
+      font-weight: 400;
+      color: var(--cyan);
+      margin-left: 0.3rem;
+    }
+
+    .field-group input[type="number"],
+    .field-group select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 1rem;
+      padding: 0.55rem 0.8rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+
+    .field-group input[type="number"]::-webkit-outer-spin-button,
+    .field-group input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .field-group input:focus,
+    .field-group select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-dim);
+    }
+
+    /* Advanced section */
+    .advanced-toggle {
+      background: none;
+      border: none;
+      color: var(--cyan);
+      font-size: 0.82rem;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .advanced-toggle .arrow {
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+
+    .advanced-toggle.open .arrow {
+      transform: rotate(90deg);
+    }
+
+    .advanced-fields {
+      display: none;
+    }
+
+    .advanced-fields.open {
+      display: block;
+    }
+
+    /* Wind Visualizer */
+    .wall-scene {
+      position: relative;
+      height: 220px;
+      background: linear-gradient(135deg, #0c1929 0%, #0a2240 100%);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 0.8rem;
+    }
+
+    .wall-surface {
+      position: absolute;
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 160px;
+      background: linear-gradient(to bottom, #94a3b8, #64748b, #94a3b8);
+      border-radius: 3px;
+      box-shadow: 0 0 18px rgba(100,116,139,0.5), 2px 0 8px rgba(0,0,0,0.5);
+      z-index: 2;
+    }
+
+    .wall-surface::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.07) 0px,
+        rgba(255,255,255,0.07) 8px,
+        transparent 8px,
+        transparent 16px
+      );
+      border-radius: 2px;
+    }
+
+    /* Ground line */
+    .ground-line {
+      position: absolute;
+      bottom: 28px;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(to right, transparent, #334155, #334155, transparent);
+      z-index: 1;
+    }
+
+    /* Wind arrows container */
+    .wind-arrows {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .wind-arrow {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .wind-arrow .shaft {
+      height: 3px;
+      border-radius: 2px;
+      background: var(--cyan);
+    }
+
+    .wind-arrow .tip {
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 9px solid var(--cyan);
+      flex-shrink: 0;
+    }
+
+    /* Each arrow row animated */
+    @keyframes windSlide {
+      0%   { transform: translateX(-140px); opacity: 0; }
+      15%  { opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateX(0px); opacity: 0; }
+    }
+
+    .wind-arrow { animation: windSlide linear infinite; }
+
+    /* Speed label */
+    .scene-label {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 0.72rem;
+      color: var(--cyan);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      z-index: 3;
+    }
+
+    .impact-flash {
+      position: absolute;
+      right: 52px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 140px;
+      background: linear-gradient(to right, rgba(6,182,212,0.0), rgba(6,182,212,0.35));
+      border-radius: 0 4px 4px 0;
+      pointer-events: none;
+      z-index: 3;
+      transition: opacity 0.4s;
+    }
+
+    /* Telemetry panel */
+    .metric-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--border);
+      gap: 0.5rem;
+    }
+
+    .metric-row:last-child { border-bottom: none; }
+
+    .metric-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .metric-label strong {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.1rem;
+    }
+
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--cyan);
+      text-align: right;
+      white-space: nowrap;
+      min-width: 90px;
+    }
+
+    .metric-value.structural {
+      color: var(--slate);
+    }
+
+    .metric-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      display: block;
+      text-align: right;
+    }
+
+    .copy-btn {
+      width: 100%;
+      margin-top: 1.1rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--cyan);
+      background: transparent;
+      color: var(--cyan);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--cyan);
+      color: #0f172a;
+    }
+
+    .copy-btn.copied {
+      background: var(--green);
+      border-color: var(--green);
+      color: #0f172a;
+    }
+
+    /* Zero-state / error */
+    .zero-value {
+      color: var(--text-muted) !important;
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 0.75rem;
+      margin: 1.5rem 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .axiom-ad-leaderboard { display: none; }
+    }
+
+    .axiom-ad-mobile-anchor {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        justify-content: center;
+        align-items: center;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        min-height: 60px;
+        z-index: 100;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+    }
+
+    /* Card (educational) */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.6rem;
+      margin-bottom: 1.2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.9rem;
+    }
+
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+    }
+
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 0.3rem;
+    }
+
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      color: var(--text);
+    }
+
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      margin-bottom: 1.2rem;
+      line-height: 1.7;
+    }
+
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 1.2rem 0 0.5rem;
+    }
+
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+    }
+
+    /* Formula block */
+    .formula-block {
+      background: var(--surface2);
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: var(--cyan);
+    }
+
+    /* FAQ */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-item:last-child { border-bottom: none; }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 1rem 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .faq-q:hover { color: var(--cyan); }
+
+    .faq-icon {
+      color: var(--cyan);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      transition: transform 0.25s;
+    }
+
+    .faq-a {
+      display: none;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.7;
+      padding-bottom: 1rem;
+    }
+
+    .faq-a.open { display: block; }
+
+    .faq-icon.open { transform: rotate(45deg); }
+
+    /* Tool-specific disclaimer */
+    .tool-disclaimer {
+      margin-top: 1rem;
+      background: rgba(100,116,139,0.08);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1.1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Wind Load Structural Pressure Estimator</h1>
+    <p class="subtitle">Calculate dynamic wind pressure and total mechanical force acting on flat walls. Enter wind velocity, wall area, and structural parameters for an instant aerodynamic load analysis.</p>
+  </header>
+
+  <!-- Unit system toggle -->
+  <div class="unit-toggle">
+    <div class="seg-group" role="group" aria-label="Unit system selector">
+      <button id="btnMetric" class="active" onclick="setUnits('metric')">Metric (SI)</button>
+      <button id="btnImperial" onclick="setUnits('imperial')">Imperial (US)</button>
+    </div>
+  </div>
+
+  <!-- Three-panel dashboard -->
+  <div class="dashboard">
+
+    <!-- Panel 1: Environmental and Structural Inputs -->
+    <div class="panel">
+      <div class="panel-label">Panel 1 - Environmental and Structural Inputs</div>
+
+      <div class="field-group">
+        <label for="windSpeed">Wind Velocity <span class="unit-badge" id="speedUnit">km/h</span></label>
+        <input type="number" id="windSpeed" min="0" step="1" value="100" oninput="recalc()" placeholder="e.g. 100" />
+      </div>
+
+      <div class="field-group">
+        <label for="wallArea">Wall Surface Area <span class="unit-badge" id="areaUnit">m&sup2;</span></label>
+        <input type="number" id="wallArea" min="0" step="0.1" value="20" oninput="recalc()" placeholder="e.g. 20" />
+      </div>
+
+      <button class="advanced-toggle" id="advBtn" onclick="toggleAdvanced()">
+        <span class="arrow">&#9658;</span> Advanced Parameters
+      </button>
+
+      <div class="advanced-fields" id="advFields">
+        <div class="field-group">
+          <label for="airDensity">Air Density <span class="unit-badge" id="densUnit">kg/m&sup3;</span></label>
+          <input type="number" id="airDensity" min="0.001" step="0.001" value="1.225" oninput="recalc()" placeholder="1.225" />
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">Sea-level standard: 1.225 kg/m3. Adjust for altitude or temperature.</div>
+        </div>
+
+        <div class="field-group">
+          <label for="dragCoeff">Drag Coefficient (Cd)</label>
+          <select id="dragCoeff" onchange="recalc()">
+            <option value="1.2">1.20 - Smooth flat plate (low turbulence)</option>
+            <option value="1.28" selected>1.28 - Standard flat wall (engineering default)</option>
+            <option value="1.3">1.30 - Flat wall, typical construction</option>
+            <option value="1.5">1.50 - Wall with parapet edges</option>
+            <option value="1.8">1.80 - Broad bluff body, high turbulence</option>
+            <option value="2.0">2.00 - Large flat surface, worst-case loading</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Force Visualizer -->
+    <div class="panel">
+      <div class="panel-label">Panel 2 - Wind Force Visualizer</div>
+
+      <div class="wall-scene" id="wallScene" aria-label="Animated wind arrows striking a flat wall">
+        <div class="wind-arrows" id="windArrows"></div>
+        <div class="wall-surface" id="wallSurface"></div>
+        <div class="ground-line"></div>
+        <div class="impact-flash" id="impactFlash"></div>
+        <div class="scene-label" id="sceneLabel">-- km/h</div>
+      </div>
+
+      <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.5;margin-top:0.4rem;">
+        Arrow intensity and density scale with wind velocity. Arrows represent aerodynamic airflow striking the structural surface, producing dynamic pressure and mechanical shear.
+      </div>
+    </div>
+
+    <!-- Panel 3: Telemetry and Structural Readouts -->
+    <div class="panel">
+      <div class="panel-label">Panel 3 - Structural Load Telemetry</div>
+
+      <div class="metric-row">
+        <div class="metric-label">
+          <strong>Dynamic Wind Pressure</strong>
+          Pressure per unit area acting on the wall surface
+        </div>
+        <div class="metric-value" id="pressureOut">--</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">
+          <strong>Total Mechanical Force</strong>
+          Cumulative structural load on the entire wall
+        </div>
+        <div class="metric-value structural" id="forceOut">--</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">
+          <strong>Wind Velocity (normalized)</strong>
+          Input speed in base unit for formula
+        </div>
+        <div class="metric-value" id="velocityOut">--</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">
+          <strong>Force Classification</strong>
+          Approximate structural risk tier
+        </div>
+        <div class="metric-value structural" id="classOut" style="font-size:0.95rem;">--</div>
+      </div>
+
+      <button class="copy-btn" id="copyBtn" onclick="copyLoad()">Copy Load Data</button>
+    </div>
+
+  </div><!-- end dashboard -->
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- Glossary -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained - Wind Load and Structural Pressure Glossary</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Wind Load</div>
+        <div class="glossary-def">The force per unit area or total force that wind applies to a structure. Determined by wind speed, air density, surface area, and aerodynamic shape of the object.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Dynamic Pressure</div>
+        <div class="glossary-def">The kinetic energy of moving air per unit volume, calculated as 0.5 x rho x v2. Measured in Pascals (Pa) or pounds-force per square foot (lbf/ft2).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Drag Coefficient (Cd)</div>
+        <div class="glossary-def">A dimensionless number describing how blunt or streamlined a surface is. Flat plates typically have Cd values between 1.2 and 2.0, indicating high aerodynamic resistance.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Air Density (rho)</div>
+        <div class="glossary-def">Mass of air per unit volume in kg per cubic meter (metric) or slugs per cubic foot (imperial). Decreases with altitude and temperature increases.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Newtons (N)</div>
+        <div class="glossary-def">The SI unit of force. One Newton accelerates a 1 kg mass at 1 m per second squared. Wind loads on large walls commonly reach thousands or millions of Newtons.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Pounds-force (lbf)</div>
+        <div class="glossary-def">The imperial unit of force. One pound-force is the gravitational force on a one-pound mass at standard gravity. Used in US building codes and structural engineering specifications.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Structural Shear</div>
+        <div class="glossary-def">The lateral force a wall must resist without sliding or racking. Wind loads produce shear stresses in wall panels, anchor connections, and lateral bracing systems.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Bluff Body</div>
+        <div class="glossary-def">An object with a non-streamlined shape that causes the airflow to separate sharply, generating high drag forces. Flat walls are classic bluff bodies in wind engineering analysis.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Educational section -->
+  <div class="card edu-section">
+    <h2>Complete Guide to Wind Load Structural Pressure Estimation</h2>
+
+    <p class="section-intro">
+      When wind strikes a flat wall, it exerts a mechanical force proportional to the square of its velocity. Understanding this aerodynamic relationship is essential for structural engineers, architects, and building inspectors who must ensure walls, cladding panels, and lateral bracing systems can withstand design-level wind events. This guide explains the physics behind wind load calculations and how to use this estimator accurately.
+    </p>
+
+    <h3>How to Use This Wind Load Calculator</h3>
+    <p>Enter your wind velocity, wall surface area, and optionally adjust air density and drag coefficient in Panel 1. Results appear instantly in Panel 3 as you type, with no submit button required. Toggle between Metric (SI) and Imperial (US) units at any time using the selector above the panels. The Force Visualizer in Panel 2 shows dynamic wind arrows that scale in intensity with the entered velocity.</p>
+
+    <h3>The Aerodynamic Wind Pressure Formula</h3>
+    <p>The core calculation follows the standard aerodynamic formula used in wind engineering worldwide:</p>
+
+    <div class="formula-block">
+      P = 0.5 x rho x v2 x Cd<br>
+      F = P x A
+    </div>
+
+    <p>Where P is dynamic wind pressure (Pa or lbf/ft2), rho is air density (kg/m3 or slugs/ft3), v is wind velocity in base units (m/s or ft/s), Cd is the dimensionless drag coefficient, F is total mechanical force (Newtons or lbf), and A is wall surface area (m2 or ft2).</p>
+
+    <p>The critical insight is the v2 term: wind pressure scales with the square of velocity. A 120 km/h storm produces not 20% more pressure than 100 km/h wind, but 44% more (1.2 squared = 1.44). This exponential growth is why even modest increases in design wind speed dramatically increase structural requirements.</p>
+
+    <h3>Choosing the Right Drag Coefficient</h3>
+    <p>For flat walls perpendicular to airflow, measured drag coefficients typically fall between 1.2 and 2.0. A smooth flat plate in a uniform laminar stream gives approximately 1.28. Real construction walls with parapets, rough surfaces, or turbulent approach flow tend toward 1.5 to 2.0. When in doubt, using 1.3 as a baseline for standard flat walls and 1.8 for worst-case loading is common engineering practice.</p>
+
+    <h3>Adjusting Air Density for Altitude and Climate</h3>
+    <p>Standard sea-level air density is 1.225 kg/m3 at 15 degrees Celsius. At 1,500 m elevation this drops to roughly 1.056 kg/m3, reducing wind loads by about 14% compared to sea level. In extreme heat (40 C at sea level), density falls to approximately 1.127 kg/m3. Conversely, very cold air (-20 C) reaches about 1.395 kg/m3, increasing wind loads meaningfully. Always input site-specific density when designing structures in non-standard conditions.</p>
+
+    <h3>From Pressure to Total Force: Structural Design Implications</h3>
+    <p>Dynamic pressure P describes the load intensity at any point on the wall surface. Multiplying by the total wall area A gives the total mechanical force F the entire wall must resist. Engineers use F to size anchor bolts, shear walls, lateral bracing connections, and foundation holddowns. Pressure P is used to verify that wall cladding materials, fastener patterns, and panel flexural capacity are adequate at any local point.</p>
+
+    <!-- FAQ accordion -->
+    <h3 style="margin-bottom:0.8rem;">Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+        How does wind speed relate to structural pressure?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Wind pressure scales with the square of wind speed, not linearly. This exponential relationship is captured by the aerodynamic formula P = 0.5 x rho x v2 x Cd, where v is velocity. Doubling the wind speed quadruples the dynamic pressure acting on a wall. This is why a 100 mph storm creates roughly four times the structural load of a 50 mph gale, even though the speed only doubled. Engineers account for this nonlinear scaling when specifying structural load ratings for buildings in high-wind zones.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+        What is a drag coefficient and how does it affect flat walls?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        The drag coefficient (Cd) is a dimensionless number that quantifies how aerodynamically blunt or streamlined a surface is. For a flat plate oriented perpendicular to airflow, measured Cd values typically range from 1.2 to 2.0 depending on aspect ratio, edge conditions, and turbulence. A perfectly smooth flat wall in steady flow uses roughly 1.28 to 1.3. Walls with parapet edges or surface roughness may approach 2.0. A higher Cd directly multiplies the computed pressure: a wall with Cd 2.0 experiences twice the mechanical force of an otherwise identical wall with Cd 1.0.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+        Why is air density important in wind load calculations?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Air density (rho) appears as a direct multiplier in the wind pressure formula P = 0.5 x rho x v2 x Cd. At sea level and 15 degrees Celsius, rho is approximately 1.225 kg per cubic meter. At high altitude, where air is thinner, the same wind speed produces meaningfully lower force. A structure at 3,000 m elevation sits in air roughly 30% less dense than sea level, reducing wind loads by that same proportion. Adjusting air density is also important in extreme heat (less dense) or cold (more dense) climates where default values no longer apply.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+        What is the difference between wind pressure and total wind force?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Dynamic wind pressure (P) is the force per unit area measured in Pascals (N per m2) or pounds-force per square foot. It describes the intensity of the aerodynamic load at any single point on the surface. Total mechanical force (F) is the integral of that pressure over the entire wall area, computed as F = P x A. A small wall with high pressure and a large wall with low pressure can produce the same total force. Engineers use pressure for material stress analysis and total force for foundation, anchor bolt, and structural connection design.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+        How do civil engineers use these calculations for building safety?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Civil and structural engineers use wind load calculations to verify that walls, cladding panels, anchor bolts, and lateral bracing systems can withstand the forces imposed by design-level wind events. The dynamic pressure from the aerodynamic formula is a starting point. Engineers then apply exposure category adjustments (urban vs. open terrain), importance factors (hospitals require higher safety margins than warehouses), and gust factors to arrive at design pressures for code compliance. Building codes such as ASCE 7 in the United States and Eurocode 1 in Europe define the minimum wind load standards structures must be designed to survive.
+      </div>
+    </div>
+
+    <div class="tool-disclaimer">
+      This tool provides aerodynamic wind load estimates for educational and preliminary planning purposes only. Results are based on simplified steady-state flow assumptions and do not account for gust factors, terrain exposure categories, building proximity effects, or code-specific load combinations. This tool is not a substitute for structural engineering analysis, licensed professional review, or compliance with local building codes such as ASCE 7, IBC, or Eurocode 1. Always consult a licensed structural engineer for safety-critical design decisions.
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ============================================================
+     Unit system state
+  ============================================================ */
+  let currentUnit = 'metric';
+
+  /* Imperial air density default: slugs per cubic foot at sea level */
+  const DENSITY_METRIC  = 1.225;    /* kg/m3  */
+  const DENSITY_IMPERIAL = 0.002377; /* slugs/ft3 */
+
+  function setUnits(unit) {
+    currentUnit = unit;
+    document.getElementById('btnMetric').classList.toggle('active', unit === 'metric');
+    document.getElementById('btnImperial').classList.toggle('active', unit === 'imperial');
+
+    const speedUnit = document.getElementById('speedUnit');
+    const areaUnit  = document.getElementById('areaUnit');
+    const densUnit  = document.getElementById('densUnit');
+    const densInput = document.getElementById('airDensity');
+
+    if (unit === 'metric') {
+      speedUnit.textContent = 'km/h';
+      areaUnit.innerHTML    = 'm&sup2;';
+      densUnit.innerHTML    = 'kg/m&sup3;';
+      densInput.value       = DENSITY_METRIC;
+      densInput.step        = '0.001';
+      document.getElementById('windSpeed').value = 100;
+      document.getElementById('wallArea').value  = 20;
+    } else {
+      speedUnit.textContent = 'mph';
+      areaUnit.innerHTML    = 'ft&sup2;';
+      densUnit.textContent  = 'slugs/ft³';
+      densInput.value       = DENSITY_IMPERIAL;
+      densInput.step        = '0.000001';
+      document.getElementById('windSpeed').value = 62;   /* ~100 km/h */
+      document.getElementById('wallArea').value  = 215;  /* ~20 m2   */
+    }
+    recalc();
+  }
+
+  /* ============================================================
+     Core aerodynamic formula engine
+     P = 0.5 x rho x v2 x Cd
+     F = P x A
+  ============================================================ */
+  function recalc() {
+    const rawSpeed  = parseFloat(document.getElementById('windSpeed').value);
+    const area      = parseFloat(document.getElementById('wallArea').value);
+    const rho       = parseFloat(document.getElementById('airDensity').value);
+    const Cd        = parseFloat(document.getElementById('dragCoeff').value);
+
+    const pressEl   = document.getElementById('pressureOut');
+    const forceEl   = document.getElementById('forceOut');
+    const velEl     = document.getElementById('velocityOut');
+    const classEl   = document.getElementById('classOut');
+
+    if (isNaN(rawSpeed) || isNaN(area) || isNaN(rho) || isNaN(Cd) ||
+        rawSpeed < 0 || area <= 0 || rho <= 0 || Cd <= 0) {
+      pressEl.textContent = '--';
+      forceEl.textContent = '--';
+      velEl.textContent   = '--';
+      classEl.textContent = '--';
+      updateVisualizer(0, 'metric');
+      return;
+    }
+
+    let v_base; /* velocity in base units for formula */
+    let pressureLabel, forceLabel, velLabel;
+
+    if (currentUnit === 'metric') {
+      /* Convert km/h to m/s */
+      v_base = rawSpeed / 3.6;
+      /* P in Pascals (N/m2) */
+      const P = 0.5 * rho * (v_base * v_base) * Cd;
+      /* F in Newtons */
+      const F = P * area;
+
+      const pDisplay = formatSI(P, 'Pa', 'kPa', 1000);
+      const fDisplay = formatSI(F, 'N',  'kN',  1000);
+
+      pressEl.textContent = pDisplay;
+      forceEl.textContent = fDisplay;
+      velEl.textContent   = v_base.toFixed(2) + ' m/s';
+
+      classEl.textContent = classifyForce(F, 'metric');
+    } else {
+      /* Convert mph to ft/s */
+      v_base = rawSpeed * 1.46667;
+      /* P in lbf/ft2 (1 slug/ft3 x ft2/s2 = lbf/ft2) */
+      const P = 0.5 * rho * (v_base * v_base) * Cd;
+      /* F in lbf */
+      const F = P * area;
+
+      const pDisplay = P.toFixed(2) + ' lbf/ft²';
+      const fDisplay = F >= 1000
+        ? (F / 1000).toFixed(2) + ' kip'
+        : F.toFixed(1) + ' lbf';
+
+      pressEl.textContent = pDisplay;
+      forceEl.textContent = fDisplay;
+      velEl.textContent   = v_base.toFixed(2) + ' ft/s';
+
+      classEl.textContent = classifyForce(F, 'imperial');
+    }
+
+    updateVisualizer(rawSpeed, currentUnit);
+  }
+
+  /* Format metric values with unit step-up */
+  function formatSI(val, unitSmall, unitLarge, threshold) {
+    if (val >= threshold * 1000) return (val / (threshold * 1000)).toFixed(2) + ' M' + unitLarge.replace('k','');
+    if (val >= threshold)        return (val / threshold).toFixed(2) + ' ' + unitLarge;
+    return val.toFixed(2) + ' ' + unitSmall;
+  }
+
+  /* Force classification tiers */
+  function classifyForce(force, unit) {
+    if (unit === 'metric') {
+      if (force < 500)          return 'Low (< 500 N)';
+      if (force < 5000)         return 'Moderate (< 5 kN)';
+      if (force < 50000)        return 'High (< 50 kN)';
+      if (force < 500000)       return 'Severe (< 500 kN)';
+      return 'Extreme (> 500 kN)';
+    } else {
+      if (force < 112)          return 'Low (< 112 lbf)';
+      if (force < 1124)         return 'Moderate (< 1 kip)';
+      if (force < 11241)        return 'High (< 10 kip)';
+      if (force < 112404)       return 'Severe (< 100 kip)';
+      return 'Extreme (> 100 kip)';
+    }
+  }
+
+  /* ============================================================
+     Wind arrow visualizer
+  ============================================================ */
+  const ARROW_ROWS = [20, 45, 70, 95, 120, 145, 170, 195];
+  let arrowInterval = null;
+
+  function updateVisualizer(rawSpeed, unit) {
+    /* Normalize to a 0-1 intensity (cap at 200 km/h or 124 mph) */
+    const maxSpeed = unit === 'metric' ? 200 : 124;
+    const intensity = Math.min(rawSpeed / maxSpeed, 1);
+
+    /* Update scene label */
+    const label = rawSpeed ? rawSpeed.toFixed(0) + ' ' + (unit === 'metric' ? 'km/h' : 'mph') : '-- ' + (unit === 'metric' ? 'km/h' : 'mph');
+    document.getElementById('sceneLabel').textContent = label;
+
+    /* Impact flash opacity */
+    document.getElementById('impactFlash').style.opacity = intensity * 0.9;
+
+    const container = document.getElementById('windArrows');
+    container.innerHTML = '';
+
+    if (intensity < 0.01) return;
+
+    /* Arrow length and speed based on intensity */
+    const shaftLen  = Math.round(30 + intensity * 80);
+    const animDur   = Math.max(0.4, 1.8 - intensity * 1.2); /* faster at higher speed */
+    const alpha     = 0.35 + intensity * 0.65;
+    const rowCount  = Math.round(2 + intensity * 6);
+    const activeRows = ARROW_ROWS.slice(0, rowCount);
+
+    activeRows.forEach((topPct, i) => {
+      const arrow = document.createElement('div');
+      arrow.className = 'wind-arrow';
+      arrow.style.cssText = `
+        top: ${topPct}px;
+        left: 10px;
+        width: ${shaftLen + 9}px;
+        opacity: ${alpha};
+        animation-duration: ${(animDur + i * 0.07).toFixed(2)}s;
+        animation-delay: ${(i * 0.15).toFixed(2)}s;
+      `;
+
+      const shaft = document.createElement('div');
+      shaft.className = 'shaft';
+      shaft.style.width = shaftLen + 'px';
+
+      const tip = document.createElement('div');
+      tip.className = 'tip';
+
+      arrow.appendChild(shaft);
+      arrow.appendChild(tip);
+      container.appendChild(arrow);
+    });
+  }
+
+  /* ============================================================
+     Advanced parameter toggle
+  ============================================================ */
+  function toggleAdvanced() {
+    const btn    = document.getElementById('advBtn');
+    const fields = document.getElementById('advFields');
+    const open   = fields.classList.toggle('open');
+    btn.classList.toggle('open', open);
+  }
+
+  /* ============================================================
+     Copy load data to clipboard
+  ============================================================ */
+  function copyLoad() {
+    const btn   = document.getElementById('copyBtn');
+    const speed = document.getElementById('windSpeed').value;
+    const area  = document.getElementById('wallArea').value;
+    const rho   = document.getElementById('airDensity').value;
+    const Cd    = document.getElementById('dragCoeff').value;
+    const P     = document.getElementById('pressureOut').textContent;
+    const F     = document.getElementById('forceOut').textContent;
+    const V     = document.getElementById('velocityOut').textContent;
+    const cls   = document.getElementById('classOut').textContent;
+    const unit  = currentUnit === 'metric' ? 'Metric (SI)' : 'Imperial (US)';
+    const su    = currentUnit === 'metric' ? 'km/h' : 'mph';
+    const au    = currentUnit === 'metric' ? 'm2' : 'ft2';
+
+    const text = [
+      'Wind Load Structural Pressure Estimator - Load Report',
+      '======================================================',
+      'Unit System      : ' + unit,
+      'Wind Velocity    : ' + speed + ' ' + su,
+      'Normalized Speed : ' + V,
+      'Wall Surface Area: ' + area + ' ' + au,
+      'Air Density (rho): ' + rho,
+      'Drag Coefficient : ' + Cd,
+      '------------------------------------------------------',
+      'Dynamic Wind Pressure : ' + P,
+      'Total Mechanical Force: ' + F,
+      'Force Classification  : ' + cls,
+      '------------------------------------------------------',
+      'Formula: P = 0.5 x rho x v2 x Cd | F = P x A',
+      'Source: axiomape.com/wind-load-pressure-estimator/',
+    ].join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy Load Data';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      btn.textContent = 'Copy failed';
+      setTimeout(() => { btn.textContent = 'Copy Load Data'; }, 2000);
+    });
+  }
+
+  /* ============================================================
+     FAQ accordion
+  ============================================================ */
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const icon   = btn.querySelector('.faq-icon');
+    const open   = answer.classList.toggle('open');
+    icon.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  /* ============================================================
+     Init
+  ============================================================ */
+  recalc();
+</script>
+</body>
+</html>

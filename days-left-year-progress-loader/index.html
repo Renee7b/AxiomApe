@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free Year Progress Tracker: see exactly what percentage of the year has elapsed in real-time via animated SVG vector rings. Tracks calendar year, fiscal year, or business days only. Updates live with 6-decimal precision. 100% client-side." />
+  <meta name="keywords" content="year progress tracker, days left in year, percentage of year completed, annual progress loader, year countdown calculator, days elapsed this year, year percentage calculator, how many days left in year, year progress bar, business days remaining, fiscal year progress, year progress ring, days remaining calculator, time elapsed this year, year completion percentage, annual calendar tracker" />
+  <title>Year Progress Tracker: Real-Time Days Left and Percentage Loader | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/days-left-year-progress-loader/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Year Progress Tracker",
+        "description": "Free Year Progress Tracker: see exactly what percentage of the year has elapsed in real-time via animated SVG vector rings. Tracks calendar year, fiscal year, or business days only. Updates live with 6-decimal precision. 100% client-side.",
+        "url": "https://axiomape.com/days-left-year-progress-loader/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do you calculate the exact percentage of the year completed?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The tool subtracts the Unix timestamp of January 1st 00:00:00 local time from the current local time, then divides by the total milliseconds in the year (366 days for leap years, 365 for standard years). This ratio, multiplied by 100, gives the exact percentage elapsed. The result is displayed to 6 decimal places and updates continuously so you can watch the year tick forward in real time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does this tool automatically account for leap years?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The engine uses the JavaScript Date object to detect whether the current year is a leap year by checking February 29th validity. When a leap year is detected, the total year length is set to 366 days (31,622,400 seconds) instead of 365 days (31,536,000 seconds). This ensures the percentage and days-remaining figures are accurate for every year without any manual adjustment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the progress percentage update constantly?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The tool runs a high-frequency timer loop using setInterval at 50-millisecond intervals. Because the year is measured in milliseconds, each passing moment genuinely changes the 6th decimal place of the percentage. This creates the satisfying live-ticker effect where the number never stops moving, giving you a visceral sense of time actually passing rather than a static daily snapshot."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I track working days instead of total calendar days?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Toggle the Business Days Only mode in the Time Configuration panel. The engine counts only Monday through Friday, excluding Saturday and Sunday, from the start of the year to today. It then calculates the percentage of the total available business days in the year that have been consumed. This is useful for tracking professional deadlines, quarterly targets, and project schedules based on working time rather than calendar time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the psychological benefit of visualizing annual progress?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Research in behavioral psychology shows that concrete visual representations of time passage activate temporal motivation, the drive to act before a deadline closes. Seeing 67% of the year gone as a filled ring triggers urgency far more effectively than reading the abstract date. Annual progress visualizers help people reconnect with long-horizon goals, reset priorities mid-year, and counteract the planning fallacy by making the shrinking remaining time viscerally obvious."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    .tool-header {
+      text-align: center;
+      padding: 2rem 1rem 1.25rem;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .tool-header p {
+      color: #94a3b8;
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .main-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1rem 3rem;
+    }
+
+    /* Three-panel dashboard */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 280px 1fr 260px;
+      gap: 1rem;
+      align-items: start;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr 1fr; }
+      .panel-visualizer { grid-column: 1 / -1; order: -1; }
+    }
+    @media (max-width: 580px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .panel-visualizer { order: -1; }
+    }
+
+    .panel {
+      background: #111827;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    /* Panel 1: Time Configuration */
+    .mode-group {
+      margin-bottom: 1rem;
+    }
+    .mode-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .mode-btn {
+      display: block;
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #cbd5e1;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      margin-bottom: 0.4rem;
+    }
+    .mode-btn:hover { background: #263247; border-color: #475569; }
+    .mode-btn.active {
+      background: rgba(6,182,212,0.12);
+      border-color: #06B6D4;
+      color: #06B6D4;
+      font-weight: 600;
+    }
+    .mode-btn .mode-icon { margin-right: 0.5rem; }
+
+    .divider { border: none; border-top: 1px solid #1e293b; margin: 1rem 0; }
+
+    .custom-date-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .custom-date-row label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .custom-date-row input[type="date"] {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      width: 100%;
+      cursor: pointer;
+    }
+    .custom-date-row input[type="date"]:focus {
+      outline: none;
+      border-color: #8B5CF6;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .toggle-label {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      flex: 1;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: #334155;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: #8B5CF6; }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+    /* Panel 2: Visualizer */
+    .panel-visualizer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1.25rem;
+    }
+    .svg-container {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      flex-shrink: 0;
+    }
+    .svg-container svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .ring-track {
+      fill: none;
+      stroke: #1e293b;
+      stroke-width: 18;
+    }
+    .ring-progress-outer {
+      fill: none;
+      stroke: url(#ringGradient);
+      stroke-width: 18;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.1s linear;
+    }
+    .ring-progress-inner {
+      fill: none;
+      stroke: #8B5CF6;
+      stroke-width: 6;
+      stroke-linecap: round;
+      opacity: 0.5;
+      transition: stroke-dashoffset 0.1s linear;
+    }
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      pointer-events: none;
+    }
+    .ring-pct {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #06B6D4;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .ring-pct-symbol {
+      font-size: 1rem;
+      color: #06B6D4;
+      opacity: 0.7;
+    }
+    .ring-mode-label {
+      font-size: 0.68rem;
+      color: #64748b;
+      margin-top: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .ring-year {
+      font-size: 0.85rem;
+      color: #475569;
+      margin-top: 0.2rem;
+      font-weight: 600;
+    }
+
+    .vis-bottom {
+      margin-top: 1.25rem;
+      width: 100%;
+      max-width: 320px;
+    }
+    .progress-bar-wrap {
+      background: #1e293b;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8B5CF6, #06B6D4);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+    }
+    .vis-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #475569;
+    }
+
+    /* Panel 3: Telemetry */
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid #1a2233;
+    }
+    .metric-row:last-of-type { border-bottom: none; }
+    .metric-name {
+      font-size: 0.73rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .metric-val {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-val.cyan { color: #06B6D4; }
+    .metric-val.violet { color: #8B5CF6; }
+
+    .copy-btn {
+      display: block;
+      width: 100%;
+      margin-top: 1rem;
+      background: linear-gradient(135deg, #06B6D4, #0891b2);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      text-align: center;
+    }
+    .copy-btn:hover { opacity: 0.85; }
+    .copy-btn.copied {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 0.75rem;
+      background: #111827;
+      border: 1px dashed #1e293b;
+      border-radius: 8px;
+      color: #334155;
+      font-size: 0.75rem;
+      margin: 1.5rem 0;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 0.5rem;
+      background: #111827;
+      border: 1px dashed #1e293b;
+      color: #334155;
+      font-size: 0.75rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Educational section */
+    .card {
+      background: #111827;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 1rem;
+    }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.85rem;
+    }
+    @media (max-width: 580px) { .glossary-grid { grid-template-columns: 1fr; } }
+    .glossary-item { background: #0f172a; border-radius: 8px; padding: 0.75rem 1rem; }
+    .glossary-term { font-size: 0.8rem; font-weight: 700; color: #06B6D4; margin-bottom: 0.3rem; }
+    .glossary-def { font-size: 0.78rem; color: #94a3b8; line-height: 1.5; }
+
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 1rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin: 1.25rem 0 0.5rem;
+    }
+    .edu-section p {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+    .section-intro {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid #1e293b;
+      padding: 0 0 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 0;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      user-select: none;
+      list-style: none;
+    }
+    .faq-q::-webkit-details-marker { display: none; }
+    .faq-chevron {
+      width: 18px; height: 18px;
+      color: #475569;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: #06B6D4; }
+    .faq-a {
+      display: none;
+      font-size: 0.83rem;
+      color: #94a3b8;
+      line-height: 1.7;
+      padding-bottom: 0.85rem;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    .mode-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      background: rgba(6,182,212,0.15);
+      color: #06B6D4;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="tool-header">
+    <h1>Year Progress Tracker: Real-Time Days Left and Percentage Loader</h1>
+    <p>Watch the current year fill in real time via live SVG vector rings. Track calendar year, fiscal year, or business days only - updated every 50 milliseconds.</p>
+  </header>
+
+  <main class="main-content" id="main">
+
+    <div class="dashboard">
+
+      <!-- Panel 1: Time Configuration -->
+      <div class="panel">
+        <div class="panel-title">Time Configuration</div>
+
+        <div class="mode-group">
+          <div class="mode-label">Tracking Scope</div>
+          <button class="mode-btn active" id="btn-calendar" onclick="setMode('calendar')">
+            <span class="mode-icon">📅</span>Standard Calendar Year
+          </button>
+          <button class="mode-btn" id="btn-fiscal" onclick="setMode('fiscal')">
+            <span class="mode-icon">💼</span>Fiscal Year (Oct 1 Start)
+          </button>
+          <button class="mode-btn" id="btn-business" onclick="setMode('business')">
+            <span class="mode-icon">🗓</span>Business Days Only
+          </button>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="mode-group">
+          <div class="mode-label">Custom Target Date</div>
+          <div class="toggle-row" style="margin-bottom:0.75rem">
+            <span class="toggle-label">Enable custom end date</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-custom" onchange="toggleCustomDate()" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="custom-date-row" id="custom-date-wrap" style="opacity:0.35;pointer-events:none">
+            <label for="input-custom-date">Target date</label>
+            <input type="date" id="input-custom-date" oninput="recalc()" />
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="toggle-row">
+          <span class="toggle-label">Show seconds remaining</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-seconds" onchange="recalc()" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Show current week number</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-week" onchange="recalc()" checked />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Panel 2: Vector Visualizer -->
+      <div class="panel panel-visualizer">
+        <div class="panel-title" style="text-align:center">Annual Progress Vector Ring</div>
+
+        <div class="svg-container">
+          <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8B5CF6" />
+                <stop offset="100%" stop-color="#06B6D4" />
+              </linearGradient>
+            </defs>
+            <!-- Outer track and progress ring -->
+            <circle class="ring-track" cx="140" cy="140" r="122" />
+            <circle class="ring-progress-outer" id="ring-outer" cx="140" cy="140" r="122"
+              stroke-dasharray="766.548" stroke-dashoffset="766.548" />
+            <!-- Inner secondary ring -->
+            <circle class="ring-track" cx="140" cy="140" r="100" style="stroke:#0f172a" />
+            <circle class="ring-progress-inner" id="ring-inner" cx="140" cy="140" r="100"
+              stroke-dasharray="628.318" stroke-dashoffset="628.318" />
+          </svg>
+
+          <div class="ring-center">
+            <div>
+              <span class="ring-pct" id="pct-display">0.000000</span><span class="ring-pct-symbol">%</span>
+            </div>
+            <div class="ring-mode-label" id="mode-label">Calendar Year</div>
+            <div class="ring-year" id="year-label">2026</div>
+          </div>
+        </div>
+
+        <div class="vis-bottom">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="linear-bar" style="width:0%"></div>
+          </div>
+          <div class="vis-labels">
+            <span id="vis-start-label">Jan 1</span>
+            <span id="vis-end-label">Dec 31</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Telemetry -->
+      <div class="panel">
+        <div class="panel-title">Live Telemetry</div>
+
+        <div class="metric-row">
+          <span class="metric-name">Days Elapsed</span>
+          <span class="metric-val cyan" id="tel-elapsed">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-name">Days Remaining</span>
+          <span class="metric-val violet" id="tel-remaining">-</span>
+        </div>
+        <div class="metric-row" id="row-week">
+          <span class="metric-name">ISO Week Number</span>
+          <span class="metric-val" id="tel-week">-</span>
+        </div>
+        <div class="metric-row" id="row-hours">
+          <span class="metric-name">Hours Left</span>
+          <span class="metric-val" id="tel-hours">-</span>
+        </div>
+        <div class="metric-row" id="row-seconds">
+          <span class="metric-name">Seconds Remaining</span>
+          <span class="metric-val" id="tel-seconds">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-name">Leap Year</span>
+          <span class="metric-val" id="tel-leap">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-name">Total Year Days</span>
+          <span class="metric-val" id="tel-total-days">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-name">Unix Timestamp</span>
+          <span class="metric-val" id="tel-unix" style="font-size:0.72rem">-</span>
+        </div>
+
+        <button class="copy-btn" id="copy-btn" onclick="copyStatus()">Copy Progress Status</button>
+      </div>
+
+    </div><!-- end .dashboard -->
+
+    <!-- Ad Placement 1 -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- Glossary -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">ISO 8601 Week Number</div>
+          <div class="glossary-def">The internationally standardized week numbering system. Week 1 is the week containing the first Thursday of the year. A year has either 52 or 53 ISO weeks. Used in business planning, payroll, and international scheduling.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Vector Graphic (SVG)</div>
+          <div class="glossary-def">A Scalable Vector Graphic is drawn using mathematical paths and coordinates rather than pixels. SVG rings render sharply at any screen resolution and can be animated directly by changing their numeric attributes in JavaScript.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Stroke Dashoffset</div>
+          <div class="glossary-def">A CSS and SVG attribute that controls how far along a dashed line pattern is shifted. By setting stroke-dasharray equal to a circle's circumference, then reducing stroke-dashoffset from that value toward zero, you animate a ring filling from empty to full.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Unix Timestamp</div>
+          <div class="glossary-def">The number of milliseconds that have elapsed since January 1, 1970 00:00:00 UTC. Used universally in programming to represent points in time as a single integer, making arithmetic on dates (like subtracting year-start from now) straightforward.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Leap Year</div>
+          <div class="glossary-def">A calendar year with 366 days instead of 365. A year is a leap year if it is divisible by 4, except for century years, which must be divisible by 400. Leap years realign the calendar with Earth's 365.2422-day tropical year.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Floating Point Precision</div>
+          <div class="glossary-def">The level of decimal accuracy in a computed number. JavaScript uses 64-bit IEEE 754 double-precision floating point, which provides about 15-16 significant digits. Displaying 6 decimal places on the year percentage uses a small fraction of that available precision.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Business Days</div>
+          <div class="glossary-def">Calendar days that fall on a Monday through Friday, excluding Saturday and Sunday. Business day counting is used in finance, law, project management, and shipping to measure working time independent of weekends.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Fiscal Year</div>
+          <div class="glossary-def">A 12-month accounting period that does not have to begin on January 1. Many corporations and governments use fiscal years starting on October 1 (US federal government), April 1 (UK government), or July 1. Progress against a fiscal year differs from calendar year progress.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational Section -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Tracking Annual Progress and Days Remaining</h2>
+
+      <p class="section-intro">Whether you are trying to hit revenue targets, personal goals, or project milestones, knowing exactly where you stand within the year is a powerful planning tool. This tracker transforms abstract dates into a concrete, real-time visual so you can feel the year moving and respond accordingly.</p>
+
+      <h3>How to Use This Year Progress Tracker</h3>
+      <p>No setup is required. Open the tool and the ring begins filling immediately based on your local system clock. The default mode tracks the Standard Calendar Year from January 1 to December 31. Toggle to Fiscal Year mode to track progress against an October 1 start date. Enable Business Days Only to count only Monday through Friday. For a countdown to a personal deadline such as a product launch or exam date, enable Custom Target Date and pick your end date. All modes update the SVG ring, the percentage readout, and the Telemetry panel simultaneously.</p>
+
+      <h3>The Math Behind the Ring</h3>
+      <p>The outer ring has a radius of 122 pixels, giving it a circumference of 2 x pi x 122 = approximately 766.55 pixels. The stroke-dasharray is set to that circumference. To show X percent elapsed, the stroke-dashoffset is set to circumference x (1 - X/100). When dashoffset equals the full circumference the ring appears empty. When dashoffset reaches zero the ring is completely filled. The inner violet ring uses a radius of 100 pixels and circumference of approximately 628.32 pixels with the same math applied, creating the layered concentric ring effect.</p>
+
+      <h3>Calendar Year vs. Fiscal Year vs. Business Days</h3>
+      <p>A Standard Calendar Year runs from January 1 to December 31. The Fiscal Year mode tracks a 12-month window starting October 1 and ending September 30, mirroring the United States federal government fiscal calendar. Business Days Only counts only the 260 to 262 working days in a typical year, excluding all Saturdays and Sundays. At 50% of the calendar year you have consumed roughly 130 business days out of approximately 261 total, but the exact count shifts based on how weekends align with January 1.</p>
+
+      <h3>Why the Percentage Has Six Decimal Places</h3>
+      <p>A standard 365-day year contains 31,536,000,000 milliseconds. Each millisecond represents approximately 0.0000000032% of the year. Displaying six decimal places means the last digit advances roughly every 31 seconds for a calendar year. This makes the counter genuinely live rather than appearing to update only once per day. The constant motion serves as a motivational reminder that time is always moving forward.</p>
+
+      <h3>The Psychology of Annual Progress Visualization</h3>
+      <p>Behavioral researchers have documented a phenomenon called the "goal gradient effect": the closer people perceive themselves to be to a deadline, the harder they work to reach it. Seeing a ring that is already 67% full triggers a fundamentally different mental response than reading "August 2026." The visual representation activates urgency that calendar dates alone do not. Studies in temporal motivation also show that people consistently underestimate how quickly the year passes, a form of optimism bias that leads to procrastination. A live progress ring corrects this by making elapsed time undeniable and visceral.</p>
+
+      <h3>Using the Copy Progress Status Button</h3>
+      <p>The Copy Progress Status button in the Telemetry panel copies a plain-text summary of your current year progress to the clipboard. This is formatted for pasting into team status updates, social media posts, personal journals, or morning review documents. It includes the current percentage, days elapsed, days remaining, and the ISO week number.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq-1">
+        <div class="faq-q" onclick="toggleFaq('faq-1')">
+          How do you calculate the exact percentage of the year completed?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="faq-a">The tool subtracts the Unix timestamp of January 1st 00:00:00 local time from the current local time, then divides by the total milliseconds in the year (366 days for leap years, 365 for standard years). This ratio, multiplied by 100, gives the exact percentage elapsed. The result is displayed to 6 decimal places and updates continuously so you can watch the year tick forward in real time.</div>
+      </div>
+
+      <div class="faq-item" id="faq-2">
+        <div class="faq-q" onclick="toggleFaq('faq-2')">
+          Does this tool automatically account for leap years?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="faq-a">Yes. The engine uses the JavaScript Date object to detect whether the current year is a leap year by checking February 29th validity. When a leap year is detected, the total year length is set to 366 days (31,622,400 seconds) instead of 365 days (31,536,000 seconds). This ensures the percentage and days-remaining figures are accurate for every year without any manual adjustment.</div>
+      </div>
+
+      <div class="faq-item" id="faq-3">
+        <div class="faq-q" onclick="toggleFaq('faq-3')">
+          Why does the progress percentage update constantly?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="faq-a">The tool runs a high-frequency timer loop using setInterval at 50-millisecond intervals. Because the year is measured in milliseconds, each passing moment genuinely changes the 6th decimal place of the percentage. This creates the satisfying live-ticker effect where the number never stops moving, giving you a visceral sense of time actually passing rather than a static daily snapshot.</div>
+      </div>
+
+      <div class="faq-item" id="faq-4">
+        <div class="faq-q" onclick="toggleFaq('faq-4')">
+          Can I track working days instead of total calendar days?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="faq-a">Yes. Toggle the Business Days Only mode in the Time Configuration panel. The engine counts only Monday through Friday, excluding Saturday and Sunday, from the start of the year to today. It then calculates the percentage of the total available business days in the year that have been consumed. This is useful for tracking professional deadlines, quarterly targets, and project schedules based on working time rather than calendar time.</div>
+      </div>
+
+      <div class="faq-item" id="faq-5">
+        <div class="faq-q" onclick="toggleFaq('faq-5')">
+          What is the psychological benefit of visualizing annual progress?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="faq-a">Research in behavioral psychology shows that concrete visual representations of time passage activate temporal motivation, the drive to act before a deadline closes. Seeing 67% of the year gone as a filled ring triggers urgency far more effectively than reading the abstract date. Annual progress visualizers help people reconnect with long-horizon goals, reset priorities mid-year, and counteract the planning fallacy by making the shrinking remaining time viscerally obvious.</div>
+      </div>
+
+    </div><!-- end .edu-section -->
+
+  </main>
+
+  <!-- Ad Placement 2 -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    // ---------------------------------------------------------------
+    // State
+    // ---------------------------------------------------------------
+    let currentMode = 'calendar'; // 'calendar' | 'fiscal' | 'business' | 'custom'
+    let customEndDate = null;
+
+    // Ring geometry constants
+    const OUTER_R = 122;
+    const INNER_R = 100;
+    const OUTER_CIRC = 2 * Math.PI * OUTER_R; // 766.548...
+    const INNER_CIRC = 2 * Math.PI * INNER_R; // 628.318...
+
+    // ---------------------------------------------------------------
+    // Leap year helper
+    // ---------------------------------------------------------------
+    function isLeapYear(y) {
+      return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+    }
+
+    // ---------------------------------------------------------------
+    // ISO week number
+    // ---------------------------------------------------------------
+    function getISOWeek(d) {
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const day = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - day);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    }
+
+    // ---------------------------------------------------------------
+    // Count business days between two dates (inclusive start, exclusive end)
+    // ---------------------------------------------------------------
+    function countBusinessDays(startMs, endMs) {
+      let count = 0;
+      const d = new Date(startMs);
+      d.setHours(0, 0, 0, 0);
+      const end = new Date(endMs);
+      end.setHours(0, 0, 0, 0);
+      while (d < end) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    }
+
+    // Total business days in a given year
+    function totalBusinessDaysInYear(y) {
+      const start = new Date(y, 0, 1);
+      const end = new Date(y + 1, 0, 1);
+      return countBusinessDays(start.getTime(), end.getTime());
+    }
+
+    // ---------------------------------------------------------------
+    // Core calculation
+    // ---------------------------------------------------------------
+    function calcProgress() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const leap = isLeapYear(year);
+      const msPerDay = 86400000;
+
+      let startMs, endMs, modeName, startLabel, endLabel;
+
+      if (currentMode === 'custom' && customEndDate) {
+        startMs = new Date(year, 0, 1).getTime();
+        endMs = customEndDate.getTime();
+        modeName = 'Custom Target';
+        startLabel = 'Jan 1';
+        const m = customEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        endLabel = m;
+      } else if (currentMode === 'fiscal') {
+        // Oct 1 start
+        let fyStart = new Date(year - 1, 9, 1);
+        let fyEnd = new Date(year, 9, 1);
+        if (now < fyStart) {
+          fyStart = new Date(year - 2, 9, 1);
+          fyEnd = new Date(year - 1, 9, 1);
+        }
+        if (now >= fyEnd) {
+          fyStart = new Date(year, 9, 1);
+          fyEnd = new Date(year + 1, 9, 1);
+        }
+        startMs = fyStart.getTime();
+        endMs = fyEnd.getTime();
+        modeName = 'Fiscal Year';
+        startLabel = 'Oct 1';
+        endLabel = 'Sep 30';
+      } else {
+        // Calendar year (default, also fallback for business mode)
+        startMs = new Date(year, 0, 1).getTime();
+        endMs = new Date(year + 1, 0, 1).getTime();
+        modeName = currentMode === 'business' ? 'Business Days' : 'Calendar Year';
+        startLabel = 'Jan 1';
+        endLabel = 'Dec 31';
+      }
+
+      let pct, daysElapsed, daysRemaining, hoursLeft, secsLeft;
+
+      if (currentMode === 'business') {
+        // Business days mode: integer day counts
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year + 1, 0, 1);
+        const totalBD = totalBusinessDaysInYear(year);
+        const elapsedBD = countBusinessDays(yearStart.getTime(), todayStart.getTime());
+        // Add fractional current-day progress
+        const dayMs = now.getTime() - todayStart.getTime();
+        const dayFrac = (now.getDay() !== 0 && now.getDay() !== 6) ? dayMs / msPerDay : 0;
+        pct = Math.min(100, ((elapsedBD + dayFrac) / totalBD) * 100);
+        daysElapsed = elapsedBD;
+        daysRemaining = totalBD - elapsedBD;
+        hoursLeft = Math.floor(daysRemaining * 24);
+        secsLeft = Math.round(daysRemaining * 86400);
+      } else {
+        const totalMs = endMs - startMs;
+        const elapsedMs = Math.max(0, now.getTime() - startMs);
+        pct = Math.min(100, (elapsedMs / totalMs) * 100);
+        daysElapsed = Math.floor(elapsedMs / msPerDay);
+        const msLeft = Math.max(0, endMs - now.getTime());
+        daysRemaining = Math.floor(msLeft / msPerDay);
+        hoursLeft = Math.floor(msLeft / 3600000);
+        secsLeft = Math.floor(msLeft / 1000);
+      }
+
+      const totalDays = leap ? 366 : 365;
+      const week = getISOWeek(now);
+      const unix = now.getTime();
+
+      return {
+        pct, daysElapsed, daysRemaining, hoursLeft, secsLeft,
+        leap, totalDays, week, unix, year,
+        modeName, startLabel, endLabel
+      };
+    }
+
+    // ---------------------------------------------------------------
+    // DOM updates
+    // ---------------------------------------------------------------
+    function recalc() {
+      const r = calcProgress();
+
+      // Percentage display
+      document.getElementById('pct-display').textContent = r.pct.toFixed(6);
+      document.getElementById('mode-label').textContent = r.modeName;
+      document.getElementById('year-label').textContent = r.year;
+
+      // SVG rings
+      const outerOffset = OUTER_CIRC * (1 - r.pct / 100);
+      const innerOffset = INNER_CIRC * (1 - r.pct / 100);
+      document.getElementById('ring-outer').setAttribute('stroke-dashoffset', outerOffset.toFixed(4));
+      document.getElementById('ring-inner').setAttribute('stroke-dashoffset', innerOffset.toFixed(4));
+
+      // Linear bar
+      document.getElementById('linear-bar').style.width = r.pct.toFixed(4) + '%';
+      document.getElementById('vis-start-label').textContent = r.startLabel;
+      document.getElementById('vis-end-label').textContent = r.endLabel;
+
+      // Telemetry
+      document.getElementById('tel-elapsed').textContent = r.daysElapsed.toLocaleString();
+      document.getElementById('tel-remaining').textContent = r.daysRemaining.toLocaleString();
+      document.getElementById('tel-week').textContent = 'Week ' + r.week;
+      document.getElementById('tel-hours').textContent = r.hoursLeft.toLocaleString();
+      document.getElementById('tel-seconds').textContent = r.secsLeft.toLocaleString();
+      document.getElementById('tel-leap').textContent = r.leap ? 'Yes (366 days)' : 'No (365 days)';
+      document.getElementById('tel-total-days').textContent = r.totalDays + ' days';
+      document.getElementById('tel-unix').textContent = r.unix.toString();
+
+      // Show/hide optional rows
+      document.getElementById('row-week').style.display =
+        document.getElementById('toggle-week').checked ? '' : 'none';
+      document.getElementById('row-seconds').style.display =
+        document.getElementById('toggle-seconds').checked ? '' : 'none';
+    }
+
+    // ---------------------------------------------------------------
+    // Mode switching
+    // ---------------------------------------------------------------
+    function setMode(mode) {
+      currentMode = mode;
+      ['calendar','fiscal','business'].forEach(m => {
+        document.getElementById('btn-' + m).classList.toggle('active', m === mode);
+      });
+      // Disable custom toggle when explicit mode chosen
+      if (mode !== 'custom') {
+        document.getElementById('toggle-custom').checked = false;
+        document.getElementById('custom-date-wrap').style.opacity = '0.35';
+        document.getElementById('custom-date-wrap').style.pointerEvents = 'none';
+      }
+      recalc();
+    }
+
+    function toggleCustomDate() {
+      const on = document.getElementById('toggle-custom').checked;
+      document.getElementById('custom-date-wrap').style.opacity = on ? '1' : '0.35';
+      document.getElementById('custom-date-wrap').style.pointerEvents = on ? '' : 'none';
+      if (on) {
+        currentMode = 'custom';
+        ['calendar','fiscal','business'].forEach(m => {
+          document.getElementById('btn-' + m).classList.remove('active');
+        });
+        const inp = document.getElementById('input-custom-date');
+        if (!inp.value) {
+          const now = new Date();
+          inp.value = now.getFullYear() + '-12-31';
+        }
+        const parts = document.getElementById('input-custom-date').value.split('-');
+        customEndDate = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2], 23, 59, 59, 999) : null;
+      } else {
+        currentMode = 'calendar';
+        document.getElementById('btn-calendar').classList.add('active');
+      }
+      recalc();
+    }
+
+    document.getElementById('input-custom-date').addEventListener('input', function() {
+      const parts = this.value.split('-');
+      customEndDate = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2], 23, 59, 59, 999) : null;
+      recalc();
+    });
+
+    // ---------------------------------------------------------------
+    // Copy progress status
+    // ---------------------------------------------------------------
+    function copyStatus() {
+      const r = calcProgress();
+      const showWeek = document.getElementById('toggle-week').checked;
+      const showSecs = document.getElementById('toggle-seconds').checked;
+      let txt = [
+        'Year Progress Status (' + r.modeName + ')',
+        '--------------------------------------------',
+        'Current date: ' + new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        'Year completed: ' + r.pct.toFixed(6) + '%',
+        'Days elapsed: ' + r.daysElapsed.toLocaleString(),
+        'Days remaining: ' + r.daysRemaining.toLocaleString(),
+      ];
+      if (showWeek) txt.push('ISO week: ' + r.week);
+      if (showSecs) txt.push('Seconds left: ' + r.secsLeft.toLocaleString());
+      txt.push('Generated by AxiomApe Year Progress Tracker: https://axiomape.com/days-left-year-progress-loader/');
+
+      navigator.clipboard.writeText(txt.join('\n')).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Progress Status';
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        alert('Copy failed. Please copy manually.');
+      });
+    }
+
+    // ---------------------------------------------------------------
+    // FAQ accordion
+    // ---------------------------------------------------------------
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      item.classList.toggle('open');
+    }
+
+    // ---------------------------------------------------------------
+    // Live update loop - 50ms for sub-second precision
+    // ---------------------------------------------------------------
+    recalc();
+    setInterval(recalc, 50);
+  </script>
+
+</body>
+</html>

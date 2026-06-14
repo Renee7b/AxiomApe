@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thermal Insulation Heat Loss Conduction Solver: Measure Energy Loss Across Structural Layers | AxiomApe</title>
+  <meta name="description" content="Free thermal insulation heat loss calculator. Build a multi-layer wall or roof assembly, enter indoor and outdoor temperatures, and instantly compute the R-value, U-value, and heat loss rate for the full structural cross-section. Metric and Imperial. 100% client-side." />
+  <meta name="keywords" content="thermal insulation calculator, heat loss calculator, R-value calculator, U-value calculator, thermal conductivity calculator, wall assembly heat loss, roof insulation heat transfer, k-value insulation, Fourier heat conduction, steady state heat transfer, multi-layer wall R-value, building envelope heat loss, BTU heat loss calculator, watts heat loss calculator, thermal resistance calculator, insulation layer calculator, structural heat transfer tool, temperature gradient calculator, building energy loss, HVAC heat loss estimator, wall U-value tool, thermal bridging calculator, heat flux calculator" />
+  <link rel="canonical" href="https://axiomape.com/thermal-insulation-heat-loss-solver/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Thermal Insulation Heat Loss Conduction Solver",
+        "description": "Free thermal insulation heat loss calculator. Build a multi-layer wall or roof assembly, enter indoor and outdoor temperatures, and instantly compute the R-value, U-value, and heat loss rate for the full structural cross-section. Metric and Imperial. 100% client-side.",
+        "url": "https://axiomape.com/thermal-insulation-heat-loss-solver/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between an R-value and a U-value?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "R-value (thermal resistance) measures how strongly a material resists heat flow. A higher R-value means better insulation. It is calculated as thickness divided by thermal conductivity (R = d / k). U-value (thermal transmittance) is simply the inverse of the total R-value (U = 1 / R_total). A lower U-value means less heat escapes. R-value is additive across layers, so you can sum each layer to get the total assembly resistance. U-value is what engineers use to calculate actual heat flow: Q = U x Area x Delta-T."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does material thickness impact thermal resistance?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Thermal resistance (R) scales directly with thickness. If you double the thickness of a layer, its R-value doubles as well, since R = d / k where d is thickness and k is the material's thermal conductivity. This linear relationship means each additional inch of fiberglass batt adds the same fixed R-value per inch, regardless of how much is already installed. However, adding more of the same material yields diminishing returns on total heat loss reduction because U-value is the inverse of R-total. Going from R-10 to R-20 cuts U in half; going from R-20 to R-40 cuts it in half again, but that second doubling requires twice as much added thickness."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is trapped air considered an effective insulator?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Still air has a thermal conductivity (k-value) of approximately 0.025 W/m-K, which is lower than most solid building materials. Insulation materials like fiberglass batt and cellulose work primarily by trapping millions of tiny pockets of air within a fibrous or loose-fill matrix, preventing convective air movement. The solid fibers themselves conduct heat, but they account for such a small fraction of the total volume that the bulk conductivity of the assembly stays close to that of still air. Once air begins moving, this benefit disappears: a ventilated air gap conducts and convects heat far more effectively than a sealed one, which is why poorly sealed wall cavities dramatically reduce real-world R-values compared to laboratory ratings."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is thermal bridging and how does it compromise insulation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Thermal bridging occurs when a highly conductive material creates a continuous path through an insulated assembly, bypassing the insulation entirely. The most common example is a wood or steel stud in a framed wall. Steel studs have a k-value roughly 400 times higher than fiberglass, so heat flows through each stud at a rate far exceeding the surrounding insulation. Even though studs occupy only 10-15% of a typical wall area, they can reduce the effective whole-wall R-value by 30-50% compared to the rated cavity R-value. This solver models layers in series (pure 1D conduction), so it reflects a clear-field R-value between framing members. Real assemblies require a correction factor or a separate framing fraction calculation to account for bridges."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do engineers use these heat loss metrics to size HVAC systems?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "HVAC sizing begins with a Manual J load calculation that sums the heat loss (in heating season) or heat gain (in cooling season) through every surface of a building: walls, roof, floors, windows, and doors. For each opaque surface, the calculation is Q = U x Area x Delta-T, exactly what this solver computes. Engineers enter the design temperature difference between the coldest outdoor design day and the desired indoor temperature. Summing Q across all surfaces, plus infiltration and ventilation loads, yields the total building heat loss in BTU/hr or Watts. A furnace or heat pump must be sized to supply at least that rate of heat output. Improving the U-value of a wall assembly (by adding insulation layers) directly reduces the required equipment capacity, lowering both installation cost and operating energy."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0D1117;
+      --bg-card:      #161B22;
+      --bg-input:     #0D1117;
+      --border:       #30363D;
+
+      --text:         #E6EDF3;
+      --text-muted:   #8B949E;
+      --text-dim:     #484F58;
+
+      /* Heat Radiation Red */
+      --red:          #EF4444;
+      --red-mid:      #DC2626;
+      --red-light:    #FCA5A5;
+      --red-dim:      rgba(239,68,68,0.14);
+      --red-glow:     rgba(239,68,68,0.30);
+
+      /* Insulation Slate */
+      --slate:        #64748B;
+      --slate-light:  #94A3B8;
+      --slate-dim:    rgba(100,116,139,0.18);
+
+      /* Cold Ambient Blue */
+      --blue:         #3B82F6;
+      --blue-mid:     #2563EB;
+      --blue-light:   #93C5FD;
+      --blue-dim:     rgba(59,130,246,0.14);
+
+      --green:        #22C55E;
+      --amber:        #F59E0B;
+      --amber-dim:    rgba(245,158,11,0.14);
+
+      --sans: system-ui, -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.55);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+    /* Page header */
+    .tool-header {
+      background: linear-gradient(135deg, #020508 0%, #050e1a 50%, #0D1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-header::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 300px;
+      background: radial-gradient(ellipse at 35% 60%, rgba(239,68,68,0.13) 0%, transparent 55%),
+                  radial-gradient(ellipse at 65% 60%, rgba(59,130,246,0.13) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.25rem, 3.4vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .tool-header h1 .accent-red  { color: var(--red); }
+    .tool-header h1 .accent-blue { color: var(--blue); }
+    .tool-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 620px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .card-label.red   { color: var(--red); }
+    .card-label.blue  { color: var(--blue); }
+    .card-label.slate { color: var(--slate-light); }
+
+    .main-content { padding: 32px 0 52px; }
+
+    /* Unit toggle */
+    .unit-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .unit-toggle-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .seg-ctrl {
+      display: inline-flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .seg-btn {
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg-btn.active { background: var(--red); color: #fff; }
+    .seg-btn:hover:not(.active) { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    /* Layer list */
+    .layer-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+    .layer-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 140px 90px 32px;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      transition: border-color 0.15s;
+    }
+    .layer-row:hover { border-color: var(--slate); }
+
+    @media (max-width: 640px) {
+      .layer-row {
+        grid-template-columns: 28px 1fr 32px;
+        grid-template-rows: auto auto;
+      }
+      .layer-row .layer-thick-wrap { grid-column: 1 / -1; grid-row: 2; }
+      .layer-row .layer-r-badge { display: none; }
+    }
+
+    .layer-handle {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      cursor: grab;
+      opacity: 0.5;
+      align-items: center;
+    }
+    .layer-handle span {
+      width: 14px; height: 2px;
+      background: var(--text-muted);
+      border-radius: 2px;
+    }
+
+    .layer-select {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+    }
+    .layer-select option { background: #161B22; }
+
+    .layer-thick-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .layer-thick-input {
+      width: 70px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 5px 8px;
+      text-align: right;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .layer-thick-input:focus { border-color: var(--red); }
+    .layer-thick-unit {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .layer-r-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--slate-light);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .layer-remove {
+      background: transparent;
+      border: 1.5px solid transparent;
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .layer-remove:hover { border-color: var(--red); color: var(--red); }
+
+    .add-layer-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: transparent;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--slate-light);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      width: 100%;
+      justify-content: center;
+    }
+    .add-layer-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+    .layer-note {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    /* Input grid */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      margin-top: 6px;
+    }
+    @media (max-width: 620px) { .input-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 420px) { .input-grid { grid-template-columns: 1fr; } }
+
+    .input-group { display: flex; flex-direction: column; gap: 7px; }
+
+    .field-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+    .field-unit {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .num-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .num-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-dim); }
+
+    /* Cross-section visualizer */
+    .xsec-wrap {
+      margin-top: 24px;
+    }
+    .xsec-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .temp-axis {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .temp-axis-val {
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .temp-axis-val.warm { color: var(--red); }
+    .temp-axis-val.cool { color: var(--blue); }
+
+    .xsec-bar-track {
+      width: 100%;
+      height: 64px;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .xsec-segment {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      overflow: hidden;
+      transition: width 0.3s ease;
+      position: relative;
+    }
+    .xsec-segment-label {
+      writing-mode: horizontal-tb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
+      max-width: 100%;
+      color: rgba(255,255,255,0.85);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      font-size: 0.62rem;
+    }
+
+    .boundary-temp-row {
+      display: flex;
+      margin-top: 5px;
+      position: relative;
+      height: 20px;
+    }
+    .boundary-temp-marker {
+      position: absolute;
+      transform: translateX(-50%);
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .xsec-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .xsec-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.73rem;
+      color: var(--text-muted);
+    }
+    .xsec-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Telemetry panel */
+    .telem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) { .telem-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 380px) { .telem-grid { grid-template-columns: 1fr; } }
+
+    .telem-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .telem-item.hl-red   { border-color: var(--red);   background: var(--red-dim); }
+    .telem-item.hl-blue  { border-color: var(--blue);  background: var(--blue-dim); }
+    .telem-item.hl-slate { border-color: var(--slate); background: var(--slate-dim); }
+
+    .telem-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .telem-val {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .telem-val.red   { color: var(--red); }
+    .telem-val.blue  { color: var(--blue); }
+    .telem-val.slate { color: var(--slate-light); }
+    .telem-unit {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 3px;
+    }
+    .telem-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .layer-breakdown {
+      margin-bottom: 18px;
+    }
+    .breakdown-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .breakdown-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+      font-size: 0.8rem;
+    }
+    .breakdown-row:hover { border-color: var(--border); }
+    .breakdown-name { font-weight: 600; color: var(--text-muted); }
+    .breakdown-r    { font-weight: 700; color: var(--slate-light); text-align: right; white-space: nowrap; }
+    .breakdown-pct  { font-weight: 600; color: var(--text-dim); text-align: right; white-space: nowrap; width: 44px; }
+    .breakdown-bar-wrap { width: 80px; }
+    .breakdown-bar-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .breakdown-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--blue));
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .copy-btn:hover { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--green); color: var(--green); }
+
+    /* Warning state */
+    .no-layers-msg {
+      text-align: center;
+      padding: 28px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 18px;
+      margin: 28px 0;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .glossary-term {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--red);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 22px 0 8px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .formula-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .formula-box .f-comment { color: var(--text-dim); font-style: italic; }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-input);
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: rgba(255,255,255,0.04); }
+    .faq-icon {
+      font-size: 1.1rem;
+      color: var(--red);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-a {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-item.open .faq-a { display: block; }
+
+    /* Also-see banner */
+    .also-see {
+      background: var(--blue-dim);
+      border: 1px solid var(--blue);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      font-size: 0.83rem;
+      color: var(--blue-light);
+    }
+    .also-see a { color: var(--blue); font-weight: 700; }
+
+    /* Mobile sticky ad */
+    .axiom-ad-mobile-anchor { display: none; }
+    @media (max-width: 768px) {
+      .axiom-ad-mobile-anchor {
+        display: block;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        text-align: center;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border);
+        padding: 8px;
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        z-index: 900;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="tool-header">
+      <h1>Thermal Insulation <span class="accent-red">Heat Loss</span> <span class="accent-blue">Conduction</span> Solver</h1>
+      <p>Measure energy loss across structural layers. Build a multi-layer wall or roof assembly, set indoor and outdoor temperatures, and instantly compute total R-value, U-value, and heat loss rate using Fourier's law of steady-state conduction.</p>
+    </header>
+
+    <div class="container main-content">
+
+      <!-- Also-see cross-reference -->
+      <div class="also-see">
+        Related tool: <a href="/insulation-r-value-calculator/">Insulation R-Value Calculator</a> - estimate how many bags or rolls of a single insulation material you need to hit a target R-value for a given area.
+      </div>
+
+      <!-- Unit System Toggle -->
+      <div class="unit-toggle-row">
+        <span class="unit-toggle-label">Unit System:</span>
+        <div class="seg-ctrl">
+          <button class="seg-btn" id="btn-metric" onclick="setUnit('metric')">Metric</button>
+          <button class="seg-btn active" id="btn-imperial" onclick="setUnit('imperial')">Imperial (US)</button>
+        </div>
+      </div>
+
+      <!-- PANEL 1: Structural Assembly Builder -->
+      <div class="card">
+        <div class="card-label red">Panel 1: Structural Assembly Builder</div>
+
+        <div id="layer-list" class="layer-list">
+          <!-- Layers rendered by JS -->
+        </div>
+
+        <button class="add-layer-btn" onclick="addLayer()">
+          <span style="font-size:1.1rem;">+</span> Add Insulation or Structural Layer
+        </button>
+
+        <p class="layer-note">
+          Layers are ordered from the warm (indoor) side on the left to the cold (outdoor) side on the right.
+          Each layer's individual thermal resistance (R = thickness / k-value) is shown on the right.
+          The calculator updates instantly as you change any value.
+        </p>
+      </div>
+
+      <!-- PANEL 2: Environmental Parameters and Cross-Section Visualizer -->
+      <div class="card">
+        <div class="card-label blue">Panel 2: Environmental Parameters and Thermal Gradient Visualizer</div>
+
+        <div class="input-grid">
+          <div class="input-group">
+            <label class="field-label" for="inp-area">Surface Area <span class="field-unit" id="area-unit-label">(ft^2)</span></label>
+            <input type="number" class="num-input" id="inp-area" value="100" min="0.1" step="1" oninput="recalc()" />
+          </div>
+          <div class="input-group">
+            <label class="field-label" for="inp-t-indoor">Indoor Temperature <span class="field-unit" id="t-indoor-unit-label">(F)</span></label>
+            <input type="number" class="num-input" id="inp-t-indoor" value="70" step="1" oninput="recalc()" />
+          </div>
+          <div class="input-group">
+            <label class="field-label" for="inp-t-outdoor">Outdoor Temperature <span class="field-unit" id="t-outdoor-unit-label">(F)</span></label>
+            <input type="number" class="num-input" id="inp-t-outdoor" value="20" step="1" oninput="recalc()" />
+          </div>
+        </div>
+
+        <!-- Cross-section temperature gradient visualizer -->
+        <div class="xsec-wrap">
+          <div class="xsec-label">Temperature Gradient Across Assembly</div>
+          <div class="temp-axis">
+            <span class="temp-axis-val warm" id="xsec-t-indoor">70 F Indoor</span>
+            <span class="temp-axis-val cool" id="xsec-t-outdoor">20 F Outdoor</span>
+          </div>
+          <div class="xsec-bar-track" id="xsec-bar">
+            <div class="no-layers-msg" style="width:100%;font-size:0.8rem;">Add layers in Panel 1 to see the thermal gradient.</div>
+          </div>
+          <div class="boundary-temp-row" id="boundary-row"></div>
+          <div class="xsec-legend" id="xsec-legend"></div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Telemetry and Energy Output -->
+      <div class="card">
+        <div class="card-label slate">Panel 3: Thermal Telemetry and Energy Output</div>
+
+        <div class="telem-grid">
+          <div class="telem-item hl-slate">
+            <div class="telem-label">Total Assembly R-Value</div>
+            <div class="telem-val slate" id="out-r-total">--</div>
+            <span class="telem-unit" id="out-r-unit"></span>
+            <div class="telem-sub" id="out-r-sub"></div>
+          </div>
+          <div class="telem-item hl-blue">
+            <div class="telem-label">Overall U-Value</div>
+            <div class="telem-val blue" id="out-u-val">--</div>
+            <span class="telem-unit" id="out-u-unit"></span>
+            <div class="telem-sub" id="out-u-sub">1 / R-total</div>
+          </div>
+          <div class="telem-item hl-red">
+            <div class="telem-label">Heat Loss Rate (Q)</div>
+            <div class="telem-val red" id="out-q-val">--</div>
+            <span class="telem-unit" id="out-q-unit"></span>
+            <div class="telem-sub" id="out-q-sub">Q = U x Area x Delta-T</div>
+          </div>
+        </div>
+
+        <!-- Per-layer breakdown -->
+        <div class="layer-breakdown" id="layer-breakdown">
+          <div class="breakdown-title">Per-Layer Thermal Resistance Breakdown</div>
+          <div id="breakdown-rows"></div>
+        </div>
+
+        <button class="copy-btn" id="copy-btn" onclick="copyReport()">
+          <span>&#128203;</span> Copy Assembly Report
+        </button>
+      </div>
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        Advertisement
+      </div>
+
+      <!-- Glossary -->
+      <div class="card">
+        <div class="card-label">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Thermal Conductivity (k-value)</div>
+            <div class="glossary-def">A material property measuring how readily heat flows through it. Units: W/(m-K) in metric, or BTU-in/(hr-ft^2-F) in US. Low k-values (like fiberglass at 0.040 W/m-K) indicate good insulators. High k-values (like concrete at ~1.0 W/m-K) indicate efficient heat conductors.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Thermal Resistance (R-value)</div>
+            <div class="glossary-def">A measure of a material's resistance to heat flow, calculated as R = thickness / k. Higher R-values mean better insulation. R-values are additive across layers: the total assembly R-value is the sum of every individual layer's R-value. US R-values use units of hr-ft^2-F/BTU.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Thermal Transmittance (U-value)</div>
+            <div class="glossary-def">The rate of heat transfer through an assembly per unit area per degree of temperature difference. U-value is the inverse of total R-value: U = 1 / R-total. A lower U-value indicates a better-insulated assembly. It is used directly in the heat loss formula Q = U x A x Delta-T.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Delta T (Temperature Difference)</div>
+            <div class="glossary-def">The driving force for heat conduction. Delta-T is the temperature difference between the warm indoor surface and the cold outdoor surface. A larger Delta-T produces proportionally more heat loss. Doubling the temperature difference doubles the heat flow rate through the same assembly.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Thermal Bridging</div>
+            <div class="glossary-def">When a high-conductivity element (such as a steel stud, concrete tie, or fastener) runs continuously through an insulated assembly, bypassing the insulation. Steel studs can reduce effective whole-wall R-value by 30-50% compared to the cavity R-value alone. This solver models clear-field (cavity) performance, not framing-adjusted values.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Steady-State Heat Transfer</div>
+            <div class="glossary-def">The condition in which temperature at every point in the assembly is constant over time. Heat flowing in equals heat flowing out. This solver uses the steady-state model (Fourier's law), which is the standard for design and code calculations. Real buildings cycle through transient conditions, but steady-state gives the conservative design load used for HVAC sizing.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Heat Loss Rate (Q)</div>
+            <div class="glossary-def">The power continuously flowing through an assembly, measured in Watts (metric) or BTU/hr (US). Q = U x Area x Delta-T. This number tells you how large a heating system must be to continuously replace the energy escaping through that surface when outdoor conditions match the design temperature.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Temperature Gradient</div>
+            <div class="glossary-def">The progressive drop in temperature from the warm side to the cold side of an assembly. Each layer drops a fraction of the total Delta-T in proportion to its share of the total R-value. A highly resistive layer (thick insulation) accounts for most of the temperature drop; a conductive layer (thin concrete) accounts for very little.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Educational Section -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Wall and Roof Heat Loss Calculations</h2>
+        <p class="section-intro">
+          Whether you are an HVAC engineer sizing heating equipment, a building scientist auditing envelope performance, or a homeowner evaluating insulation upgrades, this tool gives you the complete thermal picture of any multi-layer wall or roof assembly. Understanding how each layer contributes to the total R-value and how that resistance translates into actual heat loss in watts or BTU/hr is the foundation of energy-efficient building design.
+        </p>
+
+        <h3>How to Use This Solver</h3>
+        <p>
+          Start in Panel 1 by building your wall or roof cross-section. Click "Add Insulation or Structural Layer" and select a material from the dropdown. Enter the layer thickness in the unit system you have chosen (inches for Imperial, meters for Metric). Add as many layers as your assembly has, ordered from the warm indoor side to the cold outdoor side. The per-layer R-value badge on the right of each row updates instantly.
+        </p>
+        <p>
+          In Panel 2, enter the total surface area of the assembly (for example, one wall face), and set your indoor and outdoor design temperatures. The color-coded cross-section diagram updates in real time, showing each layer colored with a gradient from warm red (indoor side) to cool blue (outdoor side). Temperature labels at each boundary show exactly how the total Delta-T is distributed across the assembly. A thicker insulation layer will capture a proportionally larger share of the temperature drop.
+        </p>
+        <p>
+          Panel 3 shows the summary output: total R-value, overall U-value, and the final heat loss rate in watts or BTU/hr. The per-layer breakdown table lets you see which layers contribute the most resistance and which are nearly transparent to heat flow. Use "Copy Assembly Report" to export a plain-text summary for documentation or sharing with a client.
+        </p>
+
+        <h3>The Physics: Fourier's Law of Heat Conduction</h3>
+        <p>This tool implements 1D steady-state heat conduction. For each layer, thermal resistance is:</p>
+        <div class="formula-box">
+          R_layer = d / k<br>
+          <span class="f-comment">d = thickness (m or in), k = thermal conductivity (W/m-K or BTU-in/hr-ft^2-F)</span>
+        </div>
+        <p>Because layers are in series, total assembly resistance is simply the sum:</p>
+        <div class="formula-box">
+          R_total = R_1 + R_2 + R_3 + ... + R_n<br>
+          <span class="f-comment">Thermal resistances in series add directly, just like electrical resistances</span>
+        </div>
+        <p>The overall U-value (thermal transmittance) is the inverse of total resistance:</p>
+        <div class="formula-box">
+          U = 1 / R_total<br>
+          <span class="f-comment">Units: W/(m^2-K) in metric, or BTU/(hr-ft^2-F) in Imperial</span>
+        </div>
+        <p>Finally, Fourier's law gives the steady-state heat loss rate:</p>
+        <div class="formula-box">
+          Q = U x A x Delta-T<br>
+          <span class="f-comment">A = surface area, Delta-T = indoor minus outdoor temperature</span>
+        </div>
+
+        <h3>Reading the Temperature Gradient Visualizer</h3>
+        <p>
+          The cross-section diagram in Panel 2 divides the bar width according to each layer's proportional share of total R-value, not by physical thickness. This is intentional and physically meaningful: a layer's width in the diagram represents how much of the total temperature drop occurs within it. A thick layer with a low k-value (high R, like 6 inches of polyurethane foam) will occupy most of the bar. A thin, conductive layer (like 1/2-inch drywall) will occupy a narrow slice, correctly reflecting that almost no temperature drop occurs across it.
+        </p>
+        <p>
+          The boundary temperature labels between layers are computed as: T_boundary = T_indoor - (Delta-T x cumulative_R / R_total). This is the exact temperature at the interface between each pair of layers, which is important for condensation risk analysis (dew point calculations) and for selecting vapor barrier placement.
+        </p>
+
+        <h3>Why R-Values Are Additive but U-Values Are Not</h3>
+        <p>
+          A common source of confusion is whether to add R-values or U-values when combining layers. R-values are always the right thing to add because they represent resistance in series. Adding a layer of R-19 cavity insulation to an R-5 exterior foam board gives a total clear-field R of 24, regardless of materials. U-values do not add - you must sum the R-values first and then take the reciprocal to find U. Trying to add U-values gives a physically wrong answer.
+        </p>
+
+        <h3>Common Assembly Examples and Their Typical R-Values</h3>
+        <p>
+          A standard 2x4 wood-framed wall with R-13 fiberglass batt, 1/2-inch drywall on one side, and 1/2-inch OSB sheathing on the other reaches a clear-field R of roughly R-15. Adding 1-inch XPS continuous exterior insulation pushes this to approximately R-18. A 2x6 wall with R-21 batt and 2 inches of exterior polyiso can reach R-28 or higher. High-performance "Passivhaus" walls often use 8 to 12 inches of exterior mineral wool or foam, with clear-field R-values above R-40. The tool lets you model any of these assemblies and see exactly how much heat loss changes as you experiment with layer combinations.
+        </p>
+
+        <!-- FAQ Section -->
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">What is the difference between an R-value and a U-value? <span class="faq-icon">+</span></div>
+          <div class="faq-a">R-value (thermal resistance) measures how strongly a material resists heat flow. A higher R-value means better insulation. It is calculated as thickness divided by thermal conductivity (R = d / k). U-value (thermal transmittance) is simply the inverse of the total R-value (U = 1 / R_total). A lower U-value means less heat escapes. R-value is additive across layers, so you can sum each layer to get the total assembly resistance. U-value is what engineers use to calculate actual heat flow: Q = U x Area x Delta-T.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">How does material thickness impact thermal resistance? <span class="faq-icon">+</span></div>
+          <div class="faq-a">Thermal resistance (R) scales directly with thickness. If you double the thickness of a layer, its R-value doubles as well, since R = d / k where d is thickness and k is the material's thermal conductivity. This linear relationship means each additional inch of fiberglass batt adds the same fixed R-value per inch, regardless of how much is already installed. However, adding more of the same material yields diminishing returns on total heat loss reduction because U-value is the inverse of R-total. Going from R-10 to R-20 cuts U in half; going from R-20 to R-40 cuts it in half again, but that second doubling requires twice as much added thickness.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">Why is trapped air considered an effective insulator? <span class="faq-icon">+</span></div>
+          <div class="faq-a">Still air has a thermal conductivity (k-value) of approximately 0.025 W/m-K, which is lower than most solid building materials. Insulation materials like fiberglass batt and cellulose work primarily by trapping millions of tiny pockets of air within a fibrous or loose-fill matrix, preventing convective air movement. The solid fibers themselves conduct heat, but they account for such a small fraction of the total volume that the bulk conductivity of the assembly stays close to that of still air. Once air begins moving, this benefit disappears: a ventilated air gap conducts and convects heat far more effectively than a sealed one, which is why poorly sealed wall cavities dramatically reduce real-world R-values compared to laboratory ratings.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">What is thermal bridging and how does it compromise insulation? <span class="faq-icon">+</span></div>
+          <div class="faq-a">Thermal bridging occurs when a highly conductive material creates a continuous path through an insulated assembly, bypassing the insulation entirely. The most common example is a wood or steel stud in a framed wall. Steel studs have a k-value roughly 400 times higher than fiberglass, so heat flows through each stud at a rate far exceeding the surrounding insulation. Even though studs occupy only 10-15% of a typical wall area, they can reduce the effective whole-wall R-value by 30-50% compared to the rated cavity R-value. This solver models layers in series (pure 1D conduction), so it reflects a clear-field R-value between framing members. Real assemblies require a correction factor or a separate framing fraction calculation to account for bridges.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">How do engineers use these heat loss metrics to size HVAC systems? <span class="faq-icon">+</span></div>
+          <div class="faq-a">HVAC sizing begins with a Manual J load calculation that sums the heat loss (in heating season) or heat gain (in cooling season) through every surface of a building: walls, roof, floors, windows, and doors. For each opaque surface, the calculation is Q = U x Area x Delta-T, exactly what this solver computes. Engineers enter the design temperature difference between the coldest outdoor design day and the desired indoor temperature. Summing Q across all surfaces, plus infiltration and ventilation loads, yields the total building heat loss in BTU/hr or Watts. A furnace or heat pump must be sized to supply at least that rate of heat output. Improving the U-value of a wall assembly (by adding insulation layers) directly reduces the required equipment capacity, lowering both installation cost and operating energy.</div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       MATERIAL DICTIONARY
+       k values in W/(m-K) (metric)
+       Imperial k = k_metric * 6.93347 => BTU-in/(hr-ft^2-F)
+    ============================================================ */
+    var MATERIALS = [
+      { id: 'fiberglass_batt',   name: 'Fiberglass Batt',             k: 0.040 },
+      { id: 'mineral_wool',      name: 'Mineral Wool / Rock Wool',     k: 0.038 },
+      { id: 'cellulose',         name: 'Cellulose (blown-in)',         k: 0.042 },
+      { id: 'spray_foam_open',   name: 'Spray Foam (open-cell)',       k: 0.039 },
+      { id: 'spray_foam_closed', name: 'Polyurethane Foam (closed-cell)', k: 0.026 },
+      { id: 'eps',               name: 'EPS Rigid Foam Board',         k: 0.036 },
+      { id: 'xps',               name: 'XPS Rigid Foam Board',         k: 0.030 },
+      { id: 'polyiso',           name: 'Polyisocyanurate (Polyiso)',   k: 0.023 },
+      { id: 'drywall',           name: 'Drywall / Gypsum Board',       k: 0.160 },
+      { id: 'plywood',           name: 'Plywood',                      k: 0.120 },
+      { id: 'osb',               name: 'OSB (Oriented Strand Board)',   k: 0.130 },
+      { id: 'pine_lumber',       name: 'Softwood Lumber (pine/fir)',   k: 0.120 },
+      { id: 'hardwood',          name: 'Hardwood (oak/maple)',         k: 0.160 },
+      { id: 'concrete_std',      name: 'Concrete (standard)',          k: 1.000 },
+      { id: 'concrete_light',    name: 'Lightweight Concrete Block',   k: 0.380 },
+      { id: 'brick_solid',       name: 'Brick (solid clay)',           k: 0.700 },
+      { id: 'stone_granite',     name: 'Stone / Granite',              k: 2.800 },
+      { id: 'glass_single',      name: 'Glass (single pane)',          k: 1.000 },
+      { id: 'air_space',         name: 'Air Space (still, sealed)',    k: 0.025 },
+      { id: 'stucco',            name: 'Stucco / Portland Cement',     k: 0.720 }
+    ];
+
+    /* Layer color palette (R->G->B gradient will be computed per temperature) */
+    var LAYER_PALETTE = [
+      '#6d4c41','#8d6e63','#a1887f','#bcaaa4',
+      '#546e7a','#607d8b','#78909c','#90a4ae',
+      '#4a5568','#2d3748','#6b7280','#9ca3af'
+    ];
+
+    /* ============================================================
+       STATE
+    ============================================================ */
+    var unit = 'imperial'; // 'metric' or 'imperial'
+    var layerIdSeq = 0;
+    var layers = []; // [{id, matId, thicknessDisplay}]
+
+    /* Conversion factor: k_metric (W/m-K) -> k_imperial (BTU-in/hr-ft^2-F) */
+    var K_CONV = 6.93347;
+
+    /* ============================================================
+       DEFAULT LAYERS (typical 2x4 stud wall cross-section)
+    ============================================================ */
+    function initDefaults() {
+      /* Imperial defaults: drywall 0.5in, fiberglass 3.5in, OSB 0.5in */
+      addLayer('drywall',        0.5);
+      addLayer('fiberglass_batt', 3.5);
+      addLayer('osb',             0.5);
+    }
+
+    /* ============================================================
+       UNIT SYSTEM
+    ============================================================ */
+    function setUnit(u) {
+      var prevUnit = unit;
+      unit = u;
+
+      document.getElementById('btn-metric').classList.toggle('active', u === 'metric');
+      document.getElementById('btn-imperial').classList.toggle('active', u === 'imperial');
+
+      /* Convert existing layer thicknesses */
+      layers.forEach(function(layer) {
+        var thick = parseFloat(layer.thicknessDisplay) || 0;
+        if (prevUnit === 'imperial' && u === 'metric') {
+          layer.thicknessDisplay = (thick * 0.0254).toFixed(4); /* in -> m */
+        } else if (prevUnit === 'metric' && u === 'imperial') {
+          layer.thicknessDisplay = (thick / 0.0254).toFixed(3); /* m -> in */
+        }
+      });
+
+      /* Convert temp inputs */
+      var tIn  = parseFloat(document.getElementById('inp-t-indoor').value)  || 21;
+      var tOut = parseFloat(document.getElementById('inp-t-outdoor').value) || 0;
+      if (prevUnit === 'imperial' && u === 'metric') {
+        document.getElementById('inp-t-indoor').value  = ((tIn  - 32) * 5/9).toFixed(1);
+        document.getElementById('inp-t-outdoor').value = ((tOut - 32) * 5/9).toFixed(1);
+      } else if (prevUnit === 'metric' && u === 'imperial') {
+        document.getElementById('inp-t-indoor').value  = (tIn  * 9/5 + 32).toFixed(1);
+        document.getElementById('inp-t-outdoor').value = (tOut * 9/5 + 32).toFixed(1);
+      }
+
+      /* Convert area */
+      var area = parseFloat(document.getElementById('inp-area').value) || 100;
+      if (prevUnit === 'imperial' && u === 'metric') {
+        document.getElementById('inp-area').value = (area * 0.092903).toFixed(2);
+      } else if (prevUnit === 'metric' && u === 'imperial') {
+        document.getElementById('inp-area').value = (area / 0.092903).toFixed(1);
+      }
+
+      updateUnitLabels();
+      renderLayerList();
+      recalc();
+    }
+
+    function updateUnitLabels() {
+      var isM = (unit === 'metric');
+      document.getElementById('area-unit-label').textContent     = isM ? '(m^2)' : '(ft^2)';
+      document.getElementById('t-indoor-unit-label').textContent  = isM ? '(C)'   : '(F)';
+      document.getElementById('t-outdoor-unit-label').textContent = isM ? '(C)'   : '(F)';
+    }
+
+    /* ============================================================
+       LAYER MANAGEMENT
+    ============================================================ */
+    function addLayer(matId, thicknessDisplay) {
+      matId = matId || 'fiberglass_batt';
+      if (thicknessDisplay === undefined) {
+        /* Default 1 inch in imperial, 0.0254 m in metric */
+        thicknessDisplay = (unit === 'metric') ? '0.0254' : '1.0';
+      } else {
+        thicknessDisplay = String(thicknessDisplay);
+      }
+      var id = ++layerIdSeq;
+      layers.push({ id: id, matId: matId, thicknessDisplay: thicknessDisplay });
+      renderLayerList();
+      recalc();
+    }
+
+    function removeLayer(id) {
+      layers = layers.filter(function(l) { return l.id !== id; });
+      renderLayerList();
+      recalc();
+    }
+
+    function onMatChange(id, selectEl) {
+      var layer = layers.find(function(l) { return l.id === id; });
+      if (layer) { layer.matId = selectEl.value; recalc(); }
+    }
+
+    function onThickChange(id, inputEl) {
+      var layer = layers.find(function(l) { return l.id === id; });
+      if (layer) { layer.thicknessDisplay = inputEl.value; recalc(); }
+    }
+
+    /* Build the material options HTML */
+    function matOptionsHtml(selectedId) {
+      return MATERIALS.map(function(m) {
+        var sel = (m.id === selectedId) ? ' selected' : '';
+        return '<option value="' + m.id + '"' + sel + '>' + m.name + '</option>';
+      }).join('');
+    }
+
+    function renderLayerList() {
+      var thickUnit = (unit === 'metric') ? 'm' : 'in';
+      var rUnit     = (unit === 'metric') ? 'm^2-K/W' : 'hr-ft^2-F/BTU';
+      var html = '';
+      layers.forEach(function(layer, idx) {
+        var r = layerRValue(layer);
+        var rStr = (r !== null) ? r.toFixed(3) + ' ' + rUnit : '--';
+        html += '<div class="layer-row" id="lrow-' + layer.id + '">' +
+          '<div class="layer-handle"><span></span><span></span><span></span></div>' +
+          '<select class="layer-select" onchange="onMatChange(' + layer.id + ',this)">' +
+            matOptionsHtml(layer.matId) +
+          '</select>' +
+          '<div class="layer-thick-wrap">' +
+            '<input type="number" class="layer-thick-input" value="' + layer.thicknessDisplay + '"' +
+              ' min="0" step="' + (unit === 'metric' ? '0.001' : '0.125') + '"' +
+              ' oninput="onThickChange(' + layer.id + ',this)"' +
+            '/>' +
+            '<span class="layer-thick-unit">' + thickUnit + '</span>' +
+          '</div>' +
+          '<div class="layer-r-badge" title="Thermal Resistance of this layer">R = ' + rStr + '</div>' +
+          '<button class="layer-remove" onclick="removeLayer(' + layer.id + ')" title="Remove layer">&#10005;</button>' +
+        '</div>';
+      });
+      document.getElementById('layer-list').innerHTML = html;
+    }
+
+    /* ============================================================
+       CORE MATH
+    ============================================================ */
+
+    /* Get k in the current display units */
+    function kInCurrentUnit(matId) {
+      var mat = MATERIALS.find(function(m) { return m.id === matId; });
+      if (!mat) return null;
+      if (unit === 'metric') return mat.k; /* W/m-K */
+      return mat.k * K_CONV; /* BTU-in/(hr-ft^2-F) */
+    }
+
+    /* R value in current display units:
+       Metric: R = d(m) / k(W/m-K) => m^2-K/W
+       Imperial: R = d(in) / k(BTU-in/hr-ft^2-F) => hr-ft^2-F/BTU */
+    function layerRValue(layer) {
+      var d = parseFloat(layer.thicknessDisplay);
+      if (isNaN(d) || d <= 0) return null;
+      var k = kInCurrentUnit(layer.matId);
+      if (!k) return null;
+      return d / k;
+    }
+
+    function calcAssembly() {
+      var rTotal = 0;
+      var layerData = [];
+      var allValid = true;
+      layers.forEach(function(layer) {
+        var r = layerRValue(layer);
+        var mat = MATERIALS.find(function(m) { return m.id === layer.matId; });
+        if (r === null || r === 0) { allValid = false; }
+        var rVal = r || 0;
+        rTotal += rVal;
+        layerData.push({ layer: layer, mat: mat, r: rVal });
+      });
+      return { layerData: layerData, rTotal: rTotal };
+    }
+
+    /* ============================================================
+       RECALC - fires on every input change
+    ============================================================ */
+    function recalc() {
+      if (layers.length === 0) {
+        clearOutputs();
+        updateVisualizer([], 0, 0, 0);
+        return;
+      }
+
+      var tIn  = parseFloat(document.getElementById('inp-t-indoor').value)  || 0;
+      var tOut = parseFloat(document.getElementById('inp-t-outdoor').value) || 0;
+      var area = parseFloat(document.getElementById('inp-area').value)       || 0;
+
+      var asm = calcAssembly();
+      var rTotal = asm.rTotal;
+      var layerData = asm.layerData;
+
+      var uVal = (rTotal > 0) ? 1 / rTotal : 0;
+      var deltaT = tIn - tOut;
+      var Q = uVal * area * deltaT; /* Q in current unit system */
+
+      /* Update unit labels */
+      var isM = (unit === 'metric');
+      var rUnit = isM ? 'm^2-K/W' : 'hr-ft^2-F/BTU';
+      var uUnit = isM ? 'W/(m^2-K)' : 'BTU/(hr-ft^2-F)';
+      var qUnit = isM ? 'W' : 'BTU/hr';
+
+      setText('out-r-total', rTotal.toFixed(2));
+      setText('out-r-unit', rUnit);
+      setText('out-r-sub', 'Sum of all layer R-values');
+
+      setText('out-u-val', uVal.toFixed(4));
+      setText('out-u-unit', uUnit);
+      setText('out-u-sub', 'U = 1 / R-total = 1 / ' + rTotal.toFixed(2));
+
+      var qDisplay = (Math.abs(Q) >= 1000) ? (Q/1000).toFixed(2) + ' k' + qUnit : Q.toFixed(1) + ' ' + qUnit;
+      setText('out-q-val', Q.toFixed(1));
+      setText('out-q-unit', qUnit);
+      setText('out-q-sub', 'Q = ' + uVal.toFixed(4) + ' x ' + area + ' x ' + Math.abs(deltaT).toFixed(1));
+
+      /* Layer breakdown */
+      renderBreakdown(layerData, rTotal, rUnit);
+
+      /* Per-layer R badge update */
+      layers.forEach(function(layer) {
+        var r = layerRValue(layer);
+        var badge = document.querySelector('#lrow-' + layer.id + ' .layer-r-badge');
+        if (badge) badge.textContent = 'R = ' + (r !== null ? r.toFixed(3) + ' ' + rUnit : '--');
+      });
+
+      /* Visualizer */
+      updateVisualizer(layerData, rTotal, tIn, tOut);
+    }
+
+    function clearOutputs() {
+      ['out-r-total','out-u-val','out-q-val'].forEach(function(id) { setText(id, '--'); });
+      ['out-r-unit','out-u-unit','out-q-unit','out-r-sub','out-u-sub','out-q-sub'].forEach(function(id) { setText(id, ''); });
+      document.getElementById('breakdown-rows').innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem;padding:8px;">No layers added yet.</div>';
+    }
+
+    function renderBreakdown(layerData, rTotal, rUnit) {
+      var html = '';
+      layerData.forEach(function(ld) {
+        var pct = (rTotal > 0) ? (ld.r / rTotal * 100) : 0;
+        html += '<div class="breakdown-row">' +
+          '<span class="breakdown-name">' + (ld.mat ? ld.mat.name : '--') + '</span>' +
+          '<span class="breakdown-r">R ' + ld.r.toFixed(3) + '</span>' +
+          '<span class="breakdown-pct">' + pct.toFixed(1) + '%</span>' +
+          '<div class="breakdown-bar-wrap"><div class="breakdown-bar-track">' +
+            '<div class="breakdown-bar-fill" style="width:' + pct.toFixed(1) + '%"></div>' +
+          '</div></div>' +
+        '</div>';
+      });
+      document.getElementById('breakdown-rows').innerHTML = html || '<div style="color:var(--text-dim);font-size:0.8rem;padding:8px;">No layers added yet.</div>';
+    }
+
+    /* ============================================================
+       CROSS-SECTION VISUALIZER
+    ============================================================ */
+
+    /* Map a temperature to a CSS color on a red-orange-yellow-green-blue spectrum */
+    function tempToColor(t, tMin, tMax) {
+      var range = tMax - tMin;
+      if (range === 0) return '#64748B';
+      /* Normalize 0 (cold) to 1 (warm) */
+      var norm = Math.max(0, Math.min(1, (t - tMin) / range));
+      /* Warm = red, cold = blue, through orange/slate in middle */
+      var r, g, b;
+      if (norm > 0.5) {
+        /* orange to red: norm from 0.5->1 maps to 0->1 */
+        var t2 = (norm - 0.5) * 2;
+        r = Math.round(239 - t2 * 0);    /* 239 */
+        g = Math.round(130 - t2 * 130);  /* 130 -> 0 */
+        b = Math.round(246 - t2 * 246);  /* 246 -> 0 */
+      } else {
+        /* blue to orange: norm from 0->0.5 maps to 0->1 */
+        var t2 = norm * 2;
+        r = Math.round(59 + t2 * 180);   /* 59->239 */
+        g = Math.round(130 - t2 * 0);    /* 130 */
+        b = Math.round(246 - t2 * 116);  /* 246->130 */
+      }
+      return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+
+    function updateVisualizer(layerData, rTotal, tIn, tOut) {
+      var tempLabel = (unit === 'metric') ? 'C' : 'F';
+      setText('xsec-t-indoor',  tIn.toFixed(1)  + ' ' + tempLabel + ' (Indoor)');
+      setText('xsec-t-outdoor', tOut.toFixed(1) + ' ' + tempLabel + ' (Outdoor)');
+
+      document.getElementById('xsec-t-indoor').className  = 'temp-axis-val warm';
+      document.getElementById('xsec-t-outdoor').className = 'temp-axis-val cool';
+
+      var barEl      = document.getElementById('xsec-bar');
+      var boundaryEl = document.getElementById('boundary-row');
+      var legendEl   = document.getElementById('xsec-legend');
+
+      if (layerData.length === 0 || rTotal === 0) {
+        barEl.innerHTML = '<div class="no-layers-msg" style="width:100%;font-size:0.8rem;">Add layers in Panel 1 to see the thermal gradient.</div>';
+        boundaryEl.innerHTML = '';
+        legendEl.innerHTML = '';
+        return;
+      }
+
+      var deltaT = tIn - tOut;
+      var tMin = Math.min(tIn, tOut);
+      var tMax = Math.max(tIn, tOut);
+
+      /* Build segments */
+      var html = '';
+      var legendHtml = '';
+      var cumR = 0;
+      var cumulativePct = 0;
+
+      /* Boundary temperatures: at left edge = tIn */
+      var boundaries = [{ pct: 0, t: tIn }];
+
+      layerData.forEach(function(ld, idx) {
+        var pct = (rTotal > 0) ? (ld.r / rTotal * 100) : 0;
+        cumR += ld.r;
+        var tRight = tIn - deltaT * (cumR / rTotal);
+        boundaries.push({ pct: cumulativePct + pct, t: tRight });
+
+        var tLeft = boundaries[idx].t;
+        var colorLeft  = tempToColor(tLeft,  tMin, tMax);
+        var colorRight = tempToColor(tRight, tMin, tMax);
+
+        var matName = ld.mat ? ld.mat.name : 'Layer ' + (idx+1);
+        var midColor = tempToColor((tLeft + tRight) / 2, tMin, tMax);
+
+        html += '<div class="xsec-segment" style="width:' + pct.toFixed(2) + '%;' +
+          'background:linear-gradient(90deg,' + colorLeft + ',' + colorRight + ');">' +
+          '<span class="xsec-segment-label" style="' + (pct < 8 ? 'display:none;' : '') + '">' +
+            matName.split(' ')[0] +
+          '</span>' +
+        '</div>';
+
+        legendHtml += '<div class="xsec-legend-item">' +
+          '<div class="xsec-legend-dot" style="background:' + midColor + ';"></div>' +
+          '<span>' + matName + '</span>' +
+        '</div>';
+
+        cumulativePct += pct;
+      });
+
+      barEl.innerHTML = html;
+      legendEl.innerHTML = legendHtml;
+
+      /* Boundary temperature markers */
+      var boundHtml = '';
+      boundaries.forEach(function(b, idx) {
+        /* Show only interior boundaries (skip first and last, shown in axis) */
+        if (idx === 0 || idx === boundaries.length - 1) return;
+        boundHtml += '<div class="boundary-temp-marker" style="left:' + b.pct.toFixed(2) + '%">' +
+          b.t.toFixed(1) + ' ' + tempLabel +
+        '</div>';
+      });
+      boundaryEl.innerHTML = boundHtml;
+    }
+
+    /* ============================================================
+       COPY ASSEMBLY REPORT
+    ============================================================ */
+    function copyReport() {
+      var tIn   = parseFloat(document.getElementById('inp-t-indoor').value)  || 0;
+      var tOut  = parseFloat(document.getElementById('inp-t-outdoor').value) || 0;
+      var area  = parseFloat(document.getElementById('inp-area').value)       || 0;
+      var isM   = (unit === 'metric');
+      var rUnit = isM ? 'm^2-K/W' : 'hr-ft^2-F/BTU';
+      var qUnit = isM ? 'W'       : 'BTU/hr';
+      var aUnit = isM ? 'm^2'     : 'ft^2';
+      var tUnit = isM ? 'C'       : 'F';
+      var dUnit = isM ? 'm'       : 'in';
+
+      var asm = calcAssembly();
+      var rTotal = asm.rTotal;
+      var uVal   = (rTotal > 0) ? 1 / rTotal : 0;
+      var deltaT = tIn - tOut;
+      var Q      = uVal * area * deltaT;
+
+      var lines = [
+        'Thermal Insulation Heat Loss Assembly Report',
+        'Generated by AxiomApe Thermal Insulation Heat Loss Conduction Solver',
+        'https://axiomape.com/thermal-insulation-heat-loss-solver/',
+        '---',
+        'Unit System: ' + (isM ? 'Metric' : 'Imperial (US)'),
+        'Surface Area: ' + area + ' ' + aUnit,
+        'Indoor Temperature: ' + tIn + ' ' + tUnit,
+        'Outdoor Temperature: ' + tOut + ' ' + tUnit,
+        'Temperature Difference (Delta-T): ' + deltaT.toFixed(1) + ' ' + tUnit,
+        '---',
+        'Layer Assembly (Indoor Side to Outdoor Side):'
+      ];
+
+      asm.layerData.forEach(function(ld, idx) {
+        var matName = ld.mat ? ld.mat.name : 'Unknown Material';
+        var thick   = parseFloat(ld.layer.thicknessDisplay);
+        var pct     = (rTotal > 0) ? (ld.r / rTotal * 100) : 0;
+        lines.push('  Layer ' + (idx+1) + ': ' + matName +
+          ' | Thickness: ' + thick.toFixed(3) + ' ' + dUnit +
+          ' | R = ' + ld.r.toFixed(3) + ' ' + rUnit +
+          ' (' + pct.toFixed(1) + '% of total)');
+      });
+
+      lines.push('---');
+      lines.push('Total Assembly R-Value: ' + rTotal.toFixed(3) + ' ' + rUnit);
+      lines.push('Overall U-Value: ' + uVal.toFixed(4) + ' ' + (isM ? 'W/(m^2-K)' : 'BTU/(hr-ft^2-F)'));
+      lines.push('Heat Loss Rate (Q = U x A x DeltaT): ' + Q.toFixed(1) + ' ' + qUnit);
+      lines.push('---');
+
+      var text = lines.join('\n');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() { flashCopy(); });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        flashCopy();
+      }
+    }
+
+    function flashCopy() {
+      var btn = document.getElementById('copy-btn');
+      btn.classList.add('copied');
+      btn.innerHTML = '<span>&#10003;</span> Report Copied!';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<span>&#128203;</span> Copy Assembly Report';
+      }, 2200);
+    }
+
+    /* ============================================================
+       FAQ TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    function setText(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    (function init() {
+      updateUnitLabels();
+      initDefaults();
+    })();
+  </script>
+
+</body>
+</html>
