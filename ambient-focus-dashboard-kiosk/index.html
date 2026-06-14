@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambient Focus Dashboard: Customize Full-Screen Environmental Displays with Dynamic Widgets | AxiomApe</title>
+  <meta name="description" content="Free ambient focus dashboard and kiosk simulator. Drag and drop clock, countdown timer, news ticker, image carousel, scratchpad, and custom text widgets onto a full-screen canvas. Launch into immersive kiosk mode with one click. 100% browser-based - no data leaves your device." />
+  <meta name="keywords" content="ambient dashboard, focus dashboard, browser kiosk mode, full screen dashboard, productivity dashboard, ambient display, custom browser start page, countdown timer widget, clock widget, focus mode display, environmental display, digital signage browser, distraction-free display, ambient computing display, fullscreen clock, kiosk simulator, custom new tab page, focus kiosk, ambient browser dashboard, OLED dashboard, deep work display, custom wallpaper dashboard, image carousel widget, news ticker widget, browser productivity tool" />
+  <link rel="canonical" href="https://axiomape.com/ambient-focus-dashboard-kiosk/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Ambient Focus Dashboard and Kiosk Simulator",
+        "description": "Free ambient focus dashboard and kiosk simulator. Drag and drop clock, countdown timer, news ticker, image carousel, scratchpad, and custom text widgets onto a full-screen canvas. Launch into immersive kiosk mode with one click. 100% browser-based - no data leaves your device.",
+        "url": "https://axiomape.com/ambient-focus-dashboard-kiosk/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Are my custom uploaded images sent to a server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Images you upload are read entirely by your browser using the FileReader API and converted into local Data URIs stored in memory. They never leave your device. No file upload request is made, no server receives any data, and no image is transmitted over the network at any point. This tool runs 100% client-side."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I exit the full screen dashboard?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Press any key on your keyboard, click anywhere on the screen, or tap the screen on a touch device. Any of these actions immediately exits the Fullscreen API and returns you to the configuration studio. There is no visible exit button by design - the dashboard is meant to be a distraction-free environment, so the exit mechanism is intentionally invisible."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is the countdown timer calculated for future years?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The countdown timer uses JavaScript's native Date object to compute the precise difference in milliseconds between the current moment and your target date-time. It then breaks that delta down into years, months, days, hours, minutes, and seconds using calendar-accurate arithmetic that accounts for varying month lengths and leap years. The calculation updates every second in real time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why are ambient dashboards beneficial for deep work and focus?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Ambient dashboards reduce cognitive switching costs by presenting only information relevant to your current goal. Unlike a browser with open tabs, notifications, or a cluttered desktop, a full-screen ambient display provides a single visual anchor that cues your brain into a focused state. Research on environmental design and flow states shows that a deliberately minimal, purposeful visual environment can lower decision fatigue and reduce the temptation to context-switch, both of which are major drains on deep work productivity."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Where does the data for the news or stock ticker come from?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The news and financial ticker uses a built-in set of sample headlines and market data loaded from a local JavaScript array. No external API is called. This means the ticker works offline and never exposes your IP address to a third-party data provider. You can customize the ticker content by editing the text items displayed in the configuration panel before launching your dashboard."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       RESET AND BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f172a;
+      --surface:    #1e293b;
+      --surface2:   #263347;
+      --border:     #334155;
+      --text:       #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent:     #6366f1;
+      --accent2:    #06b6d4;
+      --green:      #10b981;
+      --amber:      #f59e0b;
+      --red:        #ef4444;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       STATE 1: CONFIGURATION STUDIO
+    ============================================================ */
+    #config-studio {
+      display: block;
+    }
+
+    .page-header {
+      text-align: center;
+      padding: 2rem 1.5rem 1rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .5rem;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* canvas area */
+    #canvas-wrap {
+      position: relative;
+      margin: 1rem auto;
+      max-width: 1200px;
+      width: 95%;
+      aspect-ratio: 16/9;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      cursor: crosshair;
+    }
+    #canvas-bg {
+      position: absolute; inset: 0;
+      background: #000;
+      z-index: 0;
+    }
+    #canvas-bg img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* widgets on canvas */
+    .w-widget {
+      position: absolute;
+      z-index: 10;
+      cursor: move;
+      resize: both;
+      overflow: hidden;
+      min-width: 120px;
+      min-height: 60px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      background: rgba(15,23,42,0.55);
+      padding: 10px 12px;
+      user-select: none;
+    }
+    .w-widget:hover { border-color: var(--accent); }
+    .w-widget.w-selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.4); }
+
+    /* clock widget */
+    .w-clock-digital {
+      font-size: clamp(1.4rem, 4cqw, 3.5rem);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+    .w-clock-date { font-size: .85em; color: var(--text-muted); margin-top: 4px; }
+    .w-clock-analog {
+      display: block;
+      width: 100%; height: 100%;
+      max-width: 180px; max-height: 180px;
+    }
+
+    /* countdown widget */
+    .w-countdown {
+      text-align: center;
+    }
+    .w-countdown-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+    .w-countdown-grid {
+      display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+    }
+    .w-countdown-unit {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .w-countdown-val {
+      font-size: clamp(.9rem, 2.5cqw, 1.8rem);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      line-height: 1;
+    }
+    .w-countdown-lbl { font-size: .6rem; color: var(--text-muted); text-transform: uppercase; }
+
+    /* text label widget */
+    .w-text-label {
+      font-size: clamp(.9rem, 2cqw, 1.4rem);
+      font-weight: 600;
+      color: #fff;
+      word-break: break-word;
+    }
+
+    /* scratchpad widget */
+    .w-scratchpad-area {
+      width: 100%; height: calc(100% - 20px);
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: .9rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+    }
+
+    /* ticker widget */
+    .w-ticker-wrap {
+      overflow: hidden;
+      white-space: nowrap;
+      height: 100%;
+      display: flex; align-items: center;
+    }
+    .w-ticker-inner {
+      display: inline-block;
+      animation: tickerScroll 40s linear infinite;
+      color: var(--amber);
+      font-size: .9rem;
+      font-weight: 500;
+    }
+    @keyframes tickerScroll {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* image carousel widget */
+    .w-carousel {
+      width: 100%; height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .w-carousel img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .8s ease;
+    }
+    .w-carousel img.active { opacity: 1; }
+
+    /* ============================================================
+       CONTROL PANEL
+    ============================================================ */
+    #control-panel {
+      max-width: 1200px;
+      width: 95%;
+      margin: 0 auto 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .cp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+    .cp-card h3 {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent2);
+      margin-bottom: .8rem;
+    }
+
+    .cp-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .55rem;
+      gap: .5rem;
+    }
+    .cp-row label { font-size: .85rem; color: var(--text-muted); flex: 1; }
+
+    /* toggle switch */
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle-slider::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform .2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::after { transform: translateX(18px); }
+
+    .cp-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: .4rem .6rem;
+      font-size: .85rem;
+      margin-top: .3rem;
+      outline: none;
+    }
+    .cp-input:focus { border-color: var(--accent); }
+
+    /* bg gallery */
+    .bg-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 6px;
+      margin-top: .4rem;
+    }
+    .bg-thumb {
+      aspect-ratio: 16/9;
+      border-radius: 5px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .bg-thumb:hover, .bg-thumb.active { border-color: var(--accent); }
+    .bg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bg-thumb-label {
+      font-size: .6rem;
+      text-align: center;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* seg buttons */
+    .seg-group { display: flex; gap: 4px; margin-top: .3rem; flex-wrap: wrap; }
+    .seg-btn {
+      padding: .3rem .7rem;
+      font-size: .78rem;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .seg-btn.active, .seg-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* launch button */
+    #launch-btn {
+      display: block;
+      margin: 0 auto 2rem;
+      padding: .85rem 3rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: .03em;
+      box-shadow: 0 4px 24px rgba(99,102,241,0.35);
+      transition: transform .15s, box-shadow .15s;
+    }
+    #launch-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(99,102,241,0.5); }
+
+    /* ============================================================
+       STATE 2: ACTIVE DASHBOARD (fullscreen)
+    ============================================================ */
+    #active-dashboard {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000;
+      overflow: hidden;
+    }
+    #active-dashboard.visible { display: block; }
+
+    #dash-bg {
+      position: absolute; inset: 0;
+      z-index: 0;
+    }
+    #dash-bg img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #dash-widgets {
+      position: absolute; inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    #dash-widgets .dw {
+      position: absolute;
+      pointer-events: none;
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+      background: rgba(15,23,42,0.55);
+      border-radius: 8px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* dash clock */
+    .dw-clock-digital {
+      font-size: clamp(2rem, 5vw, 5rem);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      white-space: nowrap;
+      line-height: 1.1;
+    }
+    .dw-clock-date { font-size: .5em; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+    /* dash countdown */
+    .dw-countdown { text-align: center; }
+    .dw-countdown-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--accent2);
+      margin-bottom: 6px;
+    }
+    .dw-countdown-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .dw-countdown-unit { display: flex; flex-direction: column; align-items: center; }
+    .dw-countdown-val {
+      font-size: clamp(1.5rem, 3vw, 3.5rem);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      line-height: 1;
+    }
+    .dw-countdown-lbl { font-size: .65rem; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+
+    /* dash text label */
+    .dw-text-label {
+      font-size: clamp(1rem, 2.5vw, 2rem);
+      font-weight: 600;
+      color: #fff;
+      word-break: break-word;
+    }
+
+    /* dash scratchpad */
+    .dw-scratchpad-area {
+      width: 100%; height: calc(100% - 16px);
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.85);
+      font-size: clamp(.85rem, 1.5vw, 1.1rem);
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      pointer-events: all;
+    }
+
+    /* dash ticker */
+    .dw-ticker-wrap { overflow: hidden; white-space: nowrap; height: 100%; display: flex; align-items: center; }
+    .dw-ticker-inner {
+      display: inline-block;
+      animation: tickerScroll 40s linear infinite;
+      color: var(--amber);
+      font-size: clamp(.8rem, 1.5vw, 1rem);
+      font-weight: 500;
+    }
+
+    /* dash carousel */
+    .dw-carousel { width: 100%; height: 100%; position: relative; overflow: hidden; }
+    .dw-carousel img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
+    .dw-carousel img.active { opacity: 1; }
+
+    /* dash analog */
+    .dw-analog-wrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+    /* ============================================================
+       ADS (State 1 only - intentionally not in State 2)
+    ============================================================ */
+    .ad-wrap { display: block; }
+
+    /* ============================================================
+       EDUCATIONAL CONTENT
+    ============================================================ */
+    .edu-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.2rem 3rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .card-title {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--accent2);
+      margin-bottom: 1rem;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: .8rem;
+    }
+    .glossary-item { }
+    .glossary-term { font-weight: 600; color: var(--text); font-size: .9rem; }
+    .glossary-def { color: var(--text-muted); font-size: .82rem; margin-top: 2px; }
+
+    .edu-section h2 { font-size: 1.2rem; margin-bottom: .8rem; }
+    .section-intro { color: var(--text-muted); margin-bottom: 1rem; }
+
+    .faq-item { border-top: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      padding: .85rem 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: .9rem;
+      gap: 1rem;
+    }
+    .faq-q .faq-arrow { color: var(--accent2); transition: transform .2s; flex-shrink: 0; }
+    .faq-q.open .faq-arrow { transform: rotate(90deg); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease, padding .2s;
+      color: var(--text-muted);
+      font-size: .88rem;
+    }
+    .faq-a.open { max-height: 400px; padding-bottom: .85rem; }
+
+    /* main landmark */
+    main { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     STATE 1: CONFIGURATION STUDIO
+============================================================ -->
+<div id="config-studio">
+
+  <main id="main">
+    <header class="page-header">
+      <h1>Ambient Focus Dashboard: Customize Full-Screen Environmental Displays with Dynamic Widgets</h1>
+      <p>Design a distraction-free full-screen productivity display. Drag, resize, and configure clock, countdown, ticker, image carousel, scratchpad, and custom text widgets - then launch into immersive kiosk mode.</p>
+    </header>
+
+    <!-- CANVAS PREVIEW -->
+    <div id="canvas-wrap">
+      <div id="canvas-bg"></div>
+      <!-- widgets are injected here by JS -->
+    </div>
+
+    <!-- LAUNCH BUTTON -->
+    <button id="launch-btn">Launch Dashboard (Full Screen)</button>
+
+    <!-- CONTROL PANEL -->
+    <div id="control-panel">
+
+      <!-- Background -->
+      <div class="cp-card">
+        <h3>Background Selection</h3>
+        <div class="bg-gallery" id="bg-gallery"></div>
+      </div>
+
+      <!-- Clock and Calendar -->
+      <div class="cp-card">
+        <h3>Clock and Calendar Widget</h3>
+        <div class="cp-row">
+          <label>Enable Clock Widget</label>
+          <label class="toggle"><input type="checkbox" id="tog-clock" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="cp-row">
+          <label>Display Style</label>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" data-clock="digital">Digital</button>
+          <button class="seg-btn" data-clock="analog">Analog</button>
+        </div>
+        <div class="cp-row" style="margin-top:.6rem">
+          <label>Show Date</label>
+          <label class="toggle"><input type="checkbox" id="tog-date" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="cp-row">
+          <label>Show Day of Week</label>
+          <label class="toggle"><input type="checkbox" id="tog-dow" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="cp-row">
+          <label>Date Format</label>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" data-datefmt="long">Long</button>
+          <button class="seg-btn" data-datefmt="short">Short</button>
+          <button class="seg-btn" data-datefmt="iso">ISO</button>
+        </div>
+      </div>
+
+      <!-- Custom Text Label -->
+      <div class="cp-card">
+        <h3>Custom Text Label Widget</h3>
+        <div class="cp-row">
+          <label>Enable Text Label</label>
+          <label class="toggle"><input type="checkbox" id="tog-text" checked><span class="toggle-slider"></span></label>
+        </div>
+        <input class="cp-input" type="text" id="text-label-val" placeholder="Your daily goal, mantra, or focus phrase..." value="Today I will do great work." maxlength="120" />
+        <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Leave blank to hide widget automatically.</p>
+      </div>
+
+      <!-- Countdown Timer -->
+      <div class="cp-card">
+        <h3>Target Countdown Banner Widget</h3>
+        <div class="cp-row">
+          <label>Enable Countdown Timer</label>
+          <label class="toggle"><input type="checkbox" id="tog-countdown" checked><span class="toggle-slider"></span></label>
+        </div>
+        <label style="font-size:.82rem;color:var(--text-muted)">Target Date and Time</label>
+        <input class="cp-input" type="datetime-local" id="countdown-target" />
+        <label style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem;display:block">Countdown Label</label>
+        <input class="cp-input" type="text" id="countdown-label" placeholder="e.g. Project Launch, Vacation, Goal" value="Target Countdown" maxlength="60" />
+      </div>
+
+      <!-- News / Financial Ticker -->
+      <div class="cp-card">
+        <h3>News and Financial Ticker Widget</h3>
+        <div class="cp-row">
+          <label>Enable Ticker</label>
+          <label class="toggle"><input type="checkbox" id="tog-ticker" checked><span class="toggle-slider"></span></label>
+        </div>
+        <label style="font-size:.82rem;color:var(--text-muted)">Custom Ticker Items (one per line)</label>
+        <textarea class="cp-input" id="ticker-items" rows="4" placeholder="Add headlines or quotes, one per line...">S&P 500: 5,832.14 +0.6%   |   NASDAQ: 18,720.30 +0.9%   |   Gold: $2,314/oz   |   BTC: $68,900   |   Focus: Deep work is your most valuable asset   |   Oil: $78.40/bbl   |   10-Yr Treasury: 4.28%   |   ETH: $3,540</textarea>
+      </div>
+
+      <!-- Local Scratchpad -->
+      <div class="cp-card">
+        <h3>Local Scratchpad Widget</h3>
+        <div class="cp-row">
+          <label>Enable Scratchpad</label>
+          <label class="toggle"><input type="checkbox" id="tog-scratch" checked><span class="toggle-slider"></span></label>
+        </div>
+        <p style="font-size:.78rem;color:var(--text-muted)">Text auto-saves to your browser's Local Storage. Nothing is transmitted externally.</p>
+      </div>
+
+      <!-- Image Carousel -->
+      <div class="cp-card">
+        <h3>Inspirational Image Carousel Widget</h3>
+        <div class="cp-row">
+          <label>Enable Image Carousel</label>
+          <label class="toggle"><input type="checkbox" id="tog-carousel"><span class="toggle-slider"></span></label>
+        </div>
+        <label style="font-size:.82rem;color:var(--text-muted)">Upload Custom Images (processed locally)</label>
+        <input class="cp-input" type="file" id="carousel-upload" multiple accept="image/*" style="padding:.3rem" />
+        <label style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem;display:block">Rotation Speed (seconds per image)</label>
+        <input class="cp-input" type="number" id="carousel-speed" value="8" min="1" max="120" />
+        <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Images stay in memory only - not stored or uploaded.</p>
+      </div>
+
+    </div>
+    <!-- end control-panel -->
+
+    <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only) -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="edu-wrap">
+      <div class="card">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Fullscreen API</div>
+            <div class="glossary-def">A browser API that allows a web page to expand to occupy the entire screen, hiding all browser chrome, taskbars, and OS UI elements.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Ambient Computing</div>
+            <div class="glossary-def">A design philosophy where technology fades into the background, presenting information passively without demanding active attention or interaction.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Kiosk Mode</div>
+            <div class="glossary-def">A configuration where a display runs a single, locked application full-screen with no visible OS controls - commonly used for digital signage and public terminals.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Local Storage</div>
+            <div class="glossary-def">A browser API that saves key-value data persistently on your device. Data in Local Storage survives page refreshes and browser restarts but is never sent to a server.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Image Data URI</div>
+            <div class="glossary-def">A format for embedding image data directly as a base64-encoded string inside HTML or CSS, so the image works without a separate file request or network call.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">WYSIWYG Canvas</div>
+            <div class="glossary-def">What You See Is What You Get. A canvas where the preview in the editor matches the final rendered output exactly - what you arrange in the studio is how it appears in full-screen mode.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Deep Work</div>
+            <div class="glossary-def">A term popularized by Cal Newport describing cognitively demanding tasks performed in a state of distraction-free concentration, producing high-value output that is hard to replicate.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Widget</div>
+            <div class="glossary-def">A self-contained UI module displaying a specific type of information - such as a clock, countdown timer, or news ticker - that can be independently positioned and resized on the dashboard canvas.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Ambient Focus Dashboards and Browser Kiosk Mode</h2>
+        <p class="section-intro">An ambient focus dashboard transforms any screen into a purposeful, immersive environment that reinforces your goals and minimizes distraction. Whether you are running a deep work session, managing a trading desk, or simply want a beautiful full-screen clock and image display, this tool lets you build that environment without writing a single line of code.</p>
+
+        <h3 style="margin:.9rem 0 .4rem;font-size:.95rem">How to Use This Tool</h3>
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:.8rem">1. Select a background from the gallery at the top of the control panel - choose OLED black, a gradient, or one of the built-in images. 2. Toggle the widgets you want: clock, countdown timer, text label, news ticker, scratchpad, or image carousel. Configure each one using its settings panel. 3. Drag any widget to reposition it on the canvas preview. Grab its lower-right corner to resize it freely. 4. Click "Launch Dashboard" to enter full-screen kiosk mode. 5. Press any key, click anywhere, or tap the screen to exit back to the configuration studio.</p>
+
+        <h3 style="margin:.9rem 0 .4rem;font-size:.95rem">Why Ambient Displays Improve Focus</h3>
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:.8rem">Environmental cues are powerful behavioral anchors. When your screen shows only your goal, a countdown to a deadline, and a calm background image, your brain receives a consistent signal: this context is for work. Studies in environmental psychology show that intentionally designed physical and digital environments reduce decision fatigue and increase time-on-task. An ambient dashboard functions as a digital version of a clean desk - the absence of clutter (tabs, notifications, browser bookmarks) is itself a productivity intervention.</p>
+
+        <h3 style="margin:.9rem 0 .4rem;font-size:.95rem">Using the Countdown Banner for Deadline Motivation</h3>
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:.8rem">The Target Countdown Banner calculates the precise delta between now and any future date, breaking it into years, months, days, hours, minutes, and seconds. This level of granularity is psychologically effective: seeing "47 days, 6 hours, 22 minutes" remaining creates a visceral sense of urgency that a simple calendar date does not. Set your countdown to a product launch, exam date, fitness goal, or personal milestone.</p>
+
+        <h3 style="margin:.9rem 0 .4rem;font-size:.95rem">Privacy Architecture</h3>
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:1rem">Every part of this tool runs inside your browser. Uploaded images are converted to Data URIs using the FileReader API and stored in memory only. Your scratchpad text saves to Local Storage on your device. No analytics, no telemetry, no network requests are made at any point during configuration or while the dashboard is active. Your content is yours.</p>
+
+        <div style="border-top:1px solid var(--border);padding-top:.8rem;margin-top:.4rem">
+          <p style="font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.6rem">Frequently Asked Questions</p>
+
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(this)">Are my custom uploaded images sent to a server? <span class="faq-arrow">&#9654;</span></div>
+            <div class="faq-a">No. Images you upload are read entirely by your browser using the FileReader API and converted into local Data URIs stored in memory. They never leave your device. No file upload request is made, no server receives any data, and no image is transmitted over the network at any point. This tool runs 100% client-side.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(this)">How do I exit the full screen dashboard? <span class="faq-arrow">&#9654;</span></div>
+            <div class="faq-a">Press any key on your keyboard, click anywhere on the screen, or tap the screen on a touch device. Any of these actions immediately exits the Fullscreen API and returns you to the configuration studio. There is no visible exit button by design - the dashboard is meant to be a distraction-free environment, so the exit mechanism is intentionally invisible.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(this)">How is the countdown timer calculated for future years? <span class="faq-arrow">&#9654;</span></div>
+            <div class="faq-a">The countdown timer uses JavaScript's native Date object to compute the precise difference in milliseconds between the current moment and your target date-time. It then breaks that delta down into years, months, days, hours, minutes, and seconds using calendar-accurate arithmetic that accounts for varying month lengths and leap years. The calculation updates every second in real time.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(this)">Why are ambient dashboards beneficial for deep work and focus? <span class="faq-arrow">&#9654;</span></div>
+            <div class="faq-a">Ambient dashboards reduce cognitive switching costs by presenting only information relevant to your current goal. Unlike a browser with open tabs, notifications, or a cluttered desktop, a full-screen ambient display provides a single visual anchor that cues your brain into a focused state. Research on environmental design and flow states shows that a deliberately minimal, purposeful visual environment can lower decision fatigue and reduce the temptation to context-switch, both of which are major drains on deep work productivity.</div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(this)">Where does the data for the news or stock ticker come from? <span class="faq-arrow">&#9654;</span></div>
+            <div class="faq-a">The news and financial ticker uses a built-in set of sample headlines and market data loaded from a local JavaScript array. No external API is called. This means the ticker works offline and never exposes your IP address to a third-party data provider. You can customize the ticker content by editing the text items displayed in the configuration panel before launching your dashboard.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- end edu-wrap -->
+
+  </main>
+
+  <!-- AD PLACEMENT 2: Mobile Sticky Anchor (mobile only) -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+</div>
+<!-- end config-studio -->
+
+<!-- ============================================================
+     STATE 2: ACTIVE DASHBOARD
+     No ads, no header, no footer, no badges in this state.
+     All site-chrome elements are hidden by JS when entering.
+============================================================ -->
+<div id="active-dashboard">
+  <div id="dash-bg"></div>
+  <div id="dash-widgets"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG STATE
+============================================================ */
+const cfg = {
+  bg: 'oled',
+  clockEnabled: true,
+  clockStyle: 'digital',
+  showDate: true,
+  showDow: true,
+  dateFmt: 'long',
+  textEnabled: true,
+  textVal: 'Today I will do great work.',
+  countdownEnabled: true,
+  countdownTarget: null,
+  countdownLabel: 'Target Countdown',
+  tickerEnabled: true,
+  tickerItems: '',
+  scratchEnabled: true,
+  carouselEnabled: false,
+  carouselImages: [],
+  carouselSpeed: 8,
+};
+
+/* widget position/size state (canvas coords as %) */
+const wPos = {
+  clock:     { x: 2,  y: 2,  w: 280, h: 90  },
+  text:      { x: 2,  y: 18, w: 380, h: 70  },
+  countdown: { x: 2,  y: 32, w: 500, h: 100 },
+  ticker:    { x: 0,  y: 80, w: 100, h: 60  }, /* ticker spans bottom */
+  scratch:   { x: 70, y: 2,  w: 280, h: 200 },
+  carousel:  { x: 30, y: 2,  w: 340, h: 200 },
+};
+
+/* ============================================================
+   BACKGROUND DEFINITIONS
+============================================================ */
+const BACKGROUNDS = [
+  { id: 'oled',    label: 'OLED Black',   css: '#000000' },
+  { id: 'grad1',   label: 'Deep Space',   css: 'linear-gradient(135deg,#0f0c29,#302b63,#24243e)' },
+  { id: 'grad2',   label: 'Aurora',       css: 'linear-gradient(135deg,#0f2027,#203a43,#2c5364)' },
+  { id: 'grad3',   label: 'Midnight',     css: 'linear-gradient(135deg,#141e30,#243b55)' },
+  { id: 'grad4',   label: 'Forest Night', css: 'linear-gradient(135deg,#0a1628,#0d2b1d,#0a1628)' },
+  { id: 'img0',    label: 'Persistence',  file: 'Persistence of Memory.jpg' },
+  { id: 'img1',    label: 'Phobos',       file: 'Phobos.jpg' },
+  { id: 'img2',    label: 'All Physics',  file: 'All Known Physics Equation.png' },
+  { id: 'img3',    label: 'Ikigai',       file: 'Ikigai.jpg' },
+  { id: 'img4',    label: 'Screenshot 1', file: 'Screenshot 2026-06-14 at 2.58.02 PM.jpg' },
+  { id: 'img5',    label: 'Screenshot 2', file: 'Screenshot 2026-06-14 at 2.58.12 PM.png' },
+  { id: 'img6',    label: 'Screenshot 3', file: 'Screenshot 2026-06-14 at 3.01.04 PM.png' },
+  { id: 'img7',    label: 'Screenshot 4', file: 'Screenshot 2026-06-14 at 3.04.23 PM.png' },
+];
+
+/* ============================================================
+   BUILD BACKGROUND GALLERY
+============================================================ */
+function buildBgGallery() {
+  const gal = document.getElementById('bg-gallery');
+  BACKGROUNDS.forEach(bg => {
+    const wrap = document.createElement('div');
+    const thumb = document.createElement('div');
+    thumb.className = 'bg-thumb' + (bg.id === cfg.bg ? ' active' : '');
+    thumb.dataset.bgId = bg.id;
+
+    if (bg.css) {
+      thumb.style.background = bg.css;
+      thumb.style.minHeight = '36px';
+    } else {
+      const img = document.createElement('img');
+      img.src = bg.file;
+      img.alt = bg.label;
+      img.onerror = () => { thumb.style.background = '#1e293b'; };
+      thumb.appendChild(img);
+    }
+
+    thumb.addEventListener('click', () => {
+      document.querySelectorAll('.bg-thumb').forEach(t => t.classList.remove('active'));
+      thumb.classList.add('active');
+      cfg.bg = bg.id;
+      applyBgToCanvas();
+    });
+
+    const lbl = document.createElement('div');
+    lbl.className = 'bg-thumb-label';
+    lbl.textContent = bg.label;
+
+    wrap.appendChild(thumb);
+    wrap.appendChild(lbl);
+    gal.appendChild(wrap);
+  });
+}
+
+function applyBgToCanvas() {
+  const el = document.getElementById('canvas-bg');
+  el.innerHTML = '';
+  el.style.background = '';
+  const bg = BACKGROUNDS.find(b => b.id === cfg.bg);
+  if (!bg) return;
+  if (bg.css) {
+    el.style.background = bg.css;
+  } else {
+    const img = document.createElement('img');
+    img.src = bg.file;
+    img.alt = bg.label;
+    el.appendChild(img);
+  }
+}
+
+function applyBgToDash() {
+  const el = document.getElementById('dash-bg');
+  el.innerHTML = '';
+  el.style.background = '';
+  const bg = BACKGROUNDS.find(b => b.id === cfg.bg);
+  if (!bg) return;
+  if (bg.css) {
+    el.style.background = bg.css;
+  } else {
+    const img = document.createElement('img');
+    img.src = bg.file;
+    img.alt = bg.label;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
+    el.appendChild(img);
+  }
+}
+
+/* ============================================================
+   CANVAS WIDGET RENDERING (State 1)
+============================================================ */
+function buildCanvasWidgets() {
+  const wrap = document.getElementById('canvas-wrap');
+  /* remove old widgets */
+  wrap.querySelectorAll('.w-widget').forEach(w => w.remove());
+
+  if (cfg.clockEnabled) buildCanvasClock(wrap);
+  if (cfg.textEnabled && cfg.textVal.trim()) buildCanvasText(wrap);
+  if (cfg.countdownEnabled && cfg.countdownTarget) buildCanvasCountdown(wrap);
+  if (cfg.tickerEnabled) buildCanvasTicker(wrap);
+  if (cfg.scratchEnabled) buildCanvasScratch(wrap);
+  if (cfg.carouselEnabled && cfg.carouselImages.length) buildCanvasCarousel(wrap);
+}
+
+function makeWidget(id, pos) {
+  const el = document.createElement('div');
+  el.className = 'w-widget';
+  el.dataset.wid = id;
+  el.style.left   = pos.x + '%';
+  el.style.top    = pos.y + '%';
+  el.style.width  = pos.w + 'px';
+  el.style.height = pos.h + 'px';
+  makeDraggable(el, id);
+  return el;
+}
+
+function buildCanvasClock(wrap) {
+  const el = makeWidget('clock', wPos.clock);
+  if (cfg.clockStyle === 'analog') {
+    el.innerHTML = '<canvas class="w-clock-analog" id="cv-analog"></canvas>';
+    el.style.background = 'rgba(15,23,42,0.7)';
+    el.style.width  = '160px';
+    el.style.height = '160px';
+  } else {
+    el.innerHTML = '<div class="w-clock-digital" id="cv-digital">--:--:--</div><div class="w-clock-date" id="cv-date"></div>';
+  }
+  wrap.appendChild(el);
+}
+
+function buildCanvasText(wrap) {
+  const el = makeWidget('text', wPos.text);
+  el.innerHTML = '<div class="w-text-label">' + escHtml(cfg.textVal) + '</div>';
+  wrap.appendChild(el);
+}
+
+function buildCanvasCountdown(wrap) {
+  const el = makeWidget('countdown', wPos.countdown);
+  el.innerHTML = `
+    <div class="w-countdown">
+      <div class="w-countdown-label">${escHtml(cfg.countdownLabel)}</div>
+      <div class="w-countdown-grid" id="cv-cd-grid">
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Yrs')}
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Mo')}
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Days')}
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Hrs')}
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Min')}
+        ${cdUnitHtml('w-countdown-val','w-countdown-lbl','--','Sec')}
+      </div>
+    </div>`;
+  wrap.appendChild(el);
+}
+
+function cdUnitHtml(valCls, lblCls, val, lbl) {
+  return `<div class="w-countdown-unit"><div class="${valCls}">${val}</div><div class="${lblCls}">${lbl}</div></div>`;
+}
+
+function buildCanvasTicker(wrap) {
+  const el = makeWidget('ticker', wPos.ticker);
+  el.style.left   = '0';
+  el.style.top    = '82%';
+  el.style.width  = '100%';
+  el.style.height = '40px';
+  el.style.borderRadius = '0';
+  el.innerHTML = '<div class="w-ticker-wrap"><div class="w-ticker-inner" id="cv-ticker-inner">' + getTickerText() + '</div></div>';
+  wrap.appendChild(el);
+}
+
+function buildCanvasScratch(wrap) {
+  const el = makeWidget('scratch', wPos.scratch);
+  const saved = localStorage.getItem('axiomape_ambient_scratch') || '';
+  el.innerHTML = '<textarea class="w-scratchpad-area" id="cv-scratch" placeholder="Type notes here. Auto-saved locally.">' + escHtml(saved) + '</textarea>';
+  wrap.appendChild(el);
+  el.querySelector('textarea').addEventListener('input', function() {
+    localStorage.setItem('axiomape_ambient_scratch', this.value);
+  });
+  /* prevent drag when typing inside textarea */
+  el.querySelector('textarea').addEventListener('mousedown', e => e.stopPropagation());
+}
+
+function buildCanvasCarousel(wrap) {
+  const el = makeWidget('carousel', wPos.carousel);
+  el.innerHTML = '<div class="w-carousel" id="cv-carousel"></div>';
+  const car = el.querySelector('#cv-carousel');
+  cfg.carouselImages.forEach((src, i) => {
+    const img = document.createElement('img');
+    img.src = src;
+    if (i === 0) img.classList.add('active');
+    car.appendChild(img);
+  });
+  wrap.appendChild(el);
+  startCarouselInterval('cv-carousel', cfg.carouselSpeed);
+}
+
+function getTickerText() {
+  const items = cfg.tickerItems.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!items.length) return 'No ticker items configured.';
+  return items.join('     |     ');
+}
+
+/* ============================================================
+   DRAG AND DROP (canvas widgets)
+============================================================ */
+function makeDraggable(el, id) {
+  let startX, startY, origLeft, origTop;
+
+  el.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = el.offsetParent.getBoundingClientRect();
+    origLeft = el.offsetLeft;
+    origTop  = el.offsetTop;
+    el.classList.add('w-selected');
+
+    const onMove = ev => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      el.style.left = Math.max(0, origLeft + dx) + 'px';
+      el.style.top  = Math.max(0, origTop  + dy) + 'px';
+    };
+    const onUp = () => {
+      /* save percent position */
+      const pw = el.offsetParent.clientWidth;
+      const ph = el.offsetParent.clientHeight;
+      wPos[id].x = (el.offsetLeft / pw) * 100;
+      wPos[id].y = (el.offsetTop  / ph) * 100;
+      el.classList.remove('w-selected');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  /* save size after resize */
+  const ro = new ResizeObserver(() => {
+    wPos[id].w = el.offsetWidth;
+    wPos[id].h = el.offsetHeight;
+  });
+  ro.observe(el);
+}
+
+/* ============================================================
+   TICK - updates clock and countdown on canvas every second
+============================================================ */
+let tickInterval = null;
+function startTick() {
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(tick, 1000);
+  tick();
+}
+
+function tick() {
+  updateCanvasClock();
+  updateCanvasCountdown();
+}
+
+function updateCanvasClock() {
+  const dEl = document.getElementById('cv-digital');
+  const dateEl = document.getElementById('cv-date');
+  if (!dEl && !dateEl) return;
+  const now = new Date();
+  if (dEl) dEl.textContent = now.toLocaleTimeString();
+  if (dateEl) {
+    const parts = [];
+    if (cfg.showDow) parts.push(now.toLocaleDateString('en-US', { weekday: 'long' }));
+    if (cfg.showDate) {
+      if (cfg.dateFmt === 'long')  parts.push(now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+      if (cfg.dateFmt === 'short') parts.push(now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }));
+      if (cfg.dateFmt === 'iso')   parts.push(now.toISOString().slice(0, 10));
+    }
+    dateEl.textContent = parts.join(', ');
+  }
+  if (cfg.clockStyle === 'analog') drawAnalogClock('cv-analog', now);
+}
+
+function updateCanvasCountdown() {
+  const grid = document.getElementById('cv-cd-grid');
+  if (!grid || !cfg.countdownTarget) return;
+  const delta = cfg.countdownTarget - Date.now();
+  const units = computeCountdown(delta);
+  const cells = grid.querySelectorAll('.w-countdown-val');
+  const vals = [units.y, units.mo, units.d, units.h, units.m, units.s];
+  cells.forEach((c, i) => { c.textContent = vals[i]; });
+}
+
+function computeCountdown(ms) {
+  if (ms <= 0) return { y:0, mo:0, d:0, h:0, m:0, s:0 };
+  const totalSec = Math.floor(ms / 1000);
+  const s  = totalSec % 60;
+  const m  = Math.floor(totalSec / 60) % 60;
+  const h  = Math.floor(totalSec / 3600) % 24;
+  const d  = Math.floor(totalSec / 86400) % 30;
+  const mo = Math.floor(totalSec / (86400 * 30)) % 12;
+  const y  = Math.floor(totalSec / (86400 * 365));
+  return { y, mo, d, h, m, s };
+}
+
+/* ============================================================
+   ANALOG CLOCK DRAWING
+============================================================ */
+function drawAnalogClock(canvasId, now) {
+  const cv = document.getElementById(canvasId);
+  if (!cv) return;
+  const size = Math.min(cv.offsetWidth, cv.offsetHeight) || 140;
+  cv.width = size; cv.height = size;
+  const ctx = cv.getContext('2d');
+  const cx = size / 2, cy = size / 2, r = size / 2 - 4;
+
+  ctx.clearRect(0, 0, size, size);
+
+  /* face */
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(15,23,42,0.8)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(99,102,241,0.6)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* hour ticks */
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang) * (r - 8), cy + Math.sin(ang) * (r - 8));
+    ctx.lineTo(cx + Math.cos(ang) * r,       cy + Math.sin(ang) * r);
+    ctx.strokeStyle = 'rgba(148,163,184,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  const H = now.getHours() % 12;
+  const M = now.getMinutes();
+  const S = now.getSeconds();
+
+  function hand(angle, len, color, width) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  hand((H / 12 + M / 720) * Math.PI * 2 - Math.PI / 2, r * 0.55, '#f1f5f9', 3);
+  hand((M / 60 + S / 3600) * Math.PI * 2 - Math.PI / 2, r * 0.78, '#f1f5f9', 2);
+  hand(S / 60 * Math.PI * 2 - Math.PI / 2, r * 0.85, '#ef4444', 1);
+
+  /* center dot */
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ef4444';
+  ctx.fill();
+}
+
+/* ============================================================
+   CAROUSEL INTERVAL
+============================================================ */
+const carouselTimers = {};
+function startCarouselInterval(containerId, speed) {
+  if (carouselTimers[containerId]) clearInterval(carouselTimers[containerId]);
+  carouselTimers[containerId] = setInterval(() => {
+    const car = document.getElementById(containerId);
+    if (!car) { clearInterval(carouselTimers[containerId]); return; }
+    const imgs = car.querySelectorAll('img');
+    if (!imgs.length) return;
+    let active = car.querySelector('img.active');
+    if (!active) { imgs[0].classList.add('active'); return; }
+    active.classList.remove('active');
+    const idx = Array.from(imgs).indexOf(active);
+    imgs[(idx + 1) % imgs.length].classList.add('active');
+  }, (speed || 8) * 1000);
+}
+
+/* ============================================================
+   CONTROL PANEL BINDINGS
+============================================================ */
+function bindControls() {
+  /* toggles */
+  document.getElementById('tog-clock').addEventListener('change', function() {
+    cfg.clockEnabled = this.checked; buildCanvasWidgets();
+  });
+  document.getElementById('tog-date').addEventListener('change', function() {
+    cfg.showDate = this.checked; tick();
+  });
+  document.getElementById('tog-dow').addEventListener('change', function() {
+    cfg.showDow = this.checked; tick();
+  });
+  document.getElementById('tog-text').addEventListener('change', function() {
+    cfg.textEnabled = this.checked; buildCanvasWidgets();
+  });
+  document.getElementById('tog-countdown').addEventListener('change', function() {
+    cfg.countdownEnabled = this.checked; buildCanvasWidgets();
+  });
+  document.getElementById('tog-ticker').addEventListener('change', function() {
+    cfg.tickerEnabled = this.checked; buildCanvasWidgets();
+  });
+  document.getElementById('tog-scratch').addEventListener('change', function() {
+    cfg.scratchEnabled = this.checked; buildCanvasWidgets();
+  });
+  document.getElementById('tog-carousel').addEventListener('change', function() {
+    cfg.carouselEnabled = this.checked; buildCanvasWidgets();
+  });
+
+  /* clock style seg buttons */
+  document.querySelectorAll('[data-clock]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-clock]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      cfg.clockStyle = this.dataset.clock;
+      buildCanvasWidgets();
+    });
+  });
+
+  /* date format seg buttons */
+  document.querySelectorAll('[data-datefmt]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-datefmt]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      cfg.dateFmt = this.dataset.datefmt;
+      tick();
+    });
+  });
+
+  /* text label */
+  document.getElementById('text-label-val').addEventListener('input', function() {
+    cfg.textVal = this.value;
+    const el = document.querySelector('#canvas-wrap [data-wid="text"] .w-text-label');
+    if (el) el.textContent = cfg.textVal;
+    /* hide widget if empty */
+    const widget = document.querySelector('#canvas-wrap [data-wid="text"]');
+    if (widget) widget.style.display = cfg.textVal.trim() ? '' : 'none';
+  });
+
+  /* countdown target */
+  document.getElementById('countdown-target').addEventListener('change', function() {
+    cfg.countdownTarget = this.value ? new Date(this.value).getTime() : null;
+    buildCanvasWidgets();
+  });
+  document.getElementById('countdown-label').addEventListener('input', function() {
+    cfg.countdownLabel = this.value;
+    const el = document.querySelector('#canvas-wrap .w-countdown-label');
+    if (el) el.textContent = cfg.countdownLabel;
+  });
+
+  /* ticker items */
+  document.getElementById('ticker-items').addEventListener('input', function() {
+    cfg.tickerItems = this.value;
+    const inner = document.getElementById('cv-ticker-inner');
+    if (inner) inner.textContent = getTickerText();
+  });
+  cfg.tickerItems = document.getElementById('ticker-items').value;
+
+  /* carousel upload */
+  document.getElementById('carousel-upload').addEventListener('change', function() {
+    cfg.carouselImages = [];
+    const files = Array.from(this.files);
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        cfg.carouselImages.push(e.target.result);
+        loaded++;
+        if (loaded === files.length) buildCanvasWidgets();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  /* carousel speed */
+  document.getElementById('carousel-speed').addEventListener('input', function() {
+    cfg.carouselSpeed = parseInt(this.value) || 8;
+  });
+}
+
+/* ============================================================
+   SET DEFAULT COUNTDOWN (2 weeks from now)
+============================================================ */
+function setDefaultCountdown() {
+  const d = new Date(Date.now() + 14 * 86400000);
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById('countdown-target').value = local;
+  cfg.countdownTarget = d.getTime();
+}
+
+/* ============================================================
+   LAUNCH DASHBOARD (enter State 2)
+============================================================ */
+document.getElementById('launch-btn').addEventListener('click', () => {
+  enterDashboard();
+});
+
+function enterDashboard() {
+  buildDashboard();
+  /* hide all site-chrome elements */
+  hideSiteChrome(true);
+  /* show active dashboard */
+  document.getElementById('active-dashboard').classList.add('visible');
+  /* request fullscreen */
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  /* install exit listeners */
+  installExitListeners();
+}
+
+function exitDashboard() {
+  document.getElementById('active-dashboard').classList.remove('visible');
+  clearDashboard();
+  hideSiteChrome(false);
+  if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  removeExitListeners();
+}
+
+/* ============================================================
+   SITE-CHROME HIDING (State isolation guardrail)
+============================================================ */
+function hideSiteChrome(hide) {
+  const selectors = [
+    '#axiom-header',
+    '#axiom-footer',
+    '#axiom-privacy-badge',
+    '#axiom-disclaimer',
+    '.top-bar', '.top-nav', '.site-nav', '.site-topbar',
+    '.axiom-ad-leaderboard', '.axiom-ad-mobile-anchor',
+    '[data-axiom-chrome]',
+  ];
+  selectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.display = hide ? 'none' : '';
+    });
+  });
+  /* also hide config studio elements we do not want visible in fullscreen */
+  document.getElementById('config-studio').style.display = hide ? 'none' : '';
+}
+
+/* ============================================================
+   EXIT LISTENERS
+   Any click, keydown, or touchstart exits State 2 immediately.
+============================================================ */
+let exitHandler = null;
+function installExitListeners() {
+  exitHandler = (e) => {
+    /* allow scratchpad pointer events - but still exit on key */
+    if (e.type === 'keydown') {
+      exitDashboard();
+      return;
+    }
+    /* on click/touch: only exit if NOT clicking inside scratchpad */
+    if (e.target && e.target.classList.contains('dw-scratchpad-area')) return;
+    exitDashboard();
+  };
+  document.addEventListener('keydown',    exitHandler, true);
+  document.addEventListener('click',      exitHandler, true);
+  document.addEventListener('touchstart', exitHandler, true);
+}
+
+function removeExitListeners() {
+  if (exitHandler) {
+    document.removeEventListener('keydown',    exitHandler, true);
+    document.removeEventListener('click',      exitHandler, true);
+    document.removeEventListener('touchstart', exitHandler, true);
+    exitHandler = null;
+  }
+}
+
+/* ============================================================
+   BUILD ACTIVE DASHBOARD (State 2)
+============================================================ */
+let dashTick = null;
+let dashCarouselTimer = null;
+
+function buildDashboard() {
+  applyBgToDash();
+  const dw = document.getElementById('dash-widgets');
+  dw.innerHTML = '';
+
+  const cw = document.getElementById('canvas-wrap');
+  const cRect = cw.getBoundingClientRect();
+  const sw = window.innerWidth;
+  const sh = window.innerHeight;
+
+  function toScreenPct(pos) {
+    /* canvas widgets stored in px on a % left/top basis.
+       Convert: left% is already relative to canvas width.
+       We remap from canvas coordinate space to screen. */
+    const scaleX = sw / cRect.width;
+    const scaleY = sh / cRect.height;
+    return {
+      left:   (pos.x / 100) * sw,
+      top:    (pos.y / 100) * sh,
+      width:  pos.w * scaleX,
+      height: pos.h * scaleY,
+    };
+  }
+
+  function makeDw(id, pos) {
+    const el = document.createElement('div');
+    el.className = 'dw';
+    el.dataset.wid = id;
+    const s = toScreenPct(pos);
+    el.style.left   = s.left   + 'px';
+    el.style.top    = s.top    + 'px';
+    el.style.width  = s.width  + 'px';
+    el.style.height = s.height + 'px';
+    return el;
+  }
+
+  /* Clock */
+  if (cfg.clockEnabled) {
+    const el = makeDw('clock', wPos.clock);
+    if (cfg.clockStyle === 'analog') {
+      el.innerHTML = '<div class="dw-analog-wrap"><canvas id="dw-analog"></canvas></div>';
+      el.style.background = 'rgba(15,23,42,0.7)';
+    } else {
+      el.innerHTML = '<div class="dw-clock-digital" id="dw-digital">--:--:--</div><div class="dw-clock-date" id="dw-date"></div>';
+    }
+    dw.appendChild(el);
+  }
+
+  /* Text label */
+  if (cfg.textEnabled && cfg.textVal.trim()) {
+    const el = makeDw('text', wPos.text);
+    el.innerHTML = '<div class="dw-text-label">' + escHtml(cfg.textVal) + '</div>';
+    dw.appendChild(el);
+  }
+
+  /* Countdown */
+  if (cfg.countdownEnabled && cfg.countdownTarget) {
+    const el = makeDw('countdown', wPos.countdown);
+    el.innerHTML = `
+      <div class="dw-countdown">
+        <div class="dw-countdown-label">${escHtml(cfg.countdownLabel)}</div>
+        <div class="dw-countdown-grid" id="dw-cd-grid">
+          ${dwCdUnit('--','Yrs')}${dwCdUnit('--','Mo')}${dwCdUnit('--','Days')}
+          ${dwCdUnit('--','Hrs')}${dwCdUnit('--','Min')}${dwCdUnit('--','Sec')}
+        </div>
+      </div>`;
+    dw.appendChild(el);
+  }
+
+  /* Ticker */
+  if (cfg.tickerEnabled) {
+    const el = makeDw('ticker', wPos.ticker);
+    el.style.left = '0'; el.style.width = '100%';
+    el.style.borderRadius = '0';
+    el.innerHTML = '<div class="dw-ticker-wrap"><div class="dw-ticker-inner">' + getTickerText() + '</div></div>';
+    dw.appendChild(el);
+  }
+
+  /* Scratchpad */
+  if (cfg.scratchEnabled) {
+    const el = makeDw('scratch', wPos.scratch);
+    const saved = localStorage.getItem('axiomape_ambient_scratch') || '';
+    el.innerHTML = '<textarea class="dw-scratchpad-area" placeholder="Notes...">' + escHtml(saved) + '</textarea>';
+    el.querySelector('textarea').addEventListener('input', function() {
+      localStorage.setItem('axiomape_ambient_scratch', this.value);
+    });
+    dw.appendChild(el);
+  }
+
+  /* Carousel */
+  if (cfg.carouselEnabled && cfg.carouselImages.length) {
+    const el = makeDw('carousel', wPos.carousel);
+    el.innerHTML = '<div class="dw-carousel" id="dw-carousel"></div>';
+    const car = el.querySelector('#dw-carousel');
+    cfg.carouselImages.forEach((src, i) => {
+      const img = document.createElement('img');
+      img.src = src;
+      if (i === 0) img.classList.add('active');
+      car.appendChild(img);
+    });
+    dw.appendChild(el);
+    dashCarouselTimer = setInterval(() => {
+      const imgs = car.querySelectorAll('img');
+      let active = car.querySelector('img.active');
+      if (!active) { imgs[0].classList.add('active'); return; }
+      active.classList.remove('active');
+      imgs[(Array.from(imgs).indexOf(active) + 1) % imgs.length].classList.add('active');
+    }, (cfg.carouselSpeed || 8) * 1000);
+  }
+
+  /* start dash tick */
+  dashTick = setInterval(dashTickFn, 1000);
+  dashTickFn();
+}
+
+function dwCdUnit(val, lbl) {
+  return `<div class="dw-countdown-unit"><div class="dw-countdown-val">${val}</div><div class="dw-countdown-lbl">${lbl}</div></div>`;
+}
+
+function dashTickFn() {
+  /* clock */
+  const dEl   = document.getElementById('dw-digital');
+  const dDate = document.getElementById('dw-date');
+  if (dEl || dDate) {
+    const now = new Date();
+    if (dEl) dEl.textContent = now.toLocaleTimeString();
+    if (dDate) {
+      const parts = [];
+      if (cfg.showDow) parts.push(now.toLocaleDateString('en-US', { weekday: 'long' }));
+      if (cfg.showDate) {
+        if (cfg.dateFmt === 'long')  parts.push(now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+        if (cfg.dateFmt === 'short') parts.push(now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }));
+        if (cfg.dateFmt === 'iso')   parts.push(now.toISOString().slice(0, 10));
+      }
+      dDate.textContent = parts.join(', ');
+    }
+    if (cfg.clockStyle === 'analog') drawAnalogClock('dw-analog', now);
+  }
+
+  /* countdown */
+  const grid = document.getElementById('dw-cd-grid');
+  if (grid && cfg.countdownTarget) {
+    const delta = cfg.countdownTarget - Date.now();
+    const u = computeCountdown(delta);
+    const cells = grid.querySelectorAll('.dw-countdown-val');
+    [u.y, u.mo, u.d, u.h, u.m, u.s].forEach((v, i) => { cells[i].textContent = pad(v); });
+  }
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function clearDashboard() {
+  if (dashTick) { clearInterval(dashTick); dashTick = null; }
+  if (dashCarouselTimer) { clearInterval(dashCarouselTimer); dashCarouselTimer = null; }
+  document.getElementById('dash-widgets').innerHTML = '';
+  document.getElementById('dash-bg').innerHTML = '';
+  document.getElementById('dash-bg').style.background = '';
+}
+
+/* ============================================================
+   UTILITY
+============================================================ */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ============================================================
+   FAQ ACCORDION
+============================================================ */
+function toggleFaq(btn) {
+  const answer = btn.nextElementSibling;
+  const isOpen = answer.classList.contains('open');
+  document.querySelectorAll('.faq-a.open').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-q.open').forEach(q => q.classList.remove('open'));
+  if (!isOpen) {
+    answer.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+buildBgGallery();
+applyBgToCanvas();
+setDefaultCountdown();
+bindControls();
+buildCanvasWidgets();
+startTick();
+</script>
+</body>
+</html>
