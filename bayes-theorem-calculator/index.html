@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bayes' Theorem Calculator: Update Conditional Probability in Real Time | AxiomApe</title>
+  <meta name="description" content="Free Bayes' Theorem Calculator: compute posterior probability from prior, sensitivity, and false positive rate instantly. Includes a natural frequency translator, scenario presets for medical testing, spam filtering, and quality control, and a full glossary." />
+  <meta name="keywords" content="bayes theorem calculator, conditional probability calculator, posterior probability, prior probability, sensitivity calculator, false positive rate, base rate fallacy, bayesian inference, medical test accuracy, spam filter probability" />
+  <link rel="canonical" href="https://axiomape.com/bayes-theorem-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Bayes' Theorem Calculator",
+        "description": "Free Bayes' Theorem Calculator: compute posterior probability from prior, sensitivity, and false positive rate instantly. Includes a natural frequency translator, scenario presets for medical testing, spam filtering, and quality control, and a full glossary.",
+        "url": "https://axiomape.com/bayes-theorem-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the Base Rate Fallacy in statistics?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The base rate fallacy occurs when people ignore the prior probability (base rate) of an event and focus only on new evidence. For example, a test that is 99% accurate for a disease affecting 1 in 10,000 people will still produce far more false positives than true positives, because the base rate is so low. Bayesian reasoning forces you to account for this prior probability before drawing conclusions from test results."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can a test that is 99% accurate still be wrong most of the time?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When a disease is very rare, even a highly accurate test produces more false positives than true positives. If only 1 in 1,000 people have a condition, and your test has a 1% false positive rate, then out of 1,000 people tested, roughly 10 will falsely test positive while only 1 truly has the condition. That means about 91% of positive results are false alarms, despite the test being 99% accurate in absolute terms."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is Bayes' Theorem used in spam filters and machine learning?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Spam filters use a Naive Bayes classifier to compute the probability that an email is spam given the words it contains. The prior probability is the general rate of spam in your inbox. The likelihood is how often certain words (like 'free money' or 'click here') appear in known spam versus legitimate email. The posterior probability tells the filter how likely the new email is spam given its specific word combination. Machine learning pipelines use this same pattern for classification, anomaly detection, and medical diagnosis."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between prior and posterior probability?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Prior probability is your belief about an event before seeing any new evidence. For example, a 1% chance that a random person has a particular disease. Posterior probability is your updated belief after incorporating new evidence, such as a positive test result. Bayes' Theorem is the mathematical rule that converts a prior probability into a posterior probability by weighting the new evidence against how likely that evidence was in the first place."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do sensitivity and specificity impact false positives?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sensitivity (true positive rate) measures how good a test is at catching real cases. Specificity measures how good it is at clearing innocent cases. The false positive rate equals 1 minus specificity. A test can have perfect sensitivity but low specificity, causing it to flag many healthy people as sick. Both values interact with the base rate: a test with 95% specificity in a population where only 1 in 1,000 people have the condition will still return roughly 50 false positives for every true positive."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --bg-card:     #1a1d27;
+      --bg-card2:    #1e2130;
+      --bg-input:    #252838;
+      --border:      #2e3347;
+      --border-focus:#8B5CF6;
+      --text:        #e8eaf0;
+      --text-muted:  #9099b3;
+      --text-light:  #636b85;
+      --purple:      #8B5CF6;
+      --purple-dim:  #5b3fa8;
+      --purple-bg:   rgba(139,92,246,0.12);
+      --cyan:        #06B6D4;
+      --cyan-dim:    #0891b2;
+      --cyan-bg:     rgba(6,182,212,0.10);
+      --green:       #10b981;
+      --green-bg:    rgba(16,185,129,0.10);
+      --amber:       #f59e0b;
+      --red:         #ef4444;
+      --shadow:      0 4px 24px rgba(0,0,0,0.4);
+      --radius:      14px;
+      --radius-sm:   8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===================================================
+       LAYOUT
+    =================================================== */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===================================================
+       TOOL HEADER
+    =================================================== */
+    .tool-header {
+      background: linear-gradient(135deg, #1a0a3c 0%, #2d1160 50%, #1a2050 100%);
+      padding: 52px 20px 44px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .tool-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .tool-header h1 span.accent-purple { color: var(--purple); }
+    .tool-header h1 span.accent-cyan   { color: var(--cyan); }
+    .tool-header p {
+      font-size: 1.05rem;
+      color: #b0b8d4;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin: 24px auto;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.01em;
+    }
+
+    /* ===================================================
+       PRESET DROPDOWN
+    =================================================== */
+    .preset-wrap {
+      margin-bottom: 28px;
+    }
+    .preset-wrap label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .preset-wrap select {
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.97rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239099b3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 40px;
+      transition: border-color 0.2s;
+    }
+    .preset-wrap select:focus { outline: none; border-color: var(--purple); }
+
+    /* ===================================================
+       FORMAT TOGGLE
+    =================================================== */
+    .format-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 28px;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      width: fit-content;
+    }
+    .format-btn {
+      padding: 7px 18px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .format-btn.active {
+      background: var(--purple);
+      color: #fff;
+    }
+
+    /* ===================================================
+       INPUT ROW
+    =================================================== */
+    .input-group {
+      margin-bottom: 24px;
+    }
+    .input-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .input-label {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .input-label .sym {
+      font-size: 0.78rem;
+      color: var(--purple);
+      background: var(--purple-bg);
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+    .input-value-display {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--purple);
+      min-width: 80px;
+      text-align: right;
+    }
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 5px;
+      background: var(--bg-input);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--purple);
+      cursor: pointer;
+      box-shadow: 0 0 0 3px var(--purple-bg);
+      transition: box-shadow 0.15s;
+    }
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 5px var(--purple-bg);
+    }
+    input[type="number"] {
+      width: 90px;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.95rem;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    input[type="number"]:focus { outline: none; border-color: var(--purple); }
+    .input-hint {
+      font-size: 0.77rem;
+      color: var(--text-light);
+      margin-top: 5px;
+    }
+
+    /* ===================================================
+       RESULTS
+    =================================================== */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 480px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+    .result-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 16px;
+      text-align: center;
+    }
+    .result-box.hero {
+      grid-column: 1 / -1;
+      background: var(--purple-bg);
+      border-color: var(--purple);
+    }
+    .result-box .r-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+    }
+    .result-box .r-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .result-box.hero .r-value {
+      font-size: 2.4rem;
+      color: var(--purple);
+    }
+    .result-box .r-sym {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ===================================================
+       FREQUENCY TRANSLATOR
+    =================================================== */
+    .freq-box {
+      background: var(--cyan-bg);
+      border: 1.5px solid var(--cyan);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-top: 6px;
+    }
+    .freq-box .freq-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 10px;
+    }
+    .freq-box p {
+      font-size: 0.98rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .freq-box strong { color: var(--cyan); }
+
+    /* ===================================================
+       FORMULA DISPLAY
+    =================================================== */
+    .formula-wrap {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-family: "Courier New", monospace;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.9;
+    }
+    .formula-wrap .f-highlight { color: var(--purple); font-weight: 700; }
+    .formula-wrap .f-cyan     { color: var(--cyan); }
+
+    /* ===================================================
+       AD PLACEMENTS (site-chrome handles show/hide)
+    =================================================== */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 0.8rem;
+    }
+
+    /* ===================================================
+       CHEAT SHEET TABLE
+    =================================================== */
+    .cheat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      margin-top: 16px;
+    }
+    .cheat-table th {
+      background: var(--purple-bg);
+      color: var(--purple);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--purple-dim);
+    }
+    .cheat-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .cheat-table tr:last-child td { border-bottom: none; }
+    .cheat-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .cheat-table td:first-child { font-weight: 600; color: var(--cyan); }
+    .cheat-table .formula-cell { font-family: monospace; color: var(--text-muted); }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--purple);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ===================================================
+       EDU SECTION
+    =================================================== */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin: 22px 0 10px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--green-bg);
+      border-left: 3px solid var(--green);
+      padding: 14px 18px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 20px;
+      line-height: 1.65;
+    }
+
+    /* ===================================================
+       FAQ ACCORDION
+    =================================================== */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: var(--bg-card2);
+      border: none;
+      padding: 15px 18px;
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--bg-input); }
+    .faq-q .faq-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--purple-bg);
+      color: var(--purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: transform 0.25s;
+    }
+    .faq-q.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      background: var(--bg-card2);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+    .faq-a.open { display: block; }
+
+    /* ===================================================
+       HIGHLIGHT BOX
+    =================================================== */
+    .highlight-box {
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-dim);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+    .highlight-box strong { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+<main class="container" id="main">
+
+  <header class="tool-header">
+    <h1>Bayes' Theorem <span class="accent-purple">Conditional Probability</span> Calculator</h1>
+    <p>Update your likelihood model in real time. Enter a prior, sensitivity, and false positive rate - and instantly see the posterior probability with a plain-English frequency translation.</p>
+  </header>
+
+  <!-- ============================================================
+       CALCULATOR CARD
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Bayesian Probability Engine</div>
+
+    <!-- Scenario Presets -->
+    <div class="preset-wrap">
+      <label for="scenario-select">Scenario Preset</label>
+      <select id="scenario-select" onchange="applyPreset()">
+        <option value="custom">Custom Model</option>
+        <option value="medical" selected>Medical Testing (The Rare Disease Paradox)</option>
+        <option value="spam">Spam Email Filtering</option>
+        <option value="qc">Manufacturing Quality Control</option>
+      </select>
+    </div>
+
+    <!-- Format Toggle -->
+    <div>
+      <div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Input Format</div>
+      <div class="format-toggle">
+        <button class="format-btn active" id="btn-pct"    onclick="setFormat('pct')">Percentage</button>
+        <button class="format-btn"        id="btn-dec"    onclick="setFormat('dec')">Decimal</button>
+        <button class="format-btn"        id="btn-freq"   onclick="setFormat('freq')">Frequency (per 1000)</button>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;" />
+
+    <!-- P(A): Prior -->
+    <div class="input-group">
+      <div class="input-group-header">
+        <div class="input-label">Prior Probability <span class="sym">P(A)</span></div>
+        <div class="input-value-display" id="disp-prior">1.00%</div>
+      </div>
+      <div class="input-row">
+        <input type="range" id="slider-prior" min="0" max="100" step="0.01" value="1" oninput="syncFromSlider('prior')" />
+        <input type="number" id="num-prior" value="1" step="0.01" oninput="syncFromNumber('prior')" />
+      </div>
+      <div class="input-hint" id="hint-prior">The baseline chance the event is true before any test or evidence.</div>
+    </div>
+
+    <!-- P(B|A): Sensitivity -->
+    <div class="input-group">
+      <div class="input-group-header">
+        <div class="input-label">Sensitivity / True Positive Rate <span class="sym">P(B|A)</span></div>
+        <div class="input-value-display" id="disp-sens">90.00%</div>
+      </div>
+      <div class="input-row">
+        <input type="range" id="slider-sens" min="0" max="100" step="0.01" value="90" oninput="syncFromSlider('sens')" />
+        <input type="number" id="num-sens" value="90" step="0.01" oninput="syncFromNumber('sens')" />
+      </div>
+      <div class="input-hint" id="hint-sens">The probability the test is positive when the condition IS present.</div>
+    </div>
+
+    <!-- P(B|~A): False Positive Rate -->
+    <div class="input-group">
+      <div class="input-group-header">
+        <div class="input-label">False Positive Rate <span class="sym">P(B|~A)</span></div>
+        <div class="input-value-display" id="disp-fpr">9.00%</div>
+      </div>
+      <div class="input-row">
+        <input type="range" id="slider-fpr" min="0" max="100" step="0.01" value="9" oninput="syncFromSlider('fpr')" />
+        <input type="number" id="num-fpr" value="9" step="0.01" oninput="syncFromNumber('fpr')" />
+      </div>
+      <div class="input-hint" id="hint-fpr">The probability the test is positive when the condition is ABSENT.</div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-grid">
+      <div class="result-box hero">
+        <div class="r-label">Posterior Probability P(A|B)</div>
+        <div class="r-value" id="res-posterior">--</div>
+        <div class="r-sym">Chance the condition is present given a positive result</div>
+      </div>
+      <div class="result-box">
+        <div class="r-label">Evidence Probability P(B)</div>
+        <div class="r-value" id="res-pb">--</div>
+        <div class="r-sym">Overall positive test rate in the population</div>
+      </div>
+      <div class="result-box">
+        <div class="r-label">Specificity</div>
+        <div class="r-value" id="res-spec">--</div>
+        <div class="r-sym">True Negative Rate (1 - False Positive Rate)</div>
+      </div>
+    </div>
+
+    <!-- Natural Frequency Translator -->
+    <div class="freq-box">
+      <div class="freq-title">Natural Frequency Translator - Out of 10,000 Cases</div>
+      <p id="freq-text">Enter values above to see a plain-English translation.</p>
+    </div>
+
+    <!-- Formula Display -->
+    <div class="formula-wrap" id="formula-display">
+      P(A|B) = <span class="f-cyan">P(B|A) x P(A)</span> / <span class="f-highlight">P(B)</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- Specificity vs FPR Cheat Sheet -->
+  <div class="card">
+    <div class="card-title">Specificity vs. False Positive Rate: Cheat Sheet</div>
+    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:16px;">Medical students frequently confuse these two terms when setting up Bayesian equations. They are not independent - they are two sides of the same coin.</p>
+    <div class="highlight-box">
+      <strong>Key insight:</strong> Specificity is simply 100% minus the False Positive Rate. If a test has a 9% false positive rate, its specificity is 91%. You only ever need one of the two values - the other is always implied.
+    </div>
+    <table class="cheat-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>What it measures</th>
+          <th>Formula</th>
+          <th>Bayes input?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Sensitivity</td>
+          <td>How well the test catches real cases (true positive rate)</td>
+          <td class="formula-cell">TP / (TP + FN)</td>
+          <td>P(B|A) - direct input</td>
+        </tr>
+        <tr>
+          <td>Specificity</td>
+          <td>How well the test clears innocent cases (true negative rate)</td>
+          <td class="formula-cell">TN / (TN + FP)</td>
+          <td>Indirect - convert to FPR first</td>
+        </tr>
+        <tr>
+          <td>False Positive Rate</td>
+          <td>Fraction of healthy cases that test positive</td>
+          <td class="formula-cell">1 - Specificity</td>
+          <td>P(B|~A) - direct input</td>
+        </tr>
+        <tr>
+          <td>False Negative Rate</td>
+          <td>Fraction of real cases missed by the test</td>
+          <td class="formula-cell">1 - Sensitivity</td>
+          <td>Not used directly</td>
+        </tr>
+        <tr>
+          <td>Positive Predictive Value</td>
+          <td>Probability the condition is present given a positive test</td>
+          <td class="formula-cell">TP / (TP + FP)</td>
+          <td>This IS the posterior P(A|B)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Glossary -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Bayes' Theorem</div>
+        <div class="glossary-def">A mathematical formula for updating the probability of a hypothesis when new evidence arrives. It connects prior belief, the likelihood of the evidence, and the resulting posterior belief.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Prior Probability P(A)</div>
+        <div class="glossary-def">Your initial estimate of the probability of an event before any new evidence is considered. Also called the base rate. This is the starting point for Bayesian reasoning.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Posterior Probability P(A|B)</div>
+        <div class="glossary-def">The updated probability of an event after accounting for new evidence. The output of Bayes' Theorem. Read as "the probability of A given that B occurred."</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Sensitivity (True Positive Rate)</div>
+        <div class="glossary-def">The probability that a test returns a positive result when the condition is genuinely present. A test with 90% sensitivity correctly identifies 90 out of every 100 true cases.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Specificity (True Negative Rate)</div>
+        <div class="glossary-def">The probability that a test returns a negative result when the condition is genuinely absent. Equals 1 minus the false positive rate. High specificity means few false alarms.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">False Positive Rate P(B|~A)</div>
+        <div class="glossary-def">The probability that a test returns a positive result even when the condition is absent. Even a small false positive rate can dominate the results when the condition is rare.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">False Negative</div>
+        <div class="glossary-def">A test result that incorrectly indicates the condition is absent when it is actually present. Equals 1 minus sensitivity. High false negative rates are dangerous in diagnostic settings.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Base Rate Fallacy</div>
+        <div class="glossary-def">The cognitive error of ignoring the prior probability of an event when evaluating evidence. People who forget the base rate wildly overestimate the meaning of a positive test for a rare condition.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Conditional Probability</div>
+        <div class="glossary-def">The probability of an event given that another event has already occurred, written P(A|B). Bayes' Theorem is a formula for computing conditional probabilities from known quantities.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Likelihood Ratio</div>
+        <div class="glossary-def">The ratio of the probability of the evidence given the hypothesis is true, to the probability of the evidence given the hypothesis is false. A high likelihood ratio means the evidence strongly supports the hypothesis.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Educational Section -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Bayesian Probability</h2>
+    <div class="section-intro">
+      You just got a positive result on a medical test. The test is 99% accurate. Does that mean you almost certainly have the condition? Probably not - and Bayes' Theorem is the mathematical proof of why. This guide walks through the logic, the formula, and the real-world scenarios where Bayesian thinking changes everything.
+    </div>
+
+    <h3>How to Use This Calculator</h3>
+    <p>Start by selecting a scenario preset or choosing "Custom Model" to enter your own values. Use the format toggle to switch between percentage, decimal, and per-1000-frequency inputs - the calculator converts all three to decimals before running the math, so you will never get a percentage-squared error.</p>
+    <p>Move the sliders or type directly into the number fields. Results update with every keystroke. The Posterior Probability box shows the key output: the probability the condition is present given a positive result. The Natural Frequency Translator below it converts the abstract math into a concrete count across 10,000 hypothetical cases.</p>
+
+    <h3>Understanding the Three Core Inputs</h3>
+    <p>The Prior Probability P(A) is the prevalence of the condition in the population you are sampling from. This is often the most important number, and the one people most frequently forget. A disease that affects 1 in 10,000 people has a prior of 0.01%.</p>
+    <p>Sensitivity P(B|A) is the test's ability to detect real cases. A 90% sensitivity means it catches 9 out of 10 true positives. The remaining 1 in 10 is a false negative.</p>
+    <p>The False Positive Rate P(B|~A) is the probability the test fires incorrectly on a healthy sample. Even a 1% false positive rate can overwhelm a true positive signal when the condition is rare, because the pool of healthy people is so much larger than the pool of sick people.</p>
+
+    <h3>The Bayes' Theorem Formula Step by Step</h3>
+    <p>Step 1 - Standardize all inputs to decimals between 0 and 1. If you input 1.5%, the engine works with 0.015. This prevents the classic percentage-squared error.</p>
+    <p>Step 2 - Compute the probability of a positive test in the whole population. This is called P(B): P(B) = (Sensitivity x Prior) + (FPR x (1 - Prior)).</p>
+    <p>Step 3 - Compute the posterior: P(A|B) = (Sensitivity x Prior) / P(B). This is the probability the condition is truly present given the positive test. In most real-world screening scenarios this number is far lower than people expect.</p>
+
+    <h3>Why This Matters: The Rare Disease Paradox</h3>
+    <p>Suppose a disease affects 0.1% of the population. Your test has 99% sensitivity and a 5% false positive rate. Bayes' Theorem gives a posterior of about 1.9%. That means roughly 98% of positive results are false alarms, even with a test that feels highly accurate. This is not a flaw in the test - it is a mathematical consequence of the low base rate.</p>
+    <p>Public health screening programs, airport security screening, and drug testing all face this exact problem. A test that feels effective in isolation can generate enormous false-positive burdens when applied to low-prevalence populations at scale.</p>
+
+    <h3>Spam Filtering and Machine Learning Applications</h3>
+    <p>A Naive Bayes spam classifier assigns a prior probability to every incoming email (roughly 40-70% of all email is spam globally). It then updates that prior using the likelihoods of individual word frequencies derived from training data. The posterior probability for each email either exceeds a threshold (mark as spam) or does not (allow through). This exact Bayesian update cycle - prior, evidence, posterior - runs millions of times per day across every major email service.</p>
+
+    <!-- FAQ -->
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What is the Base Rate Fallacy in statistics?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        The base rate fallacy occurs when people ignore the prior probability (base rate) of an event and focus only on new evidence. For example, a test that is 99% accurate for a disease affecting 1 in 10,000 people will still produce far more false positives than true positives, because the base rate is so low. Bayesian reasoning forces you to account for this prior probability before drawing conclusions from test results.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Why can a test that is 99% accurate still be wrong most of the time?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        When a disease is very rare, even a highly accurate test produces more false positives than true positives. If only 1 in 1,000 people have a condition, and your test has a 1% false positive rate, then out of 1,000 people tested, roughly 10 will falsely test positive while only 1 truly has the condition. That means about 91% of positive results are false alarms, despite the test being 99% accurate in absolute terms.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How is Bayes' Theorem used in spam filters and machine learning?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Spam filters use a Naive Bayes classifier to compute the probability that an email is spam given the words it contains. The prior probability is the general rate of spam in your inbox. The likelihood is how often certain words appear in known spam versus legitimate email. The posterior probability tells the filter how likely the new email is spam given its specific word combination. Machine learning pipelines use this same pattern for classification, anomaly detection, and medical diagnosis.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between prior and posterior probability?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Prior probability is your belief about an event before seeing any new evidence. For example, a 1% chance that a random person has a particular disease. Posterior probability is your updated belief after incorporating new evidence, such as a positive test result. Bayes' Theorem is the mathematical rule that converts a prior probability into a posterior probability by weighting the new evidence against how likely that evidence was in the first place.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How do sensitivity and specificity impact false positives?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Sensitivity measures how good a test is at catching real cases. Specificity measures how good it is at clearing innocent cases. The false positive rate equals 1 minus specificity. A test can have perfect sensitivity but low specificity, causing it to flag many healthy people as sick. Both values interact with the base rate: a test with 95% specificity in a population where only 1 in 1,000 people have the condition will still return roughly 50 false positives for every true positive.
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ===================================================
+     STATE
+  =================================================== */
+  let currentFormat = 'pct';  // 'pct' | 'dec' | 'freq'
+
+  // Raw decimal values (0-1 range, internal truth)
+  let state = { prior: 0.01, sens: 0.90, fpr: 0.09 };
+
+  // Scenario presets (stored as decimals)
+  const PRESETS = {
+    medical: { prior: 0.001, sens: 0.99, fpr: 0.05,
+      label: 'Medical Testing: Disease prevalence 0.1%, test sensitivity 99%, false positive rate 5%.' },
+    spam:    { prior: 0.50,  sens: 0.95, fpr: 0.01,
+      label: 'Spam Filtering: 50% of all email is spam, filter catches 95% of spam, 1% false positive rate.' },
+    qc:      { prior: 0.02,  sens: 0.98, fpr: 0.03,
+      label: 'Quality Control: 2% of units are defective, inspector catches 98% of defects, 3% false positive rate.' },
+    custom:  null
+  };
+
+  /* ===================================================
+     FORMAT HELPERS
+  =================================================== */
+  // Convert internal decimal -> display value for current format
+  function toDisplay(dec) {
+    if (currentFormat === 'pct')  return +(dec * 100).toFixed(4);
+    if (currentFormat === 'dec')  return +dec.toFixed(6);
+    if (currentFormat === 'freq') return +(dec * 1000).toFixed(4);
+    return dec;
+  }
+
+  // Convert display value -> internal decimal
+  function toDecimal(val) {
+    const v = parseFloat(val) || 0;
+    if (currentFormat === 'pct')  return Math.min(1, Math.max(0, v / 100));
+    if (currentFormat === 'dec')  return Math.min(1, Math.max(0, v));
+    if (currentFormat === 'freq') return Math.min(1, Math.max(0, v / 1000));
+    return v;
+  }
+
+  // Slider always works 0-100 representing the raw percentage of range
+  function sliderToDecimal(sliderVal) {
+    return parseFloat(sliderVal) / 100;
+  }
+  function decimalToSlider(dec) {
+    return dec * 100;
+  }
+
+  function formatPct(dec) {
+    return (dec * 100).toFixed(2) + '%';
+  }
+
+  /* ===================================================
+     RENDER
+  =================================================== */
+  function render() {
+    const { prior, sens, fpr } = state;
+
+    // Core Bayes computation
+    const pB       = (sens * prior) + (fpr * (1 - prior));
+    const posterior = pB > 0 ? (sens * prior) / pB : 0;
+    const spec      = 1 - fpr;
+
+    // Result display
+    document.getElementById('res-posterior').textContent = formatPct(posterior);
+    document.getElementById('res-pb').textContent        = formatPct(pB);
+    document.getElementById('res-spec').textContent      = formatPct(spec);
+
+    // Formula live values
+    document.getElementById('formula-display').innerHTML =
+      `P(A|B) = <span class="f-cyan">${formatPct(sens)} &times; ${formatPct(prior)}</span> / <span class="f-highlight">${formatPct(pB)}</span> = <strong style="color:var(--purple)">${formatPct(posterior)}</strong>`;
+
+    // Natural Frequency Translator (10,000 sample)
+    const N        = 10000;
+    const truePos  = Math.round(N * prior * sens);
+    const falsePos = Math.round(N * (1 - prior) * fpr);
+    const totalPos = truePos + falsePos;
+    const hasCondition = Math.round(N * prior);
+
+    let freqText;
+    if (pB === 0 || prior === 0) {
+      freqText = 'Adjust the sliders above to see a frequency translation.';
+    } else {
+      freqText = `Out of <strong>${N.toLocaleString()}</strong> cases, ` +
+        `<strong>${hasCondition.toLocaleString()}</strong> will actually have the condition. ` +
+        `<strong>${totalPos.toLocaleString()}</strong> will test positive: ` +
+        `<strong>${truePos.toLocaleString()}</strong> true positives and ` +
+        `<strong>${falsePos.toLocaleString()}</strong> false positives. ` +
+        `Therefore, if you receive a positive result, there is only a ` +
+        `<strong>${formatPct(posterior)}</strong> chance you actually have the condition.`;
+    }
+    document.getElementById('freq-text').innerHTML = freqText;
+  }
+
+  /* ===================================================
+     SYNC SLIDER -> NUMBER FIELD -> STATE
+  =================================================== */
+  function syncFromSlider(field) {
+    const sliderVal = document.getElementById('slider-' + field).value;
+    const dec = sliderToDecimal(sliderVal);
+    state[field] = dec;
+    // Update number field with current format
+    document.getElementById('num-' + field).value = toDisplay(dec);
+    updateDisplay(field);
+    render();
+    markCustom();
+  }
+
+  function syncFromNumber(field) {
+    const numVal = parseFloat(document.getElementById('num-' + field).value) || 0;
+    const dec = toDecimal(numVal);
+    state[field] = dec;
+    // Update slider
+    document.getElementById('slider-' + field).value = decimalToSlider(dec);
+    updateDisplay(field);
+    render();
+    markCustom();
+  }
+
+  function updateDisplay(field) {
+    const dec = state[field];
+    const labels = { prior: 'disp-prior', sens: 'disp-sens', fpr: 'disp-fpr' };
+    document.getElementById(labels[field]).textContent = formatPct(dec);
+  }
+
+  /* ===================================================
+     FORMAT TOGGLE
+  =================================================== */
+  function setFormat(fmt) {
+    currentFormat = fmt;
+    ['pct','dec','freq'].forEach(f => {
+      document.getElementById('btn-' + f).classList.toggle('active', f === fmt);
+    });
+
+    // Update hints and number field values
+    const hints = {
+      pct:  { prior: 'Enter as a percentage, e.g. 1 for 1%.', sens: 'Enter as a percentage, e.g. 90 for 90%.', fpr: 'Enter as a percentage, e.g. 9 for 9%.' },
+      dec:  { prior: 'Enter as a decimal, e.g. 0.01 for 1%.', sens: 'Enter as a decimal, e.g. 0.90 for 90%.', fpr: 'Enter as a decimal, e.g. 0.09 for 9%.' },
+      freq: { prior: 'Enter as cases per 1000, e.g. 10 for 1%.', sens: 'Enter as per 1000, e.g. 900 for 90%.', fpr: 'Enter as per 1000, e.g. 90 for 9%.' }
+    };
+
+    ['prior','sens','fpr'].forEach(f => {
+      document.getElementById('num-' + f).value = toDisplay(state[f]);
+      document.getElementById('hint-' + f).textContent = hints[fmt][f];
+    });
+  }
+
+  /* ===================================================
+     PRESET LOADER
+  =================================================== */
+  function applyPreset() {
+    const key = document.getElementById('scenario-select').value;
+    if (!PRESETS[key]) return;
+    const p = PRESETS[key];
+    state.prior = p.prior;
+    state.sens  = p.sens;
+    state.fpr   = p.fpr;
+    refreshAllInputs();
+    render();
+  }
+
+  function refreshAllInputs() {
+    ['prior','sens','fpr'].forEach(f => {
+      document.getElementById('slider-' + f).value = decimalToSlider(state[f]);
+      document.getElementById('num-' + f).value    = toDisplay(state[f]);
+      updateDisplay(f);
+    });
+  }
+
+  function markCustom() {
+    document.getElementById('scenario-select').value = 'custom';
+  }
+
+  /* ===================================================
+     FAQ ACCORDION
+  =================================================== */
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const isOpen = answer.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+    if (!isOpen) {
+      answer.classList.add('open');
+      btn.classList.add('open');
+    }
+  }
+
+  /* ===================================================
+     INIT
+  =================================================== */
+  applyPreset();
+  // Set medical preset on load
+  document.getElementById('scenario-select').value = 'medical';
+  applyPreset();
+</script>
+</body>
+</html>

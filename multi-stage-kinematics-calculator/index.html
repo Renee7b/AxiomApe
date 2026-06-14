@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Stage Kinematics Calculator: Solve Velocity, Distance, and Time Across Segmented Motion Paths | AxiomApe</title>
+  <meta name="description" content="Free multi-stage kinematics calculator. Define up to 10 motion segments with custom initial velocity, acceleration, and duration. Instantly solve for cumulative displacement, total time, and final velocity across complex linear acceleration paths. Supports metric and imperial units." />
+  <meta name="keywords" content="multi-stage kinematics calculator, segmented motion calculator, linear acceleration calculator, velocity distance time calculator, kinematics solver, displacement calculator, acceleration calculator, physics calculator, SUVAT calculator, multi-segment motion, kinematic equations, engineering motion calculator" />
+  <link rel="canonical" href="https://axiomape.com/multi-stage-kinematics-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Multi-Stage Kinematics Calculator",
+      "description": "Free multi-stage kinematics calculator. Define up to 10 motion segments with custom initial velocity, acceleration, and duration. Instantly solve for cumulative displacement, total time, and final velocity across complex linear acceleration paths. Supports metric and imperial units.",
+      "url": "https://axiomape.com/multi-stage-kinematics-calculator/",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does multi-segment acceleration differ from constant acceleration?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Constant acceleration assumes a single, unchanging rate of speed change throughout an entire journey. Multi-segment (or piecewise) acceleration breaks the motion into distinct phases, where each phase can have a completely different acceleration value. For example, a car accelerating from 0 to 60 mph, then cruising at 60 mph (zero acceleration), then braking to a stop is a three-segment problem. Each segment follows the standard kinematic equations independently, but the final velocity of one segment feeds directly into the initial velocity of the next, linking all phases into a continuous, realistic motion path."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does the final velocity of one segment become the start of the next?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "This continuity condition is a fundamental physical requirement: an object cannot teleport between velocities. At the boundary between two segments, the object has one and only one velocity. Whatever speed it reaches at the end of segment one is, by definition, the speed it carries into the beginning of segment two. This constraint, called velocity continuity, ensures the model is physically realistic. In this calculator, the initial velocity of every segment after the first is automatically set to and locked at the final velocity computed from the previous segment."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens if acceleration is negative (deceleration)?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A negative acceleration value (deceleration) is perfectly valid and simply means the object is slowing down in the direction of motion. The same kinematic equations apply: vf = vi + (a times t) and d = (vi times t) + (0.5 times a times t squared). If the computed final velocity would go below zero (meaning the object would reverse direction before the segment ends), the calculator displays a warning for that segment. In reality, an object under constant deceleration stops at v = 0 and the motion ceases, so any segment producing a negative final velocity represents an input that is not physically achievable without a change of direction."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I calculate distance when velocity changes constantly?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When velocity changes at a constant rate (constant acceleration), the displacement formula is d = (vi times t) + (0.5 times a times t squared). This is derived by integrating the velocity function v(t) = vi + a*t over the time interval. The first term (vi times t) accounts for the distance that would be covered at the initial velocity alone, and the second term (0.5 times a times t squared) accounts for the additional (or reduced) distance due to the changing speed. This calculator applies this formula independently for each segment and sums all segment displacements for the total path length."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the common real-world applications of segmented kinematics?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Segmented kinematics appears across many fields. In automotive engineering, vehicle performance testing (0-60 mph runs, braking distance, overtaking maneuvers) is modeled as multiple acceleration phases. In robotics and CNC machining, motion profiles for linear actuators use acceleration, constant velocity, and deceleration segments to achieve smooth, precise positioning. In aerospace, rocket trajectory calculations split the flight into boost, coast, and re-entry phases. In sports science, sprint analysis breaks a 100-meter race into drive, acceleration, maximum velocity, and deceleration phases. Any system involving planned or measured changes in acceleration over time benefits from this segmented approach."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <style>
+    /* ============================================================
+       BASE LAYOUT
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      color: #94a3b8;
+      font-size: 1rem;
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ============================================================
+       CARD
+    ============================================================ */
+    .card {
+      background: #1a1d26;
+      border: 1px solid #252836;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: .78rem;
+      font-weight: 800;
+      color: #4F46E5;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 18px;
+    }
+
+    /* ============================================================
+       TOOLBAR (unit toggle + add segment)
+    ============================================================ */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .unit-toggle {
+      display: flex;
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .unit-toggle button {
+      padding: 8px 18px;
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      transition: background .15s, color .15s;
+    }
+
+    .unit-toggle button.active {
+      background: #4F46E5;
+      color: #fff;
+    }
+
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 20px;
+      background: linear-gradient(135deg, #4F46E5, #06B6D4);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+
+    .btn-add:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+    .btn-add:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .seg-count-label {
+      font-size: .8rem;
+      color: #475569;
+      margin-left: auto;
+    }
+
+    /* ============================================================
+       SEGMENTS LIST
+    ============================================================ */
+    #segments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .segment-card {
+      background: #12151e;
+      border: 1px solid #252836;
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: border-color .2s;
+      position: relative;
+    }
+
+    .segment-card:focus-within {
+      border-color: #4F46E5;
+    }
+
+    .segment-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .segment-badge {
+      background: linear-gradient(135deg, #4F46E5, #06B6D4);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+
+    .segment-vf-display {
+      font-size: .78rem;
+      color: #06B6D4;
+      font-weight: 700;
+      margin-left: auto;
+    }
+
+    .btn-delete {
+      background: none;
+      border: 1px solid #3f4457;
+      border-radius: 6px;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px 10px;
+      font-size: .75rem;
+      font-weight: 700;
+      transition: border-color .15s, color .15s, background .15s;
+      white-space: nowrap;
+    }
+
+    .btn-delete:hover {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgba(239,68,68,.08);
+    }
+
+    .btn-delete:disabled {
+      opacity: .3;
+      cursor: not-allowed;
+    }
+
+    .segment-inputs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 580px) {
+      .segment-inputs { grid-template-columns: 1fr; }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: .72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+
+    .input-group .unit-hint {
+      font-size: .68rem;
+      color: #374151;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+
+    .input-group input[type="number"] {
+      background: #0f1117;
+      border: 1px solid #252836;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 9px 12px;
+      font-size: .92rem;
+      width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .input-group input[type="number"]:focus {
+      outline: none;
+      border-color: #4F46E5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,.18);
+    }
+
+    .input-group input.locked {
+      color: #06B6D4;
+      border-color: #1e3a4a;
+      background: #0b1219;
+      cursor: not-allowed;
+    }
+
+    .seg-warning {
+      margin-top: 10px;
+      font-size: .78rem;
+      color: #f59e0b;
+      background: rgba(245,158,11,.08);
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: 7px;
+      padding: 7px 12px;
+      display: none;
+    }
+
+    .seg-warning.visible { display: block; }
+
+    /* ============================================================
+       HERO METRICS
+    ============================================================ */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    @media (max-width: 520px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-box {
+      background: #12151e;
+      border: 1px solid #252836;
+      border-radius: 12px;
+      padding: 18px 16px;
+      text-align: center;
+    }
+
+    .metric-box .metric-label {
+      font-size: .7rem;
+      font-weight: 800;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+    }
+
+    .metric-box .metric-value {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 900;
+      color: #4F46E5;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .metric-box .metric-value.cyan { color: #06B6D4; }
+
+    .metric-box .metric-unit {
+      font-size: .75rem;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       SEGMENT SUMMARY TABLE
+    ============================================================ */
+    .summary-table-wrap {
+      overflow-x: auto;
+      margin-top: 18px;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+    }
+
+    .summary-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #0f1117;
+      color: #475569;
+      font-size: .7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      border-bottom: 1px solid #252836;
+    }
+
+    .summary-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #1a1d26;
+      color: #cbd5e1;
+    }
+
+    .summary-table tr:last-child td { border-bottom: none; }
+
+    .summary-table td.cyan { color: #06B6D4; font-weight: 700; }
+    .summary-table td.indigo { color: #818cf8; font-weight: 700; }
+
+    /* ============================================================
+       AD PLACEMENTS (styled by site-chrome)
+    ============================================================ */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: #374151;
+      font-size: .75rem;
+    }
+
+    /* ============================================================
+       GLOSSARY
+    ============================================================ */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .glossary-item {
+      background: #12151e;
+      border: 1px solid #252836;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .glossary-term {
+      font-size: .78rem;
+      font-weight: 800;
+      color: #4F46E5;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: .84rem;
+      color: #94a3b8;
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+       EDUCATIONAL SECTION
+    ============================================================ */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 14px;
+    }
+
+    .edu-section h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #c7d2fe;
+      margin: 20px 0 8px;
+    }
+
+    .section-intro {
+      color: #94a3b8;
+      line-height: 1.7;
+      margin-bottom: 12px;
+      font-size: .93rem;
+    }
+
+    .edu-section p {
+      color: #94a3b8;
+      line-height: 1.7;
+      margin-bottom: 10px;
+      font-size: .9rem;
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .faq-item {
+      background: #12151e;
+      border: 1px solid #252836;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 14px 18px;
+      color: #e2e8f0;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: color .15s;
+    }
+
+    .faq-q:hover { color: #818cf8; }
+
+    .faq-q .faq-arrow {
+      flex-shrink: 0;
+      font-size: .75rem;
+      color: #4F46E5;
+      transition: transform .2s;
+    }
+
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      color: #94a3b8;
+      font-size: .87rem;
+      line-height: 1.7;
+    }
+
+    .faq-item.open .faq-a { display: block; }
+  </style>
+</head>
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Multi-Stage Kinematics Calculator</h1>
+      <p>Define up to 10 motion segments with custom acceleration and duration. Instantly solve for cumulative displacement, total time, and final velocity across complex linear motion paths.</p>
+    </header>
+
+    <!-- ============================================================
+         MAIN TOOL CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Engineering Workspace</div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="unit-toggle">
+          <button id="btn-metric" class="active" onclick="setUnits('metric')">Metric</button>
+          <button id="btn-imperial" onclick="setUnits('imperial')">Imperial</button>
+        </div>
+        <button class="btn-add" id="btn-add" onclick="addSegment()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Add Segment
+        </button>
+        <span class="seg-count-label" id="seg-count-label">1 / 10 segments</span>
+      </div>
+
+      <!-- Segments list -->
+      <div id="segments-list"></div>
+
+      <!-- Hero metrics -->
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="metric-label">Total Displacement</div>
+          <div class="metric-value" id="m-displacement">0.000</div>
+          <div class="metric-unit" id="m-dist-unit">meters (m)</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Total Time</div>
+          <div class="metric-value cyan" id="m-time">0.000</div>
+          <div class="metric-unit">seconds (s)</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Final Velocity</div>
+          <div class="metric-value" id="m-vfinal">0.000</div>
+          <div class="metric-unit" id="m-vel-unit">m/s</div>
+        </div>
+      </div>
+
+      <!-- Segment summary table -->
+      <div class="summary-table-wrap">
+        <table class="summary-table" id="summary-table">
+          <thead>
+            <tr>
+              <th>Seg</th>
+              <th id="th-vi">Vi (m/s)</th>
+              <th id="th-acc">Accel (m/s2)</th>
+              <th id="th-t">Time (s)</th>
+              <th id="th-vf">Vf (m/s)</th>
+              <th id="th-d">Dist (m)</th>
+            </tr>
+          </thead>
+          <tbody id="summary-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Kinematics</div>
+          <div class="glossary-def">The branch of classical mechanics that describes the motion of objects without reference to the forces causing that motion. It deals purely with position, velocity, acceleration, and time.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Acceleration</div>
+          <div class="glossary-def">The rate of change of velocity with respect to time, measured in m/s squared (metric) or ft/s squared (imperial). A positive value means speeding up; a negative value means slowing down.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Displacement</div>
+          <div class="glossary-def">The net change in position of an object, measured as a signed quantity. Unlike distance, displacement accounts for direction - an object that returns to its start has zero displacement but nonzero distance traveled.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Initial Velocity</div>
+          <div class="glossary-def">The speed of an object at the beginning of a time interval, often denoted vi or u. In multi-segment motion, the initial velocity of each segment after the first is automatically determined by the final velocity of the previous segment.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Final Velocity</div>
+          <div class="glossary-def">The speed of an object at the end of a given time interval, often denoted vf or v. Calculated as vf = vi + (a * t). It becomes the initial velocity of the next segment, enforcing physical continuity.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Segmented Motion</div>
+          <div class="glossary-def">A motion model in which a total journey is broken into discrete phases, each with its own constant acceleration. This is far more realistic than single-phase models for anything involving throttle changes, braking, or gear shifts.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Vector</div>
+          <div class="glossary-def">A quantity that has both magnitude and direction. Velocity and acceleration are vectors - a negative value in this calculator indicates the direction is opposite to the positive reference direction (typically forward or upward).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Scalar</div>
+          <div class="glossary-def">A quantity that has magnitude only, with no direction. Speed (the magnitude of velocity) and time are scalars. Total distance traveled is a scalar, while displacement is a vector.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">SI Units</div>
+          <div class="glossary-def">The International System of Units, the modern form of the metric system. The SI units for kinematics are: meters (m) for distance, seconds (s) for time, and meters per second (m/s) for velocity.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Velocity Continuity</div>
+          <div class="glossary-def">The physical principle that an object cannot instantaneously jump from one velocity to another - there are no discontinuities in velocity for real objects with finite mass. This calculator enforces this by chaining segment velocities automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Multi-Stage Kinematics</h2>
+
+      <p class="section-intro">Whether you are a physics student solving a multi-phase motion problem, a mechanical engineer modeling a servo actuator, or a sports scientist analyzing a 100-meter sprint, single-phase constant-acceleration formulas rarely tell the full story. Real motion is almost always piecewise - a rocket burns fuel for 3 minutes then coasts, a car accelerates, holds speed, then brakes. This calculator handles all of it in one workspace.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Each row in the workspace represents one segment of your motion path. For the first segment, enter an initial velocity (the speed at the very start of the journey), an acceleration rate, and the duration of that phase. The calculator immediately shows the final velocity, displacement, and summary for that segment.</p>
+      <p>When you click "Add Segment," a new row appears below. Its initial velocity field is automatically filled with the final velocity from the segment above and is locked - you cannot change it, because physics won't allow it. You only need to provide the acceleration and duration for each new phase. Keep adding segments (up to 10) to model your full motion path. The three hero metrics at the bottom of the card update in real time: total displacement, total elapsed time, and the final velocity after all segments complete.</p>
+      <p>Use the Metric / Imperial toggle at any time to switch between m/s, m/s squared, and meters versus ft/s, ft/s squared, and feet. All displayed values convert instantly - your underlying inputs are preserved.</p>
+
+      <h3>The Physics Behind the Calculator</h3>
+      <p>This tool applies the standard SUVAT kinematic equations for constant acceleration within each segment. For segment n with initial velocity vi(n), acceleration a(n), and duration t(n):</p>
+      <p>Final velocity: vf(n) = vi(n) + (a(n) * t(n))</p>
+      <p>Displacement: d(n) = (vi(n) * t(n)) + (0.5 * a(n) * t(n) squared)</p>
+      <p>The initial velocity for segment n+1 is forced equal to vf(n), which is the velocity continuity constraint. Total displacement is the sum of all d(n). Total time is the sum of all t(n). These are the same equations used in introductory university physics, AP Physics, and engineering dynamics courses worldwide.</p>
+
+      <h3>Reading the Warnings</h3>
+      <p>If a segment's inputs produce a negative final velocity (meaning the object would have to pass through zero speed and reverse direction before the segment ends), a polite warning appears under that segment. This does not crash the calculator - it simply flags a physically questionable scenario so you can review your inputs. A common cause is a very large negative acceleration with a long duration. In practice, the object would stop at the moment v = 0, so you would need to split the phase at that moment.</p>
+
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How does multi-segment acceleration differ from constant acceleration?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">Constant acceleration assumes a single, unchanging rate of speed change throughout an entire journey. Multi-segment acceleration breaks the motion into distinct phases, where each phase can have a completely different acceleration value. For example, a car accelerating from 0 to 60 mph, then cruising at 60 mph (zero acceleration), then braking to a stop is a three-segment problem. Each segment follows the standard kinematic equations independently, but the final velocity of one segment feeds directly into the initial velocity of the next, linking all phases into a continuous, realistic motion path.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Why does the final velocity of one segment become the start of the next?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">This continuity condition is a fundamental physical requirement: an object cannot teleport between velocities. At the boundary between two segments, the object has one and only one velocity. Whatever speed it reaches at the end of segment one is, by definition, the speed it carries into segment two. This constraint, called velocity continuity, ensures the model is physically realistic. In this calculator, the initial velocity of every segment after the first is automatically set to and locked at the final velocity computed from the previous segment.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What happens if acceleration is negative (deceleration)?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">A negative acceleration value (deceleration) is perfectly valid and simply means the object is slowing down in the direction of motion. The same kinematic equations apply. If the computed final velocity would go below zero, the calculator displays a warning for that segment. In reality, an object under constant deceleration stops at v = 0 and does not reverse unless a force explicitly acts in the reverse direction, so any segment producing a negative final velocity represents an input that needs review.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How do I calculate distance when velocity changes constantly?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">When velocity changes at a constant rate (constant acceleration), the displacement formula is d = (vi * t) + (0.5 * a * t squared). This comes from integrating the velocity function v(t) = vi + a*t over the time interval. The first term accounts for the distance covered at the initial velocity alone; the second term accounts for the additional or reduced distance due to the changing speed. This calculator applies this formula to each segment and sums all results for the total path length.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What are the common real-world applications of segmented kinematics?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">Segmented kinematics appears across many fields. In automotive engineering, vehicle performance testing (0-60 mph runs, braking distance) is modeled as multiple acceleration phases. In robotics and CNC machining, motion profiles use acceleration, constant velocity, and deceleration segments for smooth positioning. In aerospace, rocket trajectories split into boost, coast, and re-entry phases. In sports science, sprint analysis breaks a 100-meter race into drive, acceleration, max velocity, and deceleration phases.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let unitSystem = 'metric'; // 'metric' | 'imperial'
+    const METRIC_FACTOR = 1;          // base
+    const IMP_FACTOR = 3.28084;       // 1 m = 3.28084 ft
+
+    // Each segment: { vi, acc, dur } in metric (m/s, m/s2, s)
+    // vi for seg 0 is user-editable; vi for seg n>0 = vf of seg n-1
+    let segments = [];
+    let nextId = 0;
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    window.addEventListener('DOMContentLoaded', () => {
+      addSegment();
+    });
+
+    /* ============================================================
+       UNIT LABELS
+    ============================================================ */
+    function unitLabels() {
+      if (unitSystem === 'metric') {
+        return { vel: 'm/s', acc: 'm/s²', dist: 'm', distLong: 'meters (m)', velLong: 'm/s' };
+      }
+      return { vel: 'ft/s', acc: 'ft/s²', dist: 'ft', distLong: 'feet (ft)', velLong: 'ft/s' };
+    }
+
+    /* ============================================================
+       ADD SEGMENT
+    ============================================================ */
+    function addSegment() {
+      if (segments.length >= 10) return;
+
+      const id = nextId++;
+      const seg = { id, vi: 0, acc: 0, dur: 0 };
+      segments.push(seg);
+      renderSegment(seg);
+      updateCountLabel();
+      document.getElementById('btn-add').disabled = segments.length >= 10;
+      recalc();
+    }
+
+    /* ============================================================
+       DELETE SEGMENT
+    ============================================================ */
+    function deleteSegment(id) {
+      const idx = segments.findIndex(s => s.id === id);
+      if (idx === -1) return;
+      segments.splice(idx, 1);
+      const el = document.getElementById('seg-' + id);
+      if (el) el.remove();
+      updateCountLabel();
+      document.getElementById('btn-add').disabled = false;
+      recalc();
+    }
+
+    /* ============================================================
+       RENDER ONE SEGMENT CARD
+    ============================================================ */
+    function renderSegment(seg) {
+      const ul = unitLabels();
+      const idx = segments.indexOf(seg);
+      const isFirst = idx === 0;
+      const list = document.getElementById('segments-list');
+
+      const div = document.createElement('div');
+      div.className = 'segment-card';
+      div.id = 'seg-' + seg.id;
+
+      // Convert stored metric values to display units
+      const dispVi = toDisplay(seg.vi);
+      const dispAcc = toDisplayAcc(seg.acc);
+
+      div.innerHTML = `
+        <div class="segment-header">
+          <span class="segment-badge">Segment ${idx + 1}</span>
+          <span class="segment-vf-display" id="vf-disp-${seg.id}"></span>
+          <button class="btn-delete" onclick="deleteSegment(${seg.id})" ${segments.length <= 1 ? 'disabled' : ''} title="Remove this segment">Delete</button>
+        </div>
+        <div class="segment-inputs">
+          <div class="input-group">
+            <label for="vi-${seg.id}">Initial Velocity <span class="unit-hint" id="vi-unit-${seg.id}">(${ul.vel})</span></label>
+            <input type="number" id="vi-${seg.id}" step="any"
+              value="${fmtInput(dispVi)}"
+              ${isFirst ? '' : 'readonly class="locked"'}
+              oninput="onSegInput(${seg.id},'vi',this.value)"
+              placeholder="0" />
+          </div>
+          <div class="input-group">
+            <label for="acc-${seg.id}">Acceleration <span class="unit-hint" id="acc-unit-${seg.id}">(${ul.acc})</span></label>
+            <input type="number" id="acc-${seg.id}" step="any"
+              value="${fmtInput(dispAcc)}"
+              oninput="onSegInput(${seg.id},'acc',this.value)"
+              placeholder="0" />
+          </div>
+          <div class="input-group">
+            <label for="dur-${seg.id}">Duration <span class="unit-hint">(s)</span></label>
+            <input type="number" id="dur-${seg.id}" step="any" min="0"
+              value="${fmtInput(seg.dur)}"
+              oninput="onSegInput(${seg.id},'dur',this.value)"
+              placeholder="0" />
+          </div>
+        </div>
+        <div class="seg-warning" id="warn-${seg.id}"></div>
+      `;
+
+      list.appendChild(div);
+    }
+
+    /* ============================================================
+       INPUT HANDLER
+    ============================================================ */
+    function onSegInput(id, field, rawVal) {
+      const seg = segments.find(s => s.id === id);
+      if (!seg) return;
+      const val = parseFloat(rawVal);
+      const num = isNaN(val) ? 0 : val;
+
+      if (field === 'vi') {
+        // Only editable for first segment; store in metric
+        seg.vi = toMetric(num);
+      } else if (field === 'acc') {
+        seg.acc = toMetricAcc(num);
+      } else if (field === 'dur') {
+        seg.dur = num; // duration is unitless (seconds)
+      }
+
+      recalc();
+    }
+
+    /* ============================================================
+       RECALCULATE ALL SEGMENTS
+    ============================================================ */
+    function recalc() {
+      const ul = unitLabels();
+      let totalDisp = 0;
+      let totalTime = 0;
+      let currentVi = 0;
+
+      // Rebuild segment badges and enforce vi continuity
+      segments.forEach((seg, idx) => {
+        const el = document.getElementById('seg-' + seg.id);
+        if (!el) return;
+
+        // Update badge number
+        const badge = el.querySelector('.segment-badge');
+        if (badge) badge.textContent = 'Segment ' + (idx + 1);
+
+        // Enforce continuity: lock vi for non-first segments
+        if (idx === 0) {
+          currentVi = seg.vi;
+        } else {
+          seg.vi = currentVi;
+          const viInput = document.getElementById('vi-' + seg.id);
+          if (viInput) {
+            viInput.value = fmtInput(toDisplay(seg.vi));
+            viInput.readOnly = true;
+            viInput.className = 'locked';
+          }
+        }
+
+        // Update unit hint labels
+        const viUnit = document.getElementById('vi-unit-' + seg.id);
+        const accUnit = document.getElementById('acc-unit-' + seg.id);
+        if (viUnit) viUnit.textContent = '(' + ul.vel + ')';
+        if (accUnit) accUnit.textContent = '(' + ul.acc + ')';
+
+        // Validate duration
+        const dur = seg.dur;
+        const warn = document.getElementById('warn-' + seg.id);
+
+        if (dur < 0) {
+          showWarn(warn, 'Duration cannot be negative. Please enter a value of 0 or greater.');
+          currentVi = seg.vi; // don't advance
+          return;
+        }
+
+        // Compute vf and displacement (all in metric)
+        const vf = seg.vi + seg.acc * dur;
+        const d = seg.vi * dur + 0.5 * seg.acc * dur * dur;
+
+        // Warn on negative final velocity (would reverse direction)
+        if (vf < 0 && dur > 0) {
+          showWarn(warn, 'This segment produces a negative final velocity (' + toDisplay(vf).toFixed(3) + ' ' + ul.vel + '). The object would stop and reverse direction before the segment ends. Consider splitting this phase at the point where velocity reaches zero.');
+        } else {
+          hideWarn(warn);
+        }
+
+        // Update vf display in segment header
+        const vfDisp = document.getElementById('vf-disp-' + seg.id);
+        if (vfDisp) {
+          vfDisp.textContent = 'vf = ' + toDisplay(vf).toFixed(3) + ' ' + ul.vel;
+        }
+
+        totalDisp += d;
+        totalTime += dur;
+        currentVi = vf;
+      });
+
+      // Hero metrics
+      const dispFactor = unitSystem === 'metric' ? 1 : IMP_FACTOR;
+      document.getElementById('m-displacement').textContent = (totalDisp * dispFactor).toFixed(3);
+      document.getElementById('m-time').textContent = totalTime.toFixed(3);
+      document.getElementById('m-vfinal').textContent = toDisplay(currentVi).toFixed(3);
+      document.getElementById('m-dist-unit').textContent = ul.distLong;
+      document.getElementById('m-vel-unit').textContent = ul.velLong;
+
+      // Summary table headers
+      document.getElementById('th-vi').textContent = 'Vi (' + ul.vel + ')';
+      document.getElementById('th-acc').textContent = 'Accel (' + ul.acc + ')';
+      document.getElementById('th-t').textContent = 'Time (s)';
+      document.getElementById('th-vf').textContent = 'Vf (' + ul.vel + ')';
+      document.getElementById('th-d').textContent = 'Dist (' + ul.dist + ')';
+
+      // Summary table rows
+      const tbody = document.getElementById('summary-body');
+      tbody.innerHTML = '';
+      segments.forEach((seg, idx) => {
+        const dur = Math.max(0, seg.dur);
+        const vf = seg.vi + seg.acc * dur;
+        const d = seg.vi * dur + 0.5 * seg.acc * dur * dur;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td class="indigo">${toDisplay(seg.vi).toFixed(3)}</td>
+          <td>${toDisplayAcc(seg.acc).toFixed(3)}</td>
+          <td>${dur.toFixed(3)}</td>
+          <td class="cyan">${toDisplay(vf).toFixed(3)}</td>
+          <td class="indigo">${(d * dispFactor).toFixed(3)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Re-enable/disable delete buttons (min 1 segment)
+      segments.forEach(seg => {
+        const btn = document.querySelector('#seg-' + seg.id + ' .btn-delete');
+        if (btn) btn.disabled = segments.length <= 1;
+      });
+    }
+
+    /* ============================================================
+       UNIT TOGGLE
+    ============================================================ */
+    function setUnits(system) {
+      unitSystem = system;
+      document.getElementById('btn-metric').classList.toggle('active', system === 'metric');
+      document.getElementById('btn-imperial').classList.toggle('active', system === 'imperial');
+
+      const ul = unitLabels();
+
+      // Update first segment vi input display value (others are locked and updated in recalc)
+      if (segments.length > 0) {
+        const firstSeg = segments[0];
+        const viInput = document.getElementById('vi-' + firstSeg.id);
+        if (viInput) viInput.value = fmtInput(toDisplay(firstSeg.vi));
+
+        const accInput = document.getElementById('acc-' + firstSeg.id);
+        if (accInput) accInput.value = fmtInput(toDisplayAcc(firstSeg.acc));
+      }
+
+      // Update all non-first segment acc inputs
+      segments.forEach((seg, idx) => {
+        if (idx === 0) return;
+        const accInput = document.getElementById('acc-' + seg.id);
+        if (accInput) accInput.value = fmtInput(toDisplayAcc(seg.acc));
+      });
+
+      recalc();
+    }
+
+    /* ============================================================
+       UNIT CONVERSION HELPERS
+    ============================================================ */
+    function toDisplay(metricVal) {
+      return unitSystem === 'metric' ? metricVal : metricVal * IMP_FACTOR;
+    }
+
+    function toDisplayAcc(metricVal) {
+      return unitSystem === 'metric' ? metricVal : metricVal * IMP_FACTOR;
+    }
+
+    function toMetric(displayVal) {
+      return unitSystem === 'metric' ? displayVal : displayVal / IMP_FACTOR;
+    }
+
+    function toMetricAcc(displayVal) {
+      return unitSystem === 'metric' ? displayVal : displayVal / IMP_FACTOR;
+    }
+
+    /* ============================================================
+       HELPERS
+    ============================================================ */
+    function fmtInput(val) {
+      if (val === 0 || val === null || val === undefined) return '';
+      return val;
+    }
+
+    function showWarn(el, msg) {
+      if (!el) return;
+      el.textContent = 'Note: ' + msg;
+      el.classList.add('visible');
+    }
+
+    function hideWarn(el) {
+      if (!el) return;
+      el.classList.remove('visible');
+    }
+
+    function updateCountLabel() {
+      document.getElementById('seg-count-label').textContent = segments.length + ' / 10 segments';
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

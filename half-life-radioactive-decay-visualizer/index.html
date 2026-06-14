@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Half-Life Radioactive Decay Visualizer: Project Isotope Breakdown Schedules | AxiomApe</title>
+  <meta name="description" content="Free half-life radioactive decay calculator and visualizer. Select a preset isotope or enter custom values, solve for any variable, and see the exponential decay curve with a full breakdown schedule. 100% client-side." />
+  <meta name="keywords" content="half-life calculator, radioactive decay calculator, carbon-14 dating calculator, uranium-238 decay, iodine-131 half-life, exponential decay visualizer, radiometric dating tool, isotope decay schedule, nuclear decay calculator, decay constant calculator, remaining amount calculator, half life formula, N0 Nt calculator, radioactive decay graph" />
+  <link rel="canonical" href="https://axiomape.com/half-life-radioactive-decay-visualizer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Half-Life Radioactive Decay Visualizer",
+        "description": "Free half-life radioactive decay calculator and visualizer. Select a preset isotope or enter custom values, solve for any variable, and see the exponential decay curve with a full breakdown schedule. 100% client-side.",
+        "url": "https://axiomape.com/half-life-radioactive-decay-visualizer/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does a radioactive substance mathematically never reach exactly zero?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The decay formula Nt = N0 times (0.5) raised to the power of t divided by t1/2 is an exponential function. Exponential functions approach zero asymptotically - they get infinitely close but the math never produces an exact zero result. Each half-life cuts the remaining amount in half, so you always have half of something remaining, no matter how small. In reality, atoms are discrete - you eventually reach one atom and then it either decays or it does not. But as a mathematical model for large populations of atoms, the curve never truly touches zero."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Carbon-14 dating use half-lives to determine age?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Living organisms continuously absorb Carbon-14 from the atmosphere, maintaining a known ratio of C-14 to stable C-12. When an organism dies, it stops absorbing C-14, and the existing C-14 begins decaying with a half-life of 5,730 years. Scientists measure the current C-14 to C-12 ratio in a sample and compare it to the known starting ratio. By rearranging the decay formula to solve for time, they can calculate how many years ago the organism died. The technique is reliable for objects up to about 50,000 years old, after which too little C-14 remains to measure accurately."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between a parent and daughter isotope?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A parent isotope is the unstable radioactive atom that undergoes decay. The daughter isotope is the new atom produced after the parent decays. For example, when Uranium-238 decays, its daughter product is Thorium-234. The daughter may itself be radioactive, leading to a decay chain, or it may be stable. In radiometric dating, scientists measure the ratio of parent to daughter isotopes in a rock or mineral to determine its age."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are all isotopes of an element radioactive?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Most elements have both stable and unstable (radioactive) isotopes. Carbon, for example, has two stable isotopes - Carbon-12 and Carbon-13 - and one common radioactive isotope, Carbon-14. Hydrogen has stable Protium and Deuterium, and radioactive Tritium. Generally, isotopes with too many or too few neutrons relative to their protons are unstable and will decay. The band of stability on a nuclide chart shows the neutron-to-proton ratios that produce stable nuclei."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does temperature or pressure change an isotope's half-life?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No - under the conditions found on Earth or in most laboratory settings, temperature and pressure have no measurable effect on radioactive half-lives. Decay rates are governed by nuclear forces, which are far stronger than the chemical or physical forces affected by heat and pressure. This constancy is precisely what makes radiometric dating reliable: the decay clock ticks at the same rate regardless of whether a rock is buried deep underground or sitting on the surface. Only extreme conditions - such as those inside stars - can alter decay rates."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f1117;
+      --surface:    #1a1d27;
+      --surface2:   #22263a;
+      --border:     #2e3250;
+      --text:       #e2e8f0;
+      --muted:      #8892a4;
+      --green:      #22C55E;
+      --amber:      #F59E0B;
+      --red:        #ef4444;
+      --radius:     10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    #main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    header.page-header {
+      text-align: center;
+      padding: 32px 0 24px;
+    }
+    header.page-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    header.page-header p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Preset dropdown */
+    .preset-row {
+      margin-bottom: 20px;
+    }
+    .preset-row label {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    select, input[type="number"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer; }
+    select:focus, input[type="number"]:focus { border-color: var(--green); }
+    input[type="number"].active-field { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(245,158,11,0.18); }
+    input[type="number"].solved-field { border-color: var(--green); box-shadow: 0 0 0 2px rgba(34,197,94,0.15); }
+
+    /* Core Grid */
+    .vars-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 540px) { .vars-grid { grid-template-columns: 1fr; } }
+
+    .var-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .var-block.is-solved { border-color: var(--green); }
+    .var-block.has-value { border-color: var(--amber); }
+
+    .var-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .var-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .var-tag {
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .tag-input  { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .tag-solved { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .tag-empty  { background: rgba(136,146,164,0.12); color: var(--muted); }
+
+    .var-math {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .input-with-unit {
+      display: flex;
+      gap: 6px;
+    }
+    .input-with-unit input { flex: 1; min-width: 0; }
+    .input-with-unit select { width: auto; flex-shrink: 0; min-width: 110px; }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      margin-top: 6px;
+      padding: 2px 0;
+      text-decoration: underline;
+      display: block;
+    }
+    .clear-btn:hover { color: var(--red); }
+
+    /* Result display */
+    .result-display {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 6px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      min-height: 42px;
+      word-break: break-all;
+    }
+
+    /* Status bar */
+    .status-bar {
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      text-align: center;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .status-bar.ok    { background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.3);  color: var(--green); }
+    .status-bar.warn  { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+    .status-bar.error { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.3);  color: var(--red); }
+
+    /* Canvas */
+    .graph-wrap {
+      position: relative;
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #12151e;
+    }
+    #decay-canvas {
+      display: block;
+      width: 100%;
+      height: 260px;
+    }
+    .graph-label {
+      position: absolute;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* Schedule Table */
+    .schedule-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--amber);
+      margin: 20px 0 10px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .schedule-table th {
+      background: var(--surface2);
+      color: var(--muted);
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .schedule-table td {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .schedule-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .schedule-table .hl-num { color: var(--amber); font-weight: 700; }
+    .schedule-table .hl-amt { color: var(--green); font-weight: 600; font-family: 'Courier New', monospace; }
+    .schedule-table .pct    { color: var(--muted); }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      margin: 24px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item { display: flex; flex-direction: column; gap: 4px; }
+    .glossary-term { font-weight: 700; color: var(--green); font-size: 0.9rem; }
+    .glossary-def  { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+
+    /* Educational section */
+    .edu-section h2 { font-size: 1.25rem; color: var(--text); margin-bottom: 14px; }
+    .edu-section h3 { font-size: 1rem; color: var(--amber); margin: 20px 0 8px; }
+    .section-intro  { color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+    .edu-section p  { color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .rule-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .rule-box .rule-n { font-size: 1.5rem; font-weight: 800; color: var(--amber); }
+    .rule-box .rule-label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .rule-box .rule-pct { font-size: 1rem; font-weight: 700; color: var(--green); margin-top: 2px; }
+
+    /* FAQ */
+    .faq-item { border-top: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      text-align: left;
+      padding: 14px 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .faq-q:hover { color: var(--green); }
+    .faq-q .faq-chevron { color: var(--muted); font-size: 1rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-q.open .faq-chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.9rem;
+    }
+    .faq-a.open { display: block; }
+
+    .formula-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: var(--green);
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <div style="background:rgba(132,204,22,0.08);border:1px solid rgba(132,204,22,0.35);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:0.88rem;color:#84CC16;">
+    A more comprehensive version of this tool is now available: <a href="/radioactive-isotope-half-life-computer/" style="color:#84CC16;font-weight:700;text-decoration:underline;">Radioactive Isotope Half-Life Computer</a> - with dual-mode isotope search, tri-variable auto-solve, amount unit toggles, and a live SVG decay curve with half-life markers.
+  </div>
+
+  <header class="page-header">
+    <h1>Half-Life Radioactive Decay Visualizer</h1>
+    <p>Select an isotope preset or enter custom values. Fill any three fields to instantly solve the fourth, visualize the exponential decay curve, and generate a breakdown schedule.</p>
+  </header>
+
+  <!-- TOOL CARD -->
+  <div class="card">
+    <div class="card-title">Decay Calculator</div>
+
+    <!-- Preset -->
+    <div class="preset-row">
+      <label for="preset-select">Isotope Preset</label>
+      <select id="preset-select" onchange="applyPreset()">
+        <option value="">-- Select a preset isotope --</option>
+        <option value="carbon14">Carbon-14 (5,730 Years)</option>
+        <option value="uranium238">Uranium-238 (4.468 Billion Years)</option>
+        <option value="iodine131">Iodine-131 (8.02 Days)</option>
+        <option value="custom">Custom Isotope</option>
+      </select>
+    </div>
+
+    <!-- Four variable inputs -->
+    <div class="vars-grid">
+
+      <!-- N0 -->
+      <div class="var-block" id="block-n0">
+        <div class="var-label-row">
+          <span class="var-label">Initial Amount (N0)</span>
+          <span class="var-tag tag-empty" id="tag-n0">Empty</span>
+        </div>
+        <div class="var-math">N<sub>0</sub></div>
+        <div class="input-with-unit">
+          <input type="number" id="inp-n0" placeholder="e.g. 100" min="0" oninput="onVarInput('n0')" />
+          <select id="unit-n0" onchange="onVarInput('n0')">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+            <option value="mg">mg</option>
+            <option value="mol">mol</option>
+            <option value="atoms">Atoms</option>
+          </select>
+        </div>
+        <button class="clear-btn" onclick="clearField('n0')">Clear</button>
+      </div>
+
+      <!-- Nt -->
+      <div class="var-block" id="block-nt">
+        <div class="var-label-row">
+          <span class="var-label">Remaining Amount (Nt)</span>
+          <span class="var-tag tag-empty" id="tag-nt">Empty</span>
+        </div>
+        <div class="var-math">N<sub>t</sub></div>
+        <div class="input-with-unit">
+          <input type="number" id="inp-nt" placeholder="e.g. 25" min="0" oninput="onVarInput('nt')" />
+          <select id="unit-nt" onchange="onVarInput('nt')">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+            <option value="mg">mg</option>
+            <option value="mol">mol</option>
+            <option value="atoms">Atoms</option>
+          </select>
+        </div>
+        <button class="clear-btn" onclick="clearField('nt')">Clear</button>
+      </div>
+
+      <!-- Half-life -->
+      <div class="var-block" id="block-hl">
+        <div class="var-label-row">
+          <span class="var-label">Half-Life (t<sub>1/2</sub>)</span>
+          <span class="var-tag tag-empty" id="tag-hl">Empty</span>
+        </div>
+        <div class="var-math">t<sub>1/2</sub></div>
+        <div class="input-with-unit">
+          <input type="number" id="inp-hl" placeholder="e.g. 5730" min="0" oninput="onVarInput('hl')" />
+          <select id="unit-hl" onchange="onVarInput('hl')">
+            <option value="seconds">Seconds</option>
+            <option value="minutes">Minutes</option>
+            <option value="days">Days</option>
+            <option value="years" selected>Years</option>
+            <option value="millionyears">Million Years</option>
+            <option value="billionyears">Billion Years</option>
+          </select>
+        </div>
+        <button class="clear-btn" onclick="clearField('hl')">Clear</button>
+      </div>
+
+      <!-- Time -->
+      <div class="var-block" id="block-t">
+        <div class="var-label-row">
+          <span class="var-label">Time Elapsed (t)</span>
+          <span class="var-tag tag-empty" id="tag-t">Empty</span>
+        </div>
+        <div class="var-math">t</div>
+        <div class="input-with-unit">
+          <input type="number" id="inp-t" placeholder="e.g. 11460" min="0" oninput="onVarInput('t')" />
+          <select id="unit-t" onchange="onVarInput('t')">
+            <option value="seconds">Seconds</option>
+            <option value="minutes">Minutes</option>
+            <option value="days">Days</option>
+            <option value="years" selected>Years</option>
+            <option value="millionyears">Million Years</option>
+            <option value="billionyears">Billion Years</option>
+          </select>
+        </div>
+        <button class="clear-btn" onclick="clearField('t')">Clear</button>
+      </div>
+
+    </div><!-- /vars-grid -->
+
+    <div class="status-bar" id="status-bar">Fill any three fields above to calculate the fourth.</div>
+
+    <!-- Decay Curve -->
+    <div class="graph-wrap" id="graph-wrap" style="display:none">
+      <canvas id="decay-canvas"></canvas>
+    </div>
+
+    <!-- Schedule Table -->
+    <div id="schedule-section" style="display:none">
+      <div class="schedule-title">Decay Schedule - Amount Remaining After Each Half-Life</div>
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>Half-Lives Elapsed</th>
+            <th>Time Elapsed</th>
+            <th>Amount Remaining</th>
+            <th>% Remaining</th>
+          </tr>
+        </thead>
+        <tbody id="schedule-body"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /card -->
+
+  <!-- AD PLACEMENT 1 -->
+<!-- ============================================================
+     AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+     Google AdSense 728x90 - shown on screens larger than 768px
+============================================================ -->
+<div class="axiom-ad-leaderboard" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+  <!-- GLOSSARY -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <span class="glossary-term">Half-Life</span>
+        <span class="glossary-def">The time required for exactly half of the atoms in a radioactive sample to decay. It is a fixed constant for each isotope, regardless of sample size.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Exponential Decay</span>
+        <span class="glossary-def">A process where a quantity decreases by a consistent percentage over equal time intervals, producing a curved graph that approaches but never reaches zero.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Parent Isotope</span>
+        <span class="glossary-def">The original, unstable radioactive atom before it undergoes decay. For example, Uranium-238 is the parent in the uranium decay series.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Daughter Isotope</span>
+        <span class="glossary-def">The new atom produced when a parent isotope decays. The daughter may be stable or itself radioactive, creating a decay chain.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Radiometric Dating</span>
+        <span class="glossary-def">A technique for determining the age of materials by measuring the known decay rate of radioactive isotopes and the ratio of parent to daughter atoms present.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Isotope</span>
+        <span class="glossary-def">Atoms of the same element that have the same number of protons but different numbers of neutrons, giving them different atomic masses and stability.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Decay Constant</span>
+        <span class="glossary-def">The probability per unit time that an individual atom will decay, symbolized as lambda. It is related to half-life by the formula: lambda = ln(2) divided by t1/2.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Radioactive Decay</span>
+        <span class="glossary-def">The spontaneous transformation of an unstable atomic nucleus into a more stable configuration, releasing energy in the form of alpha particles, beta particles, or gamma rays.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Logarithm</span>
+        <span class="glossary-def">The inverse of exponentiation. The natural logarithm (ln) is used in half-life formulas to solve for time when the amounts and half-life are known.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">Activity</span>
+        <span class="glossary-def">The number of decay events per second in a radioactive sample, measured in Becquerels (Bq). Activity decreases as the sample decays, following the same exponential curve as the amount.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATIONAL SECTION -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Radioactive Half-Life and Decay</h2>
+    <p class="section-intro">Half-life is one of the most elegant concepts in nuclear physics: no matter how large or small your sample, exactly half of it will be gone after one half-life. This tool lets you explore that mathematics visually - from the scale of bacteria-killing Iodine-131 (half-life of just 8 days) to the incomprehensible patience of Uranium-238 (half-life longer than the age of Earth).</p>
+
+    <h3>How to Use This Tool</h3>
+    <p>Enter values in any three of the four fields: Initial Amount (N0), Remaining Amount (Nt), Half-Life (t1/2), and Time Elapsed (t). Use the unit dropdowns to match your real-world problem - the calculator automatically converts all time values to the same unit before computing, so you can enter a half-life in Years and a time elapsed in Days without errors. The fourth variable solves instantly, the decay curve draws in real-time, and the schedule table shows you exactly how much remains after each of the first five half-lives.</p>
+
+    <h3>The Core Decay Formula</h3>
+    <div class="formula-box">
+      Nt = N0 x (0.5)^(t / t1/2)<br><br>
+      Solve for N0: N0 = Nt / (0.5)^(t / t1/2)<br>
+      Solve for t:  t = t1/2 x ln(Nt/N0) / ln(0.5)<br>
+      Solve for t1/2: t1/2 = t x ln(Nt/N0) / ln(0.5)
+    </div>
+    <p>The formula says: take the initial amount, multiply it by 0.5 raised to the power of (time elapsed divided by half-life). Each time t equals one full half-life, the exponent equals 1, and you multiply by 0.5 exactly once - cutting the amount in half.</p>
+
+    <h3>Half-Life Rules of Thumb</h3>
+    <p>These benchmarks are used constantly in nuclear medicine, radiation safety, and geology. Memorizing them gives you instant intuition about any decay problem:</p>
+    <div class="rules-grid">
+      <div class="rule-box">
+        <div class="rule-n">1</div>
+        <div class="rule-label">half-life</div>
+        <div class="rule-pct">50.00% remains</div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-n">2</div>
+        <div class="rule-label">half-lives</div>
+        <div class="rule-pct">25.00% remains</div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-n">3</div>
+        <div class="rule-label">half-lives</div>
+        <div class="rule-pct">12.50% remains</div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-n">5</div>
+        <div class="rule-label">half-lives</div>
+        <div class="rule-pct">3.125% remains</div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-n">7</div>
+        <div class="rule-label">half-lives</div>
+        <div class="rule-pct">Less than 1% remains</div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-n">10</div>
+        <div class="rule-label">half-lives</div>
+        <div class="rule-pct">Less than 0.1% remains</div>
+      </div>
+    </div>
+    <p>The 7-half-life and 10-half-life rules are particularly useful in nuclear medicine and radiation safety. A radioactive tracer used in a medical scan becomes essentially inert after 7 half-lives (less than 1% of original activity). A nuclear waste storage plan must account for at least 10 half-lives before a site is considered safe.</p>
+
+    <h3>Real-World Applications</h3>
+    <p>Carbon-14 dating works because the isotope is constantly replenished in living organisms through atmospheric CO2. Death stops replenishment, and the clock starts. At 5,730 years per half-life, an artifact with half the normal C-14 ratio is approximately 5,730 years old. This method reliably dates organic material up to about 50,000 years.</p>
+    <p>Iodine-131's 8.02-day half-life makes it both medically useful and manageable from a safety perspective. It is used to treat thyroid cancer precisely because the thyroid absorbs iodine - the isotope delivers a targeted radiation dose. After 10 half-lives (about 80 days), less than 0.1% of the original dose remains.</p>
+    <p>Uranium-238, with its 4.468-billion-year half-life, is used to date the oldest rocks on Earth. When molten rock solidifies, it traps Uranium-238 but excludes its daughter product Lead-206. The ratio of U-238 to Pb-206 in a rock sample directly reveals its age - a method that has confirmed Earth is approximately 4.54 billion years old.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Why does a radioactive substance mathematically never reach exactly zero?
+        <span class="faq-chevron">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        The decay formula is an exponential function. Exponential functions approach zero asymptotically - they get infinitely close but the math never produces an exact zero. Each half-life cuts the remaining amount in half, so you always have half of something remaining, no matter how small. In reality, atoms are discrete: you eventually reach one atom and it either decays or it does not. But as a mathematical model for large populations of atoms, the curve never truly touches zero. This is why in practice we use the 7-half-life and 10-half-life rules of thumb to define "effectively gone" for safety and medical purposes.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How does Carbon-14 dating use half-lives to determine age?
+        <span class="faq-chevron">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        Living organisms continuously absorb Carbon-14 from the atmosphere, maintaining a known ratio of C-14 to stable C-12. When an organism dies, it stops absorbing C-14, and the existing C-14 begins decaying with a half-life of 5,730 years. Scientists measure the current C-14 to C-12 ratio in a sample and compare it to the known starting ratio. By rearranging the decay formula to solve for time (t = t1/2 x ln(Nt/N0) / ln(0.5)), they calculate how many years ago the organism died. The technique is reliable for objects up to about 50,000 years old, after which too little C-14 remains to measure accurately.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between a parent and daughter isotope?
+        <span class="faq-chevron">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        A parent isotope is the unstable radioactive atom that undergoes decay. The daughter isotope is the new atom produced after the parent decays. For example, when Uranium-238 decays, its immediate daughter product is Thorium-234. The daughter may itself be radioactive, leading to a decay chain that ends at a stable isotope (in U-238's case, Lead-206, after 14 intermediate steps). In radiometric dating, scientists measure the ratio of parent to daughter isotopes in a rock or mineral to determine its age, based on the known half-life of the parent.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Are all isotopes of an element radioactive?
+        <span class="faq-chevron">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        No. Most elements have both stable and unstable (radioactive) isotopes. Carbon has two stable isotopes - Carbon-12 and Carbon-13 - and one common radioactive isotope, Carbon-14. Hydrogen has stable Protium and Deuterium, and radioactive Tritium. Generally, isotopes with too many or too few neutrons relative to their protons are unstable and will decay. The band of stability on a nuclide chart shows the neutron-to-proton ratios that produce stable nuclei. Elements with atomic number above 83 (Bismuth) have no stable isotopes at all - all are radioactive.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Does temperature or pressure change an isotope's half-life?
+        <span class="faq-chevron">&#9660;</span>
+      </button>
+      <div class="faq-a">
+        No - under the conditions found on Earth or in most laboratory settings, temperature and pressure have no measurable effect on radioactive half-lives. Decay rates are governed by nuclear forces, which are far stronger than the chemical or physical forces affected by heat and pressure. This constancy is precisely what makes radiometric dating reliable: the decay clock ticks at the same rate whether a rock is buried deep underground or sitting on the surface. Only extreme conditions found inside stars - or under very specific electron-capture scenarios in laboratory settings - can cause measurable shifts in decay rates.
+      </div>
+    </div>
+
+  </div><!-- /edu-section -->
+
+</main>
+
+<!-- AD PLACEMENT 2 -->
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+// =========================================================
+// UNIT CONVERSION TO SECONDS (base unit for time)
+// =========================================================
+const TIME_TO_S = {
+  seconds:     1,
+  minutes:     60,
+  days:        86400,
+  years:       31557600,         // 365.25 days
+  millionyears: 31557600e6,
+  billionyears: 31557600e9
+};
+
+// Amount units are stored as-is; unit must match between N0 and Nt
+// (user is responsible for matching units on amounts)
+
+// =========================================================
+// STATE
+// =========================================================
+let userVals = { n0: null, nt: null, hl: null, t: null };
+// Which field is the currently solved field
+let solvedField = null;
+
+// =========================================================
+// PRESET LOADER
+// =========================================================
+function applyPreset() {
+  const p = document.getElementById('preset-select').value;
+  const hlInp = document.getElementById('inp-hl');
+  const hlUnit = document.getElementById('unit-hl');
+
+  if (p === 'carbon14') {
+    hlInp.value = '5730';
+    hlUnit.value = 'years';
+    setUserVal('hl', 5730, 'years');
+  } else if (p === 'uranium238') {
+    hlInp.value = '4.468';
+    hlUnit.value = 'billionyears';
+    setUserVal('hl', 4.468, 'billionyears');
+  } else if (p === 'iodine131') {
+    hlInp.value = '8.02';
+    hlUnit.value = 'days';
+    setUserVal('hl', 8.02, 'days');
+  } else if (p === 'custom') {
+    clearField('hl');
+    return;
+  }
+  updateTags();
+  compute();
+}
+
+// =========================================================
+// INPUT HANDLER
+// =========================================================
+function onVarInput(key) {
+  const rawVal = parseFloat(document.getElementById('inp-' + key).value);
+  if (isNaN(rawVal) || rawVal < 0) {
+    userVals[key] = null;
+  } else {
+    const unit = document.getElementById('unit-' + key) ? document.getElementById('unit-' + key).value : null;
+    userVals[key] = { val: rawVal, unit };
+  }
+  // If this field was the solved field, clear solve status
+  if (solvedField === key) solvedField = null;
+  updateTags();
+  compute();
+}
+
+function setUserVal(key, val, unit) {
+  document.getElementById('inp-' + key).value = val;
+  if (document.getElementById('unit-' + key)) document.getElementById('unit-' + key).value = unit;
+  userVals[key] = { val, unit };
+}
+
+function clearField(key) {
+  document.getElementById('inp-' + key).value = '';
+  userVals[key] = null;
+  if (solvedField === key) solvedField = null;
+  updateTags();
+  compute();
+}
+
+// =========================================================
+// TAG UPDATER
+// =========================================================
+function updateTags() {
+  ['n0','nt','hl','t'].forEach(k => {
+    const tag = document.getElementById('tag-' + k);
+    const block = document.getElementById('block-' + k);
+    if (k === solvedField) {
+      tag.textContent = 'Solved';
+      tag.className = 'var-tag tag-solved';
+      block.className = 'var-block is-solved';
+    } else if (userVals[k] !== null) {
+      tag.textContent = 'Input';
+      tag.className = 'var-tag tag-input';
+      block.className = 'var-block has-value';
+    } else {
+      tag.textContent = 'Empty';
+      tag.className = 'var-tag tag-empty';
+      block.className = 'var-block';
+    }
+  });
+}
+
+// =========================================================
+// TIME NORMALIZATION
+// =========================================================
+function toSeconds(val, unit) {
+  return val * (TIME_TO_S[unit] || 1);
+}
+function fromSeconds(secs, unit) {
+  return secs / (TIME_TO_S[unit] || 1);
+}
+
+// =========================================================
+// COMPUTE ENGINE
+// =========================================================
+function compute() {
+  const filled = ['n0','nt','hl','t'].filter(k => userVals[k] !== null);
+  const empty  = ['n0','nt','hl','t'].filter(k => userVals[k] === null);
+  const sb = document.getElementById('status-bar');
+
+  if (filled.length < 3) {
+    sb.textContent = `Fill ${3 - filled.length} more field${3 - filled.length > 1 ? 's' : ''} to calculate.`;
+    sb.className = 'status-bar';
+    document.getElementById('graph-wrap').style.display = 'none';
+    document.getElementById('schedule-section').style.display = 'none';
+    solvedField = null;
+    updateTags();
+    return;
+  }
+
+  if (filled.length > 3 && solvedField !== null) {
+    // All four filled - just recompute from the three non-solved
+    // Let the user change any input freely
+  }
+
+  // Determine which field to solve
+  let target = empty.length === 1 ? empty[0] : (solvedField || null);
+
+  if (target === null && filled.length === 4) {
+    // All four have values - nothing to solve, just draw
+    drawGraph();
+    drawSchedule();
+    sb.textContent = 'All fields filled. Clear one to enable solving.';
+    sb.className = 'status-bar warn';
+    return;
+  }
+
+  if (target === null) {
+    sb.textContent = 'Fill any three fields to calculate the fourth.';
+    sb.className = 'status-bar';
+    return;
+  }
+
+  // Get normalized inputs
+  const get = k => userVals[k];
+  const inputs = {};
+  ['n0','nt','hl','t'].filter(k => k !== target).forEach(k => {
+    inputs[k] = get(k);
+  });
+
+  // Time normalization: convert t and hl to seconds for ratio
+  let hlSecs, tSecs, ratio;
+
+  try {
+    if (target === 'nt') {
+      hlSecs = toSeconds(inputs.hl.val, inputs.hl.unit);
+      tSecs  = toSeconds(inputs.t.val,  inputs.t.unit);
+      ratio = tSecs / hlSecs;
+      const ntVal = inputs.n0.val * Math.pow(0.5, ratio);
+      solvedField = 'nt';
+      document.getElementById('inp-nt').value = formatDisplay(ntVal);
+      userVals['nt'] = { val: ntVal, unit: inputs.n0.unit };
+      document.getElementById('unit-nt').value = inputs.n0.unit;
+    }
+    else if (target === 'n0') {
+      hlSecs = toSeconds(inputs.hl.val, inputs.hl.unit);
+      tSecs  = toSeconds(inputs.t.val,  inputs.t.unit);
+      ratio = tSecs / hlSecs;
+      const n0Val = inputs.nt.val / Math.pow(0.5, ratio);
+      solvedField = 'n0';
+      document.getElementById('inp-n0').value = formatDisplay(n0Val);
+      userVals['n0'] = { val: n0Val, unit: inputs.nt.unit };
+      document.getElementById('unit-n0').value = inputs.nt.unit;
+    }
+    else if (target === 't') {
+      if (inputs.n0.val <= 0 || inputs.nt.val <= 0 || inputs.nt.val >= inputs.n0.val) {
+        throw new Error('Nt must be less than N0 and both must be positive to solve for t.');
+      }
+      hlSecs = toSeconds(inputs.hl.val, inputs.hl.unit);
+      const tSecsResult = hlSecs * Math.log(inputs.nt.val / inputs.n0.val) / Math.log(0.5);
+      const tUnit = inputs.hl.unit; // output t in same unit as hl
+      const tVal = fromSeconds(tSecsResult, tUnit);
+      solvedField = 't';
+      document.getElementById('inp-t').value = formatDisplay(tVal);
+      document.getElementById('unit-t').value = tUnit;
+      userVals['t'] = { val: tVal, unit: tUnit };
+    }
+    else if (target === 'hl') {
+      if (inputs.n0.val <= 0 || inputs.nt.val <= 0 || inputs.nt.val >= inputs.n0.val) {
+        throw new Error('Nt must be less than N0 and both must be positive to solve for half-life.');
+      }
+      tSecs = toSeconds(inputs.t.val, inputs.t.unit);
+      const hlSecsResult = tSecs * Math.log(inputs.nt.val / inputs.n0.val) / Math.log(0.5);
+      const hlUnit = inputs.t.unit;
+      const hlVal = fromSeconds(hlSecsResult, hlUnit);
+      solvedField = 'hl';
+      document.getElementById('inp-hl').value = formatDisplay(hlVal);
+      document.getElementById('unit-hl').value = hlUnit;
+      userVals['hl'] = { val: hlVal, unit: hlUnit };
+    }
+
+    sb.textContent = 'Solved: ' + fieldName(target) + ' calculated from the three known values.';
+    sb.className = 'status-bar ok';
+    updateTags();
+    drawGraph();
+    drawSchedule();
+
+  } catch(e) {
+    sb.textContent = 'Error: ' + e.message;
+    sb.className = 'status-bar error';
+    document.getElementById('graph-wrap').style.display = 'none';
+    document.getElementById('schedule-section').style.display = 'none';
+  }
+}
+
+function fieldName(k) {
+  return { n0:'Initial Amount (N0)', nt:'Remaining Amount (Nt)', hl:'Half-Life', t:'Time Elapsed' }[k];
+}
+
+// =========================================================
+// NUMBER FORMATTING
+// =========================================================
+function formatDisplay(n) {
+  if (n === null || isNaN(n) || !isFinite(n)) return '';
+  if (Math.abs(n) >= 1e-3 && Math.abs(n) < 1e9) {
+    // Normal range - use up to 8 sig figs
+    return parseFloat(n.toPrecision(8)).toString();
+  }
+  return n.toExponential(4);
+}
+
+function formatSci(n) {
+  // Returns HTML with proper superscript for scientific notation
+  if (n === null || isNaN(n) || !isFinite(n)) return 'N/A';
+  if (n === 0) return '0';
+  if (Math.abs(n) >= 0.001 && Math.abs(n) < 1e7) {
+    return n.toPrecision(6).replace(/\.?0+$/, '');
+  }
+  const exp = n.toExponential(4);
+  return exp.replace(/e([+-])(\d+)/, (_, sign, digits) => {
+    const superSign = sign === '-' ? '<sup>-' : '<sup>';
+    return ' x 10' + superSign + parseInt(digits) + '</sup>';
+  });
+}
+
+// =========================================================
+// GRAPH
+// =========================================================
+function drawGraph() {
+  if (!userVals.n0 || !userVals.hl) return;
+  const n0 = userVals.n0.val;
+  const hlSecs = toSeconds(userVals.hl.val, userVals.hl.unit);
+  if (n0 <= 0 || hlSecs <= 0) return;
+
+  const wrap = document.getElementById('graph-wrap');
+  wrap.style.display = 'block';
+
+  const canvas = document.getElementById('decay-canvas');
+  const W = canvas.offsetWidth || 800;
+  const H = 260;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 54 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top  - pad.bottom;
+
+  // Draw 8 half-lives on x-axis
+  const numHL = 8;
+  const totalSecs = hlSecs * numHL;
+
+  // Grid lines
+  ctx.strokeStyle = '#2e3250';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= numHL; i++) {
+    const x = pad.left + (i / numHL) * cw;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ch); ctx.stroke();
+  }
+  const ySteps = 4;
+  for (let i = 0; i <= ySteps; i++) {
+    const y = pad.top + (i / ySteps) * ch;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#8892a4';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, pad.top + ch);
+  ctx.lineTo(pad.left + cw, pad.top + ch);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#8892a4';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= numHL; i++) {
+    const x = pad.left + (i / numHL) * cw;
+    ctx.fillText('t' + i, x, pad.top + ch + 14);
+  }
+  ctx.fillText('Half-Lives', pad.left + cw / 2, pad.top + ch + 30);
+
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= ySteps; i++) {
+    const frac = 1 - i / ySteps;
+    const y = pad.top + (i / ySteps) * ch;
+    ctx.fillText((frac * 100).toFixed(0) + '%', pad.left - 6, y + 4);
+  }
+
+  // Decay curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#22C55E';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = 'rgba(34,197,94,0.35)';
+  ctx.shadowBlur = 6;
+
+  for (let px = 0; px <= cw; px++) {
+    const t = (px / cw) * totalSecs;
+    const ratio = t / hlSecs;
+    const frac = Math.pow(0.5, ratio);
+    const x = pad.left + px;
+    const y = pad.top + (1 - frac) * ch;
+    if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Mark current time if t is available
+  if (userVals.t) {
+    const tSecs = toSeconds(userVals.t.val, userVals.t.unit);
+    const frac = Math.min(tSecs / totalSecs, 1);
+    const decayFrac = Math.pow(0.5, tSecs / hlSecs);
+    const px = pad.left + frac * cw;
+    const py = pad.top + (1 - decayFrac) * ch;
+
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(px, pad.top); ctx.lineTo(px, pad.top + ch);
+    ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + cw, py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#F59E0B';
+    ctx.fill();
+
+    ctx.fillStyle = '#F59E0B';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    const labelX = px + 8 > pad.left + cw - 50 ? px - 55 : px + 8;
+    ctx.fillText((decayFrac * 100).toFixed(2) + '%', labelX, py - 6);
+  }
+}
+
+// =========================================================
+// SCHEDULE TABLE
+// =========================================================
+function drawSchedule() {
+  if (!userVals.n0 || !userVals.hl) return;
+
+  const n0 = userVals.n0.val;
+  const n0Unit = userVals.n0.unit;
+  const hlVal  = userVals.hl.val;
+  const hlUnit = userVals.hl.unit;
+  if (n0 <= 0) return;
+
+  const body = document.getElementById('schedule-body');
+  body.innerHTML = '';
+
+  for (let i = 1; i <= 5; i++) {
+    const remaining = n0 * Math.pow(0.5, i);
+    const pct = (100 * Math.pow(0.5, i)).toFixed(4);
+    const t = hlVal * i;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="hl-num">${i}</td>
+      <td>${formatDisplay(t)} ${unitLabel(hlUnit)}</td>
+      <td class="hl-amt">${formatSci(remaining)} ${n0Unit}</td>
+      <td class="pct">${pct}%</td>
+    `;
+    body.appendChild(tr);
+  }
+
+  document.getElementById('schedule-section').style.display = 'block';
+}
+
+function unitLabel(unit) {
+  const map = {
+    seconds:'s', minutes:'min', days:'days',
+    years:'yr', millionyears:'Myr', billionyears:'Gyr'
+  };
+  return map[unit] || unit;
+}
+
+// =========================================================
+// FAQ TOGGLE
+// =========================================================
+function toggleFaq(btn) {
+  const ans = btn.nextElementSibling;
+  const open = ans.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+  document.querySelectorAll('.faq-q').forEach(b => b.classList.remove('open'));
+  if (!open) { ans.classList.add('open'); btn.classList.add('open'); }
+}
+
+// =========================================================
+// RESIZE
+// =========================================================
+window.addEventListener('resize', () => {
+  if (userVals.n0 && userVals.hl) drawGraph();
+});
+</script>
+
+</body>
+</html>

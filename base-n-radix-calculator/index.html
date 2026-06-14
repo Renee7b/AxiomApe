@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base-N Radix Calculator: Convert Numbers Across Any Numeral Base | AxiomApe</title>
+  <meta name="description" content="Free arbitrary base converter. Shift any number between Base-2 and Base-36 instantly. BigInt precision for large values, algorithm breakdown showing positional weights, and a quick-reference matrix for Binary, Octal, Decimal, and Hex." />
+  <meta name="keywords" content="base converter, radix calculator, arbitrary base, base-n converter, binary octal decimal hex, number system converter, positional notation, base 36, hexadecimal converter, numeral system" />
+  <link rel="canonical" href="https://axiomape.com/base-n-radix-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Base-N Radix Calculator",
+        "description": "Free arbitrary base converter. Shift any number between Base-2 and Base-36 instantly. BigInt precision for large values, algorithm breakdown showing positional weights, and a quick-reference matrix for Binary, Octal, Decimal, and Hex.",
+        "url": "https://axiomape.com/base-n-radix-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a radix or base in mathematics?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A radix (or base) is the number of unique digits a numeral system uses to represent values. Base-10 uses ten digits (0-9), Base-2 uses two (0 and 1), and Base-16 uses sixteen (0-9 plus A-F). The position of each digit encodes a power of the radix, which is how positional notation works."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do computers rely on Base-2 (Binary) and Base-16 (Hexadecimal)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Computers use Base-2 because physical transistors have exactly two states: on or off. Binary maps perfectly to this. Hexadecimal is used alongside it because one hex digit represents exactly four binary digits (bits), making it a compact shorthand for binary values. A full byte (8 bits) fits neatly into two hex characters."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do most numeral systems max out at Base-36?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard positional notation uses the alphanumeric character set: digits 0-9 provide ten symbols and letters A-Z provide twenty-six more, totaling 36 unique symbols. Base-36 is therefore the largest base that can be expressed using only standard keyboard characters without inventing new symbols."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does positional notation work in arbitrary bases?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In any base B, a number with digits d(n)...d(1)d(0) equals the sum of each digit multiplied by B raised to its position index. For example, the binary number 1011 equals 1x2^3 + 0x2^2 + 1x2^1 + 1x2^0 = 8+0+2+1 = 11 in decimal. The same logic applies at any radix."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are some real-world uses for non-standard bases like Base-12 or Base-60?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Base-60 (sexagesimal) is used for time (60 seconds per minute, 60 minutes per hour) and angles (360 degrees). Base-12 (duodecimal) appears in units like dozens, inches per foot, and months per year. Base-20 (vigesimal) was used by the Maya. Base-64 is used to encode binary data as text in email attachments and data URIs."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =============================================
+       GLOBAL RESET & BASE STYLES
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0d1117;
+      --bg-card:       #161b22;
+      --bg-input:      #0d1117;
+      --border:        #30363d;
+      --border-soft:   #21262d;
+      --green:         #10B981;
+      --green-dim:     #0d9268;
+      --green-glow:    rgba(16,185,129,0.15);
+      --purple:        #8B5CF6;
+      --purple-dim:    #6d46d4;
+      --purple-glow:   rgba(139,92,246,0.15);
+      --text:          #e6edf3;
+      --text-muted:    #8b949e;
+      --text-subtle:   #6e7681;
+      --error:         #f85149;
+      --error-bg:      rgba(248,81,73,0.1);
+      --success:       #10B981;
+      --mono:          'Courier New', Courier, monospace;
+      --radius:        10px;
+      --radius-sm:     6px;
+      --shadow:        0 2px 12px rgba(0,0,0,0.4);
+      --shadow-lg:     0 4px 24px rgba(0,0,0,0.6);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =============================================
+       SITE NAV (hidden by site-chrome.js)
+    ============================================= */
+    .site-nav {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      text-align: center;
+    }
+    .site-nav a { font-size: 13px; font-weight: 600; color: var(--green); }
+
+    /* =============================================
+       PAGE HEADER
+    ============================================= */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #1a1040 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 20px 36px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .page-header h1 span.accent-green { color: var(--green); }
+    .page-header h1 span.accent-purple { color: var(--purple); }
+    .page-header p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* =============================================
+       LAYOUT
+    ============================================= */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 40px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--green-glow);
+      color: var(--green);
+      border: 1px solid var(--green-dim);
+    }
+
+    /* =============================================
+       MAIN CONVERTER INPUTS
+    ============================================= */
+    .converter-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 14px;
+      align-items: end;
+    }
+    @media (max-width: 640px) {
+      .converter-row { grid-template-columns: 1fr; }
+    }
+
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .number-input {
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      padding: 12px 16px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .number-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+    .number-input.error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px var(--error-bg);
+    }
+    .number-input::placeholder { color: var(--text-subtle); }
+
+    .base-control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 160px;
+    }
+    @media (max-width: 640px) {
+      .base-control { min-width: unset; }
+    }
+
+    .base-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+    .base-number {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .base-number.from-accent { color: var(--purple); }
+    .base-number.to-accent   { color: var(--green); }
+
+    .base-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .base-range.from-slider {
+      background: linear-gradient(to right, var(--purple) 0%, var(--purple) var(--pct, 0%), var(--border) var(--pct, 0%), var(--border) 100%);
+    }
+    .base-range.to-slider {
+      background: linear-gradient(to right, var(--green) 0%, var(--green) var(--pct, 0%), var(--border) var(--pct, 0%), var(--border) 100%);
+    }
+    .base-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .base-range.from-slider::-webkit-slider-thumb { background: var(--purple); }
+    .base-range.to-slider::-webkit-slider-thumb   { background: var(--green); }
+    .base-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .base-range::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      cursor: pointer;
+    }
+    .base-range.from-slider::-moz-range-thumb { background: var(--purple); }
+    .base-range.to-slider::-moz-range-thumb   { background: var(--green); }
+
+    .base-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-subtle);
+      margin-top: 2px;
+    }
+
+    .base-num-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      padding: 4px 8px;
+      width: 60px;
+      text-align: center;
+      outline: none;
+    }
+    .base-num-input:focus { border-color: var(--purple); }
+
+    /* =============================================
+       OUTPUT AREA
+    ============================================= */
+    .output-section {
+      margin-top: 20px;
+    }
+    .output-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .output-box {
+      background: var(--bg-input);
+      border: 2px solid var(--green);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 0 16px var(--green-glow);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 58px;
+    }
+    .output-value {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 0.05em;
+      word-break: break-all;
+      flex: 1;
+    }
+    .output-value.empty { color: var(--text-subtle); font-size: 0.9rem; font-style: italic; }
+
+    .copy-btn {
+      background: var(--green-glow);
+      border: 1px solid var(--green-dim);
+      border-radius: var(--radius-sm);
+      color: var(--green);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      white-space: nowrap;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { background: rgba(16,185,129,0.25); }
+
+    /* =============================================
+       VALIDATION ERROR
+    ============================================= */
+    .validation-msg {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      display: none;
+    }
+    .validation-msg.error {
+      background: var(--error-bg);
+      border: 1px solid var(--error);
+      color: var(--error);
+      display: block;
+    }
+
+    /* =============================================
+       QUICK REFERENCE MATRIX
+    ============================================= */
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .ref-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .ref-cell {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .ref-cell.active { border-color: var(--purple); box-shadow: 0 0 10px var(--purple-glow); }
+    .ref-base {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-subtle);
+      margin-bottom: 6px;
+    }
+    .ref-cell.active .ref-base { color: var(--purple); }
+    .ref-value {
+      font-family: var(--mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-all;
+      line-height: 1.3;
+    }
+    .ref-value.empty { color: var(--text-subtle); font-size: 0.8rem; font-style: italic; font-weight: 400; }
+
+    /* =============================================
+       ALGORITHM BREAKDOWN
+    ============================================= */
+    .breakdown-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s, color 0.15s;
+      margin-top: 16px;
+    }
+    .breakdown-toggle:hover {
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+    .breakdown-toggle .arrow {
+      transition: transform 0.2s;
+      font-size: 0.75rem;
+    }
+    .breakdown-toggle.open .arrow { transform: rotate(180deg); }
+
+    .breakdown-body {
+      display: none;
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+    }
+    .breakdown-body.visible { display: block; }
+
+    .breakdown-step {
+      margin-bottom: 10px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .breakdown-step .hl { color: var(--purple); }
+    .breakdown-step .hl-g { color: var(--green); }
+    .breakdown-formula {
+      margin: 12px 0;
+      padding: 10px 14px;
+      background: rgba(139,92,246,0.07);
+      border-left: 3px solid var(--purple);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .breakdown-total {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    /* =============================================
+       AD PLACEMENTS
+    ============================================= */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-subtle);
+      font-size: 0.8rem;
+      padding: 8px;
+    }
+
+    /* =============================================
+       COMMON BASES GUIDE
+    ============================================= */
+    .bases-guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .base-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .base-card-title {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--purple);
+      margin-bottom: 4px;
+    }
+    .base-card p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* =============================================
+       GLOSSARY
+    ============================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item { }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--green);
+      font-size: 0.9rem;
+      margin-bottom: 3px;
+    }
+    .glossary-def {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* =============================================
+       EDUCATIONAL SECTION
+    ============================================= */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+    .section-intro {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    /* =============================================
+       FAQ ACCORDION
+    ============================================= */
+    .faq-item {
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      padding: 14px 0;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: color 0.15s;
+    }
+    .faq-q:hover { color: var(--green); }
+    .faq-q .faq-arrow {
+      color: var(--green);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 0 0 14px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .faq-a.visible { display: block; }
+
+    /* =============================================
+       SEE ALSO NOTICE
+    ============================================= */
+    .see-also {
+      background: rgba(139,92,246,0.08);
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .see-also a { color: var(--purple); font-weight: 600; }
+
+    /* =============================================
+       UTILITIES
+    ============================================= */
+    .section-spacer { margin-bottom: 8px; }
+    .mono { font-family: var(--mono); }
+  </style>
+</head>
+
+<body>
+  <!-- site-chrome.js injects header, footer, privacy badge, and disclaimer -->
+  <div class="site-nav"><a href="https://axiomape.com">axiomape.com</a></div>
+
+  <header class="page-header">
+    <h1><span class="accent-purple">Base-N</span> Radix Calculator: <span class="accent-green">Shift Numbers Across Any Base</span></h1>
+    <p>Convert any value between Base-2 and Base-36 with BigInt precision. See positional weights, get a quick-reference matrix, and explore the math behind numeral systems.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- SEE ALSO CROSS-REFERENCE -->
+    <div class="see-also">
+      Looking for Binary, Octal, Decimal, and Hex only? Try the focused
+      <a href="/binary-converter/">Binary Converter</a>, which also includes an ASCII text encoder.
+    </div>
+
+    <!-- MAIN CONVERTER CARD -->
+    <div class="card">
+      <div class="card-title">Arbitrary Radix Converter <span class="badge">Real-Time</span></div>
+
+      <div class="converter-row">
+        <!-- Number Input -->
+        <div class="input-group">
+          <label for="numInput">Number Value</label>
+          <input
+            type="text"
+            id="numInput"
+            class="number-input"
+            placeholder="Enter a number..."
+            autocomplete="off"
+            spellcheck="false"
+            oninput="handleConvert()"
+          />
+        </div>
+
+        <!-- Starting Base -->
+        <div class="base-control">
+          <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Starting Base</label>
+          <div class="base-display">
+            <span class="base-number from-accent" id="fromBaseDisplay">10</span>
+            <input type="number" class="base-num-input" id="fromBaseNum" value="10" min="2" max="36" oninput="syncSlider('from')" onchange="syncSlider('from')" />
+          </div>
+          <input type="range" class="base-range from-slider" id="fromSlider" min="2" max="36" value="10"
+            oninput="syncNum('from')" onchange="syncNum('from')" style="--pct:23.53%" />
+          <div class="base-label-row"><span>Base 2</span><span>Base 36</span></div>
+        </div>
+
+        <!-- Target Base -->
+        <div class="base-control">
+          <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Target Base</label>
+          <div class="base-display">
+            <span class="base-number to-accent" id="toBaseDisplay">2</span>
+            <input type="number" class="base-num-input" id="toBaseNum" value="2" min="2" max="36" oninput="syncSlider('to')" onchange="syncSlider('to')" />
+          </div>
+          <input type="range" class="base-range to-slider" id="toSlider" min="2" max="36" value="2"
+            oninput="syncNum('to')" onchange="syncNum('to')" style="--pct:0%" />
+          <div class="base-label-row"><span>Base 2</span><span>Base 36</span></div>
+        </div>
+      </div>
+
+      <!-- Validation Message -->
+      <div class="validation-msg" id="validationMsg"></div>
+
+      <!-- Output -->
+      <div class="output-section">
+        <div class="output-label">Result in Base <span id="outputBaseLabel">2</span></div>
+        <div class="output-box">
+          <span class="output-value empty" id="outputValue">Enter a number above to convert</span>
+          <button class="copy-btn" onclick="copyResult()" id="copyBtn" style="display:none">Copy</button>
+        </div>
+      </div>
+
+      <!-- Algorithm Breakdown Toggle -->
+      <button class="breakdown-toggle" id="breakdownToggle" onclick="toggleBreakdown()" style="display:none">
+        <span>Show Algorithm Breakdown</span>
+        <span class="arrow">v</span>
+      </button>
+      <div class="breakdown-body" id="breakdownBody"></div>
+    </div>
+
+    <!-- QUICK REFERENCE MATRIX -->
+    <div class="card">
+      <div class="card-title">Quick Reference Matrix</div>
+      <div class="ref-grid">
+        <div class="ref-cell" id="refBin">
+          <div class="ref-base">Binary (Base-2)</div>
+          <div class="ref-value empty" id="refBinVal">-</div>
+        </div>
+        <div class="ref-cell" id="refOct">
+          <div class="ref-base">Octal (Base-8)</div>
+          <div class="ref-value empty" id="refOctVal">-</div>
+        </div>
+        <div class="ref-cell" id="refDec">
+          <div class="ref-base">Decimal (Base-10)</div>
+          <div class="ref-value empty" id="refDecVal">-</div>
+        </div>
+        <div class="ref-cell" id="refHex">
+          <div class="ref-base">Hex (Base-16)</div>
+          <div class="ref-value empty" id="refHexVal">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AD PLACEMENT 1: In-Content Leaderboard -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- COMMON BASES GUIDE -->
+    <div class="card">
+      <div class="card-title">Common Bases Guide</div>
+      <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:16px;">
+        Different numeral bases appear throughout computing, science, history, and everyday life.
+        Here is a reference to what each significant base is used for.
+      </p>
+      <div class="bases-guide-grid">
+        <div class="base-card">
+          <div class="base-card-title">Base-2 (Binary)</div>
+          <p>The foundation of all digital computing. Maps directly to transistor on/off states. Used in bitwise operations, boolean logic, and machine code.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-8 (Octal)</div>
+          <p>Used in early Unix file permission masks (e.g., chmod 755). Each octal digit represents exactly three binary bits, making it a compact binary shorthand.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-10 (Decimal)</div>
+          <p>The universal human counting system, likely derived from ten fingers. Used in everyday arithmetic, currency, measurement, and scientific notation.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-12 (Duodecimal)</div>
+          <p>Appears in dozens, inches per foot, months per year, and hours on a clock face. Twelve has more divisors than ten, making fractions simpler.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-16 (Hexadecimal)</div>
+          <p>Standard shorthand for binary in computing. One hex digit represents four bits exactly. Used in memory addresses, color codes (#FF5733), and debugging.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-20 (Vigesimal)</div>
+          <p>Used by the ancient Maya for their complex calendar system. Also appears in the French counting system (quatre-vingts = "four-twenties" = 80).</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-32</div>
+          <p>Used in Crockford Base32 and RFC 4648 encoding for checksums, TOTP tokens (two-factor authentication), and compact hash representations.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-36</div>
+          <p>The largest base expressible with the standard alphanumeric set (0-9, A-Z). Used for URL shorteners, unique ID generation, and compact numeric encoding.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-60 (Sexagesimal)</div>
+          <p>Used by ancient Babylonians. Persists today in time (60 seconds, 60 minutes) and angles (360 degrees = 6 x 60). Sixty has twelve divisors, enabling clean fractions.</p>
+        </div>
+        <div class="base-card">
+          <div class="base-card-title">Base-64</div>
+          <p>Not a positional number system, but an encoding scheme. Represents binary data as printable ASCII text. Used in email attachments, data URIs, and JWT tokens.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOSSARY CARD -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Radix</div>
+          <div class="glossary-def">The base of a numeral system - the count of unique symbols used. Base-10 has a radix of 10; binary has a radix of 2.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Base-N</div>
+          <div class="glossary-def">Any numeral system using N distinct symbols per digit position. "N" is the radix. This calculator supports N from 2 to 36.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Binary</div>
+          <div class="glossary-def">Base-2: uses only 0 and 1. Every value in a computer is ultimately stored as a sequence of binary digits called bits.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Hexadecimal</div>
+          <div class="glossary-def">Base-16: uses digits 0-9 and letters A-F (representing 10-15). One hex digit encodes exactly four binary bits.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Octal</div>
+          <div class="glossary-def">Base-8: uses digits 0-7. Common in Unix-style file permissions and as a three-bit binary shorthand.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Alphanumeric</div>
+          <div class="glossary-def">The combined set of digits 0-9 and letters A-Z, giving 36 unique characters - the ceiling for positional base notation without custom symbols.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Numeral System</div>
+          <div class="glossary-def">A writing system for expressing numbers. The decimal (Base-10) system is most common, but binary, octal, and hexadecimal are all used in computing.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Positional Notation</div>
+          <div class="glossary-def">A numeral representation where each digit's value depends on its position. The rightmost digit represents the ones place, the next represents the base, and so on.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Bit</div>
+          <div class="glossary-def">Short for "binary digit." The smallest unit of digital information, with a value of either 0 or 1. Eight bits form one byte.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Byte</div>
+          <div class="glossary-def">A group of 8 bits. A byte can hold 256 distinct values (0-255 in decimal, 00-FF in hex). It is the standard unit of digital storage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Base-N Number Systems</h2>
+      <p class="section-intro">
+        Whether you are debugging a hexadecimal memory address, studying historical numeral systems, or building
+        a cryptographic tool that needs compact number representations, understanding arbitrary base conversion
+        is a core computer science skill. This guide explains the math, the history, and the practical use cases.
+      </p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>
+        Type any number into the "Number Value" field. Select the base that number is currently written in using the
+        "Starting Base" slider (default is Base-10, which is standard decimal). Then choose your "Target Base" using
+        the second slider. The result appears instantly in the green output box below. The Quick Reference Matrix
+        below that always shows the same value converted into Binary, Octal, Decimal, and Hex simultaneously.
+      </p>
+      <p>
+        For very large numbers, this calculator uses JavaScript BigInt internally, so it avoids the floating-point
+        precision loss that affects standard parseInt() for values beyond 2^53. You can safely convert large hashes
+        and identifiers without corrupting digits.
+      </p>
+      <p>
+        Click "Show Algorithm Breakdown" to see the full mathematical expansion of the conversion - each digit
+        multiplied by its positional weight (the base raised to the digit's index), then summed.
+      </p>
+
+      <h3>The Mathematics of Positional Notation</h3>
+      <p>
+        Every positional number system works the same way: the value of a number is the sum of each digit multiplied
+        by the radix raised to that digit's position index (starting at 0 from the right). For a number with digits
+        d(n), d(n-1), ..., d(1), d(0) in base B, the decimal value is:
+      </p>
+      <p class="mono" style="background:var(--bg-input);border-left:3px solid var(--purple);padding:10px 14px;border-radius:0 6px 6px 0;font-size:0.88rem;color:var(--text);">
+        Value = d(n)*B^n + d(n-1)*B^(n-1) + ... + d(1)*B^1 + d(0)*B^0
+      </p>
+      <p>
+        For example, the hexadecimal number 1A3 in Base-16 equals (1 x 256) + (10 x 16) + (3 x 1) = 256 + 160 + 3 = 419
+        in decimal. The letters A-Z represent digit values 10-35 in bases higher than 10.
+      </p>
+
+      <h3>Converting TO a Target Base</h3>
+      <p>
+        To convert a decimal integer to any target base B, repeatedly divide the number by B and record each remainder.
+        The remainders, read from last to first (bottom to top), form the digits of the result in base B. This calculator
+        performs that process using BigInt arithmetic so the precision is exact at any length.
+      </p>
+
+      <h3>Why Base-36 is the Maximum for Standard Text</h3>
+      <p>
+        The alphanumeric character set gives us exactly 36 symbols: the digits 0-9 (ten symbols) plus the letters A-Z
+        (twenty-six symbols). Base-36 uses all of them. Any base higher than 36 would require inventing new symbols
+        (or using multi-character tokens), which breaks the simple one-digit-one-character mapping that makes positional
+        notation readable. Base-64 encoding, for example, is not a true positional number system - it uses a separate
+        symbol table and is used for encoding binary data as text, not for arithmetic.
+      </p>
+
+      <!-- FAQ -->
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is a radix or base in mathematics?
+          <span class="faq-arrow">v</span>
+        </button>
+        <div class="faq-a">
+          A radix (or base) is the number of unique digits a numeral system uses to represent values. Base-10 uses
+          ten digits (0-9), Base-2 uses two (0 and 1), and Base-16 uses sixteen (0-9 plus A-F). The position of each
+          digit encodes a power of the radix, which is how positional notation works.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why do computers rely on Base-2 (Binary) and Base-16 (Hexadecimal)?
+          <span class="faq-arrow">v</span>
+        </button>
+        <div class="faq-a">
+          Computers use Base-2 because physical transistors have exactly two states: on or off. Binary maps perfectly
+          to this reality. Hexadecimal is used alongside it because one hex digit represents exactly four binary digits
+          (bits), making it a compact, human-readable shorthand for binary values. A full byte (8 bits) fits neatly into
+          exactly two hex characters - for example, 11111111 in binary is FF in hex.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why do most numeral systems max out at Base-36?
+          <span class="faq-arrow">v</span>
+        </button>
+        <div class="faq-a">
+          Standard positional notation uses the alphanumeric character set: digits 0-9 provide ten symbols and letters
+          A-Z provide twenty-six more, totaling 36 unique symbols. Base-36 is therefore the largest base that can be
+          expressed using only standard keyboard characters without inventing new symbols. Any larger base would require
+          a custom symbol table, which is why Base-64 is an encoding scheme rather than a true positional numeral system.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does positional notation work in arbitrary bases?
+          <span class="faq-arrow">v</span>
+        </button>
+        <div class="faq-a">
+          In any base B, a number's value is the sum of each digit multiplied by B raised to that digit's position index
+          (counting from 0 on the right). The binary number 1011 equals 1x2^3 + 0x2^2 + 1x2^1 + 1x2^0 = 8+0+2+1 = 11
+          in decimal. The same formula applies at every radix - just swap in the new base value for B.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What are some real-world uses for non-standard bases like Base-12 or Base-60?
+          <span class="faq-arrow">v</span>
+        </button>
+        <div class="faq-a">
+          Base-60 (sexagesimal) underpins timekeeping (60 seconds per minute, 60 minutes per hour) and angular
+          measurement (360 degrees), inherited from ancient Babylonian mathematics. Base-12 (duodecimal) appears
+          in dozens, inches per foot, and months per year - twelve is divisible by 1, 2, 3, 4, and 6, making
+          fractions cleaner. Base-20 (vigesimal) was the foundation of Mayan mathematics and their advanced
+          calendar system. Base-36 is used in URL shorteners and unique ID generators to create compact, all-lowercase
+          alphanumeric strings.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AD PLACEMENT 2: Mobile Sticky Anchor -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    // =============================================
+    //  CONSTANTS & HELPERS
+    // =============================================
+    const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    function getBase(type) {
+      const id = type === 'from' ? 'fromSlider' : 'toSlider';
+      return parseInt(document.getElementById(id).value, 10);
+    }
+
+    // Valid chars for a given base
+    function validCharsForBase(base) {
+      return DIGITS.slice(0, base);
+    }
+
+    // Validate input string against source base
+    function validateInput(str, base) {
+      const valid = validCharsForBase(base).split('');
+      const upper = str.toUpperCase();
+      for (let i = 0; i < upper.length; i++) {
+        if (!valid.includes(upper[i])) {
+          return { ok: false, char: str[i] };
+        }
+      }
+      return { ok: true };
+    }
+
+    // Convert any-base string to BigInt (base 2-36)
+    function toBigInt(str, base) {
+      const b = BigInt(base);
+      let result = 0n;
+      const upper = str.toUpperCase();
+      for (let i = 0; i < upper.length; i++) {
+        const digit = BigInt(DIGITS.indexOf(upper[i]));
+        result = result * b + digit;
+      }
+      return result;
+    }
+
+    // Convert BigInt to any-base string (base 2-36)
+    function fromBigInt(value, base) {
+      if (value === 0n) return '0';
+      const b = BigInt(base);
+      let result = '';
+      while (value > 0n) {
+        result = DIGITS[Number(value % b)] + result;
+        value = value / b;
+      }
+      return result;
+    }
+
+    // Human-readable base name
+    function baseName(n) {
+      const names = { 2: 'Binary', 8: 'Octal', 10: 'Decimal', 16: 'Hexadecimal' };
+      return names[n] || `Base-${n}`;
+    }
+
+    // =============================================
+    //  SLIDER / NUMBER INPUT SYNC
+    // =============================================
+    function updateSliderFill(type) {
+      const slider = document.getElementById(type === 'from' ? 'fromSlider' : 'toSlider');
+      const pct = ((slider.value - 2) / (36 - 2) * 100).toFixed(2);
+      slider.style.setProperty('--pct', pct + '%');
+    }
+
+    function syncNum(type) {
+      const slider = document.getElementById(type === 'from' ? 'fromSlider' : 'toSlider');
+      const numInput = document.getElementById(type === 'from' ? 'fromBaseNum' : 'toBaseNum');
+      const display = document.getElementById(type === 'from' ? 'fromBaseDisplay' : 'toBaseDisplay');
+      numInput.value = slider.value;
+      display.textContent = slider.value;
+      updateSliderFill(type);
+      handleConvert();
+    }
+
+    function syncSlider(type) {
+      const numInput = document.getElementById(type === 'from' ? 'fromBaseNum' : 'toBaseNum');
+      const slider = document.getElementById(type === 'from' ? 'fromSlider' : 'toSlider');
+      const display = document.getElementById(type === 'from' ? 'fromBaseDisplay' : 'toBaseDisplay');
+      let v = parseInt(numInput.value, 10);
+      if (isNaN(v)) v = type === 'from' ? 10 : 2;
+      v = Math.min(36, Math.max(2, v));
+      numInput.value = v;
+      slider.value = v;
+      display.textContent = v;
+      updateSliderFill(type);
+      handleConvert();
+    }
+
+    // Initialize slider fills
+    updateSliderFill('from');
+    updateSliderFill('to');
+
+    // =============================================
+    //  MAIN CONVERSION ENGINE
+    // =============================================
+    function handleConvert() {
+      const raw = document.getElementById('numInput').value.trim();
+      const fromBase = getBase('from');
+      const toBase = getBase('to');
+
+      document.getElementById('outputBaseLabel').textContent = toBase;
+
+      const validationEl = document.getElementById('validationMsg');
+      const outputEl = document.getElementById('outputValue');
+      const copyBtn = document.getElementById('copyBtn');
+      const toggleBtn = document.getElementById('breakdownToggle');
+
+      // Reset ref matrix
+      setRefMatrix(null);
+
+      if (!raw) {
+        validationEl.className = 'validation-msg';
+        outputEl.className = 'output-value empty';
+        outputEl.textContent = 'Enter a number above to convert';
+        copyBtn.style.display = 'none';
+        toggleBtn.style.display = 'none';
+        document.getElementById('breakdownBody').className = 'breakdown-body';
+        return;
+      }
+
+      // Validate characters against source base
+      const check = validateInput(raw, fromBase);
+      if (!check.ok) {
+        const baseLabel = baseName(fromBase);
+        const validRange = fromBase <= 10
+          ? `0-${DIGITS[fromBase - 1]}`
+          : `0-9 and A-${DIGITS[fromBase - 1]}`;
+        validationEl.className = 'validation-msg error';
+        validationEl.textContent =
+          `The character "${check.char.toUpperCase()}" is not valid in ${baseLabel} (Base-${fromBase}). Valid digits are: ${validRange}.`;
+        outputEl.className = 'output-value empty';
+        outputEl.textContent = 'Fix the input to see the result';
+        copyBtn.style.display = 'none';
+        toggleBtn.style.display = 'none';
+        document.getElementById('breakdownBody').className = 'breakdown-body';
+        document.getElementById('numInput').classList.add('error');
+        return;
+      }
+
+      // Clear errors
+      validationEl.className = 'validation-msg';
+      document.getElementById('numInput').classList.remove('error');
+
+      // Perform BigInt conversion
+      let decimalValue;
+      try {
+        decimalValue = toBigInt(raw, fromBase);
+      } catch (e) {
+        validationEl.className = 'validation-msg error';
+        validationEl.textContent = 'Conversion error. Please check your input.';
+        return;
+      }
+
+      const result = fromBigInt(decimalValue, toBase);
+
+      // Show result
+      outputEl.className = 'output-value';
+      outputEl.textContent = result.toUpperCase();
+      copyBtn.style.display = 'inline-block';
+      toggleBtn.style.display = 'flex';
+
+      // Update quick reference matrix
+      setRefMatrix(decimalValue, fromBase, toBase);
+
+      // Build breakdown
+      buildBreakdown(raw, fromBase, toBase, decimalValue, result.toUpperCase());
+    }
+
+    // =============================================
+    //  QUICK REFERENCE MATRIX
+    // =============================================
+    function setRefMatrix(decVal, fromBase, toBase) {
+      const cells = [
+        { id: 'refBin',    base: 2,  valId: 'refBinVal',  label: 'Binary (Base-2)' },
+        { id: 'refOct',    base: 8,  valId: 'refOctVal',  label: 'Octal (Base-8)' },
+        { id: 'refDec',    base: 10, valId: 'refDecVal',  label: 'Decimal (Base-10)' },
+        { id: 'refHex',    base: 16, valId: 'refHexVal',  label: 'Hex (Base-16)' },
+      ];
+      cells.forEach(c => {
+        const el = document.getElementById(c.valId);
+        const cell = document.getElementById(c.id);
+        if (decVal === null) {
+          el.className = 'ref-value empty';
+          el.textContent = '-';
+          cell.classList.remove('active');
+        } else {
+          const v = fromBigInt(decVal, c.base).toUpperCase();
+          el.className = 'ref-value';
+          el.textContent = v;
+          // Highlight if this base matches the from or to base
+          cell.classList.toggle('active', c.base === fromBase || c.base === toBase);
+        }
+      });
+    }
+
+    // =============================================
+    //  ALGORITHM BREAKDOWN
+    // =============================================
+    function buildBreakdown(raw, fromBase, toBase, decVal, result) {
+      const body = document.getElementById('breakdownBody');
+      const upper = raw.toUpperCase();
+      const len = upper.length;
+
+      let html = '';
+
+      // Step 1: Convert input to decimal showing positional weights
+      html += `<div class="breakdown-step"><span class="hl">Step 1:</span> Convert <span class="hl">${upper}</span> from Base-${fromBase} to Decimal (Base-10)</div>`;
+      if (fromBase === 10) {
+        html += `<div class="breakdown-step" style="color:var(--text-muted);font-size:0.82rem;">Input is already in Decimal - no conversion needed.</div>`;
+      } else {
+        // Build positional expansion
+        let terms = [];
+        let termValues = [];
+        for (let i = 0; i < len; i++) {
+          const digitChar = upper[i];
+          const digitVal = DIGITS.indexOf(digitChar);
+          const power = len - 1 - i;
+          const weight = BigInt(fromBase) ** BigInt(power);
+          const termVal = BigInt(digitVal) * weight;
+          terms.push(`${digitChar}(=${digitVal}) x ${fromBase}^${power}`);
+          termValues.push({ digitChar, digitVal, fromBase, power, termVal: termVal.toString() });
+        }
+        html += `<div class="breakdown-formula">`;
+        html += terms.join('\n+ ');
+        html += `\n= `;
+        html += termValues.map(t => t.termVal).join(' + ');
+        html += `\n= ${decVal.toString()}`;
+        html += `</div>`;
+        html += `<div class="breakdown-total">Decimal value: ${decVal.toString()}</div>`;
+      }
+
+      // Step 2: Convert decimal to target base
+      html += `<div class="breakdown-step" style="margin-top:14px;"><span class="hl">Step 2:</span> Convert Decimal <span class="hl">${decVal.toString()}</span> to Base-${toBase}</div>`;
+      if (toBase === 10) {
+        html += `<div class="breakdown-step" style="color:var(--text-muted);font-size:0.82rem;">Target is Decimal - result is the decimal value directly.</div>`;
+      } else {
+        // Show repeated division
+        let steps = [];
+        let n = decVal;
+        const b = BigInt(toBase);
+        if (n === 0n) {
+          steps.push({ quotient: '0', remainder: '0', remainderChar: '0' });
+        } else {
+          while (n > 0n) {
+            const rem = n % b;
+            const quot = n / b;
+            steps.push({
+              quotient: quot.toString(),
+              remainder: rem.toString(),
+              remainderChar: DIGITS[Number(rem)]
+            });
+            n = quot;
+          }
+        }
+        html += `<div class="breakdown-step" style="font-size:0.8rem;color:var(--text-subtle);margin-bottom:6px;">Repeatedly divide by ${toBase}, collect remainders bottom-to-top:</div>`;
+        html += `<div class="breakdown-formula">`;
+        steps.forEach((s, idx) => {
+          const inputVal = idx === 0 ? decVal.toString() : steps[idx - 1].quotient;
+          html += `${inputVal} / ${toBase} = ${s.quotient} remainder <span class="hl-g">${s.remainderChar}</span>\n`;
+        });
+        html += `\nResult (remainders reversed): <span class="hl-g">${result}</span>`;
+        html += `</div>`;
+      }
+
+      html += `<div class="breakdown-total">Final result: ${upper} (Base-${fromBase}) = <span style="color:var(--green)">${result}</span> (Base-${toBase})</div>`;
+
+      body.innerHTML = html;
+    }
+
+    function toggleBreakdown() {
+      const btn = document.getElementById('breakdownToggle');
+      const body = document.getElementById('breakdownBody');
+      const isOpen = body.classList.contains('visible');
+      body.classList.toggle('visible', !isOpen);
+      btn.classList.toggle('open', !isOpen);
+      btn.querySelector('span:first-child').textContent = isOpen ? 'Show Algorithm Breakdown' : 'Hide Algorithm Breakdown';
+    }
+
+    // =============================================
+    //  COPY RESULT
+    // =============================================
+    function copyResult() {
+      const val = document.getElementById('outputValue').textContent;
+      navigator.clipboard.writeText(val).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = val;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    }
+
+    // =============================================
+    //  FAQ ACCORDION
+    // =============================================
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling;
+      const isOpen = answer.classList.contains('visible');
+      answer.classList.toggle('visible', !isOpen);
+      btn.classList.toggle('open', !isOpen);
+    }
+
+  </script>
+</body>
+</html>

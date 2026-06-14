@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chemical Equation Balancer: Stoichiometry Solver with Matrix Math | AxiomApe</title>
+  <meta name="description" content="Free Chemical Equation Balancer: type any unbalanced equation and instantly get the lowest whole-number coefficients using algebraic matrix elimination. Shows atom counts, conservation of mass check, and subscript formatting. 100% client-side." />
+  <meta name="keywords" content="chemical equation balancer, stoichiometry calculator, balance chemical equations, algebraic method balancing, conservation of mass calculator, molecule coefficient solver, chemistry homework help, balance equations online, chemical reaction balancer, polyatomic ion balancer, Gaussian elimination chemistry, subscript equation formatter, reactants products balancer, free chemistry tool" />
+  <link rel="canonical" href="https://axiomape.com/chemical-equation-balancer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Chemical Equation Balancer",
+        "description": "Free Chemical Equation Balancer: type any unbalanced equation and instantly get the lowest whole-number coefficients using algebraic matrix elimination. Shows atom counts, conservation of mass check, and subscript formatting. 100% client-side.",
+        "url": "https://axiomape.com/chemical-equation-balancer/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why do we balance chemical equations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We balance chemical equations because of the Law of Conservation of Mass: matter cannot be created or destroyed in a chemical reaction. Every atom that exists in the reactants must still exist in the products, just rearranged into new molecules. An unbalanced equation is scientifically incorrect because it implies atoms appear from nowhere or vanish. Balanced equations also let chemists calculate exact mass ratios for reactions, which is the foundation of stoichiometry used in lab work, industrial manufacturing, and pharmaceutical dosing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can I not just change the subscripts to balance the equation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Subscripts in a chemical formula define the molecule itself. Changing a subscript changes the identity of the compound. H2O (water) and H2O2 (hydrogen peroxide) are completely different substances with different properties and reactions. Altering the subscript to balance an equation would be like changing the recipe to claim you made a different dish. Only the coefficients in front of each molecule may be changed. Coefficients multiply the entire molecule, so they scale atom counts without altering what the molecule is."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the algebraic method for balancing equations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The algebraic method assigns a variable (a, b, c, etc.) to the coefficient of each molecule. For each element, you write an equation stating that its atom count on the left must equal its count on the right. This produces a system of linear equations. You then solve the system using Gaussian elimination or substitution, set one variable to 1, solve for the others, and multiply through by the lowest common denominator to get the smallest whole-number coefficients. This method always works and avoids the infinite loops that trial-and-error approaches can fall into for complex equations."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the Law of Conservation of Mass?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Law of Conservation of Mass, established by Antoine Lavoisier in 1789, states that the total mass of reactants in a closed chemical reaction equals the total mass of products. No mass is gained or lost; atoms are only rearranged. This is why a balanced equation must show the same number of each type of atom on both sides. Modern physics extends this slightly to include mass-energy equivalence, but for all ordinary chemical reactions the law holds with extreme precision."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you handle polyatomic ions when balancing equations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When a polyatomic ion (like SO4, NO3, OH, or CO3) appears intact on both sides of an equation, you can treat the whole ion as a single unit and count it rather than counting each individual atom. For example, in Ca(OH)2 + H3PO4 = Ca3(PO4)2 + H2O, you can count PO4 groups directly. However, this shortcut only works when the ion is unchanged in both reactants and products. If the ion breaks apart during the reaction, you must count each element atom by atom. This balancer always counts atoms individually for accuracy."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0D1117;
+      --bg-card:     #161B22;
+      --bg-input:    #0D1117;
+      --border:      #30363D;
+      --text:        #E6EDF3;
+      --text-muted:  #8B949E;
+      --text-dim:    #484F58;
+
+      --orange:      #F97316;
+      --orange-dim:  rgba(249,115,22,0.13);
+      --orange-glow: rgba(249,115,22,0.28);
+
+      --green:       #10B981;
+      --green-dim:   rgba(16,185,129,0.13);
+      --green-glow:  rgba(16,185,129,0.28);
+
+      --cyan:        #06B6D4;
+      --cyan-dim:    rgba(6,182,212,0.13);
+      --cyan-glow:   rgba(6,182,212,0.28);
+
+      --yellow:      #F59E0B;
+      --red:         #EF4444;
+      --red-dim:     rgba(239,68,68,0.12);
+
+      --mono: 'Courier New', Courier, monospace;
+      --sans: system-ui, -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    main.page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    header.page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header.page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    header.page-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Preset dropdown */
+    .preset-row {
+      margin-bottom: 1.25rem;
+    }
+    .preset-row label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+    select#preset {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.98rem;
+      padding: 0.65rem 0.85rem;
+      appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B949E' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      padding-right: 2rem;
+    }
+    select#preset:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-dim);
+    }
+
+    /* Main input */
+    .input-row {
+      margin-bottom: 1rem;
+    }
+    .input-row label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+    .input-hint {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+    input#eq-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      padding: 0.75rem 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input#eq-input:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-dim);
+    }
+    input#eq-input.error-state {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-dim);
+    }
+
+    /* Live subscript preview */
+    #subscript-preview {
+      background: rgba(6,182,212,0.06);
+      border: 1px solid rgba(6,182,212,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 1rem;
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      min-height: 2.4rem;
+      margin-top: 0.5rem;
+      font-family: var(--mono);
+      transition: opacity 0.2s;
+    }
+    #subscript-preview.hidden { display: none; }
+    #subscript-preview span.coeff {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    #subscript-preview .arrow-sep {
+      color: var(--text-dim);
+      margin: 0 0.4rem;
+    }
+
+    /* Error message */
+    #error-msg {
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 1rem;
+      color: var(--red);
+      font-size: 0.95rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    /* Result section */
+    #result-section {
+      display: none;
+    }
+
+    .balanced-display {
+      background: rgba(6,182,212,0.07);
+      border: 1px solid rgba(6,182,212,0.3);
+      border-radius: var(--radius-sm);
+      padding: 1.1rem 1.25rem;
+      font-size: 1.25rem;
+      font-family: var(--mono);
+      text-align: center;
+      margin-bottom: 1.25rem;
+      word-break: break-word;
+    }
+    .balanced-display .coeff {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    .balanced-display .arrow-sep {
+      color: var(--text-muted);
+      margin: 0 0.6rem;
+    }
+    .balanced-display .reactant-mol {
+      color: var(--orange);
+    }
+    .balanced-display .product-mol {
+      color: var(--green);
+    }
+    .balanced-display .plus-sep {
+      color: var(--text-dim);
+      margin: 0 0.35rem;
+    }
+
+    /* Atom count table */
+    .check-table-wrapper {
+      overflow-x: auto;
+    }
+    table.check-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    table.check-table th {
+      background: rgba(255,255,255,0.04);
+      padding: 0.55rem 0.85rem;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    table.check-table td {
+      padding: 0.5rem 0.85rem;
+      border-bottom: 1px solid rgba(48,54,61,0.5);
+      font-family: var(--mono);
+    }
+    table.check-table td.elem-name { color: var(--text); font-weight: 600; }
+    table.check-table td.reactant-count { color: var(--orange); }
+    table.check-table td.product-count { color: var(--green); }
+    table.check-table td.match-check { text-align: center; font-size: 1.1rem; }
+    table.check-table tr:last-child td { border-bottom: none; }
+    .section-subtitle {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+    }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 0.5rem;
+      margin: 1.5rem 0;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 0.4rem;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .glossary-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .glossary-def {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    /* Polyatomic reference */
+    .poly-table-wrapper { overflow-x: auto; }
+    table.poly-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+    table.poly-table th {
+      background: rgba(255,255,255,0.04);
+      padding: 0.5rem 0.85rem;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    table.poly-table td {
+      padding: 0.55rem 0.85rem;
+      border-bottom: 1px solid rgba(48,54,61,0.4);
+      font-family: var(--mono);
+    }
+    table.poly-table tr:last-child td { border-bottom: none; }
+    table.poly-table td.ion-name { color: var(--text); font-weight: 600; font-family: var(--sans); }
+    table.poly-table td.ion-formula { color: var(--cyan); }
+    table.poly-table td.ion-charge { color: var(--orange); }
+    table.poly-table td.ion-note { color: var(--text-muted); font-family: var(--sans); font-size: 0.85rem; }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin: 1.25rem 0 0.5rem;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: rgba(255,255,255,0.03);
+      border: none;
+      padding: 0.85rem 1rem;
+      color: var(--text);
+      font-size: 0.97rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.15s;
+    }
+    .faq-question:hover { background: rgba(255,255,255,0.06); }
+    .faq-question .faq-icon {
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      color: var(--cyan);
+      transition: transform 0.2s;
+    }
+    .faq-question[aria-expanded="true"] .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.2s;
+      background: rgba(6,182,212,0.04);
+    }
+    .faq-answer.open {
+      max-height: 600px;
+      padding: 0.85rem 1rem;
+    }
+    .faq-answer p {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .glossary-grid { grid-template-columns: 1fr; }
+      .balanced-display { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Chemical Equation Balancer</h1>
+      <p>Type any unbalanced equation and get instant lowest whole-number coefficients via algebraic matrix math. No guessing loops, no crashes.</p>
+    </header>
+
+    <!-- TOOL CARD -->
+    <div class="card">
+      <div class="card-title">Balance Your Equation</div>
+
+      <!-- Preset dropdown -->
+      <div class="preset-row">
+        <label for="preset">Quick-Fill a Classic Reaction</label>
+        <select id="preset" onchange="loadPreset(this.value)">
+          <option value="">-- Select a preset --</option>
+          <option value="CH4+O2=CO2+H2O">Combustion of Methane (CH4 + O2)</option>
+          <option value="CO2+H2O=C6H12O6+O2">Photosynthesis (CO2 + H2O)</option>
+          <option value="Fe2O3+Al=Fe+Al2O3">Thermite Reaction (Fe2O3 + Al)</option>
+          <option value="custom">Custom Equation</option>
+        </select>
+      </div>
+
+      <!-- Main input -->
+      <div class="input-row">
+        <label for="eq-input">Unbalanced Equation</label>
+        <div class="input-hint">Use = or -> as the separator. Examples: H2+O2=H2O or Fe2O3+Al=Fe+Al2O3 or Ca(NO3)2=CaO+NO2+O2</div>
+        <input
+          type="text"
+          id="eq-input"
+          placeholder="CH4+O2=CO2+H2O"
+          oninput="handleInput()"
+          onchange="handleInput()"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- Live subscript preview -->
+      <div id="subscript-preview" class="hidden"></div>
+
+      <!-- Error message -->
+      <div id="error-msg"></div>
+    </div>
+
+    <!-- RESULT CARD -->
+    <div class="card" id="result-section">
+      <div class="card-title">Balanced Equation</div>
+      <div class="balanced-display" id="balanced-display"></div>
+
+      <div class="section-subtitle" style="margin-top:1.25rem;">Conservation of Mass Check</div>
+      <div class="check-table-wrapper">
+        <table class="check-table" id="check-table">
+          <thead>
+            <tr>
+              <th>Element</th>
+              <th style="color:var(--orange)">Reactants</th>
+              <th style="color:var(--green)">Products</th>
+              <th>Match</th>
+            </tr>
+          </thead>
+          <tbody id="check-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AD PLACEMENT 1 -->
+<!-- ============================================================
+     AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+     Google AdSense 728x90 - shown on screens larger than 768px
+============================================================ -->
+<div class="axiom-ad-leaderboard" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Stoichiometry</div>
+          <div class="glossary-def">The branch of chemistry that calculates the quantitative relationships between reactants and products in a chemical reaction based on the balanced equation.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Reactant</div>
+          <div class="glossary-def">A substance that enters into and is altered in the course of a chemical reaction. Reactants appear on the left side of the equation arrow.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Product</div>
+          <div class="glossary-def">A substance formed as a result of a chemical reaction. Products appear on the right side of the equation arrow.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Coefficient</div>
+          <div class="glossary-def">The whole number placed in front of a chemical formula in a balanced equation. It indicates how many molecules (or moles) of that substance are involved. Only coefficients may be changed when balancing.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Subscript</div>
+          <div class="glossary-def">The small number written below and after an element symbol in a formula (e.g., the 2 in H<sub>2</sub>O). Subscripts define the exact ratio of atoms in a molecule and must never be changed to balance an equation.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Conservation of Mass</div>
+          <div class="glossary-def">The principle that the total mass of reactants equals the total mass of products in a closed system. No atoms are created or destroyed, only rearranged. This is why equations must be balanced.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Polyatomic Ion</div>
+          <div class="glossary-def">A charged group of two or more atoms bonded together that acts as a single unit in reactions. Examples include sulfate (SO<sub>4</sub><sup>2-</sup>), nitrate (NO<sub>3</sub><sup>-</sup>), and ammonium (NH<sub>4</sub><sup>+</sup>).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Yield</div>
+          <div class="glossary-def">In a chemical equation, yield (shown by the arrow) indicates the direction of the reaction. In stoichiometry, percent yield compares actual product obtained to the theoretical maximum.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Combustion</div>
+          <div class="glossary-def">A rapid chemical reaction between a fuel and oxygen that produces heat, light, and typically carbon dioxide and water. The combustion of methane (CH<sub>4</sub>) is a classic balancing exercise.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Mole</div>
+          <div class="glossary-def">The SI unit for amount of substance. One mole equals 6.022 x 10<sup>23</sup> particles (Avogadro's number). Coefficients in balanced equations represent mole ratios, not just individual molecule counts.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POLYATOMIC IONS REFERENCE -->
+    <div class="card">
+      <div class="card-title">Common Polyatomic Ions Reference Guide</div>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">When balancing equations containing polyatomic ions, knowing their formulas and charges saves time. This cheat sheet covers the most common ions in high school chemistry.</p>
+      <div class="poly-table-wrapper">
+        <table class="poly-table">
+          <thead>
+            <tr>
+              <th>Ion Name</th>
+              <th>Formula</th>
+              <th>Charge</th>
+              <th>Common Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="ion-name">Sulfate</td>
+              <td class="ion-formula">SO<sub>4</sub></td>
+              <td class="ion-charge">2-</td>
+              <td class="ion-note">CaSO<sub>4</sub> (gypsum), H<sub>2</sub>SO<sub>4</sub> (sulfuric acid)</td>
+            </tr>
+            <tr>
+              <td class="ion-name">Nitrate</td>
+              <td class="ion-formula">NO<sub>3</sub></td>
+              <td class="ion-charge">1-</td>
+              <td class="ion-note">Ca(NO<sub>3</sub>)<sub>2</sub> (fertilizer), HNO<sub>3</sub> (nitric acid)</td>
+            </tr>
+            <tr>
+              <td class="ion-name">Carbonate</td>
+              <td class="ion-formula">CO<sub>3</sub></td>
+              <td class="ion-charge">2-</td>
+              <td class="ion-note">CaCO<sub>3</sub> (limestone), Na<sub>2</sub>CO<sub>3</sub> (soda ash)</td>
+            </tr>
+            <tr>
+              <td class="ion-name">Hydroxide</td>
+              <td class="ion-formula">OH</td>
+              <td class="ion-charge">1-</td>
+              <td class="ion-note">NaOH (lye), Ca(OH)<sub>2</sub> (slaked lime)</td>
+            </tr>
+            <tr>
+              <td class="ion-name">Phosphate</td>
+              <td class="ion-formula">PO<sub>4</sub></td>
+              <td class="ion-charge">3-</td>
+              <td class="ion-note">Ca<sub>3</sub>(PO<sub>4</sub>)<sub>2</sub> (bone mineral), H<sub>3</sub>PO<sub>4</sub> (phosphoric acid)</td>
+            </tr>
+            <tr>
+              <td class="ion-name">Ammonium</td>
+              <td class="ion-formula">NH<sub>4</sub></td>
+              <td class="ion-charge">1+</td>
+              <td class="ion-note">(NH<sub>4</sub>)<sub>2</sub>SO<sub>4</sub> (fertilizer), NH<sub>4</sub>Cl (ammonium chloride)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Balancing Chemical Equations</h2>
+      <p class="section-intro">
+        Whether you are working through AP Chemistry homework or just trying to understand how atoms rearrange during a reaction, balancing equations is one of the most fundamental skills in chemistry. This guide explains why it matters, how this tool does it correctly using matrix algebra, and what to watch out for when working with complex molecules.
+      </p>
+
+      <h3>How to Use This Balancer</h3>
+      <p>Type your unbalanced equation directly into the input field. Use a plus sign (+) between molecules on each side, and either an equals sign (=) or an arrow (->) to separate reactants from products. Write element symbols with correct capitalization: a capital letter starts a new element, so Co is cobalt while CO is carbon monoxide. Use parentheses for polyatomic groups with multipliers, like Ca(NO3)2. The tool updates in real time as you type. No buttons to press.</p>
+      <p>Select one of the preset reactions from the dropdown to see an example instantly. The balanced equation is displayed with coefficients highlighted in cyan, reactant molecules in orange, and product molecules in green. The Conservation of Mass Check table below it proves every atom balances out.</p>
+
+      <h3>Why Trial and Error Fails for Complex Equations</h3>
+      <p>Simple equations like H2 + O2 = H2O can be balanced by inspection in seconds. But equations with five or six molecules and four or five elements can take dozens of failed attempts by hand. Worse, a naive while-loop approach written in code can spin indefinitely on equations that have no solution, hanging the browser entirely. This tool avoids that problem completely by treating balancing as a system of linear equations and solving it algebraically.</p>
+
+      <h3>The Algebraic Matrix Method (How This Tool Works)</h3>
+      <p>Each molecule in the equation is assigned a coefficient variable: a, b, c, and so on. For every element that appears, the tool writes one conservation equation: atoms of that element in reactants (with their coefficients) must equal atoms of that element in products. This produces a matrix of coefficients. The tool then applies Gaussian elimination with partial pivoting to reduce the matrix to row-echelon form, finds the null space (the set of coefficient ratios that satisfy all constraints), and scales the solution to the smallest possible whole numbers by dividing by the greatest common divisor.</p>
+      <p>The result is always the lowest set of whole-number coefficients that balances the equation, computed in a deterministic, finite number of steps with no possibility of an infinite loop.</p>
+
+      <h3>Parsing Two-Letter Elements and Parentheses</h3>
+      <p>The parser handles two-letter element symbols correctly by reading capital letters as the start of a new element name and lowercase letters as continuations. So "Co" is parsed as cobalt, while "CO" is carbon followed by oxygen. For parenthetical groups like Ca(NO3)2, the parser reads inside the parentheses, records the atoms found there, then multiplies all of them by the trailing number (2 in this case). Nested parentheses are also supported for more complex organometallic compounds.</p>
+
+      <h3>FAQ</h3>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          Why do we balance chemical equations?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>We balance chemical equations because of the Law of Conservation of Mass: matter cannot be created or destroyed in a chemical reaction. Every atom that exists in the reactants must still exist in the products, just rearranged into new molecules. An unbalanced equation is scientifically incorrect because it implies atoms appear from nowhere or vanish. Balanced equations also let chemists calculate exact mass ratios for reactions, which is the foundation of stoichiometry used in lab work, industrial manufacturing, and pharmaceutical dosing.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          Why can I not just change the subscripts to balance the equation?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>Subscripts in a chemical formula define the molecule itself. Changing a subscript changes the identity of the compound. H<sub>2</sub>O (water) and H<sub>2</sub>O<sub>2</sub> (hydrogen peroxide) are completely different substances with different properties and reactions. Altering the subscript to balance an equation would be like changing the recipe to claim you made a different dish. Only the coefficients in front of each molecule may be changed. Coefficients multiply the entire molecule, so they scale atom counts without altering what the molecule is.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the algebraic method for balancing equations?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>The algebraic method assigns a variable (a, b, c, etc.) to the coefficient of each molecule. For each element, you write an equation stating that its atom count on the left must equal its count on the right. This produces a system of linear equations. You then solve the system using Gaussian elimination or substitution, set one variable to 1, solve for the others, and multiply through by the lowest common denominator to get the smallest whole-number coefficients. This method always works and avoids the infinite loops that trial-and-error approaches can fall into for complex equations.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          What is the Law of Conservation of Mass?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>The Law of Conservation of Mass, established by Antoine Lavoisier in 1789, states that the total mass of reactants in a closed chemical reaction equals the total mass of products. No mass is gained or lost; atoms are only rearranged. This is why a balanced equation must show the same number of each type of atom on both sides. Modern physics extends this slightly to include mass-energy equivalence, but for all ordinary chemical reactions the law holds with extreme precision.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+          How do you handle polyatomic ions when balancing?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer">
+          <p>When a polyatomic ion (like SO<sub>4</sub>, NO<sub>3</sub>, OH, or CO<sub>3</sub>) appears intact on both sides of an equation, you can treat the whole ion as a single unit and count it rather than counting each individual atom. For example, in Ca(OH)<sub>2</sub> + H<sub>3</sub>PO<sub>4</sub> = Ca<sub>3</sub>(PO<sub>4</sub>)<sub>2</sub> + H<sub>2</sub>O, you can count PO<sub>4</sub> groups directly. However, this shortcut only works when the ion is unchanged in both reactants and products. If the ion breaks apart during the reaction, you must count each element atom by atom. This balancer always counts atoms individually for accuracy.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+  <script>
+  // ============================================================
+  // MOLECULE PARSER
+  // Handles: two-letter elements, parentheses/brackets with
+  // multipliers, nested groups.
+  // Returns: { Element: count, ... } for one molecule string.
+  // ============================================================
+  function parseMolecule(formula) {
+    const stack = [{}];
+    let i = 0;
+    const s = formula.trim();
+    while (i < s.length) {
+      const ch = s[i];
+      if (ch === '(' || ch === '[') {
+        stack.push({});
+        i++;
+      } else if (ch === ')' || ch === ']') {
+        i++;
+        let numStr = '';
+        while (i < s.length && /\d/.test(s[i])) { numStr += s[i++]; }
+        const mult = numStr ? parseInt(numStr, 10) : 1;
+        const top = stack.pop();
+        const cur = stack[stack.length - 1];
+        for (const el in top) {
+          cur[el] = (cur[el] || 0) + top[el] * mult;
+        }
+      } else if (/[A-Z]/.test(ch)) {
+        // Read element: one capital + optional lowercase
+        let el = ch;
+        i++;
+        while (i < s.length && /[a-z]/.test(s[i])) { el += s[i++]; }
+        // Read optional number
+        let numStr = '';
+        while (i < s.length && /\d/.test(s[i])) { numStr += s[i++]; }
+        const count = numStr ? parseInt(numStr, 10) : 1;
+        const cur = stack[stack.length - 1];
+        cur[el] = (cur[el] || 0) + count;
+      } else {
+        // Skip unexpected characters
+        i++;
+      }
+    }
+    if (stack.length !== 1) throw new Error('Mismatched parentheses in: ' + formula);
+    return stack[0];
+  }
+
+  // ============================================================
+  // EQUATION PARSER
+  // Splits raw equation into reactant and product molecule lists.
+  // ============================================================
+  function parseEquation(raw) {
+    // Normalize arrow
+    let eq = raw.replace(/\s+/g, '').replace(/->/g, '=').replace(/=/g, '=');
+    // Remove any extra spaces
+    const parts = eq.split('=');
+    if (parts.length !== 2) throw new Error('Use = or -> to separate reactants and products.');
+    const reactantStrs = parts[0].split('+').filter(s => s.length > 0);
+    const productStrs  = parts[1].split('+').filter(s => s.length > 0);
+    if (!reactantStrs.length || !productStrs.length) throw new Error('Equation must have at least one molecule on each side.');
+    const reactants = reactantStrs.map(parseMolecule);
+    const products  = productStrs.map(parseMolecule);
+    return { reactants, products, reactantStrs, productStrs };
+  }
+
+  // ============================================================
+  // GCD / LCM helpers
+  // ============================================================
+  function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { let t = b; b = a % b; a = t; }
+    return a;
+  }
+  function lcm(a, b) { return Math.abs(a * b) / gcd(a, b); }
+
+  function arrayGcd(arr) {
+    return arr.reduce((acc, v) => gcd(acc, v), 0);
+  }
+  function arrayLcm(arr) {
+    return arr.reduce((acc, v) => lcm(acc, v), 1);
+  }
+
+  // ============================================================
+  // FRACTION helpers (to keep arithmetic exact)
+  // ============================================================
+  function fracReduce(n, d) {
+    if (d === 0) return [0, 0]; // sentinel for zero-row
+    const g = gcd(Math.abs(n), Math.abs(d));
+    const sign = d < 0 ? -1 : 1;
+    return [sign * n / g, sign * d / g];
+  }
+
+  // ============================================================
+  // GAUSSIAN ELIMINATION over rationals
+  // Finds the null space of the matrix (one-dimensional assumed).
+  // Returns coefficient array or throws.
+  // ============================================================
+  function gaussianNullSpace(matrix, numCols) {
+    const rows = matrix.length;
+    const cols = numCols;
+    // Work in fractions: each cell is [numerator, denominator]
+    // Convert matrix (which has integer entries) to fraction form
+    let M = matrix.map(row => row.map(v => [v, 1]));
+
+    let pivotCol = [];
+    let col = 0;
+    let row = 0;
+    while (row < rows && col < cols) {
+      // Find pivot in this column
+      let pivotRow = -1;
+      for (let r = row; r < rows; r++) {
+        if (M[r][col][0] !== 0) { pivotRow = r; break; }
+      }
+      if (pivotRow === -1) { col++; continue; }
+      // Swap
+      [M[row], M[pivotRow]] = [M[pivotRow], M[row]];
+      pivotCol.push(col);
+      // Scale pivot row so pivot = 1
+      const [pn, pd] = M[row][col];
+      for (let c = 0; c < cols; c++) {
+        const [n, d] = M[row][c];
+        M[row][c] = fracReduce(n * pd, d * pn);
+      }
+      // Eliminate column in all other rows
+      for (let r = 0; r < rows; r++) {
+        if (r === row) continue;
+        const [fn, fd] = M[r][col];
+        if (fn === 0) continue;
+        for (let c = 0; c < cols; c++) {
+          const [an, ad] = M[r][c];
+          const [bn, bd] = M[row][c];
+          // a - f * b
+          const newN = an * bd * fd - fn * bn * ad;
+          const newD = ad * bd * fd;
+          M[r][c] = fracReduce(newN, newD);
+        }
+      }
+      row++;
+      col++;
+    }
+
+    // Identify free variables (columns without a pivot)
+    const pivotSet = new Set(pivotCol);
+    const freeVars = [];
+    for (let c = 0; c < cols; c++) {
+      if (!pivotSet.has(c)) freeVars.push(c);
+    }
+    if (freeVars.length === 0) throw new Error('System has only the trivial solution. Check that all molecules share elements correctly.');
+    if (freeVars.length > 1) throw new Error('Equation is under-constrained (multiple independent solutions). Try a more specific equation.');
+
+    const freeCol = freeVars[0];
+    // Set free variable = 1, solve for pivot variables
+    const sol = new Array(cols).fill([0, 1]);
+    sol[freeCol] = [1, 1];
+    for (let r = 0; r < pivotCol.length; r++) {
+      const pc = pivotCol[r];
+      // sol[pc] = -M[r][freeCol] * 1  (since pivot coeff = 1 after reduction)
+      const [fn, fd] = M[r][freeCol];
+      sol[pc] = fracReduce(-fn, fd);
+    }
+
+    // Scale to positive integers: find LCM of denominators, then divide by GCD of numerators
+    const denoms = sol.map(([n, d]) => d === 0 ? 1 : Math.abs(d));
+    const L = arrayLcm(denoms);
+    const scaled = sol.map(([n, d]) => {
+      if (d === 0) return 0;
+      return Math.round(n * L / d);
+    });
+
+    // If any negative, flip signs
+    if (scaled.some(v => v < 0)) { for (let k = 0; k < scaled.length; k++) scaled[k] *= -1; }
+    if (scaled.some(v => v < 0)) throw new Error('Could not find a positive solution. The equation may be invalid.');
+
+    const g = arrayGcd(scaled.filter(v => v !== 0));
+    return scaled.map(v => v / g);
+  }
+
+  // ============================================================
+  // BALANCE ENGINE
+  // ============================================================
+  function balanceEquation(raw) {
+    const { reactants, products, reactantStrs, productStrs } = parseEquation(raw);
+
+    // Collect all elements
+    const elemSet = new Set();
+    [...reactants, ...products].forEach(mol => Object.keys(mol).forEach(e => elemSet.add(e)));
+    const elements = [...elemSet].sort();
+
+    const nMolecules = reactants.length + products.length;
+
+    // Build matrix: one row per element, one col per molecule
+    // Reactant counts are positive, product counts are negative (move to one side)
+    const matrix = elements.map(el => {
+      const row = [];
+      reactants.forEach(mol => row.push(mol[el] || 0));
+      products.forEach(mol => row.push(-(mol[el] || 0)));
+      return row;
+    });
+
+    const coeffs = gaussianNullSpace(matrix, nMolecules);
+    const reactantCoeffs = coeffs.slice(0, reactants.length);
+    const productCoeffs = coeffs.slice(reactants.length);
+
+    // Validate: all coefficients must be positive integers
+    if ([...reactantCoeffs, ...productCoeffs].some(v => !Number.isInteger(v) || v <= 0)) {
+      throw new Error('Could not find valid positive whole-number coefficients. Double-check the equation.');
+    }
+
+    // Verify conservation
+    for (const el of elements) {
+      const lhs = reactants.reduce((s, mol, i) => s + (mol[el] || 0) * reactantCoeffs[i], 0);
+      const rhs = products.reduce((s, mol, i) => s + (mol[el] || 0) * productCoeffs[i], 0);
+      if (lhs !== rhs) throw new Error('Internal balancing error for element ' + el + '. Please report this equation.');
+    }
+
+    return {
+      reactantCoeffs,
+      productCoeffs,
+      reactantStrs,
+      productStrs,
+      elements,
+      reactants,
+      products
+    };
+  }
+
+  // ============================================================
+  // SUBSCRIPT FORMATTER
+  // Convert "H2O" -> "H<sub>2</sub>O" etc.
+  // ============================================================
+  function toSubscript(str) {
+    return str.replace(/(\d+)/g, '<sub>$1</sub>');
+  }
+
+  // Convert full equation string to subscript preview HTML (no coefficients yet)
+  function equationToSubscriptHTML(raw) {
+    const normalized = raw.replace(/\s+/g, '').replace(/->/g, '=');
+    const parts = normalized.split('=');
+    if (parts.length !== 2) return toSubscript(raw);
+    const reactantTokens = parts[0].split('+').map(toSubscript);
+    const productTokens  = parts[1].split('+').map(toSubscript);
+    const lhs = reactantTokens.join(' <span style="color:var(--text-dim)">+</span> ');
+    const rhs = productTokens.join(' <span style="color:var(--text-dim)">+</span> ');
+    return lhs + ' <span class="arrow-sep">&#8594;</span> ' + rhs;
+  }
+
+  // Build balanced equation HTML with colored coefficients
+  function buildBalancedHTML(result) {
+    const { reactantCoeffs, productCoeffs, reactantStrs, productStrs } = result;
+    const rParts = reactantStrs.map((mol, i) => {
+      const c = reactantCoeffs[i];
+      const coeffHTML = c > 1 ? `<span class="coeff">${c}</span>` : '';
+      return coeffHTML + `<span class="reactant-mol">${toSubscript(mol)}</span>`;
+    });
+    const pParts = productStrs.map((mol, i) => {
+      const c = productCoeffs[i];
+      const coeffHTML = c > 1 ? `<span class="coeff">${c}</span>` : '';
+      return coeffHTML + `<span class="product-mol">${toSubscript(mol)}</span>`;
+    });
+    const plus = '<span class="plus-sep"> + </span>';
+    return rParts.join(plus) + '<span class="arrow-sep"> &#8594; </span>' + pParts.join(plus);
+  }
+
+  // Build conservation of mass check table rows
+  function buildCheckTableRows(result) {
+    const { reactantCoeffs, productCoeffs, elements, reactants, products } = result;
+    return elements.map(el => {
+      const lhs = reactants.reduce((s, mol, i) => s + (mol[el] || 0) * reactantCoeffs[i], 0);
+      const rhs = products.reduce((s, mol, i) => s + (mol[el] || 0) * productCoeffs[i], 0);
+      const match = lhs === rhs ? '&#10003;' : '&#10007;';
+      const matchColor = lhs === rhs ? 'var(--green)' : 'var(--red)';
+      return `<tr>
+        <td class="elem-name">${el}</td>
+        <td class="reactant-count">${lhs}</td>
+        <td class="product-count">${rhs}</td>
+        <td class="match-check" style="color:${matchColor}">${match}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ============================================================
+  // VALIDATE: check for element imbalance issues
+  // ============================================================
+  function validateElements(reactants, products, elements) {
+    const reactantElems = new Set();
+    const productElems  = new Set();
+    reactants.forEach(mol => Object.keys(mol).forEach(e => reactantElems.add(e)));
+    products.forEach(mol => Object.keys(mol).forEach(e => productElems.add(e)));
+
+    for (const el of reactantElems) {
+      if (!productElems.has(el)) return `Invalid Equation: The element ${el} is present in the reactants but missing from the products.`;
+    }
+    for (const el of productElems) {
+      if (!reactantElems.has(el)) return `Invalid Equation: The element ${el} is present in the products but missing from the reactants.`;
+    }
+    return null;
+  }
+
+  // ============================================================
+  // MAIN UI HANDLER
+  // ============================================================
+  function handleInput() {
+    const raw = document.getElementById('eq-input').value.trim();
+    const preview = document.getElementById('subscript-preview');
+    const errorMsg = document.getElementById('error-msg');
+    const resultSection = document.getElementById('result-section');
+    const input = document.getElementById('eq-input');
+
+    if (!raw) {
+      preview.classList.add('hidden');
+      errorMsg.style.display = 'none';
+      resultSection.style.display = 'none';
+      input.classList.remove('error-state');
+      return;
+    }
+
+    // Show subscript preview always
+    preview.classList.remove('hidden');
+    preview.innerHTML = equationToSubscriptHTML(raw);
+
+    errorMsg.style.display = 'none';
+    input.classList.remove('error-state');
+
+    try {
+      // First parse to check element balance
+      const parsed = parseEquation(raw);
+      const allElems = new Set();
+      [...parsed.reactants, ...parsed.products].forEach(mol => Object.keys(mol).forEach(e => allElems.add(e)));
+      const validationError = validateElements(parsed.reactants, parsed.products, [...allElems]);
+      if (validationError) {
+        showError(validationError);
+        resultSection.style.display = 'none';
+        return;
+      }
+
+      const result = balanceEquation(raw);
+
+      // Show results
+      document.getElementById('balanced-display').innerHTML = buildBalancedHTML(result);
+      document.getElementById('check-tbody').innerHTML = buildCheckTableRows(result);
+      resultSection.style.display = 'block';
+    } catch (err) {
+      showError(err.message || 'Unable to balance this equation. Check the format and try again.');
+      resultSection.style.display = 'none';
+    }
+  }
+
+  function showError(msg) {
+    const errorMsg = document.getElementById('error-msg');
+    const input = document.getElementById('eq-input');
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+    input.classList.add('error-state');
+  }
+
+  // ============================================================
+  // PRESETS
+  // ============================================================
+  function loadPreset(val) {
+    if (!val || val === 'custom') {
+      document.getElementById('eq-input').value = '';
+      document.getElementById('subscript-preview').classList.add('hidden');
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('eq-input').focus();
+      return;
+    }
+    document.getElementById('eq-input').value = val;
+    handleInput();
+  }
+
+  // ============================================================
+  // FAQ TOGGLE
+  // ============================================================
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const isOpen = answer.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-question').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    if (!isOpen) {
+      answer.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  }
+  </script>
+</body>
+</html>

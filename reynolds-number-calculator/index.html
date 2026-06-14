@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reynolds Number Calculator: Classify Fluid Flow Regimes in Pipes | AxiomApe</title>
+  <meta name="description" content="Free Reynolds Number Calculator for fluid dynamics and plumbing engineering. Select a fluid preset or enter custom density and viscosity, input flow velocity or volumetric flow rate, and instantly classify flow as Laminar, Transitional, or Turbulent. 100% client-side." />
+  <meta name="keywords" content="reynolds number calculator, laminar flow calculator, turbulent flow calculator, fluid dynamics calculator, pipe flow regime, Reynolds number formula, kinematic viscosity, dynamic viscosity, flow classification, pipe Reynolds number, Re calculator, flow velocity calculator, volumetric flow rate, plumbing hydraulics, transitional flow, fluid mechanics tool" />
+  <link rel="canonical" href="https://axiomape.com/reynolds-number-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Reynolds Number Calculator",
+        "description": "Free Reynolds Number Calculator for fluid dynamics and plumbing engineering. Select a fluid preset or enter custom density and viscosity, input flow velocity or volumetric flow rate, and instantly classify flow as Laminar, Transitional, or Turbulent. 100% client-side.",
+        "url": "https://axiomape.com/reynolds-number-calculator/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does the Reynolds number not have any units?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Reynolds number is dimensionless because the units of every variable in the formula cancel out perfectly. The numerator (density times velocity times diameter) has units of kg/m3 times m/s times m, which equals kg/(m times s). The denominator (dynamic viscosity) has units of Pa times s, and a Pascal equals kg/(m times s squared), so Pa times s equals kg/(m times s). Dividing the numerator by the denominator leaves no units at all. This is intentional: it means a Reynolds number of 2,000 means exactly the same thing whether you are working in metric or imperial units, making Re a universal, system-agnostic descriptor of flow behavior."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between dynamic viscosity and kinematic viscosity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Dynamic viscosity (mu, in Pa times s or Centipoise) measures a fluid's internal resistance to shear stress - how hard it is to physically push layers of fluid past each other. It is a direct property of the fluid itself. Kinematic viscosity (nu, in m squared per second or Centistokes) is dynamic viscosity divided by fluid density. It measures how the fluid's momentum diffuses through itself, accounting for the fluid's own inertia. The Reynolds number formula uses dynamic viscosity directly. If you only have kinematic viscosity, you can back-calculate: dynamic viscosity equals kinematic viscosity times density. Water at 20 degrees C has a dynamic viscosity of about 1.002 cP and a kinematic viscosity of about 1.004 cSt."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is turbulent flow usually preferred in heat exchangers but avoided in long pipelines?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Turbulent flow creates chaotic mixing eddies that constantly bring hot and cold fluid layers into contact with each other and with the pipe wall. This dramatically increases the convective heat transfer coefficient, allowing heat exchangers to transfer more energy using shorter, cheaper tubing. In a long pipeline, however, this same chaotic motion is a liability: it creates far greater friction losses than laminar flow (proportional to velocity squared rather than velocity), requiring more pump energy and higher operating costs over long distances. Oil and gas pipelines are engineered specifically to maintain Reynolds numbers as low as practically possible to minimize these losses."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does temperature affect the Reynolds number of a fluid?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Temperature primarily affects Re by changing the fluid's viscosity. For liquids like water and oil, viscosity decreases significantly as temperature rises - hot water is runnier than cold water. A lower viscosity means a higher Reynolds number for the same flow conditions, pushing the flow closer to or into the turbulent regime. For gases like air, the relationship is opposite: viscosity increases slightly with temperature (hot air is marginally thicker), which slightly lowers Re. The effect on liquids is much more dramatic. For example, water's dynamic viscosity drops from about 1.79 cP at 0 degrees C to 0.36 cP at 70 degrees C - a fivefold reduction that would nearly quintuple the Reynolds number at the same flow velocity."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "At what exact Reynolds number does flow transition from laminar to turbulent?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "There is no single exact transition point. The transition occurs over a range. Below Re = 2,300, flow in a circular pipe is reliably laminar. Above Re = 4,000, flow is reliably turbulent. Between 2,300 and 4,000 is the transitional regime, where flow can alternate between laminar and turbulent bursts, is sensitive to pipe surface roughness, upstream disturbances, and vibration, and is generally unpredictable for engineering design. These thresholds (2,300 and 4,000) apply specifically to flow inside smooth, straight, circular pipes. Other geometries, non-circular ducts, curved pipes, or open channels have different critical Reynolds numbers."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0D1117;
+      --bg-card:       #161B22;
+      --bg-input:      #0D1117;
+      --border:        #30363D;
+      --border-active: #0EA5E9;
+      --text:          #E6EDF3;
+      --text-muted:    #8B949E;
+      --text-dim:      #484F58;
+
+      --blue:          #0EA5E9;
+      --blue-dim:      rgba(14,165,233,0.15);
+      --blue-glow:     rgba(14,165,233,0.30);
+
+      --green:         #10B981;
+      --green-dim:     rgba(16,185,129,0.15);
+      --green-glow:    rgba(16,185,129,0.30);
+
+      --yellow:        #F59E0B;
+      --yellow-dim:    rgba(245,158,11,0.15);
+      --yellow-glow:   rgba(245,158,11,0.30);
+
+      --red:           #EF4444;
+      --red-dim:       rgba(239,68,68,0.15);
+      --red-glow:      rgba(239,68,68,0.30);
+
+      --sans:   system-ui, -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Page header ── */
+    .tool-header {
+      background: linear-gradient(135deg, #0D1117 0%, #161B22 60%, #1C2128 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 20px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-header::before {
+      content: '';
+      position: absolute;
+      top: -40px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 200px;
+      background: radial-gradient(ellipse at center, rgba(14,165,233,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .tool-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .tool-header h1 span { color: var(--blue); }
+    .tool-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 580px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* ── Preset dropdown ── */
+    .preset-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .preset-row label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 9px 14px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 200px;
+      transition: border-color 0.15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B949E' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    select:focus { outline: none; border-color: var(--blue); }
+
+    /* ── Input toggle (Velocity / Flow Rate) ── */
+    .toggle-bar {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 24px;
+      width: fit-content;
+    }
+    .toggle-btn {
+      padding: 8px 20px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-btn.active {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    /* ── Input grid ── */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) { .input-grid { grid-template-columns: 1fr; } }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-group label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .input-row {
+      display: flex;
+      gap: 0;
+    }
+    .input-row input[type="number"] {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      color: var(--text);
+      font-size: 1rem;
+      padding: 10px 14px;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+    .input-row input[type="number"]::-webkit-inner-spin-button,
+    .input-row input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .input-row input[type="number"]:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+    .input-row input[type="number"]:focus + select.unit-sel {
+      border-color: var(--blue);
+    }
+    .input-row select.unit-sel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      padding: 10px 10px;
+      cursor: pointer;
+      min-width: 80px;
+      transition: border-color 0.15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B949E' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 26px;
+    }
+    .input-row select.unit-sel:focus { outline: none; border-color: var(--blue); }
+
+    /* disabled state for preset-locked fields */
+    .input-row input.preset-locked {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .input-row select.preset-locked {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* ── Result card ── */
+    .result-card {
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      border: 2px solid var(--border);
+      transition: border-color 0.35s, background 0.35s, box-shadow 0.35s;
+      text-align: center;
+    }
+    .result-card.state-empty {
+      background: var(--bg-card);
+      border-color: var(--border);
+    }
+    .result-card.state-laminar {
+      background: var(--green-dim);
+      border-color: var(--green);
+      box-shadow: 0 0 32px var(--green-glow);
+    }
+    .result-card.state-transitional {
+      background: var(--yellow-dim);
+      border-color: var(--yellow);
+      box-shadow: 0 0 32px var(--yellow-glow);
+    }
+    .result-card.state-turbulent {
+      background: var(--red-dim);
+      border-color: var(--red);
+      box-shadow: 0 0 32px var(--red-glow);
+    }
+
+    .re-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .re-value {
+      font-size: clamp(2.5rem, 8vw, 4rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 14px;
+      transition: color 0.3s;
+    }
+    .state-laminar      .re-value { color: var(--green); }
+    .state-transitional .re-value { color: var(--yellow); }
+    .state-turbulent    .re-value { color: var(--red); }
+    .state-empty        .re-value { color: var(--text-dim); }
+
+    .regime-badge {
+      display: inline-block;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      padding: 6px 22px;
+      border-radius: 99px;
+      margin-bottom: 10px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .state-laminar      .regime-badge { background: var(--green); color: #fff; }
+    .state-transitional .regime-badge { background: var(--yellow); color: #0D1117; }
+    .state-turbulent    .regime-badge { background: var(--red); color: #fff; }
+    .state-empty        .regime-badge { background: var(--border); color: var(--text-muted); }
+
+    .regime-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* ── Re scale bar ── */
+    .scale-wrap {
+      margin-top: 20px;
+    }
+    .scale-track {
+      position: relative;
+      height: 8px;
+      border-radius: 99px;
+      background: linear-gradient(to right, var(--green) 0%, var(--green) 30%, var(--yellow) 40%, var(--yellow) 50%, var(--red) 65%, var(--red) 100%);
+      overflow: visible;
+    }
+    .scale-marker {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid #0D1117;
+      box-shadow: 0 0 0 3px #fff;
+      transition: left 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none;
+    }
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ── Detail row ── */
+    .detail-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      justify-content: center;
+    }
+    .detail-pill {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .detail-pill strong { color: var(--text); }
+
+    /* ── Glossary ── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 640px) { .glossary-grid { grid-template-columns: 1fr; } }
+
+    .glossary-item { display: flex; flex-direction: column; gap: 4px; }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.03em;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ── */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 20px 0 8px;
+    }
+    .section-intro,
+    .edu-section p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .edu-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px;
+    }
+    .edu-section ul li {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding: 4px 0 4px 18px;
+      position: relative;
+    }
+    .edu-section ul li::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+
+    /* ── Regime Context Guide ── */
+    .regime-guide {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+    }
+    @media (max-width: 640px) { .regime-guide { grid-template-columns: 1fr; } }
+    .regime-tile {
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    .regime-tile.lam { border-color: var(--green); background: var(--green-dim); }
+    .regime-tile.trans { border-color: var(--yellow); background: var(--yellow-dim); }
+    .regime-tile.turb { border-color: var(--red); background: var(--red-dim); }
+    .regime-tile-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .lam  .regime-tile-label { color: var(--green); }
+    .trans .regime-tile-label { color: var(--yellow); }
+    .turb .regime-tile-label { color: var(--red); }
+    .regime-tile-re {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .regime-tile p {
+      font-size: 0.8rem !important;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin: 0 !important;
+    }
+
+    /* ── FAQ ── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--bg); }
+    .faq-arrow {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .faq-item.open .faq-a { max-height: 500px; }
+    .faq-a-inner {
+      padding: 0 18px 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    /* ── Formula display ── */
+    .formula-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 24px;
+      text-align: center;
+      margin: 14px 0;
+      font-family: 'Courier New', monospace;
+    }
+    .formula-main {
+      font-size: 1.3rem;
+      color: var(--blue);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .formula-note {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Ad placements ── */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px 0;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      padding: 8px 0;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    /* ── Utility ── */
+    .mt8  { margin-top: 8px; }
+    .mt16 { margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="tool-header">
+    <div class="container">
+      <h1>Reynolds Number <span>Calculator</span></h1>
+      <p>Classify fluid flow as Laminar, Transitional, or Turbulent in any pipe or duct. Enter fluid properties and flow conditions for an instant Re calculation.</p>
+    </div>
+  </header>
+
+  <div class="container" style="padding-top: 28px; padding-bottom: 40px;">
+
+    <!-- ====================================================
+         CALCULATOR CARD
+    ===================================================== -->
+    <div class="card">
+      <div class="card-title">Fluid Medium</div>
+
+      <div class="preset-row">
+        <label for="fluidPreset">Select Fluid Preset:</label>
+        <select id="fluidPreset" onchange="applyPreset()">
+          <option value="water">Water (20°C / 68°F)</option>
+          <option value="air">Air (20°C / 68°F)</option>
+          <option value="oil">SAE 30 Motor Oil (20°C / 68°F)</option>
+          <option value="custom">Custom Fluid</option>
+        </select>
+      </div>
+
+      <!-- Input Method Toggle -->
+      <div class="card-title" style="margin-bottom: 12px;">Flow Input Method</div>
+      <div class="toggle-bar" style="margin-bottom: 24px;">
+        <button class="toggle-btn active" id="btnVelocity" onclick="setInputMode('velocity')">Flow Velocity (v)</button>
+        <button class="toggle-btn" id="btnFlowRate" onclick="setInputMode('flowrate')">Volumetric Flow Rate (Q)</button>
+      </div>
+
+      <!-- Core Inputs -->
+      <div class="card-title" style="margin-bottom: 16px;">Flow Parameters</div>
+      <div class="input-grid">
+
+        <!-- Velocity input (shown in velocity mode) -->
+        <div class="input-group" id="velocityGroup">
+          <label>Flow Velocity (v)</label>
+          <div class="input-row">
+            <input type="number" id="velocity" min="0" step="any" placeholder="e.g. 2.5" oninput="compute()" />
+            <select class="unit-sel" id="velocityUnit" onchange="compute()">
+              <option value="m_s">m/s</option>
+              <option value="ft_s">ft/s</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Flow Rate input (shown in flow rate mode) -->
+        <div class="input-group" id="flowrateGroup" style="display:none;">
+          <label>Volumetric Flow Rate (Q)</label>
+          <div class="input-row">
+            <input type="number" id="flowrate" min="0" step="any" placeholder="e.g. 10" oninput="compute()" />
+            <select class="unit-sel" id="flowrateUnit" onchange="compute()">
+              <option value="L_s">L/s</option>
+              <option value="m3_h">m&sup3;/h</option>
+              <option value="GPM">GPM</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Pipe Diameter -->
+        <div class="input-group">
+          <label>Pipe Internal Diameter (D)</label>
+          <div class="input-row">
+            <input type="number" id="diameter" min="0" step="any" placeholder="e.g. 50" oninput="compute()" />
+            <select class="unit-sel" id="diameterUnit" onchange="compute()">
+              <option value="mm">mm</option>
+              <option value="cm">cm</option>
+              <option value="m">m</option>
+              <option value="in">in</option>
+              <option value="ft">ft</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Fluid Density -->
+        <div class="input-group">
+          <label>Fluid Density (&rho;)</label>
+          <div class="input-row">
+            <input type="number" id="density" min="0" step="any" placeholder="e.g. 998" oninput="compute()" />
+            <select class="unit-sel" id="densityUnit" onchange="compute()">
+              <option value="kg_m3">kg/m&sup3;</option>
+              <option value="g_cm3">g/cm&sup3;</option>
+              <option value="lb_ft3">lb/ft&sup3;</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Viscosity -->
+        <div class="input-group">
+          <label>Dynamic Viscosity (&mu;)</label>
+          <div class="input-row">
+            <input type="number" id="viscosity" min="0" step="any" placeholder="e.g. 1.002" oninput="compute()" />
+            <select class="unit-sel" id="viscosityUnit" onchange="compute()">
+              <option value="Pa_s">Pa&middot;s</option>
+              <option value="cP">cP</option>
+            </select>
+          </div>
+        </div>
+
+      </div><!-- /input-grid -->
+    </div><!-- /calculator card -->
+
+
+    <!-- ====================================================
+         RESULT CARD
+    ===================================================== -->
+    <div class="result-card state-empty" id="resultCard">
+      <div class="re-label">Reynolds Number (Re)</div>
+      <div class="re-value" id="reValue">--</div>
+      <div class="regime-badge" id="regimeBadge">Enter values above</div>
+      <div class="regime-desc" id="regimeDesc">Fill in the flow parameters to classify the fluid regime.</div>
+
+      <div class="scale-wrap" id="scaleWrap" style="display:none;">
+        <div class="scale-track">
+          <div class="scale-marker" id="scaleMarker" style="left:0%"></div>
+        </div>
+        <div class="scale-labels">
+          <span>0</span>
+          <span style="color:var(--green)">Laminar</span>
+          <span style="color:var(--yellow)">Transitional</span>
+          <span style="color:var(--red)">Turbulent</span>
+          <span>Re &gt; 10k</span>
+        </div>
+      </div>
+
+      <div class="detail-row" id="detailRow" style="display:none;">
+        <div class="detail-pill">Velocity: <strong id="detailV">--</strong> m/s</div>
+        <div class="detail-pill">Diameter: <strong id="detailD">--</strong> m</div>
+        <div class="detail-pill">Density: <strong id="detailRho">--</strong> kg/m&sup3;</div>
+        <div class="detail-pill">Viscosity: <strong id="detailMu">--</strong> Pa&middot;s</div>
+      </div>
+    </div>
+
+
+    <!-- ====================================================
+         AD PLACEMENT 1
+    ===================================================== -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+
+    <!-- ====================================================
+         REGIME CONTEXT GUIDE
+    ===================================================== -->
+    <div class="card">
+      <div class="card-title">Regime Context Guide</div>
+      <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px;">Engineers use the Reynolds number to predict pressure drops, size pumps, and select valve types before a single pipe is laid. Here is how each regime affects practical plumbing and process engineering decisions.</p>
+
+      <div class="regime-guide">
+        <div class="regime-tile lam">
+          <div class="regime-tile-label">Laminar Flow</div>
+          <div class="regime-tile-re">Re &lt; 2,300</div>
+          <p>Smooth, parallel streamlines. Pressure drop scales linearly with velocity. Ideal for viscous fluids, microfluidics, and lubrication systems. Pump sizing uses the Hagen-Poiseuille equation. Low noise and minimal vibration.</p>
+        </div>
+        <div class="regime-tile trans">
+          <div class="regime-tile-label">Transitional Flow</div>
+          <div class="regime-tile-re">2,300 to 4,000</div>
+          <p>Unstable and unpredictable. Pressure drop calculations are unreliable. Engineers typically redesign the system to avoid this zone by either reducing flow velocity (push Re below 2,300) or increasing it (push Re above 4,000) for predictable behavior.</p>
+        </div>
+        <div class="regime-tile turb">
+          <div class="regime-tile-label">Turbulent Flow</div>
+          <div class="regime-tile-re">Re &gt; 4,000</div>
+          <p>Chaotic eddies and cross-mixing. Pressure drop scales with velocity squared, requiring more pump power over long runs. Excellent heat and mass transfer. Use the Darcy-Weisbach equation and a Moody chart to account for pipe roughness in pressure drop calculations.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ====================================================
+         GLOSSARY CARD
+    ===================================================== -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Reynolds Number (Re)</div>
+          <div class="glossary-def">A dimensionless ratio comparing inertial forces to viscous forces in a fluid. It predicts whether flow will be smooth (laminar) or chaotic (turbulent) without any units.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Laminar Flow</div>
+          <div class="glossary-def">Flow in which fluid moves in smooth, parallel layers with no cross-currents or eddies. Occurs at Re below 2,300 in circular pipes. Like toothpaste squeezed in a neat ribbon.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Turbulent Flow</div>
+          <div class="glossary-def">Chaotic, irregular flow with eddies, vortices, and rapid mixing. Occurs at Re above 4,000. Higher friction losses but superior heat and mass transfer characteristics.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Transitional Flow</div>
+          <div class="glossary-def">An unstable regime between Re 2,300 and 4,000 where flow can switch between laminar and turbulent spontaneously. Engineers avoid designing systems that operate here.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Dynamic Viscosity (&mu;)</div>
+          <div class="glossary-def">Measured in Pascal-seconds (Pa·s) or Centipoise (cP). Quantifies how much force is needed to slide one layer of fluid past another at a given rate. A property of the fluid at a given temperature.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Kinematic Viscosity (&nu;)</div>
+          <div class="glossary-def">Dynamic viscosity divided by fluid density (m²/s). Describes how momentum diffuses through the fluid, accounting for its own inertia. Used in some alternative Re formulas: Re = v·D / nu.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Characteristic Length (D)</div>
+          <div class="glossary-def">The relevant geometric dimension for the flow - the internal diameter for circular pipes. For non-circular ducts, the hydraulic diameter (4 times cross-sectional area divided by wetted perimeter) is used instead.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Volumetric Flow Rate (Q)</div>
+          <div class="glossary-def">The volume of fluid passing a cross-section per unit time (L/s, m³/h, or GPM). Related to velocity by Q = v times the pipe cross-sectional area. This calculator accepts Q directly and derives velocity internally.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Pipe Friction</div>
+          <div class="glossary-def">Resistance to flow caused by the fluid's viscosity and the roughness of the pipe wall. In laminar flow it is purely viscous. In turbulent flow, wall roughness dominates and is quantified by the Darcy friction factor via the Moody chart.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Hydraulic Diameter</div>
+          <div class="glossary-def">A substitute characteristic length for non-circular ducts, defined as 4 times the cross-sectional area divided by the wetted perimeter. For a circular pipe, hydraulic diameter equals the pipe's internal diameter exactly.</div>
+        </div>
+
+      </div>
+    </div><!-- /glossary -->
+
+
+    <!-- ====================================================
+         EDUCATIONAL SECTION
+    ===================================================== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to the Reynolds Number in Pipe Flow</h2>
+
+      <p class="section-intro">Whether you are sizing a pump, selecting a valve, designing a heat exchanger, or troubleshooting a noisy water main, the Reynolds number is the single most important dimensionless quantity in fluid mechanics. It tells you, before you run a single experiment, whether the flow in your pipe will behave smoothly or chaotically - and that distinction changes almost every downstream engineering decision.</p>
+
+      <h3>How to Use This Calculator</h3>
+      <p>Start by selecting a fluid preset. The calculator will auto-fill density and viscosity for Water, Air, or SAE 30 Motor Oil at 20°C. If you are working with a different fluid or a fluid at a different temperature, choose "Custom Fluid" and enter your own values. Then select your input method: if you know the flow velocity directly, use the Velocity tab. If you know the volumetric flow rate (e.g. from a pump curve or a flow meter reading), use the Flow Rate tab and enter the pipe diameter - the calculator derives velocity internally. The Reynolds number and flow regime classification update in real time as you type.</p>
+
+      <h3>The Physics Behind the Formula</h3>
+      <div class="formula-box">
+        <div class="formula-main">Re = (&rho; &times; v &times; D) / &mu;</div>
+        <div class="formula-note">rho = density (kg/m³) | v = velocity (m/s) | D = diameter (m) | mu = dynamic viscosity (Pa·s)</div>
+      </div>
+      <p>The numerator represents inertial forces - the tendency of moving fluid to keep moving and resist changes in direction. The denominator represents viscous forces - the fluid's internal "stickiness" that damps out disturbances. When the ratio is small (low Re), viscous forces win: any perturbation is quickly smoothed out, and flow stays laminar. When the ratio is large (high Re), inertial forces dominate: small disturbances amplify into eddies and the flow becomes turbulent.</p>
+
+      <h3>Converting Volumetric Flow Rate to Velocity</h3>
+      <div class="formula-box">
+        <div class="formula-main">v = Q / (&pi; &times; (D/2)²)</div>
+        <div class="formula-note">Q = volumetric flow rate (m³/s) | D = pipe internal diameter (m)</div>
+      </div>
+      <p>When you enter a flow rate, the calculator first converts it to SI units (m³/s), then divides by the pipe cross-sectional area to get velocity in m/s, then uses that velocity in the Re formula. This matches the standard approach in every fluid mechanics textbook.</p>
+
+      <h3>How Engineers Use Re to Predict Pressure Drop and Size Pumps</h3>
+      <p>In laminar flow, the Hagen-Poiseuille equation gives the exact pressure drop: delta P = 128 times mu times L times Q, divided by pi times D to the fourth power. Pressure drop scales linearly with both flow rate and pipe length. Doubling the flow rate doubles the pressure drop, and doubling the pipe length doubles it again. Pump sizing in laminar systems is highly predictable.</p>
+      <p>In turbulent flow, the Darcy-Weisbach equation is used: delta P = f times (L/D) times (rho times v squared / 2). The friction factor f is no longer constant - it depends on both the Reynolds number and the relative roughness of the pipe wall (pipe roughness divided by D), read from a Moody chart or calculated using the Colebrook equation. Because pressure drop scales with v squared in turbulent flow, doubling flow velocity quadruples the pressure drop and the pump power required. Pipe material selection (smooth PVC versus rough cast iron) also becomes critical.</p>
+
+      <h3>Practical Engineering Rules of Thumb</h3>
+      <ul>
+        <li>A standard design velocity for water in building plumbing is 1-3 m/s (3-10 ft/s). At these velocities, most residential pipe diameters produce turbulent flow.</li>
+        <li>In oil pipelines, lower flow velocity is preferred specifically to maintain lower Re and reduce friction losses over hundreds of kilometers.</li>
+        <li>Heat exchanger shell-and-tube designs target Re above 10,000 on the tube side for strong convective heat transfer coefficients.</li>
+        <li>HVAC duct designers use hydraulic diameter to apply the same Re criteria to rectangular ducts.</li>
+        <li>Food processing and pharmaceutical piping often requires sanitizable smooth surfaces precisely because turbulent flow creates cleaning action at high Re that can be validated by Re calculation.</li>
+      </ul>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq1">
+        <div class="faq-q" onclick="toggleFaq('faq1')">
+          Why does the Reynolds number not have any units?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">The Reynolds number is dimensionless because the units of every variable in the formula cancel out perfectly. The numerator (density times velocity times diameter) has units of kg/m³ times m/s times m, which equals kg/(m·s). The denominator (dynamic viscosity) has units of Pa·s. Since a Pascal equals kg/(m·s²), Pa·s equals kg/(m·s). Dividing numerator by denominator leaves no units at all. This is intentional: it means a Reynolds number of 2,000 means exactly the same thing whether you are working in metric or imperial units, making Re a universal, system-agnostic descriptor of flow behavior.</div>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <div class="faq-q" onclick="toggleFaq('faq2')">
+          What is the difference between dynamic viscosity and kinematic viscosity?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Dynamic viscosity (mu, in Pa·s or Centipoise) measures a fluid's internal resistance to shear stress - how hard it is to physically push layers of fluid past each other. It is a direct property of the fluid itself. Kinematic viscosity (nu, in m²/s or Centistokes) is dynamic viscosity divided by fluid density. It measures how the fluid's momentum diffuses through itself, accounting for the fluid's own inertia. The Reynolds number formula uses dynamic viscosity directly. If you only have kinematic viscosity, you can back-calculate: dynamic viscosity equals kinematic viscosity times density. Water at 20°C has a dynamic viscosity of about 1.002 cP and a kinematic viscosity of about 1.004 cSt.</div>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <div class="faq-q" onclick="toggleFaq('faq3')">
+          Why is turbulent flow usually preferred in heat exchangers but avoided in long pipelines?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Turbulent flow creates chaotic mixing eddies that constantly bring hot and cold fluid layers into contact with each other and with the pipe wall. This dramatically increases the convective heat transfer coefficient, allowing heat exchangers to transfer more energy using shorter, cheaper tubing. In a long pipeline, however, this same chaotic motion is a liability: it creates far greater friction losses than laminar flow (proportional to velocity squared rather than velocity), requiring more pump energy and higher operating costs over long distances. Oil and gas pipelines are engineered specifically to maintain Reynolds numbers as low as practically possible to minimize these losses.</div>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <div class="faq-q" onclick="toggleFaq('faq4')">
+          How does temperature affect the Reynolds number of a fluid?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Temperature primarily affects Re by changing the fluid's viscosity. For liquids like water and oil, viscosity decreases significantly as temperature rises - hot water is runnier than cold water. A lower viscosity means a higher Reynolds number for the same flow conditions, pushing the flow closer to or into the turbulent regime. For gases like air, the relationship is opposite: viscosity increases slightly with temperature (hot air is marginally thicker), which slightly lowers Re. The effect on liquids is much more dramatic. For example, water's dynamic viscosity drops from about 1.79 cP at 0°C to 0.36 cP at 70°C - a fivefold reduction that would nearly quintuple the Reynolds number at the same flow velocity.</div>
+        </div>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <div class="faq-q" onclick="toggleFaq('faq5')">
+          At what exact Reynolds number does flow transition from laminar to turbulent?
+          <span class="faq-arrow">&#9660;</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">There is no single exact transition point. The transition occurs over a range. Below Re = 2,300, flow in a circular pipe is reliably laminar. Above Re = 4,000, flow is reliably turbulent. Between 2,300 and 4,000 is the transitional regime, where flow can alternate between laminar and turbulent bursts, is sensitive to pipe surface roughness, upstream disturbances, and vibration, and is generally unpredictable for engineering design. These thresholds apply specifically to flow inside smooth, straight, circular pipes. Other geometries, non-circular ducts, curved pipes, or open channels have different critical Reynolds numbers.</div>
+        </div>
+      </div>
+
+    </div><!-- /edu-section -->
+
+  </div><!-- /container -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* ================================================================
+   FLUID PRESETS (SI: density in kg/m³, viscosity in Pa·s)
+================================================================ */
+const PRESETS = {
+  water: { density: 998.2,    viscosity: 0.001002 },
+  air:   { density: 1.204,    viscosity: 0.0000181 },
+  oil:   { density: 870,      viscosity: 0.200 },
+  custom: null
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let inputMode = 'velocity'; // 'velocity' | 'flowrate'
+
+/* ================================================================
+   PRESET APPLICATION
+================================================================ */
+function applyPreset() {
+  const preset = document.getElementById('fluidPreset').value;
+  const data = PRESETS[preset];
+  const densityInput   = document.getElementById('density');
+  const viscosityInput = document.getElementById('viscosity');
+  const densityUnit    = document.getElementById('densityUnit');
+  const viscosityUnit  = document.getElementById('viscosityUnit');
+
+  if (data) {
+    // Set to kg/m³ and Pa·s for preset values
+    densityUnit.value = 'kg_m3';
+    viscosityUnit.value = 'Pa_s';
+    densityInput.value   = data.density;
+    viscosityInput.value = data.viscosity;
+
+    densityInput.classList.add('preset-locked');
+    viscosityInput.classList.add('preset-locked');
+    densityUnit.classList.add('preset-locked');
+    viscosityUnit.classList.add('preset-locked');
+  } else {
+    densityInput.value   = '';
+    viscosityInput.value = '';
+    densityInput.classList.remove('preset-locked');
+    viscosityInput.classList.remove('preset-locked');
+    densityUnit.classList.remove('preset-locked');
+    viscosityUnit.classList.remove('preset-locked');
+  }
+  compute();
+}
+
+/* ================================================================
+   INPUT MODE TOGGLE
+================================================================ */
+function setInputMode(mode) {
+  inputMode = mode;
+  document.getElementById('velocityGroup').style.display  = (mode === 'velocity')  ? '' : 'none';
+  document.getElementById('flowrateGroup').style.display  = (mode === 'flowrate')  ? '' : 'none';
+  document.getElementById('btnVelocity').classList.toggle('active',  mode === 'velocity');
+  document.getElementById('btnFlowRate').classList.toggle('active',  mode === 'flowrate');
+  compute();
+}
+
+/* ================================================================
+   UNIT CONVERSION TO SI
+================================================================ */
+function toSI_velocity(val, unit) {
+  // returns m/s
+  if (unit === 'ft_s') return val * 0.3048;
+  return val; // m/s
+}
+
+function toSI_flowrate(val, unit) {
+  // returns m³/s
+  if (unit === 'L_s')  return val * 0.001;
+  if (unit === 'm3_h') return val / 3600;
+  if (unit === 'GPM')  return val * 6.30902e-5;
+  return val; // m³/s
+}
+
+function toSI_diameter(val, unit) {
+  // returns m
+  if (unit === 'mm') return val * 0.001;
+  if (unit === 'cm') return val * 0.01;
+  if (unit === 'in') return val * 0.0254;
+  if (unit === 'ft') return val * 0.3048;
+  return val; // m
+}
+
+function toSI_density(val, unit) {
+  // returns kg/m³
+  if (unit === 'g_cm3')  return val * 1000;
+  if (unit === 'lb_ft3') return val * 16.0185;
+  return val; // kg/m³
+}
+
+function toSI_viscosity(val, unit) {
+  // returns Pa·s
+  if (unit === 'cP') return val * 0.001;
+  return val; // Pa·s
+}
+
+/* ================================================================
+   MAIN COMPUTE
+================================================================ */
+function compute() {
+  const dVal    = parseFloat(document.getElementById('diameter').value);
+  const dUnit   = document.getElementById('diameterUnit').value;
+  const rhoVal  = parseFloat(document.getElementById('density').value);
+  const rhoUnit = document.getElementById('densityUnit').value;
+  const muVal   = parseFloat(document.getElementById('viscosity').value);
+  const muUnit  = document.getElementById('viscosityUnit').value;
+
+  if (isNaN(dVal)   || dVal   <= 0) return setEmpty();
+  if (isNaN(rhoVal) || rhoVal <= 0) return setEmpty();
+  if (isNaN(muVal)  || muVal  <= 0) return setEmpty();
+
+  // Diameter and fluid props in SI
+  const D   = toSI_diameter(dVal, dUnit);
+  const rho = toSI_density(rhoVal, rhoUnit);
+  const mu  = toSI_viscosity(muVal, muUnit);
+
+  let v_SI;
+
+  if (inputMode === 'velocity') {
+    const vVal  = parseFloat(document.getElementById('velocity').value);
+    const vUnit = document.getElementById('velocityUnit').value;
+    if (isNaN(vVal) || vVal < 0) return setEmpty();
+    v_SI = toSI_velocity(vVal, vUnit);
+  } else {
+    const qVal  = parseFloat(document.getElementById('flowrate').value);
+    const qUnit = document.getElementById('flowrateUnit').value;
+    if (isNaN(qVal) || qVal < 0) return setEmpty();
+    const Q_SI = toSI_flowrate(qVal, qUnit);
+    const area = Math.PI * Math.pow(D / 2, 2);
+    if (area <= 0) return setEmpty();
+    v_SI = Q_SI / area;
+  }
+
+  if (v_SI < 0) return setEmpty();
+
+  // Core formula: Re = (rho * v * D) / mu
+  const Re = (rho * v_SI * D) / mu;
+
+  if (!isFinite(Re) || Re < 0) return setEmpty();
+
+  setResult(Re, v_SI, D, rho, mu);
+}
+
+/* ================================================================
+   DISPLAY HELPERS
+================================================================ */
+function setEmpty() {
+  const card = document.getElementById('resultCard');
+  card.className = 'result-card state-empty';
+  document.getElementById('reValue').textContent   = '--';
+  document.getElementById('regimeBadge').textContent = 'Enter values above';
+  document.getElementById('regimeDesc').textContent  = 'Fill in the flow parameters to classify the fluid regime.';
+  document.getElementById('scaleWrap').style.display = 'none';
+  document.getElementById('detailRow').style.display = 'none';
+}
+
+function setResult(Re, v, D, rho, mu) {
+  const card        = document.getElementById('resultCard');
+  const reEl        = document.getElementById('reValue');
+  const badgeEl     = document.getElementById('regimeBadge');
+  const descEl      = document.getElementById('regimeDesc');
+  const markerEl    = document.getElementById('scaleMarker');
+
+  // Format Re with comma separators, rounded to whole number
+  reEl.textContent = Math.round(Re).toLocaleString('en-US');
+
+  // Classify
+  let stateClass, label, desc;
+  if (Re < 2300) {
+    stateClass = 'state-laminar';
+    label      = 'Laminar Flow';
+    desc       = 'Smooth, orderly fluid motion with parallel streamlines. Viscous forces dominate. Pressure drop is proportional to velocity.';
+  } else if (Re <= 4000) {
+    stateClass = 'state-transitional';
+    label      = 'Transitional Flow';
+    desc       = 'Fluctuating, unpredictable fluid motion between laminar and turbulent states. Avoid designing systems to operate in this zone.';
+  } else {
+    stateClass = 'state-turbulent';
+    label      = 'Turbulent Flow';
+    desc       = 'Chaotic, eddying fluid motion. Inertial forces dominate. Pressure drop scales with velocity squared. Strong mixing and heat transfer.';
+  }
+
+  card.className    = 'result-card ' + stateClass;
+  badgeEl.textContent = label;
+  descEl.textContent  = desc;
+
+  // Scale marker position (log scale, 0-10000 mapped linearly for visual clarity)
+  const capped    = Math.min(Re, 10000);
+  const pct       = (capped / 10000) * 100;
+  markerEl.style.left = pct.toFixed(1) + '%';
+
+  document.getElementById('scaleWrap').style.display = '';
+  document.getElementById('detailRow').style.display = '';
+
+  // Detail pills
+  document.getElementById('detailV').textContent   = v.toExponential(3);
+  document.getElementById('detailD').textContent   = D.toExponential(3);
+  document.getElementById('detailRho').textContent = rho.toFixed(3);
+  document.getElementById('detailMu').textContent  = mu.toExponential(4);
+}
+
+/* ================================================================
+   FAQ ACCORDION
+================================================================ */
+function toggleFaq(id) {
+  const item = document.getElementById(id);
+  item.classList.toggle('open');
+}
+
+/* ================================================================
+   INIT: apply default preset on load
+================================================================ */
+applyPreset();
+</script>
+
+</body>
+</html>

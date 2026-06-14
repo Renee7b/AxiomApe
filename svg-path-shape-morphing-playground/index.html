@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Path Shape Morphing Playground: Build Keyframe Transitions for Vector Elements | AxiomApe</title>
+  <meta name="description" content="Free SVG path morphing playground. Paste any two SVG path d-attributes, auto-normalize node counts, scrub the morph live, and export ready-to-use CSS @keyframes or GSAP MorphSVG code. 100% client-side." />
+  <meta name="keywords" content="svg path morphing, svg shape morph, path interpolation, svg animation, css keyframes svg, gsap morphsvg, svg d attribute animator, vector shape transition, path normalization tool, svg morph generator, bezier curve morph, svg keyframe tool, shape tween, vector animation playground, svg path editor" />
+  <link rel="canonical" href="https://axiomape.com/svg-path-shape-morphing-playground/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "SVG Path Shape Morphing Playground",
+        "description": "Free SVG path morphing playground. Paste any two SVG path d-attributes, auto-normalize node counts, scrub the morph live, and export ready-to-use CSS @keyframes or GSAP MorphSVG code. 100% client-side.",
+        "url": "https://axiomape.com/svg-path-shape-morphing-playground/",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why can't I just morph any two shapes without preprocessing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "SVG path morphing works by interpolating between matching coordinate pairs. If your start path has 4 anchor points and your end path has 8, there is no one-to-one correspondence, so the browser or animation library has nowhere to map each point. The result is either a hard error or a jarring, chaotic animation where points jump to arbitrary locations. Path normalization solves this by subdividing the simpler path's segments until both paths have the same number of coordinate pairs, giving the interpolation engine clean 1-to-1 mappings."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is path normalization and why is it required for smooth animations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Path normalization is the process of rewriting two SVG path strings so they contain an identical number of anchor points and segment commands. The tool converts all relative commands (lowercase m, l, c, etc.) to their absolute equivalents, then subdivides whichever path has fewer segments. Subdivision splits one segment into two shorter segments that trace the exact same curve, so the shape looks identical before any animation starts. Once both paths have the same node count, linear interpolation can smoothly blend every coordinate pair frame by frame."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does this tool handle shapes with different node counts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The tool parses both path strings into arrays of absolute coordinate commands, counts the points in each, then repeatedly splits the midpoint of the longest remaining segment in the shorter path until the counts match. This greedy midpoint subdivision strategy preserves the original shape geometry while adding the minimum number of extra nodes needed. The result is a normalized pair of paths that interpolate smoothly without any visual popping or warping."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are the performance benefits of using SVG morphing versus CSS-only shapes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CSS-only shape techniques like clip-path and border-radius are limited to simple geometry. An SVG path morph can transition between arbitrarily complex outlines - letters, icons, logos, illustrations - with a single animated attribute change on the d property. Modern browsers composite SVG attribute animations on the GPU when triggered via CSS or the Web Animations API, giving you smooth 60fps transitions without layout thrashing. GSAP MorphSVG additionally handles path normalization at runtime and supports non-linear easing across the morph."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a ViewBox and why does it matter for morphing paths?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The viewBox attribute defines the internal coordinate system of an SVG canvas. For example, viewBox='0 0 100 100' means your path coordinates live in a 100x100 unit space regardless of how large the SVG element is on screen. When morphing two paths, both must be authored in the same coordinate space. If your start path was designed in a 512x512 viewBox and your end path in a 100x100 viewBox, the coordinates will not align and the morph will appear to jump and scale incorrectly. Normalize both paths to the same viewBox before animating."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d2b;
+      --surface2:  #222535;
+      --border:    #2d3148;
+      --border2:   #3a3f5c;
+      --text:      #e2e8f0;
+      --text-muted:#8892a4;
+      --purple:    #9333EA;
+      --purple-dim:rgba(147,51,234,0.15);
+      --purple-glow:0 0 14px rgba(147,51,234,0.5);
+      --teal:      #14B8A6;
+      --teal-dim:  rgba(20,184,166,0.15);
+      --teal-glow: 0 0 14px rgba(20,184,166,0.5);
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    main#main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+
+    header.page-header {
+      text-align: center;
+      padding: 40px 0 32px;
+    }
+    header.page-header h1 {
+      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    header.page-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--purple);
+      margin-bottom: 16px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+
+    /* ── Dual-pane workspace ── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) { .workspace { grid-template-columns: 1fr; } }
+
+    .pane {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .pane-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--border2);
+      flex-shrink: 0;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .status-dot.valid   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.invalid { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+
+    textarea.path-input {
+      width: 100%;
+      height: 110px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      padding: 10px 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea.path-input:focus { border-color: var(--purple); box-shadow: var(--purple-glow); }
+    textarea.path-input.valid   { border-color: var(--green); }
+    textarea.path-input.invalid { border-color: var(--red); }
+
+    .status-msg {
+      font-size: 0.7rem;
+      margin-top: 5px;
+      min-height: 16px;
+      color: var(--text-muted);
+    }
+    .status-msg.ok  { color: var(--green); }
+    .status-msg.err { color: var(--red); }
+
+    /* ── Helper row ── */
+    .helper-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .helper-row label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    select, input[type="number"] {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 0.83rem;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus, input[type="number"]:focus { border-color: var(--purple); }
+    select { min-width: 200px; }
+    input[type="number"] { width: 80px; }
+
+    /* ── Keyframe controls ── */
+    .kf-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .kf-row label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+    .kf-row .val  { font-family: var(--mono); font-size: 0.85rem; color: var(--purple); min-width: 38px; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      min-width: 120px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border2);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: var(--purple-glow);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    /* ── Play button ── */
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    button.btn {
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button.btn:hover  { opacity: 0.85; }
+    button.btn:active { transform: scale(0.97); }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-teal   { background: var(--teal);   color: #fff; }
+    .btn-ghost  {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--text-muted);
+    }
+
+    /* ── SVG Canvas ── */
+    .canvas-wrap {
+      background: var(--bg);
+      border: 1.5px solid var(--purple);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      margin-bottom: 16px;
+      box-shadow: inset 0 0 30px rgba(147,51,234,0.05);
+      position: relative;
+    }
+    #morph-svg {
+      width: 100%;
+      max-width: 560px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .canvas-legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .legend-swatch {
+      width: 22px; height: 3px;
+      border-radius: 2px;
+    }
+
+    /* ── Output cards ── */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) { .output-grid { grid-template-columns: 1fr; } }
+
+    .out-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .out-card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 10px;
+    }
+    pre.out-code {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #a5b4fc;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 180px;
+      line-height: 1.5;
+    }
+    .copy-btn {
+      margin-top: 8px;
+      padding: 5px 14px;
+      font-size: 0.73rem;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .copy-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+    /* ── Glossary ── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term { font-weight: 700; color: var(--purple); font-size: 0.85rem; margin-bottom: 4px; }
+    .glossary-def  { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Educational / FAQ ── */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .section-intro { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.7; }
+    .edu-section h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 20px 0 8px; }
+    .edu-section p  { font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 10px; }
+
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      padding: 14px 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      gap: 12px;
+    }
+    .faq-q::after { content: '+'; color: var(--purple); font-size: 1.2rem; flex-shrink: 0; }
+    .faq-item.open .faq-q::after { content: '-'; }
+    .faq-a {
+      display: none;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding-bottom: 14px;
+      line-height: 1.7;
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── Ad placements ── */
+    .axiom-ad-leaderboard, .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>SVG Path Shape Morphing Playground</h1>
+    <p>Paste two SVG path strings, scrub the morph in real time, and export CSS @keyframes or GSAP code - all client-side.</p>
+  </header>
+
+  <!-- ── Tool Card ── -->
+  <div class="card">
+    <div class="card-title">Vector Design Studio</div>
+
+    <!-- Morphing Helper preset -->
+    <div class="helper-row">
+      <label for="preset-select">Morphing Helper:</label>
+      <select id="preset-select" onchange="applyPreset()">
+        <option value="">-- Choose a preset --</option>
+        <option value="square-circle">Square to Circle</option>
+        <option value="triangle-pentagon">Triangle to Pentagon</option>
+        <option value="heart-star">Heart to Star</option>
+        <option value="letter-a-b">Letter A to Letter B</option>
+      </select>
+      <label for="duration-input" style="margin-left:8px;">Duration:</label>
+      <input type="number" id="duration-input" value="1.2" min="0.1" max="20" step="0.1" oninput="updateOutputs()" />
+      <label>s</label>
+    </div>
+
+    <!-- Dual-pane path inputs -->
+    <div class="workspace">
+      <div class="pane">
+        <div class="pane-label">
+          <span class="status-dot" id="dot-start"></span>
+          Start Path (d attribute)
+        </div>
+        <textarea class="path-input" id="path-start" spellcheck="false"
+          placeholder='M 10 10 L 90 10 L 90 90 L 10 90 Z'
+          oninput="onPathChange('start')"></textarea>
+        <div class="status-msg" id="msg-start">Paste or type an SVG path d string.</div>
+      </div>
+      <div class="pane">
+        <div class="pane-label">
+          <span class="status-dot" id="dot-end"></span>
+          End Path (d attribute)
+        </div>
+        <textarea class="path-input" id="path-end" spellcheck="false"
+          placeholder='M 50 10 C 80 10 90 40 90 50 C 90 75 72 90 50 90 C 28 90 10 75 10 50 C 10 25 20 10 50 10 Z'
+          oninput="onPathChange('end')"></textarea>
+        <div class="status-msg" id="msg-end">Paste or type an SVG path d string.</div>
+      </div>
+    </div>
+
+    <!-- Keyframe progress control -->
+    <div class="kf-row">
+      <label>Animation Progress:</label>
+      <input type="range" id="progress-slider" min="0" max="100" value="0"
+        oninput="onSliderChange()" />
+      <span class="val" id="progress-val">0%</span>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn btn-purple" onclick="togglePlay()" id="play-btn">&#9654; Play</button>
+        <button class="btn btn-ghost" onclick="resetPlayback()">Reset</button>
+      </div>
+    </div>
+
+    <!-- SVG Visualizer -->
+    <div class="canvas-wrap">
+      <svg id="morph-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- start shape ghost -->
+        <path id="shape-start-ghost" fill="none" stroke="#9333EA" stroke-width="1.2"
+          stroke-dasharray="5 3" opacity="0.35" />
+        <!-- end shape ghost -->
+        <path id="shape-end-ghost" fill="none" stroke="#14B8A6" stroke-width="1.2"
+          stroke-dasharray="5 3" opacity="0.35" />
+        <!-- live morphing shape -->
+        <path id="shape-live" fill="rgba(147,51,234,0.12)" stroke="url(#morph-grad)"
+          stroke-width="2.2" />
+        <defs>
+          <linearGradient id="morph-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#9333EA" />
+            <stop offset="100%" stop-color="#14B8A6" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="canvas-legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#9333EA;"></div>
+          Start Shape
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:linear-gradient(90deg,#9333EA,#14B8A6);"></div>
+          Live Morph
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#14B8A6;"></div>
+          End Shape
+        </div>
+      </div>
+    </div>
+
+    <!-- Output grid -->
+    <div class="output-grid">
+      <div class="out-card">
+        <div class="out-card-title">Live Interpolated Path String</div>
+        <pre class="out-code" id="out-path-string">Move the slider to generate the interpolated d value.</pre>
+        <button class="copy-btn" onclick="copyOut('out-path-string', this)">Copy</button>
+      </div>
+      <div class="out-card" id="css-export-card">
+        <div class="out-card-title">CSS @keyframes Export</div>
+        <pre class="out-code" id="out-css-export">Provide valid start and end paths to generate animation code.</pre>
+        <button class="copy-btn" onclick="copyOut('out-css-export', this)">Copy</button>
+      </div>
+    </div>
+    <div class="output-grid">
+      <div class="out-card">
+        <div class="out-card-title">GSAP MorphSVG Syntax</div>
+        <pre class="out-code" id="out-gsap-export">Provide valid start and end paths to generate GSAP code.</pre>
+        <button class="copy-btn" onclick="copyOut('out-gsap-export', this)">Copy</button>
+      </div>
+      <div class="out-card">
+        <div class="out-card-title">Normalization Report</div>
+        <pre class="out-code" id="out-norm-report" style="color:#94a3b8;">No paths loaded yet.</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ── Glossary ── -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">SVG Path (d attribute)</div>
+        <div class="glossary-def">The d attribute inside an SVG path element contains a series of drawing commands (M, L, C, Z, etc.) that define the shape's outline as a series of straight lines and curves.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Bezier Curve</div>
+        <div class="glossary-def">A parametric curve defined by anchor points and control handles. Cubic bezier curves (C command) use two control points and are the backbone of smooth SVG shape outlines.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Path Normalization</div>
+        <div class="glossary-def">The process of rewriting two path strings so they contain an identical number of segments and coordinate pairs, making smooth frame-by-frame interpolation mathematically possible.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Interpolation</div>
+        <div class="glossary-def">Computing intermediate values between a start and end value. For paths, this means blending each coordinate pair: x = xStart + (xEnd - xStart) * progress, producing every frame of the morph.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Keyframe</div>
+        <div class="glossary-def">A snapshot of an animation at a specific point in time. In CSS, @keyframes rules define the property values at 0% (start) and 100% (end), and the browser fills in the intermediate states.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">ViewBox</div>
+        <div class="glossary-def">An SVG attribute that defines the internal coordinate system. A viewBox of "0 0 200 200" means path coordinates live in a 200x200 unit grid, independent of the element's pixel size on screen.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Node / Vertex</div>
+        <div class="glossary-def">An anchor point on a path where one segment ends and the next begins. More nodes means finer shape detail, but also a larger d string and more coordinate pairs for the morph engine to process.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Midpoint Subdivision</div>
+        <div class="glossary-def">A normalization strategy that splits a segment at its geometric midpoint, inserting a new node without changing the visible shape. Repeated until the node counts of both paths match.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Educational section ── -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to SVG Path Morphing</h2>
+    <p class="section-intro">SVG morphing is one of the most visually striking animation techniques on the web - a button that transforms into an arrow, a logo that reshapes into a checkmark, a circle that blooms into a star. Unlike image crossfades, a path morph is resolution-independent, hardware-accelerated, and scriptable with pure CSS or a few lines of JavaScript.</p>
+
+    <h3>How to Use This Tool</h3>
+    <p>Paste your start shape's d attribute into the left pane and your end shape's d attribute into the right pane. The green dot indicates valid SVG path syntax. Use the Morphing Helper dropdown to load a preset if you want a quick demo. Drag the Animation Progress slider to scrub through the morph frame by frame. When you are happy with the shape pair, copy the CSS @keyframes or GSAP code from the output cards and drop it directly into your project.</p>
+    <p>If your shapes have mismatched node counts, the normalization engine automatically subdivides the simpler path. The Normalization Report card shows exactly how many segments each path had before and after normalization so you know what was changed.</p>
+
+    <h3>How the Interpolation Engine Works</h3>
+    <p>Once both paths are normalized to the same segment count, the morph is computed with linear interpolation on every coordinate pair. For a progress value p (0 to 1), each output coordinate is xFinal = xStart + (xEnd - xStart) * p and yFinal = yStart + (yEnd - yStart) * p. The resulting d string is assembled from these blended coordinates and rendered live in the SVG canvas on every slider tick.</p>
+    <p>For the CSS export, the tool generates a full @keyframes block with the start path at 0% and the end path at 100%, plus the animation shorthand property. For GSAP, it outputs a gsap.to() call targeting the path element's attr.d property, which works without any plugins for simple linear morphs.</p>
+
+    <h3>Tips for Best Results</h3>
+    <p>Both paths should share the same viewBox coordinate space. If one was drawn in Figma at 24x24 and the other in Illustrator at 512x512, scale one to match the other before pasting. Avoid mixing open paths (no Z command) with closed paths (ends with Z) - the morph will still work, but the fill behavior may look unexpected. For complex illustrations with multiple sub-paths (using M...Z M...Z), use each sub-path individually.</p>
+
+    <h3>Frequently Asked Questions</h3>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Why can't I just morph any two shapes without preprocessing?</div>
+      <div class="faq-a">SVG path morphing works by interpolating between matching coordinate pairs. If your start path has 4 anchor points and your end path has 8, there is no one-to-one correspondence, so the browser or animation library has nowhere to map each point. The result is either a hard error or a jarring animation where points jump to arbitrary locations. Path normalization solves this by subdividing the simpler path's segments until both paths have the same number of coordinate pairs, giving the interpolation engine clean 1-to-1 mappings.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What is path normalization and why is it required for smooth animations?</div>
+      <div class="faq-a">Path normalization is the process of rewriting two SVG path strings so they contain an identical number of anchor points and segment commands. The tool converts all relative commands to absolute equivalents, then subdivides whichever path has fewer segments. Subdivision splits one segment into two shorter segments that trace the exact same curve, so the visible shape is unchanged before any animation starts. Once both paths share the same node count, linear interpolation can smoothly blend every coordinate pair frame by frame.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How does this tool handle shapes with different node counts?</div>
+      <div class="faq-a">The tool parses both path strings into arrays of absolute coordinate commands, counts the points in each, then repeatedly splits the midpoint of the longest remaining segment in the shorter path until the counts match. This greedy midpoint subdivision strategy preserves the original shape geometry while adding the minimum number of extra nodes needed. The Normalization Report card shows the before and after segment counts for each path.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What are the performance benefits of using SVG morphing versus CSS-only shapes?</div>
+      <div class="faq-a">CSS-only shape techniques like clip-path and border-radius are limited to simple geometry. An SVG path morph can transition between arbitrarily complex outlines - letters, icons, logos, illustrations - with a single animated attribute change. Modern browsers composite SVG attribute animations on the GPU when triggered via the Web Animations API, giving you smooth 60fps transitions without layout thrashing. GSAP MorphSVG additionally handles path normalization at runtime and supports non-linear easing across the morph.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">What is a ViewBox and why does it matter for morphing paths?</div>
+      <div class="faq-a">The viewBox attribute defines the internal coordinate system of an SVG canvas. A viewBox of "0 0 100 100" means your path coordinates live in a 100x100 unit space regardless of how large the SVG element is on screen. When morphing two paths, both must be authored in the same coordinate space. If your start path was designed in a 512x512 viewBox and your end path in a 100x100 viewBox, the coordinates will not align and the morph will appear to jump and scale incorrectly. Normalize both paths to the same viewBox before animating.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// PRESETS
+// ─────────────────────────────────────────────
+const PRESETS = {
+  'square-circle': {
+    start: 'M 20 20 L 180 20 L 180 180 L 20 180 Z',
+    end:   'M 100 20 C 148 20 180 52 180 100 C 180 148 148 180 100 180 C 52 180 20 148 20 100 C 20 52 52 20 100 20 Z'
+  },
+  'triangle-pentagon': {
+    start: 'M 100 20 L 180 170 L 20 170 Z',
+    end:   'M 100 20 L 173 74 L 146 163 L 54 163 L 27 74 Z'
+  },
+  'heart-star': {
+    start: 'M 100 150 C 40 110 20 70 40 50 C 60 30 80 40 100 60 C 120 40 140 30 160 50 C 180 70 160 110 100 150 Z',
+    end:   'M 100 20 L 115 70 L 170 70 L 125 105 L 140 160 L 100 130 L 60 160 L 75 105 L 30 70 L 85 70 Z'
+  },
+  'letter-a-b': {
+    start: 'M 50 170 L 100 30 L 150 170 M 65 120 L 135 120',
+    end:   'M 50 30 L 50 170 M 50 30 L 110 30 C 140 30 150 50 150 70 C 150 90 140 100 110 100 L 50 100 M 110 100 C 145 100 155 120 155 140 C 155 160 145 170 110 170 L 50 170'
+  }
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset-select').value;
+  if (!key || !PRESETS[key]) return;
+  document.getElementById('path-start').value = PRESETS[key].start;
+  document.getElementById('path-end').value   = PRESETS[key].end;
+  onPathChange('start');
+  onPathChange('end');
+}
+
+// ─────────────────────────────────────────────
+// PATH PARSER - tokenize d string into commands
+// ─────────────────────────────────────────────
+function parsePath(d) {
+  if (!d || !d.trim()) return null;
+  const re = /([MmZzLlHhVvCcSsQqTtAa])|([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/g;
+  const tokens = [];
+  let m;
+  while ((m = re.exec(d)) !== null) {
+    if (m[1]) tokens.push(m[1]);
+    else tokens.push(parseFloat(m[2]));
+  }
+
+  const cmds = [];
+  let i = 0;
+  let cx = 0, cy = 0, sx = 0, sy = 0;
+
+  function num() { return typeof tokens[i] === 'number' ? tokens[i++] : NaN; }
+
+  while (i < tokens.length) {
+    const cmd = tokens[i++];
+    if (typeof cmd !== 'string') continue;
+
+    switch (cmd) {
+      case 'M': { const x=num(), y=num(); cx=x; cy=y; sx=x; sy=y; cmds.push({t:'M',x,y}); break; }
+      case 'm': { const x=cx+num(), y=cy+num(); cx=x; cy=y; sx=x; sy=y; cmds.push({t:'M',x,y}); break; }
+      case 'L': while(typeof tokens[i]==='number'){const x=num(),y=num();cx=x;cy=y;cmds.push({t:'L',x,y});}break;
+      case 'l': while(typeof tokens[i]==='number'){const x=cx+num(),y=cy+num();cx=x;cy=y;cmds.push({t:'L',x,y});}break;
+      case 'H': while(typeof tokens[i]==='number'){const x=num();cx=x;cmds.push({t:'L',x,y:cy});}break;
+      case 'h': while(typeof tokens[i]==='number'){const x=cx+num();cx=x;cmds.push({t:'L',x,y:cy});}break;
+      case 'V': while(typeof tokens[i]==='number'){const y=num();cy=y;cmds.push({t:'L',x:cx,y});}break;
+      case 'v': while(typeof tokens[i]==='number'){const y=cy+num();cy=y;cmds.push({t:'L',x:cx,y});}break;
+      case 'C': while(typeof tokens[i]==='number'){
+        const x1=num(),y1=num(),x2=num(),y2=num(),x=num(),y=num();
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 'c': while(typeof tokens[i]==='number'){
+        const x1=cx+num(),y1=cy+num(),x2=cx+num(),y2=cy+num(),x=cx+num(),y=cy+num();
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 'S': while(typeof tokens[i]==='number'){
+        const prev=cmds[cmds.length-1];
+        const x1=prev&&prev.t==='C'?2*cx-prev.x2:cx, y1=prev&&prev.t==='C'?2*cy-prev.y2:cy;
+        const x2=num(),y2=num(),x=num(),y=num();
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 's': while(typeof tokens[i]==='number'){
+        const prev=cmds[cmds.length-1];
+        const x1=prev&&prev.t==='C'?2*cx-prev.x2:cx, y1=prev&&prev.t==='C'?2*cy-prev.y2:cy;
+        const x2=cx+num(),y2=cy+num(),x=cx+num(),y=cy+num();
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 'Q': while(typeof tokens[i]==='number'){
+        const qx=num(),qy=num(),x=num(),y=num();
+        const x1=cx+(2/3)*(qx-cx), y1=cy+(2/3)*(qy-cy);
+        const x2=x+(2/3)*(qx-x),   y2=y+(2/3)*(qy-y);
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 'q': while(typeof tokens[i]==='number'){
+        const qx=cx+num(),qy=cy+num(),x=cx+num(),y=cy+num();
+        const x1=cx+(2/3)*(qx-cx), y1=cy+(2/3)*(qy-cy);
+        const x2=x+(2/3)*(qx-x),   y2=y+(2/3)*(qy-y);
+        cmds.push({t:'C',x1,y1,x2,y2,x,y}); cx=x; cy=y; break;
+      } break;
+      case 'Z': case 'z': cmds.push({t:'Z'}); cx=sx; cy=sy; break;
+      default: break;
+    }
+  }
+  return cmds.length ? cmds : null;
+}
+
+function cmdsToD(cmds) {
+  return cmds.map(c => {
+    if (c.t === 'M') return `M ${r(c.x)} ${r(c.y)}`;
+    if (c.t === 'L') return `L ${r(c.x)} ${r(c.y)}`;
+    if (c.t === 'C') return `C ${r(c.x1)} ${r(c.y1)} ${r(c.x2)} ${r(c.y2)} ${r(c.x)} ${r(c.y)}`;
+    if (c.t === 'Z') return 'Z';
+    return '';
+  }).join(' ');
+}
+
+function r(v) { return Math.round(v * 1000) / 1000; }
+
+// ─────────────────────────────────────────────
+// NORMALIZATION - equalize segment counts
+// ─────────────────────────────────────────────
+function cmdPoint(c) {
+  if (c.t === 'M' || c.t === 'L') return {x: c.x, y: c.y};
+  if (c.t === 'C') return {x: c.x, y: c.y};
+  return null;
+}
+
+function segLength(a, b) {
+  if (!a || !b) return 0;
+  const pa = cmdPoint(a), pb = cmdPoint(b);
+  if (!pa || !pb) return 0;
+  return Math.hypot(pb.x - pa.x, pb.y - pa.y);
+}
+
+function splitSegment(cmds, idx) {
+  // Insert a midpoint node between cmds[idx] and cmds[idx+1]
+  const a = cmds[idx], b = cmds[idx + 1];
+  if (!a || !b) return cmds;
+  const pa = cmdPoint(a), pb = cmdPoint(b);
+  if (!pa || !pb) return cmds;
+
+  if (b.t === 'C') {
+    // De Casteljau midpoint for cubic bezier
+    const p0 = pa;
+    const p1 = {x: b.x1, y: b.y1};
+    const p2 = {x: b.x2, y: b.y2};
+    const p3 = pb;
+    const m01 = mid(p0, p1), m12 = mid(p1, p2), m23 = mid(p2, p3);
+    const m012 = mid(m01, m12), m123 = mid(m12, m23);
+    const m0123 = mid(m012, m123);
+    const seg1 = {t:'C', x1:m01.x, y1:m01.y, x2:m012.x, y2:m012.y, x:m0123.x, y:m0123.y};
+    const seg2 = {t:'C', x1:m123.x, y1:m123.y, x2:m23.x, y2:m23.y, x:p3.x, y:p3.y};
+    return [...cmds.slice(0, idx+1), seg1, seg2, ...cmds.slice(idx+2)];
+  } else {
+    // Line or Move: just insert the midpoint as L
+    const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+    const mid_cmd = {t: 'L', x: mx, y: my};
+    return [...cmds.slice(0, idx+1), mid_cmd, ...cmds.slice(idx+1)];
+  }
+}
+
+function mid(a, b) { return {x: (a.x+b.x)/2, y: (a.y+b.y)/2}; }
+
+function countPoints(cmds) {
+  return cmds.filter(c => c.t === 'M' || c.t === 'L' || c.t === 'C').length;
+}
+
+function normalizePaths(cmdsA, cmdsB) {
+  let a = [...cmdsA], b = [...cmdsB];
+  let iters = 0;
+  while (countPoints(a) !== countPoints(b) && iters < 200) {
+    if (countPoints(a) < countPoints(b)) {
+      // Find the longest non-Z segment in a to split
+      let maxLen = -1, maxIdx = 0;
+      for (let i = 0; i < a.length - 1; i++) {
+        if (a[i+1].t === 'Z' || a[i].t === 'Z') continue;
+        const l = segLength(a[i], a[i+1]);
+        if (l > maxLen) { maxLen = l; maxIdx = i; }
+      }
+      a = splitSegment(a, maxIdx);
+    } else {
+      let maxLen = -1, maxIdx = 0;
+      for (let i = 0; i < b.length - 1; i++) {
+        if (b[i+1].t === 'Z' || b[i].t === 'Z') continue;
+        const l = segLength(b[i], b[i+1]);
+        if (l > maxLen) { maxLen = l; maxIdx = i; }
+      }
+      b = splitSegment(b, maxIdx);
+    }
+    iters++;
+  }
+  return {a, b, iters};
+}
+
+// ─────────────────────────────────────────────
+// INTERPOLATION
+// ─────────────────────────────────────────────
+function interpCmds(a, b, t) {
+  const result = [];
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const ca = a[i], cb = b[i];
+    if (ca.t === 'Z' || cb.t === 'Z') { result.push({t:'Z'}); continue; }
+    if (ca.t === 'M') {
+      result.push({t:'M', x: lerp(ca.x,cb.x,t), y: lerp(ca.y,cb.y,t)});
+    } else if (ca.t === 'L') {
+      result.push({t:'L', x: lerp(ca.x,cb.x,t), y: lerp(ca.y,cb.y,t)});
+    } else if (ca.t === 'C') {
+      result.push({t:'C',
+        x1: lerp(ca.x1, cb.x1 !== undefined ? cb.x1 : cb.x, t),
+        y1: lerp(ca.y1, cb.y1 !== undefined ? cb.y1 : cb.y, t),
+        x2: lerp(ca.x2, cb.x2 !== undefined ? cb.x2 : cb.x, t),
+        y2: lerp(ca.y2, cb.y2 !== undefined ? cb.y2 : cb.y, t),
+        x:  lerp(ca.x,  cb.x,  t),
+        y:  lerp(ca.y,  cb.y,  t)
+      });
+    } else {
+      result.push(ca);
+    }
+  }
+  return result;
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let normA = null, normB = null;
+let rawA = null, rawB = null;
+let playRaf = null, playStart = null, playProgress = 0;
+
+// ─────────────────────────────────────────────
+// PATH VALIDATION
+// ─────────────────────────────────────────────
+function validatePath(d) {
+  if (!d.trim()) return {ok: false, msg: 'Empty path string.'};
+  const cmds = parsePath(d);
+  if (!cmds || cmds.length === 0) return {ok: false, msg: 'Could not parse path commands.'};
+  const pts = countPoints(cmds);
+  return {ok: true, msg: `Valid - ${pts} point${pts !== 1 ? 's' : ''} parsed.`, cmds};
+}
+
+function onPathChange(which) {
+  const id = which === 'start' ? 'path-start' : 'path-end';
+  const dotId = which === 'start' ? 'dot-start' : 'dot-end';
+  const msgId = which === 'start' ? 'msg-start' : 'msg-end';
+  const ta = document.getElementById(id);
+  const dot = document.getElementById(dotId);
+  const msg = document.getElementById(msgId);
+
+  const val = ta.value.trim();
+  if (!val) {
+    dot.className = 'status-dot';
+    ta.className = 'path-input';
+    msg.textContent = 'Paste or type an SVG path d string.';
+    msg.className = 'status-msg';
+    if (which === 'start') rawA = null;
+    else rawB = null;
+    normA = null; normB = null;
+    return;
+  }
+
+  const result = validatePath(val);
+  if (result.ok) {
+    dot.className = 'status-dot valid';
+    ta.className = 'path-input valid';
+    msg.textContent = result.msg;
+    msg.className = 'status-msg ok';
+    if (which === 'start') rawA = result.cmds;
+    else rawB = result.cmds;
+  } else {
+    dot.className = 'status-dot invalid';
+    ta.className = 'path-input invalid';
+    msg.textContent = result.msg;
+    msg.className = 'status-msg err';
+    if (which === 'start') rawA = null;
+    else rawB = null;
+    normA = null; normB = null;
+  }
+
+  tryNormalize();
+  updateOutputs();
+}
+
+function tryNormalize() {
+  if (!rawA || !rawB) { normA = null; normB = null; return; }
+  const cntA = countPoints(rawA), cntB = countPoints(rawB);
+  const res = normalizePaths(rawA, rawB);
+  normA = res.a; normB = res.b;
+
+  document.getElementById('out-norm-report').textContent =
+    `Start path: ${cntA} points -> ${countPoints(normA)} (after normalization)\n` +
+    `End path:   ${cntB} points -> ${countPoints(normB)} (after normalization)\n` +
+    `Iterations: ${res.iters}\n` +
+    (res.iters === 0 ? 'Paths already matched. No subdivision needed.' :
+     `Subdivided ${res.iters} segment${res.iters!==1?'s':''} to equalize node counts.`);
+}
+
+// ─────────────────────────────────────────────
+// UPDATE OUTPUTS
+// ─────────────────────────────────────────────
+function updateOutputs() {
+  const t = (document.getElementById('progress-slider').value) / 100;
+  document.getElementById('progress-val').textContent = Math.round(t * 100) + '%';
+
+  const startTA = document.getElementById('path-start').value.trim();
+  const endTA   = document.getElementById('path-end').value.trim();
+
+  // Update ghost shapes in SVG
+  const startGhost = document.getElementById('shape-start-ghost');
+  const endGhost   = document.getElementById('shape-end-ghost');
+  const live       = document.getElementById('shape-live');
+
+  if (rawA) startGhost.setAttribute('d', startTA);
+  else startGhost.setAttribute('d', '');
+
+  if (rawB) endGhost.setAttribute('d', endTA);
+  else endGhost.setAttribute('d', '');
+
+  if (!normA || !normB) {
+    live.setAttribute('d', '');
+    document.getElementById('out-path-string').textContent =
+      'Both paths must be valid to show the interpolated result.';
+    document.getElementById('out-css-export').textContent =
+      'Provide valid start and end paths to generate animation code.';
+    document.getElementById('out-gsap-export').textContent =
+      'Provide valid start and end paths to generate GSAP code.';
+    return;
+  }
+
+  const interpolated = interpCmds(normA, normB, t);
+  const dStr = cmdsToD(interpolated);
+  live.setAttribute('d', dStr);
+
+  document.getElementById('out-path-string').textContent = dStr;
+
+  const dur = parseFloat(document.getElementById('duration-input').value) || 1.2;
+  const normStartD = cmdsToD(normA);
+  const normEndD   = cmdsToD(normB);
+
+  document.getElementById('out-css-export').textContent =
+`@keyframes morphShape {
+  0%   { d: path("${normStartD}"); }
+  100% { d: path("${normEndD}"); }
+}
+
+.my-path {
+  animation: morphShape ${dur}s ease-in-out infinite alternate;
+}`;
+
+  document.getElementById('out-gsap-export').textContent =
+`// GSAP (requires MorphSVGPlugin for complex paths)
+// Simple attr tween (works without plugin for normalized paths):
+gsap.to("#my-path", {
+  duration: ${dur},
+  attr: { d: "${normEndD}" },
+  ease: "power2.inOut",
+  yoyo: true,
+  repeat: -1
+});
+
+// With MorphSVGPlugin (handles normalization automatically):
+// gsap.to("#my-path", {
+//   duration: ${dur},
+//   morphSVG: "${normEndD}",
+//   ease: "power2.inOut"
+// });`;
+}
+
+function onSliderChange() {
+  stopPlay();
+  updateOutputs();
+}
+
+// ─────────────────────────────────────────────
+// PLAYBACK
+// ─────────────────────────────────────────────
+let playing = false;
+
+function togglePlay() {
+  if (playing) stopPlay();
+  else startPlay();
+}
+
+function startPlay() {
+  if (!normA || !normB) return;
+  playing = true;
+  document.getElementById('play-btn').textContent = 'Pause';
+  const dur = (parseFloat(document.getElementById('duration-input').value) || 1.2) * 1000;
+  const startProg = parseFloat(document.getElementById('progress-slider').value) / 100;
+  let startTime = null;
+  let direction = 1;
+  let prog = startProg;
+
+  function tick(ts) {
+    if (!playing) return;
+    if (!startTime) startTime = ts - prog * dur;
+    const elapsed = ts - startTime;
+    prog = (elapsed % (dur * 2)) / dur;
+    if (prog > 1) { prog = 2 - prog; } // ping-pong
+    document.getElementById('progress-slider').value = Math.round(prog * 100);
+    updateOutputs();
+    playRaf = requestAnimationFrame(tick);
+  }
+  playRaf = requestAnimationFrame(tick);
+}
+
+function stopPlay() {
+  playing = false;
+  if (playRaf) cancelAnimationFrame(playRaf);
+  document.getElementById('play-btn').textContent = '▶ Play';
+}
+
+function resetPlayback() {
+  stopPlay();
+  document.getElementById('progress-slider').value = 0;
+  updateOutputs();
+}
+
+// ─────────────────────────────────────────────
+// COPY UTIL
+// ─────────────────────────────────────────────
+function copyOut(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  }).catch(() => {});
+}
+
+// ─────────────────────────────────────────────
+// FAQ ACCORDION
+// ─────────────────────────────────────────────
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
+}
+
+// ─────────────────────────────────────────────
+// INIT with default preset
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('preset-select').value = 'square-circle';
+  applyPreset();
+});
+</script>
+</body>
+</html>

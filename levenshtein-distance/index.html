@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free Levenshtein Distance Calculator: measure the edit distance between two strings in real time. See the exact transformation path with color-coded insertions, deletions, and substitutions. Powered by the Wagner-Fischer algorithm, 100% in-browser." />
+  <meta name="keywords" content="levenshtein distance calculator, edit distance, string similarity, fuzzy string matching, wagner-fischer algorithm, text comparison tool, insertion deletion substitution, dynamic programming string" />
+  <title>Levenshtein Distance Calculator: Measure String Edit Distance | AxiomApe</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="canonical" href="https://axiomape.com/levenshtein-distance/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+  ============================================================ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Levenshtein Distance Calculator",
+        "description": "Free Levenshtein Distance Calculator: measure the edit distance between two strings in real time. See the exact transformation path with color-coded insertions, deletions, and substitutions. Powered by the Wagner-Fischer algorithm, 100% in-browser.",
+        "url": "https://axiomape.com/levenshtein-distance/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is edit distance?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Edit distance is the minimum number of single-character operations (insertions, deletions, or substitutions) required to transform one string into another. The Levenshtein variant is the most common definition: each operation costs exactly 1, and you find the cheapest sequence of edits."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is this tool useful for data cleaning?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When merging records or deduplicating databases, the same entity often appears with slight spelling variations such as typos, abbreviations, or inconsistent formatting. Edit distance gives you a numeric score for how different two strings are, so you can set a threshold and automatically flag likely duplicates for review without needing an exact match."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Levenshtein distance differ from a character-by-character comparison?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A character-by-character comparison only checks positions in lockstep and breaks the moment a single insertion or deletion shifts everything out of alignment. Levenshtein distance accounts for insertions and deletions explicitly, so a single extra character in the middle of a word does not cascade into every subsequent position being flagged as a mismatch."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use this to compare large blocks of code?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can, but Levenshtein distance is designed for short-to-medium strings. For very long inputs the algorithm's memory and time requirements grow as length1 times length2, which can become slow in a browser past a few thousand characters each. For large code files a line-level diff tool is usually more practical and informative."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is the similarity percentage calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Similarity is calculated as: 1 minus (edit distance divided by the length of the longer string), expressed as a percentage. A distance of 0 gives 100% similarity. A distance equal to the longer string's length gives 0% similarity. This normalizes the raw distance so you can compare pairs of strings of different lengths on the same scale."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark theme */
+      --bg:          #0f1117;
+      --bg-card:     #1a1d27;
+      --bg-card-2:   #20232f;
+      --border:      #2e3347;
+      --border-light:#3a3f56;
+
+      /* Accent palette */
+      --indigo:      #6366f1;
+      --indigo-dim:  #4f52cc;
+      --indigo-glow: rgba(99,102,241,0.18);
+      --teal:        #14b8a6;
+      --teal-dim:    #0f9689;
+      --teal-glow:   rgba(20,184,166,0.15);
+
+      /* Text */
+      --text:        #e2e8f0;
+      --text-muted:  #94a3b8;
+      --text-dim:    #64748b;
+
+      /* Op colors */
+      --del-bg:      rgba(239,68,68,0.18);
+      --del-border:  #ef4444;
+      --del-text:    #fca5a5;
+      --ins-bg:      rgba(34,197,94,0.15);
+      --ins-border:  #22c55e;
+      --ins-text:    #86efac;
+      --sub-bg:      rgba(234,179,8,0.18);
+      --sub-border:  #eab308;
+      --sub-text:    #fde047;
+      --match-text:  #94a3b8;
+
+      --radius:      14px;
+      --radius-sm:   8px;
+      --shadow:      0 4px 24px rgba(0,0,0,0.4);
+      --mono:        'Fira Code', 'Consolas', 'Menlo', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Page header ───────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0c0e1a 0%, #131629 50%, #1a1d35 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+    }
+    .tool-header h1 {
+      font-size: clamp(22px, 4vw, 34px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 40%, #14b8a6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .tool-header p {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* ── Main layout ───────────────────────────────────────────── */
+    .main-content { padding: 32px 0 48px; }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--indigo);
+      margin-bottom: 18px;
+    }
+
+    /* ── Comparison zone ───────────────────────────────────────── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .input-group textarea {
+      width: 100%;
+      height: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .input-group textarea:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px var(--indigo-glow);
+    }
+    .char-count {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      text-align: right;
+      font-family: var(--mono);
+    }
+    .char-count.warn { color: var(--sub-border); }
+
+    /* ── Toggles ───────────────────────────────────────────────── */
+    .options-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .toggle-label input[type="checkbox"] { display: none; }
+    .toggle-track {
+      width: 36px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 99px;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle-label input:checked ~ .toggle-track {
+      background: var(--indigo);
+    }
+    .toggle-label input:checked ~ .toggle-track::after {
+      transform: translateX(16px);
+    }
+
+    /* ── Score cards ───────────────────────────────────────────── */
+    .score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 0;
+    }
+    @media (max-width: 500px) {
+      .score-grid { grid-template-columns: 1fr; }
+    }
+    .score-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+    }
+    .score-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .score-value {
+      font-size: 48px;
+      font-weight: 800;
+      font-family: var(--mono);
+      line-height: 1;
+    }
+    .score-value.indigo { color: var(--indigo); }
+    .score-value.teal   { color: var(--teal); }
+    .score-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* ── Similarity bar ────────────────────────────────────────── */
+    .sim-bar-wrap {
+      margin-top: 12px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .sim-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--indigo) 0%, var(--teal) 100%);
+      transition: width 0.3s ease;
+    }
+
+    /* ── Operation Map ─────────────────────────────────────────── */
+    .op-map-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--teal);
+      margin-bottom: 14px;
+    }
+    .op-map-empty {
+      color: var(--text-dim);
+      font-size: 13px;
+      text-align: center;
+      padding: 24px 0;
+      font-style: italic;
+    }
+    .op-map-equal {
+      color: var(--teal);
+      font-size: 13px;
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    .op-row-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .op-row {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.9;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      overflow-x: auto;
+      white-space: nowrap;
+      margin-bottom: 10px;
+    }
+    .op-row:last-child { margin-bottom: 0; }
+
+    .ch {
+      display: inline-block;
+      padding: 1px 2px;
+      border-radius: 3px;
+      white-space: pre;
+    }
+    .ch-match { color: var(--match-text); }
+    .ch-del {
+      background: var(--del-bg);
+      color: var(--del-text);
+      border-bottom: 2px solid var(--del-border);
+      text-decoration: line-through;
+      text-decoration-color: var(--del-border);
+    }
+    .ch-ins {
+      background: var(--ins-bg);
+      color: var(--ins-text);
+      border-bottom: 2px solid var(--ins-border);
+    }
+    .ch-sub {
+      background: var(--sub-bg);
+      color: var(--sub-text);
+      border-bottom: 2px solid var(--sub-border);
+    }
+
+    /* ── Legend ────────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .dot-del { background: var(--del-border); }
+    .dot-ins { background: var(--ins-border); }
+    .dot-sub { background: var(--sub-border); }
+    .dot-mat { background: var(--border-light); }
+
+    /* ── Op stats ──────────────────────────────────────────────── */
+    .op-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .op-stat {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .op-stat span {
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+    .stat-del { color: var(--del-text); }
+    .stat-ins { color: var(--ins-text); }
+    .stat-sub { color: var(--sub-text); }
+
+    /* ── Glossary ──────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--indigo);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ── Educational section ───────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--teal);
+      margin: 22px 0 8px;
+    }
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      padding: 16px;
+      background: var(--bg);
+      border-left: 3px solid var(--indigo);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 20px;
+    }
+
+    /* ── FAQ ───────────────────────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      background: var(--bg);
+      padding: 14px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--bg-card-2); }
+    .faq-arrow {
+      font-size: 16px;
+      transition: transform 0.2s;
+      color: var(--indigo);
+      flex-shrink: 0;
+    }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    /* ── Ad placements ─────────────────────────────────────────── */
+    /* Styles injected by site-chrome.js */
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .card { padding: 18px; }
+      .score-value { font-size: 38px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Page header (tool-specific, NOT role="banner") -->
+  <header class="tool-header">
+    <h1>Levenshtein Distance Calculator</h1>
+    <p>Measure the structural edit distance between two strings in real time. See exactly which characters were inserted, deleted, or substituted.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- ═══════════════════════════════════════════════════════
+           TOOL CARD
+      ═══════════════════════════════════════════════════════ -->
+      <article aria-label="Levenshtein Distance Calculator tool">
+
+        <!-- Comparison Zone -->
+        <section class="card" aria-labelledby="compare-heading">
+          <div class="card-title" id="compare-heading">Comparison Zone</div>
+
+          <div class="compare-grid">
+            <div class="input-group">
+              <label for="src">Source String</label>
+              <textarea id="src" placeholder="Enter source text..." spellcheck="false" oninput="onInput()"></textarea>
+              <div class="char-count" id="src-count">0 chars</div>
+            </div>
+            <div class="input-group">
+              <label for="tgt">Target String</label>
+              <textarea id="tgt" placeholder="Enter target text..." spellcheck="false" oninput="onInput()"></textarea>
+              <div class="char-count" id="tgt-count">0 chars</div>
+            </div>
+          </div>
+
+          <div class="options-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="case-toggle" checked onchange="onInput()" />
+              <span class="toggle-track"></span>
+              Case Sensitive
+            </label>
+            <label class="toggle-label">
+              <input type="checkbox" id="ws-toggle" onchange="onInput()" />
+              <span class="toggle-track"></span>
+              Ignore Whitespace
+            </label>
+          </div>
+
+          <!-- Results Dashboard -->
+          <div class="score-grid" role="region" aria-label="Results">
+            <div class="score-card">
+              <div class="score-label">Edit Distance</div>
+              <div class="score-value indigo" id="edit-score">-</div>
+              <div class="score-sub">minimum operations</div>
+            </div>
+            <div class="score-card">
+              <div class="score-label">Similarity</div>
+              <div class="score-value teal" id="sim-score">-</div>
+              <div class="sim-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="sim-bar-wrap">
+                <div class="sim-bar-fill" id="sim-bar" style="width:0%"></div>
+              </div>
+              <div class="score-sub" id="sim-sub">type in both fields</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Operation Map -->
+        <section class="card" aria-labelledby="opmap-heading">
+          <div class="op-map-title" id="opmap-heading">Transformation Path</div>
+          <div id="op-map-body">
+            <p class="op-map-empty">Enter text in both fields above to see the transformation path.</p>
+          </div>
+        </section>
+
+      </article>
+
+      <!-- ═══════════════════════════════════════════════════════
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ═══════════════════════════════════════════════════════ -->
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           GLOSSARY
+      ═══════════════════════════════════════════════════════ -->
+      <section class="card" aria-labelledby="glossary-heading">
+        <div class="card-title" id="glossary-heading">Key Terms Explained</div>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-term">Levenshtein Distance</div>
+            <div class="glossary-def">The minimum number of single-character edits (insertions, deletions, substitutions) needed to change one string into another. Named after Soviet mathematician Vladimir Levenshtein, who introduced the concept in 1965.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Edit Distance</div>
+            <div class="glossary-def">A general term for any metric that counts the number of operations required to transform one string into another. Levenshtein distance is the most widely used variant, but others (Damerau-Levenshtein, Hamming) use different operation sets.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Dynamic Programming</div>
+            <div class="glossary-def">An algorithmic technique that solves complex problems by breaking them into overlapping sub-problems and storing their results. The Levenshtein algorithm uses a matrix to avoid recomputing the cost of reaching each position in the two strings.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Wagner-Fischer Algorithm</div>
+            <div class="glossary-def">The standard algorithm for computing Levenshtein distance, published in 1974. It builds an (n+1) x (m+1) cost matrix and fills it row by row, with each cell storing the minimum edits to transform the first i characters of the source into the first j characters of the target.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Fuzzy String Matching</div>
+            <div class="glossary-def">Techniques that find strings which are approximately equal rather than exactly equal. Edit distance is a core building block: a low distance means the strings are likely the same entity with minor typos or formatting differences.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Insertion</div>
+            <div class="glossary-def">An edit operation that adds a character to the source string. In the transformation path it is shown in green and counts as 1 unit of edit distance.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Deletion</div>
+            <div class="glossary-def">An edit operation that removes a character from the source string. In the transformation path it is shown in red with strikethrough and counts as 1 unit of edit distance.</div>
+          </div>
+          <div class="glossary-item">
+            <div class="glossary-term">Substitution</div>
+            <div class="glossary-def">An edit operation that replaces one character with another. In the transformation path it is shown in yellow and counts as 1 unit of edit distance. A substitution is equivalent to a deletion followed by an insertion, which is why it costs 1, not 2.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════
+           EDUCATIONAL SECTION
+      ═══════════════════════════════════════════════════════ -->
+      <section class="card edu-section" aria-labelledby="edu-heading">
+        <h2 id="edu-heading">The Complete Guide to Levenshtein Distance</h2>
+
+        <p class="section-intro">Whether you are cleaning a database, building a spell-checker, or auditing code for near-duplicate functions, Levenshtein distance gives you a precise, numeric answer to the question: "how different are these two strings, and exactly which characters changed?"</p>
+
+        <h3>How to Use This Tool</h3>
+        <p>Type or paste your first string into the "Source String" box and your second string into the "Target String" box. Results update in real time as you type - no button to click. The Edit Distance score shows the raw integer count of minimum operations. The Similarity percentage normalizes that score against the longer string so you can compare pairs of different lengths on the same scale.</p>
+        <p>The Transformation Path below the scores shows a character-level map. Characters in red were deleted from the source; characters in green were inserted to reach the target; characters in yellow were substituted. Unchanged characters appear in grey. Use the toggles to control whether the comparison is case-sensitive (on by default) and whether whitespace should be stripped before comparing (off by default).</p>
+
+        <h3>What the Edit Distance Score Actually Means</h3>
+        <p>An edit distance of 0 means the strings are identical under the current settings. A distance of 1 means a single typo - one key press wrong - separates them. Distances in the range of 1 to 3 are typically considered "close enough to be the same" for fuzzy matching purposes, though the right threshold depends entirely on your use case. A distance equal to the length of the longer string means every character is different - the strings share nothing in common.</p>
+        <p>The similarity percentage (1 - distance / max length) is more intuitive for communication. 95% similar is easy to grasp; an edit distance of 3 on a 60-character string is less so. Use the raw distance for algorithms and the percentage for dashboards and human review queues.</p>
+
+        <h3>Why Not Just Compare Character by Character?</h3>
+        <p>A naive positional comparison breaks the moment a single insertion or deletion shifts everything. Compare "colour" and "color": every character from position 4 onward is "wrong" according to positional comparison, even though only one letter was added. Levenshtein distance recognizes that a single deletion transforms one into the other and returns a distance of 1. This makes it far more robust for real-world text where insertions and deletions are as common as outright substitutions.</p>
+
+        <h3>How the Wagner-Fischer Algorithm Works</h3>
+        <p>The algorithm creates a grid with (source length + 1) rows and (target length + 1) columns. The first row is filled with 0, 1, 2, 3... (cost of deleting each source character to reach an empty target). The first column is filled the same way (cost of inserting each target character from an empty source). Each remaining cell is filled with the minimum of three options: the cell above plus 1 (deletion), the cell to the left plus 1 (insertion), or the diagonal cell plus 0 if the characters match, or plus 1 if they do not (substitution). The value in the bottom-right corner is the Levenshtein distance.</p>
+        <p>To generate the Transformation Path, this tool then backtracks from the bottom-right cell to the top-left, at each step identifying whether a match, substitution, insertion, or deletion was chosen. This backtrack trace is what powers the color-coded character display you see in the Operation Map.</p>
+
+        <h3>Practical Applications</h3>
+        <p>Spell checkers use edit distance to rank candidate corrections by closeness to the misspelled word. Database deduplication tools use it to find records that differ only by a typo or abbreviation. DNA sequencing software uses it (and related algorithms) to align genetic sequences. Search engines use it to handle "did you mean?" suggestions. Version control systems use edit-distance-derived metrics for displaying code changes. Any time you need to answer "are these two things the same, just slightly garbled?" edit distance is the right starting point.</p>
+
+        <h3>Performance Note for Large Inputs</h3>
+        <p>The Wagner-Fischer algorithm has time and memory complexity of O(n x m) where n and m are the string lengths. For strings up to 1,000 characters each, computation is near-instantaneous in a modern browser. Beyond that, you will see a warning in the character counter and the algorithm may take a perceptible moment to run. For very long inputs such as entire files or large code blocks, a line-level diff tool is usually more appropriate - see the Diff Checker tool for that use case.</p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item" id="faq1">
+          <div class="faq-q" onclick="toggleFaq('faq1')" role="button" tabindex="0" aria-expanded="false">
+            What is an "Edit Distance"?
+            <span class="faq-arrow">&#x25BE;</span>
+          </div>
+          <div class="faq-a">Edit distance is the minimum number of single-character operations (insertions, deletions, or substitutions) required to transform one string into another. The Levenshtein variant is the most common definition: each operation costs exactly 1, and you find the cheapest sequence of edits. A distance of 0 means the strings are identical; higher numbers mean more work is needed to convert one into the other.</div>
+        </div>
+
+        <div class="faq-item" id="faq2">
+          <div class="faq-q" onclick="toggleFaq('faq2')" role="button" tabindex="0" aria-expanded="false">
+            Why is this tool useful for data cleaning?
+            <span class="faq-arrow">&#x25BE;</span>
+          </div>
+          <div class="faq-a">When merging records or deduplicating databases, the same entity often appears with slight spelling variations - typos, abbreviations, or inconsistent formatting. Edit distance gives you a numeric score for how different two strings are, so you can set a threshold and automatically flag likely duplicates for review without needing an exact match. For example, "Renee Smith" and "Rene Smyth" have an edit distance of 2 and would likely be caught by a threshold of 3, while "Renee Smith" and "Robert Jones" would have a much higher distance and be correctly treated as different people.</div>
+        </div>
+
+        <div class="faq-item" id="faq3">
+          <div class="faq-q" onclick="toggleFaq('faq3')" role="button" tabindex="0" aria-expanded="false">
+            How does this differ from a character-by-character comparison?
+            <span class="faq-arrow">&#x25BE;</span>
+          </div>
+          <div class="faq-a">A character-by-character comparison only checks positions in lockstep and breaks the moment a single insertion or deletion shifts everything out of alignment. Levenshtein distance accounts for insertions and deletions explicitly, so a single extra character in the middle of a word does not cascade into every subsequent position being flagged as a mismatch. This makes it dramatically more accurate for natural language text, usernames, product names, and any other strings where insertions and deletions are common.</div>
+        </div>
+
+        <div class="faq-item" id="faq4">
+          <div class="faq-q" onclick="toggleFaq('faq4')" role="button" tabindex="0" aria-expanded="false">
+            Can I use this to compare large blocks of code?
+            <span class="faq-arrow">&#x25BE;</span>
+          </div>
+          <div class="faq-a">You can, but Levenshtein distance is designed for short-to-medium strings. For very long inputs the algorithm's memory and time requirements grow as length1 times length2, which can become slow in a browser past a few thousand characters each. More importantly, for code comparison the character-level view is often less useful than a line-level diff. If you want to compare two functions, pasting them here will show you every character difference; if you want to compare two files, the Diff Checker tool (which operates line by line) will give you a more readable and actionable result.</div>
+        </div>
+
+        <div class="faq-item" id="faq5">
+          <div class="faq-q" onclick="toggleFaq('faq5')" role="button" tabindex="0" aria-expanded="false">
+            How is the similarity percentage calculated?
+            <span class="faq-arrow">&#x25BE;</span>
+          </div>
+          <div class="faq-a">Similarity is calculated as: 1 minus (edit distance divided by the length of the longer string), expressed as a percentage. A distance of 0 gives 100% similarity. A distance equal to the longer string's length gives 0% similarity. This normalizes the raw distance so you can compare pairs of strings of different lengths on the same scale - a distance of 3 means something very different for a 5-character string versus a 500-character string, and this formula accounts for that.</div>
+        </div>
+
+      </section>
+
+    </div><!-- end .container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ════════════════════════════════════════════════════════════
+       LEVENSHTEIN DISTANCE ENGINE
+       Wagner-Fischer dynamic programming algorithm with
+       backtracking for the Transformation Path visualization.
+    ════════════════════════════════════════════════════════════ */
+
+    const WARN_THRESHOLD = 1000;
+
+    /* ── Preprocessing ──────────────────────────────────────── */
+    function preprocess(str, caseSensitive, ignoreWs) {
+      if (ignoreWs)    str = str.replace(/\s+/g, '');
+      if (!caseSensitive) str = str.toLowerCase();
+      return str;
+    }
+
+    /* ── Wagner-Fischer matrix ──────────────────────────────── */
+    function buildMatrix(s, t) {
+      const n = s.length, m = t.length;
+      // Build (n+1) x (m+1) matrix
+      const dp = [];
+      for (let i = 0; i <= n; i++) {
+        dp[i] = new Array(m + 1).fill(0);
+        dp[i][0] = i;
+      }
+      for (let j = 0; j <= m; j++) dp[0][j] = j;
+
+      for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+          if (s[i - 1] === t[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1]; // match - no cost
+          } else {
+            dp[i][j] = 1 + Math.min(
+              dp[i - 1][j],     // deletion
+              dp[i][j - 1],     // insertion
+              dp[i - 1][j - 1]  // substitution
+            );
+          }
+        }
+      }
+      return { dp, n, m };
+    }
+
+    /* ── Backtrack to get edit ops ──────────────────────────── */
+    // Returns array of ops: { type: 'match'|'sub'|'del'|'ins', srcChar, tgtChar }
+    function backtrack(s, t, dp, n, m) {
+      const ops = [];
+      let i = n, j = m;
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && s[i-1] === t[j-1]) {
+          ops.push({ type: 'match', srcChar: s[i-1], tgtChar: t[j-1] });
+          i--; j--;
+        } else if (i > 0 && j > 0 && dp[i][j] === dp[i-1][j-1] + 1) {
+          ops.push({ type: 'sub', srcChar: s[i-1], tgtChar: t[j-1] });
+          i--; j--;
+        } else if (i > 0 && dp[i][j] === dp[i-1][j] + 1) {
+          ops.push({ type: 'del', srcChar: s[i-1], tgtChar: null });
+          i--;
+        } else {
+          ops.push({ type: 'ins', srcChar: null, tgtChar: t[j-1] });
+          j--;
+        }
+      }
+      return ops.reverse();
+    }
+
+    /* ── Render a character span ────────────────────────────── */
+    function charSpan(ch, cls) {
+      const display = ch === ' ' ? '·' : (ch === '\t' ? '⇥' : ch);
+      return `<span class="ch ${cls}">${escHtml(display)}</span>`;
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    /* ── Main compute + render ──────────────────────────────── */
+    function onInput() {
+      const rawSrc = document.getElementById('src').value;
+      const rawTgt = document.getElementById('tgt').value;
+      const caseSensitive = document.getElementById('case-toggle').checked;
+      const ignoreWs     = document.getElementById('ws-toggle').checked;
+
+      // Char counts
+      const srcLen = rawSrc.length;
+      const tgtLen = rawTgt.length;
+      const srcCountEl = document.getElementById('src-count');
+      const tgtCountEl = document.getElementById('tgt-count');
+      srcCountEl.textContent = srcLen + ' chars';
+      tgtCountEl.textContent = tgtLen + ' chars';
+      srcCountEl.className = 'char-count' + (srcLen > WARN_THRESHOLD ? ' warn' : '');
+      tgtCountEl.className = 'char-count' + (tgtLen > WARN_THRESHOLD ? ' warn' : '');
+
+      // Empty state
+      if (rawSrc === '' && rawTgt === '') {
+        setScores('-', '-', 0, 'type in both fields');
+        document.getElementById('op-map-body').innerHTML =
+          '<p class="op-map-empty">Enter text in both fields above to see the transformation path.</p>';
+        return;
+      }
+
+      const s = preprocess(rawSrc, caseSensitive, ignoreWs);
+      const t = preprocess(rawTgt, caseSensitive, ignoreWs);
+
+      // Compute
+      const { dp, n, m } = buildMatrix(s, t);
+      const distance = dp[n][m];
+      const maxLen   = Math.max(n, m);
+      const simPct   = maxLen === 0 ? 100 : Math.round((1 - distance / maxLen) * 100);
+
+      setScores(distance, simPct + '%', simPct,
+        maxLen === 0 ? 'identical (both empty)' : (distance === 0 ? 'identical strings' : ''));
+
+      // Operation map
+      if (n === 0 && m === 0) {
+        document.getElementById('op-map-body').innerHTML =
+          '<p class="op-map-equal">Both strings are empty - nothing to compare.</p>';
+        return;
+      }
+      if (distance === 0) {
+        document.getElementById('op-map-body').innerHTML =
+          '<p class="op-map-equal">Strings are identical - no edits needed.</p>';
+        return;
+      }
+
+      const ops = backtrack(s, t, dp, n, m);
+
+      let srcHtml = '', tgtHtml = '';
+      let delCount = 0, insCount = 0, subCount = 0;
+
+      ops.forEach(op => {
+        switch (op.type) {
+          case 'match':
+            srcHtml += charSpan(op.srcChar, 'ch-match');
+            tgtHtml += charSpan(op.tgtChar, 'ch-match');
+            break;
+          case 'del':
+            srcHtml += charSpan(op.srcChar, 'ch-del');
+            tgtHtml += charSpan(' ', 'ch-match'); // placeholder space
+            delCount++;
+            break;
+          case 'ins':
+            srcHtml += charSpan(' ', 'ch-match'); // placeholder space
+            tgtHtml += charSpan(op.tgtChar, 'ch-ins');
+            insCount++;
+            break;
+          case 'sub':
+            srcHtml += charSpan(op.srcChar, 'ch-sub');
+            tgtHtml += charSpan(op.tgtChar, 'ch-sub');
+            subCount++;
+            break;
+        }
+      });
+
+      document.getElementById('op-map-body').innerHTML = `
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot dot-mat"></div>Match</div>
+          <div class="legend-item"><div class="legend-dot dot-del"></div>Deletion (from source)</div>
+          <div class="legend-item"><div class="legend-dot dot-ins"></div>Insertion (into target)</div>
+          <div class="legend-item"><div class="legend-dot dot-sub"></div>Substitution</div>
+        </div>
+        <div class="op-row-label">Source (with deletions and substitutions marked)</div>
+        <div class="op-row" role="region" aria-label="Source string transformation">${srcHtml}</div>
+        <div class="op-row-label">Target (with insertions and substitutions marked)</div>
+        <div class="op-row" role="region" aria-label="Target string transformation">${tgtHtml}</div>
+        <div class="op-stats">
+          <div class="op-stat"><span class="stat-del">${delCount}</span> deletion${delCount !== 1 ? 's' : ''}</div>
+          <div class="op-stat"><span class="stat-ins">${insCount}</span> insertion${insCount !== 1 ? 's' : ''}</div>
+          <div class="op-stat"><span class="stat-sub">${subCount}</span> substitution${subCount !== 1 ? 's' : ''}</div>
+          <div class="op-stat"><span style="color:var(--indigo)">${distance}</span> total edit${distance !== 1 ? 's' : ''}</div>
+        </div>
+      `;
+    }
+
+    function setScores(dist, sim, pct, sub) {
+      document.getElementById('edit-score').textContent = dist;
+      document.getElementById('sim-score').textContent = sim;
+      document.getElementById('sim-bar').style.width = pct + '%';
+      document.getElementById('sim-bar-wrap').setAttribute('aria-valuenow', pct);
+      if (sub) document.getElementById('sim-sub').textContent = sub;
+      else document.getElementById('sim-sub').textContent = '';
+    }
+
+    /* ── FAQ accordion ──────────────────────────────────────── */
+    function toggleFaq(id) {
+      const el = document.getElementById(id);
+      const isOpen = el.classList.contains('open');
+      el.classList.toggle('open', !isOpen);
+      el.querySelector('.faq-q').setAttribute('aria-expanded', String(!isOpen));
+    }
+
+    // Keyboard accessibility for FAQ
+    document.querySelectorAll('.faq-q').forEach(btn => {
+      btn.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          btn.click();
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

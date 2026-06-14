@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YAML to JSON Converter: Bi-Directional Format Conversion, No Server Calls | AxiomApe</title>
+  <meta name="description" content="Free bi-directional YAML to JSON converter. Paste YAML and get JSON instantly, or flip to JSON to YAML mode. Real-time parsing, syntax validation, and one-click download. 100% local - your data never leaves your browser." />
+  <meta name="keywords" content="yaml to json, json to yaml, yaml converter, yaml parser, json converter, data format converter, yaml json online, devops config converter, kubernetes yaml, docker compose json, serialize yaml" />
+  <meta property="og:title" content="YAML to JSON Converter | AxiomApe" />
+  <meta property="og:description" content="Instantly convert between YAML and JSON in your browser. Real-time parsing, syntax error detection, and one-click download. No data ever leaves your machine." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://axiomape.com/yaml-to-json-converter/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <!--
+    JSON-LD Structured Data
+    SoftwareApplication: identifies this page as a free developer tool.
+    FAQPage: marks up the FAQ section near the bottom of the page.
+  -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "YAML to JSON Converter",
+        "description": "Free bi-directional YAML to JSON converter. Paste YAML and get JSON instantly, or flip to JSON to YAML mode. Real-time parsing, syntax validation, and one-click download. 100% local - your data never leaves your browser.",
+        "url": "https://axiomape.com/yaml-to-json-converter/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What are the main differences between YAML and JSON?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "YAML (YAML Ain't Markup Language) and JSON (JavaScript Object Notation) both represent structured data as key-value pairs, but differ significantly in syntax and use cases. JSON uses curly braces, square brackets, and double-quoted strings - its structure is explicit and unambiguous. YAML relies on indentation and whitespace to define hierarchy, making it far more human-readable for configuration files but more fragile when whitespace is mishandled. JSON supports strings, numbers, booleans, arrays, objects, and null. YAML supports all of those plus additional types like dates, multi-line strings (block scalars), anchors, and aliases for reusing values. JSON has no comment syntax at all. YAML supports comments with the # character. In practice: JSON dominates REST APIs and data interchange; YAML dominates configuration files (Kubernetes, Docker Compose, GitHub Actions, Ansible)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can't YAML comments be converted to JSON?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "JSON has no comment syntax. The JSON specification (RFC 8259) deliberately omits comments to keep parsers simple and the format unambiguous. When this converter parses your YAML, it builds an in-memory JavaScript object from the data values only - comments are not data, so they are discarded by the YAML parser and cannot be represented in the JSON output. If you need to preserve annotations alongside your data, one common workaround is to add a dedicated key like '_comment' with the comment text as a string value. This is non-standard but widely understood."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I handle complex nested objects in this converter?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Complex nested YAML structures - including deeply nested mappings, sequences of objects, multi-line strings, and anchors with aliases - are all handled automatically. Paste your YAML into the left panel and the converter will parse the full structure using js-yaml and output properly indented JSON on the right. For YAML anchors (&anchor) and aliases (*alias), js-yaml resolves them before conversion, so the output JSON will contain the fully expanded data. For multi-line YAML block scalars (| for literal, > for folded), the converter preserves the text content as a JSON string, collapsing folded blocks per the YAML spec."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my configuration data stored or sent anywhere?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This tool runs entirely inside your browser using JavaScript. Not a single character of your YAML or JSON is transmitted to any server, logged, or stored. The conversion happens locally in your browser's JavaScript engine. Your Kubernetes configs, Docker Compose files, API secrets, and application settings remain completely on your machine. You can even save this page and run it offline - it will work identically with no network connection."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I convert JSON arrays back to valid YAML?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Flip the direction toggle to JSON to YAML mode, paste your JSON into the left panel, and the converter will output clean YAML using block style for objects and sequences. JSON arrays become YAML sequences (list items prefixed with - ). Nested JSON objects become indented YAML mappings. Strings, numbers, booleans, and nulls are written using YAML's native literal syntax. The output uses 2-space indentation by default, which is the most widely accepted YAML convention for configuration files."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ==========================================================
+       GLOBAL RESET & BASE
+    ========================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Dark developer theme */
+      --bg:             #0f1117;
+      --surface:        #161b27;
+      --card:           #1a2035;
+      --card-alt:       #1e2640;
+      --border:         #2a3349;
+      --border-light:   #313d58;
+      --text:           #e2e8f0;
+      --text-muted:     #8b9ab8;
+      --text-dim:       #64748b;
+
+      /* Brand accents */
+      --blue:           #3B82F6;
+      --blue-hover:     #2563EB;
+      --blue-glow:      rgba(59,130,246,.18);
+      --orange:         #F59E0B;
+      --orange-hover:   #D97706;
+      --orange-glow:    rgba(245,158,11,.15);
+
+      /* Status colors */
+      --success:        #22c55e;
+      --success-bg:     rgba(34,197,94,.12);
+      --danger:         #ef4444;
+      --danger-bg:      rgba(239,68,68,.12);
+
+      /* Editor */
+      --editor-bg:      #0d1117;
+      --editor-border:  #21283b;
+      --editor-active:  rgba(59,130,246,.15);
+
+      /* Layout */
+      --radius:         10px;
+      --radius-sm:      6px;
+      --radius-xs:      4px;
+      --shadow:         0 4px 20px rgba(0,0,0,.45);
+      --shadow-sm:      0 2px 8px rgba(0,0,0,.3);
+      --font:           'Inter', system-ui, sans-serif;
+      --mono:           'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ==========================================================
+       SITE TOP BAR (hidden by site-chrome)
+    ========================================================== */
+    .site-topbar {
+      text-align: center;
+      padding: 10px 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .site-topbar a {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--blue);
+      letter-spacing: 0.02em;
+    }
+
+    /* ==========================================================
+       PAGE HEADER
+    ========================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0d1420 0%, #0f1625 50%, #131e2e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 24px 44px;
+      text-align: center;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(59,130,246,.15);
+      border: 1px solid rgba(59,130,246,.3);
+      color: #93c5fd;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 3.5vw, 2.3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      line-height: 1.2;
+      color: #f1f5f9;
+    }
+    .page-header h1 span.accent-blue { color: var(--blue); }
+    .page-header h1 span.accent-orange { color: var(--orange); }
+    .page-header p {
+      max-width: 620px;
+      margin: 0 auto;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* ==========================================================
+       MAIN LAYOUT
+    ========================================================== */
+    .main-wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 28px 20px 0;
+    }
+
+    /* ==========================================================
+       CONVERTER CARD
+    ========================================================== */
+    .converter-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    /* --- Toolbar --- */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 18px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .toolbar-left  { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+    .toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    /* Direction toggle */
+    .dir-toggle {
+      display: flex;
+      align-items: center;
+      background: var(--editor-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .dir-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: all 0.18s ease;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .dir-btn.active {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 1px 6px rgba(59,130,246,.4);
+    }
+    .dir-btn:not(.active):hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+    .swap-icon-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(245,158,11,.1);
+      color: var(--orange);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .swap-icon-btn:hover { background: rgba(245,158,11,.2); border-color: var(--orange); }
+
+    /* Generic buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 13px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { background: rgba(255,255,255,.08); color: var(--text); border-color: var(--border-light); }
+    .btn-blue {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+    .btn-blue:hover { background: var(--blue-hover); border-color: var(--blue-hover); color: #fff; }
+    .btn-orange {
+      background: rgba(245,158,11,.12);
+      color: var(--orange);
+      border-color: rgba(245,158,11,.3);
+    }
+    .btn-orange:hover { background: rgba(245,158,11,.2); border-color: var(--orange); }
+
+    /* ==========================================================
+       EDITOR PANELS
+    ========================================================== */
+    .panels-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      min-height: 420px;
+    }
+    .panel:last-child { border-right: none; }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .panel-label.active-label { color: var(--blue); }
+    .panel-actions { display: flex; align-items: center; gap: 6px; }
+
+    /* Status pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-family: var(--mono);
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+      cursor: default;
+    }
+    .status-pill.valid {
+      background: var(--success-bg);
+      border-color: rgba(34,197,94,.3);
+      color: var(--success);
+    }
+    .status-pill.error {
+      background: var(--danger-bg);
+      border-color: rgba(239,68,68,.3);
+      color: var(--danger);
+    }
+    .status-pill.idle {
+      background: rgba(139,154,184,.08);
+      border-color: rgba(139,154,184,.2);
+      color: var(--text-dim);
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    /* Error tooltip */
+    .error-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 280px;
+      max-width: 360px;
+      background: #1e0a0a;
+      border: 1px solid rgba(239,68,68,.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      color: #fca5a5;
+      z-index: 100;
+      line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0,0,0,.6);
+      white-space: pre-wrap;
+    }
+    .status-pill.error:hover .error-tooltip { display: block; }
+
+    /* Textareas */
+    .editor-textarea {
+      flex: 1;
+      width: 100%;
+      padding: 16px;
+      background: var(--editor-bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      line-height: 1.7;
+      border: none;
+      outline: none;
+      resize: none;
+      min-height: 380px;
+      tab-size: 2;
+    }
+    .editor-textarea::placeholder { color: var(--text-dim); }
+    .editor-textarea:focus {
+      background: #0a0f18;
+      box-shadow: inset 0 0 0 2px rgba(59,130,246,.25);
+    }
+    .panel:last-child .editor-textarea {
+      background: #090d14;
+    }
+
+    /* ==========================================================
+       CARDS (educational / glossary)
+    ========================================================== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title-icon {
+      font-size: 1.1rem;
+    }
+
+    /* ==========================================================
+       GLOSSARY GRID
+    ========================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      transition: border-color 0.15s;
+    }
+    .glossary-item:hover { border-color: var(--blue); }
+    .glossary-term {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* ==========================================================
+       EDUCATIONAL SECTION
+    ========================================================== */
+    .edu-section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      font-size: 0.97rem;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      font-size: 0.93rem;
+      line-height: 1.7;
+    }
+    .edu-section ul, .edu-section ol {
+      padding-left: 22px;
+      margin-bottom: 14px;
+    }
+    .edu-section li {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.7;
+      margin-bottom: 6px;
+    }
+    .edu-section li strong { color: var(--text); }
+    .inline-code {
+      font-family: var(--mono);
+      font-size: 0.82em;
+      background: rgba(59,130,246,.12);
+      color: #93c5fd;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(59,130,246,.2);
+    }
+
+    /* ==========================================================
+       FAQ ACCORDION
+    ========================================================== */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--card-alt);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+      gap: 12px;
+    }
+    .faq-question:hover { background: rgba(59,130,246,.07); }
+    .faq-icon {
+      font-size: 1.1rem;
+      color: var(--blue);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      display: none;
+      padding: 16px 18px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+    }
+    .faq-answer.open { display: block; }
+
+    /* ==========================================================
+       AD PLACEMENTS (classes from site-chrome.js)
+    ========================================================== */
+    .axiom-ad-leaderboard {
+      margin: 0 0 24px;
+      text-align: center;
+      min-height: 92px;
+    }
+    .axiom-ad-mobile-anchor { text-align: center; }
+
+    /* ==========================================================
+       COPY FEEDBACK
+    ========================================================== */
+    .copy-feedback {
+      font-size: 0.78rem;
+      color: var(--success);
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .copy-feedback.show { opacity: 1; }
+
+    /* ==========================================================
+       RESPONSIVE
+    ========================================================== */
+    @media (max-width: 768px) {
+      .panels-row { grid-template-columns: 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
+      .panel:last-child { border-bottom: none; }
+      .card { padding: 20px 18px; }
+      .toolbar { gap: 8px; }
+      .editor-textarea { min-height: 260px; }
+    }
+    @media (max-width: 500px) {
+      .toolbar-right { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SITE TOP BAR (hidden by site-chrome.js) -->
+  <div class="site-topbar">
+    <a href="/">axiomape.com</a>
+  </div>
+
+  <header class="page-header">
+    <div class="header-badge">&#128736; Developer Tool</div>
+    <h1><span class="accent-blue">YAML</span> to <span class="accent-orange">JSON</span> Converter</h1>
+    <p>Bi-directional, real-time conversion between YAML and JSON. Real-time parsing with syntax validation. 100% local - your data never leaves the browser.</p>
+  </header>
+
+  <main class="main-wrap" id="main">
+
+    <!-- ====================================================
+         CONVERTER CARD
+    ==================================================== -->
+    <div class="converter-card">
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <!-- Direction toggle -->
+          <div class="dir-toggle" role="group" aria-label="Conversion direction">
+            <button class="dir-btn active" id="dirYamlToJson" onclick="setDirection('yaml2json')">YAML &rarr; JSON</button>
+            <button class="dir-btn"        id="dirJsonToYaml" onclick="setDirection('json2yaml')">JSON &rarr; YAML</button>
+          </div>
+
+          <!-- Swap button -->
+          <button class="swap-icon-btn" onclick="swapPanels()" title="Swap input and output">&#8645;</button>
+
+          <!-- Format buttons -->
+          <button class="btn btn-orange" onclick="formatInput()" title="Format / beautify the input">&#10022; Format Input</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn" onclick="clearAll()">&#10005; Clear</button>
+        </div>
+      </div>
+
+      <!-- Editor panels -->
+      <div class="panels-row">
+
+        <!-- LEFT: Input -->
+        <div class="panel" id="panelLeft">
+          <div class="panel-header">
+            <span class="panel-label active-label" id="leftLabel">YAML Input</span>
+            <div class="panel-actions">
+              <button class="btn btn-blue" onclick="loadSample()" title="Load a sample YAML file">Load Sample</button>
+            </div>
+          </div>
+          <textarea
+            class="editor-textarea"
+            id="inputArea"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="Paste your YAML here and JSON will appear on the right in real time..."
+            oninput="scheduleConvert()"
+            onkeydown="handleTab(event)"
+          ></textarea>
+        </div>
+
+        <!-- RIGHT: Output -->
+        <div class="panel" id="panelRight">
+          <div class="panel-header">
+            <span class="panel-label" id="rightLabel">JSON Output</span>
+            <div class="panel-actions">
+              <!-- Status pill -->
+              <div class="status-pill idle" id="statusPill" title="Parsing status">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+                <div class="error-tooltip" id="errorTooltip"></div>
+              </div>
+              <span class="copy-feedback" id="copyFeedback">Copied!</span>
+              <button class="btn" onclick="copyOutput()" title="Copy output to clipboard">&#128203; Copy</button>
+              <button class="btn btn-blue" onclick="downloadOutput()" title="Download output as file">&#11123; Download</button>
+            </div>
+          </div>
+          <textarea
+            class="editor-textarea"
+            id="outputArea"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="Converted output will appear here..."
+            readonly
+          ></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ====================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ==================================================== -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ====================================================
+         GLOSSARY CARD
+    ==================================================== -->
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon">&#128218;</span> Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">YAML</div>
+          <div class="glossary-def">YAML Ain't Markup Language - a human-readable data serialization language that uses indentation to define structure. Favored for configuration files in DevOps and cloud tools.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">JSON</div>
+          <div class="glossary-def">JavaScript Object Notation - a lightweight text format for representing structured data as key-value pairs, arrays, and primitives. The standard format for REST APIs and web data exchange.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Parser</div>
+          <div class="glossary-def">Software that reads a raw text string and converts it into an in-memory data structure. A YAML parser validates indentation rules and produces a JavaScript object; a JSON parser validates brace/bracket syntax and does the same.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Serialization</div>
+          <div class="glossary-def">The reverse of parsing: taking an in-memory object and encoding it as a text string for storage or transmission. JSON.stringify() serializes a JavaScript object to JSON; jsyaml.dump() serializes it to YAML.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Schema</div>
+          <div class="glossary-def">A formal definition of the expected structure, types, and constraints of a data document. Both YAML and JSON have schema standards (JSON Schema, YAML Schema) used to validate that a file conforms to a required shape.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Indentation</div>
+          <div class="glossary-def">In YAML, indentation using spaces (never tabs) is the primary syntax mechanism for defining nested structure. Unlike JSON which uses braces, YAML's entire hierarchy is conveyed through consistent 2- or 4-space indentation levels.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Key-Value Pair</div>
+          <div class="glossary-def">The fundamental data unit in both YAML and JSON. In JSON: "name": "Alice". In YAML: name: Alice. Each key maps to exactly one value, which may itself be a string, number, boolean, null, object, or array.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Block Scalar</div>
+          <div class="glossary-def">A YAML syntax for multi-line string values. The literal block scalar (|) preserves newlines exactly as written. The folded block scalar (&gt;) collapses newlines into spaces unless followed by a blank line. Both are converted to a plain JSON string.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Anchor / Alias</div>
+          <div class="glossary-def">YAML features for reusing values. An anchor (&amp;name) marks a node; an alias (*name) references it elsewhere in the document. They eliminate repetition in large configs. During conversion, aliases are fully expanded into the JSON output.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ====================================================
+         EDUCATIONAL SECTION
+    ==================================================== -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to YAML and JSON Conversion</h2>
+
+      <p class="section-intro">
+        YAML and JSON represent the same data in different ways. YAML was designed for humans writing configuration files by hand; JSON was designed for machines exchanging data over APIs. This converter lets you move freely between the two without touching a command line, server, or library installation. Everything runs directly in your browser using the battle-tested js-yaml library.
+      </p>
+
+      <h3>How to use this tool</h3>
+      <p>
+        Conversion is instant and automatic. Paste any YAML into the left panel and the JSON output appears on the right as you type, with no button to press. The status pill in the output panel header turns green ("Valid") when the parse succeeds, or red ("Error") when it detects a syntax problem. Hovering the red pill reveals a tooltip with the specific error message and, where available, the line number where parsing failed.
+      </p>
+      <p>
+        To go the other direction, click the <strong>JSON &rarr; YAML</strong> button or the swap arrows icon. The panels flip, and you can now paste JSON on the left to get YAML on the right. The Format Input button tidies up whichever format is in the left panel. Copy and Download buttons on the right panel let you extract the result without selecting text manually.
+      </p>
+
+      <h3>What are the main differences between YAML and JSON?</h3>
+      <p>
+        YAML and JSON are structurally equivalent for most common data shapes - objects, arrays, strings, numbers, booleans, and null - but their syntax philosophies differ dramatically. JSON is explicit and mechanical: every string must be double-quoted, every object wrapped in curly braces, every array in square brackets. This verbosity makes JSON easy to parse but verbose to write by hand. YAML trades that explicitness for readability: strings usually need no quotes, hierarchy is expressed through indentation alone, and the # comment syntax lets you annotate your configuration files.
+      </p>
+      <p>
+        The practical consequence is that YAML dominates configuration files - Kubernetes manifests, Docker Compose, GitHub Actions workflows, Ansible playbooks, and most CI/CD pipeline definitions are all YAML. JSON dominates REST API payloads, NoSQL document stores, package manifests (package.json), and browser-to-server data exchange.
+      </p>
+
+      <h3>Why comments in YAML disappear during conversion</h3>
+      <p>
+        The JSON specification has no comment syntax - this was a deliberate design decision to keep JSON parsers simple and the format unambiguous. When the YAML parser reads your document, it builds a pure data object. Comments are not data; they are discarded before the object is built. The resulting JSON output therefore has no place to put them. If you need to preserve annotations, a common workaround is to add a dedicated key like <span class="inline-code">_comment</span> with the annotation as a string value, which will survive the round-trip.
+      </p>
+
+      <h3>Handling complex nested structures, anchors, and block scalars</h3>
+      <p>
+        This converter handles the full YAML 1.2 feature set via js-yaml. Anchors (<span class="inline-code">&amp;name</span>) and aliases (<span class="inline-code">*name</span>) are resolved before conversion - the JSON output contains the fully expanded data with no references. Multi-line strings written with the literal block scalar (<span class="inline-code">|</span>) are preserved as JSON strings with embedded newlines (<span class="inline-code">\n</span>). Folded block scalars (<span class="inline-code">&gt;</span>) are collapsed per the YAML spec. Deeply nested mappings and sequences of objects are converted to their JSON object and array equivalents at every depth level.
+      </p>
+
+      <h3>Use cases: when to convert YAML to JSON (and back)</h3>
+      <ul>
+        <li><strong>API testing:</strong> Many REST APIs require JSON payloads. If your team writes configs in YAML, convert before pasting into Postman or Insomnia.</li>
+        <li><strong>Debugging Kubernetes manifests:</strong> Convert a YAML manifest to JSON to inspect it in a JSON-aware viewer or validate it against a JSON Schema.</li>
+        <li><strong>Configuration migration:</strong> Moving a service from a YAML-configured system to a JSON-based one, or the reverse, is a one-paste operation here.</li>
+        <li><strong>Language interop:</strong> Some libraries parse one format natively but not the other. Convert once and use the format your library supports.</li>
+        <li><strong>Learning and exploration:</strong> Paste an unfamiliar YAML document and see its JSON equivalent to understand the structure before writing code against it.</li>
+      </ul>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          What are the main differences between YAML and JSON?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          YAML and JSON both represent structured data as key-value pairs, but differ in syntax and purpose. JSON uses explicit braces, brackets, and double-quoted strings - precise and unambiguous but verbose. YAML uses indentation to define hierarchy - readable and writable by humans but sensitive to whitespace errors. JSON has no comment support; YAML supports # comments. JSON supports strings, numbers, booleans, arrays, objects, and null. YAML adds dates, multi-line strings, anchors, and aliases. In practice: JSON dominates REST APIs and data exchange; YAML dominates configuration files.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Why can't YAML comments be converted to JSON?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          The JSON specification (RFC 8259) has no comment syntax - this was deliberate, to keep parsers simple and the format unambiguous. When this converter parses your YAML, it builds an in-memory JavaScript object from data values only. Comments are not data and are discarded by the YAML parser before the object is constructed. The resulting JSON output has no place to put them. A common workaround is to add a dedicated key like "_comment" with the comment text as a string value, which survives the round-trip intact.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          How do I handle complex nested objects in this converter?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          Complex nested YAML structures - deeply nested mappings, sequences of objects, multi-line block scalars, and anchors with aliases - are all handled automatically. Paste your YAML and the converter parses the full structure using js-yaml and outputs properly indented JSON. YAML anchors (&amp;anchor) and aliases (*alias) are fully resolved before conversion, so the JSON output contains the expanded data. Multi-line literal block scalars (|) are preserved as JSON strings with embedded newlines. Folded scalars (&gt;) are collapsed per the YAML spec.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Is my configuration data stored or sent anywhere?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          No. This tool runs entirely in your browser using JavaScript. Not one character of your YAML or JSON is transmitted to any server, logged, or stored. Conversion happens locally in your browser's JavaScript engine. Your Kubernetes configs, Docker Compose files, API secrets, and application settings remain completely on your machine. You can save this page as an HTML file and run it offline with no network connection - it will work identically.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Can I convert JSON arrays back to valid YAML?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          Yes. Click the "JSON to YAML" direction button, paste your JSON on the left, and the converter outputs clean YAML on the right. JSON arrays become YAML sequences (list items prefixed with - ). Nested JSON objects become indented YAML mappings. Strings, numbers, booleans, and null use YAML's native literal syntax. The output uses 2-space indentation, which is the most widely accepted YAML convention for configuration files.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- js-yaml via CDN (browser-compatible YAML parser) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+          integrity="sha512-CSBhVREyzHAjAFfBlIBakjoRUKp5h7VSweP0InR/pAJyptH7peuhCsqAI/snV+TwZmXZqoUklpXp6R6wMnYf5Q=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let direction = 'yaml2json'; // 'yaml2json' | 'json2yaml'
+    let debounceTimer = null;
+
+    /* ============================================================
+       DIRECTION MANAGEMENT
+    ============================================================ */
+    function setDirection(dir) {
+      direction = dir;
+      const isY2J = dir === 'yaml2json';
+
+      // Toggle button states
+      document.getElementById('dirYamlToJson').classList.toggle('active', isY2J);
+      document.getElementById('dirJsonToYaml').classList.toggle('active', !isY2J);
+
+      // Update labels
+      document.getElementById('leftLabel').textContent  = isY2J ? 'YAML Input'  : 'JSON Input';
+      document.getElementById('rightLabel').textContent = isY2J ? 'JSON Output' : 'YAML Output';
+
+      // Update placeholder
+      const input = document.getElementById('inputArea');
+      input.placeholder = isY2J
+        ? 'Paste your YAML here and JSON will appear on the right in real time...'
+        : 'Paste your JSON here and YAML will appear on the right in real time...';
+
+      const output = document.getElementById('outputArea');
+      output.placeholder = isY2J
+        ? 'Converted JSON output will appear here...'
+        : 'Converted YAML output will appear here...';
+
+      // Re-convert with new direction
+      convert();
+    }
+
+    function swapPanels() {
+      const inputEl  = document.getElementById('inputArea');
+      const outputEl = document.getElementById('outputArea');
+      const currentOutput = outputEl.value;
+
+      // Swap direction
+      const newDir = direction === 'yaml2json' ? 'json2yaml' : 'yaml2json';
+
+      // Move output to input
+      inputEl.value = currentOutput;
+
+      // Switch direction (which will re-convert)
+      setDirection(newDir);
+    }
+
+    /* ============================================================
+       DEBOUNCED CONVERSION
+    ============================================================ */
+    function scheduleConvert() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(convert, 220);
+    }
+
+    /* ============================================================
+       CORE CONVERSION ENGINE
+    ============================================================ */
+    function convert() {
+      const input = document.getElementById('inputArea').value.trim();
+      const outputEl = document.getElementById('outputArea');
+
+      if (!input) {
+        outputEl.value = '';
+        setStatus('idle', 'Ready', '');
+        return;
+      }
+
+      try {
+        let result = '';
+
+        if (direction === 'yaml2json') {
+          // Parse YAML -> JS object -> JSON string
+          const obj = jsyaml.load(input, { schema: jsyaml.DEFAULT_SCHEMA });
+          result = JSON.stringify(obj, null, 2);
+        } else {
+          // Parse JSON -> JS object -> YAML string
+          const obj = JSON.parse(input);
+          result = jsyaml.dump(obj, {
+            indent: 2,
+            lineWidth: -1,
+            noRefs: true,
+            quotingType: '"',
+            forceQuotes: false
+          });
+        }
+
+        outputEl.value = result;
+        setStatus('valid', 'Valid', '');
+
+      } catch (err) {
+        outputEl.value = '';
+        setStatus('error', 'Syntax Error', err.message || 'Parsing failed');
+      }
+    }
+
+    /* ============================================================
+       STATUS PILL
+    ============================================================ */
+    function setStatus(state, label, errorMsg) {
+      const pill    = document.getElementById('statusPill');
+      const text    = document.getElementById('statusText');
+      const tooltip = document.getElementById('errorTooltip');
+
+      pill.className = 'status-pill ' + state;
+      text.textContent = label;
+      tooltip.textContent = errorMsg || '';
+    }
+
+    /* ============================================================
+       FORMAT / BEAUTIFY INPUT
+    ============================================================ */
+    function formatInput() {
+      const inputEl = document.getElementById('inputArea');
+      const raw = inputEl.value.trim();
+      if (!raw) return;
+
+      try {
+        if (direction === 'yaml2json') {
+          // Parse and re-dump YAML to normalize indentation
+          const obj = jsyaml.load(raw, { schema: jsyaml.DEFAULT_SCHEMA });
+          inputEl.value = jsyaml.dump(obj, {
+            indent: 2,
+            lineWidth: -1,
+            noRefs: true
+          });
+        } else {
+          // Parse and re-stringify JSON to normalize
+          const obj = JSON.parse(raw);
+          inputEl.value = JSON.stringify(obj, null, 2);
+        }
+        convert();
+      } catch (_) {
+        // If formatting fails, leave input unchanged
+      }
+    }
+
+    /* ============================================================
+       COPY OUTPUT
+    ============================================================ */
+    function copyOutput() {
+      const val = document.getElementById('outputArea').value;
+      if (!val) return;
+      navigator.clipboard.writeText(val).then(() => {
+        const fb = document.getElementById('copyFeedback');
+        fb.classList.add('show');
+        setTimeout(() => fb.classList.remove('show'), 2200);
+      });
+    }
+
+    /* ============================================================
+       DOWNLOAD OUTPUT
+    ============================================================ */
+    function downloadOutput() {
+      const val = document.getElementById('outputArea').value;
+      if (!val) return;
+      const ext  = direction === 'yaml2json' ? 'json' : 'yaml';
+      const mime = direction === 'yaml2json' ? 'application/json' : 'text/yaml';
+      const blob = new Blob([val], { type: mime });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'converted.' + ext;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ============================================================
+       CLEAR ALL
+    ============================================================ */
+    function clearAll() {
+      document.getElementById('inputArea').value  = '';
+      document.getElementById('outputArea').value = '';
+      setStatus('idle', 'Ready', '');
+    }
+
+    /* ============================================================
+       LOAD SAMPLE
+    ============================================================ */
+    function loadSample() {
+      const yamlSample = `# Application configuration example
+app:
+  name: MyService
+  version: "2.4.1"
+  environment: production
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  tls:
+    enabled: true
+    cert: /etc/ssl/certs/server.crt
+    key: /etc/ssl/private/server.key
+
+database:
+  primary:
+    host: db.internal
+    port: 5432
+    name: myservice_prod
+    pool_size: 20
+  replicas:
+    - host: db-replica-1.internal
+      port: 5432
+    - host: db-replica-2.internal
+      port: 5432
+
+features:
+  dark_mode: true
+  beta_api: false
+  max_upload_mb: 50
+  allowed_origins:
+    - https://myapp.com
+    - https://staging.myapp.com
+
+logging:
+  level: info
+  format: json
+  output: stdout
+`;
+
+      const jsonSample = `{
+  "app": {
+    "name": "MyService",
+    "version": "2.4.1",
+    "environment": "production"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "tls": {
+      "enabled": true,
+      "cert": "/etc/ssl/certs/server.crt",
+      "key": "/etc/ssl/private/server.key"
+    }
+  },
+  "database": {
+    "primary": {
+      "host": "db.internal",
+      "port": 5432,
+      "name": "myservice_prod",
+      "pool_size": 20
+    },
+    "replicas": [
+      { "host": "db-replica-1.internal", "port": 5432 },
+      { "host": "db-replica-2.internal", "port": 5432 }
+    ]
+  },
+  "features": {
+    "dark_mode": true,
+    "beta_api": false,
+    "max_upload_mb": 50,
+    "allowed_origins": [
+      "https://myapp.com",
+      "https://staging.myapp.com"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output": "stdout"
+  }
+}`;
+
+      document.getElementById('inputArea').value = direction === 'yaml2json' ? yamlSample : jsonSample;
+      convert();
+    }
+
+    /* ============================================================
+       TAB KEY SUPPORT IN TEXTAREA
+    ============================================================ */
+    function handleTab(e) {
+      if (e.key !== 'Tab') return;
+      e.preventDefault();
+      const ta  = e.target;
+      const s   = ta.selectionStart;
+      const end = ta.selectionEnd;
+      ta.value  = ta.value.substring(0, s) + '  ' + ta.value.substring(end);
+      ta.selectionStart = ta.selectionEnd = s + 2;
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(questionEl) {
+      const item   = questionEl.parentElement;
+      const answer = questionEl.nextElementSibling;
+      item.classList.toggle('open');
+      answer.classList.toggle('open');
+    }
+
+  </script>
+</body>
+</html>

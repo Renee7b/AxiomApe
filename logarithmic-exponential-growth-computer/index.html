@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free logarithmic and exponential growth calculator. Model discrete compounding, continuous growth (e^rt), and logistic S-curve limits. Live SVG curve, 10-point forecast schedule, doubling time, and scientific notation for large numbers. 100% client-side." />
+  <meta name="keywords" content="exponential growth calculator, logarithmic growth calculator, logistic growth calculator, continuous growth formula, discrete compounding calculator, doubling time calculator, carrying capacity calculator, S-curve growth model, compound growth rate, growth forecast tool, rule of 72, Euler number e, growth rate calculator, population growth model, viral adoption curve, investment compounding, growth schedule" />
+  <title>Logarithmic and Exponential Growth Computer: Forecast Scale Schedules | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/logarithmic-exponential-growth-computer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Logarithmic and Exponential Growth Computer",
+        "description": "Free logarithmic and exponential growth calculator. Model discrete compounding, continuous growth (e^rt), and logistic S-curve limits. Live SVG curve, 10-point forecast schedule, doubling time, and scientific notation for large numbers. 100% client-side.",
+        "url": "https://axiomape.com/logarithmic-exponential-growth-computer/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between continuous and discrete growth?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Discrete growth compounds at fixed intervals (monthly, annually) using the formula N(t) = N0 x (1+r)^t, where each period adds a lump-sum percentage on top of the previous total. Continuous growth compounds at every instant using the formula N(t) = N0 x e^(rt), where e is Euler's number (approximately 2.71828). Continuous growth always produces a slightly larger result than discrete for the same nominal rate, because the compounding never stops between intervals. Banks advertise APR (discrete) but pay APY (continuous approximation). In biology and viral adoption, continuous growth is the more realistic model because organisms reproduce at all times, not just at year-end."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is the number e used in continuous growth formulas?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Euler's number e (approximately 2.71828) is the unique base at which the rate of growth of a function equals the function itself. In other words, if you have N(t) = e^t, the slope of the curve at any point equals its height at that same point. This property makes e the natural base for describing any process where the rate of change is proportional to the current value, which is exactly what continuous exponential growth means. It was discovered by mathematician Jacob Bernoulli while studying compound interest and later named after Leonhard Euler."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is carrying capacity in a logistic growth model?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Carrying capacity (K) is the maximum population or value that an environment or market can sustainably support. In a logistic growth model, the curve starts as exponential growth but decelerates as the population approaches K, eventually leveling off into a flat asymptote. The formula is N(t) = K / (1 + ((K - N0) / N0) x e^(-rt)). Real-world examples: a social network's user base approaching total internet users, a bacteria colony limited by nutrients, or a new product saturating its target market. Without a carrying capacity, pure exponential models eventually produce unrealistic results."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you calculate the doubling time of an investment?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For continuous growth, doubling time Td = ln(2) / r, where ln(2) is approximately 0.6931 and r is the growth rate as a decimal. For discrete growth, it is Td = ln(2) / ln(1+r). A quick mental shortcut is the Rule of 72: divide 72 by the percentage rate to get the approximate doubling time in periods. For example, a 6% annual return doubles roughly every 72 / 6 = 12 years. The Rule of 72 is accurate to within 1-2% for rates between 3% and 15%, making it a fast sanity check without a calculator."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do viral trends eventually flatten out into an S-curve?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Viral trends follow a logistic S-curve because every population has a finite ceiling. Early adoption is exponential: each new user can spread to many others who have not yet heard of the product. But as adoption rises, the pool of reachable non-users shrinks. Each new user has fewer potential converts to reach, so the growth rate decelerates. Eventually nearly everyone who would adopt the product already has, and growth flatlines at the carrying capacity. This same pattern governs epidemic spread, technology adoption, and market saturation."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3250;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --green:     #10B981;
+      --green-dim: #065f46;
+      --amber:     #F59E0B;
+      --amber-dim: #78350f;
+      --blue:      #60a5fa;
+      --radius:    10px;
+      --shadow:    0 4px 24px rgba(0,0,0,.45);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ────────────────────────────────── */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1rem 3rem;
+    }
+
+    .page-header {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: .55rem;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* ── Card ──────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--green);
+      margin-bottom: 1.1rem;
+    }
+
+    /* ── Preset dropdown ───────────────────────── */
+    .preset-bar {
+      margin-bottom: 1.4rem;
+    }
+    .preset-bar label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: .4rem;
+    }
+    select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: .95rem;
+      padding: .55rem .8rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right .75rem center;
+      padding-right: 2.2rem;
+    }
+    select:focus { outline: 2px solid var(--green); border-color: var(--green); }
+
+    /* ── Toggle (growth type) ──────────────────── */
+    .toggle-wrap {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.4rem;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: .55rem .5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .18s;
+      text-align: center;
+    }
+    .toggle-btn.active {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── Input grid ────────────────────────────── */
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 560px) { .input-grid { grid-template-columns: 1fr; } }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+    }
+    .field label {
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+    }
+    .field label span.formula {
+      color: var(--amber);
+      font-style: italic;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .input-row {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+    }
+    .input-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+    .input-row input[type="number"] {
+      width: 90px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: .92rem;
+      padding: .42rem .55rem;
+      text-align: right;
+    }
+    .input-row input[type="number"]:focus { outline: 2px solid var(--green); border-color: var(--green); }
+    .field.disabled { opacity: .4; pointer-events: none; }
+    .field.disabled label { color: var(--border); }
+
+    /* K field hint */
+    .k-hint {
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: .15rem;
+    }
+
+    /* ── Hero metrics ──────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.4rem;
+    }
+    @media (max-width: 560px) { .metrics-grid { grid-template-columns: 1fr; } }
+    .metric-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: .4rem;
+    }
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--green);
+      word-break: break-all;
+    }
+    .metric-value.amber { color: var(--amber); }
+    .metric-value.blue  { color: var(--blue); }
+
+    /* ── SVG Graph ─────────────────────────────── */
+    .graph-wrap {
+      position: relative;
+      width: 100%;
+      margin: 1.4rem 0 .5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #12151f;
+    }
+    #growth-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .graph-legend {
+      display: flex;
+      gap: 1.2rem;
+      padding: .5rem .8rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-right: .3rem;
+      vertical-align: middle;
+    }
+
+    /* ── Forecast table ────────────────────────── */
+    .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    thead th {
+      background: var(--surface2);
+      color: var(--green);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-size: .75rem;
+      padding: .55rem .75rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr:nth-child(even) { background: #1a1d2780; }
+    tbody td {
+      padding: .48rem .75rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border)40;
+      font-variant-numeric: tabular-nums;
+    }
+    tbody td:first-child { text-align: left; color: var(--muted); }
+    tbody td.highlight { color: var(--green); font-weight: 700; }
+    tbody tr:last-child td { border-bottom: none; color: var(--amber); font-weight: 600; }
+
+    /* ── Ad placement ──────────────────────────── */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 1.5rem 0;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: .8rem;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+    }
+
+    /* ── Glossary ──────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: .9rem;
+    }
+    .glossary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .8rem 1rem;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--green);
+      font-size: .9rem;
+      margin-bottom: .3rem;
+    }
+    .glossary-def {
+      color: var(--muted);
+      font-size: .83rem;
+      line-height: 1.5;
+    }
+
+    /* ── Educational section ───────────────────── */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green);
+      margin: 1.3rem 0 .5rem;
+    }
+    .section-intro,
+    .edu-section p {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.7;
+      margin-bottom: .8rem;
+    }
+
+    /* ── Rule of 72 box ────────────────────────── */
+    .rule72-box {
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      border-radius: 8px;
+      padding: 1.1rem 1.3rem;
+      margin: 1.2rem 0;
+    }
+    .rule72-box h3 {
+      color: var(--amber) !important;
+      margin-top: 0 !important;
+    }
+    .rule72-box p { color: #fde68a; }
+    .rule72-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .83rem;
+      margin-top: .7rem;
+    }
+    .rule72-table th {
+      background: #92400e60;
+      color: var(--amber);
+      padding: .4rem .6rem;
+      text-align: center;
+      font-weight: 700;
+    }
+    .rule72-table td {
+      padding: .35rem .6rem;
+      text-align: center;
+      border-bottom: 1px solid #92400e40;
+      color: #fde68a;
+    }
+    .rule72-table tr:last-child td { border-bottom: none; }
+
+    /* ── FAQ ───────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: .65rem;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      background: var(--surface2);
+      border: none;
+      color: var(--text);
+      padding: .9rem 1.1rem;
+      text-align: left;
+      font-size: .92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .5rem;
+    }
+    .faq-question:hover { background: #2a2f47; }
+    .faq-icon {
+      color: var(--green);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      font-weight: 400;
+    }
+    .faq-answer {
+      display: none;
+      padding: .8rem 1.1rem 1rem;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Disclaimer ────────────────────────────── */
+    .tool-disclaimer {
+      background: #1a1d27;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .8rem 1.1rem;
+      color: var(--muted);
+      font-size: .78rem;
+      margin-top: 1.2rem;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Logarithmic and Exponential Growth Computer</h1>
+    <p>Forecast scale schedules with continuous, discrete, and logistic growth models. Live SVG curve, 10-point schedule table, and doubling time - all computed locally in your browser.</p>
+  </header>
+
+  <!-- ── TOOL CARD ─────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Growth Forecaster</div>
+
+    <!-- Preset dropdown -->
+    <div class="preset-bar">
+      <label for="preset-select">Forecasting Preset</label>
+      <select id="preset-select" onchange="applyPreset(this.value)">
+        <option value="custom">Custom Forecast</option>
+        <option value="compound">Compound Investment (Discrete)</option>
+        <option value="viral">Viral User Adoption (Continuous)</option>
+        <option value="logistic">Market Saturation (Logistic / Logarithmic Limit)</option>
+      </select>
+    </div>
+
+    <!-- Growth type toggle -->
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="btn-continuous" onclick="setGrowthType('continuous')" type="button">Continuous Growth (e^rt)</button>
+      <button class="toggle-btn"        id="btn-discrete"   onclick="setGrowthType('discrete')"   type="button">Discrete Growth ((1+r)^t)</button>
+    </div>
+
+    <!-- Core inputs -->
+    <div class="input-grid">
+
+      <div class="field">
+        <label for="inp-n0">Initial Value (N<sub>0</sub>)</label>
+        <div class="input-row">
+          <input type="range" id="sl-n0" min="1" max="1000000" step="1" value="1000" oninput="syncNum('n0',this.value)">
+          <input type="number" id="inp-n0" min="1" max="1e15" step="1" value="1000" oninput="syncSlider('n0',this.value)">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="inp-r">Growth Rate (r) <span class="formula">as %</span></label>
+        <div class="input-row">
+          <input type="range" id="sl-r" min="0.1" max="100" step="0.1" value="8" oninput="syncNum('r',this.value)">
+          <input type="number" id="inp-r" min="0.01" max="500" step="0.01" value="8" oninput="syncSlider('r',this.value)">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="inp-t">Time Period (t) <span class="formula">intervals</span></label>
+        <div class="input-row">
+          <input type="range" id="sl-t" min="1" max="100" step="1" value="20" oninput="syncNum('t',this.value)">
+          <input type="number" id="inp-t" min="1" max="1000" step="1" value="20" oninput="syncSlider('t',this.value)">
+        </div>
+      </div>
+
+      <div class="field" id="field-k">
+        <label for="inp-k">Carrying Capacity (K) <span class="formula">optional</span></label>
+        <div class="input-row">
+          <input type="range" id="sl-k" min="1000" max="10000000" step="1000" value="1000000" oninput="syncNum('k',this.value)">
+          <input type="number" id="inp-k" min="1" max="1e15" step="1" value="1000000" oninput="syncSlider('k',this.value)">
+        </div>
+        <p class="k-hint" id="k-hint">Enable logistic mode via the preset or by setting K above N0</p>
+      </div>
+
+    </div>
+
+    <!-- Hero metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Final Projected Value</div>
+        <div class="metric-value" id="m-final">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Doubling Time (Td)</div>
+        <div class="metric-value amber" id="m-double">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Absolute Growth</div>
+        <div class="metric-value blue" id="m-gain">-</div>
+      </div>
+    </div>
+
+    <!-- SVG Chart -->
+    <div class="graph-wrap">
+      <svg id="growth-svg" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" aria-label="Growth curve chart"></svg>
+    </div>
+    <div class="graph-legend">
+      <span><span class="legend-dot" style="background:#10B981"></span>Growth Curve</span>
+      <span><span class="legend-dot" style="background:#F59E0B"></span>Carrying Capacity (K)</span>
+    </div>
+
+    <!-- Forecast schedule table -->
+    <div class="card-title" style="margin-top:1.4rem">10-Point Forecast Schedule</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Milestone</th>
+            <th>Time (t)</th>
+            <th>Value N(t)</th>
+            <th>Growth from N0</th>
+            <th>Growth %</th>
+          </tr>
+        </thead>
+        <tbody id="forecast-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- /tool card -->
+
+  <!-- AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only) -->
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ── GLOSSARY ───────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Exponential Growth</div>
+        <div class="glossary-def">A pattern where the value multiplies by a constant factor each period, producing a J-shaped curve that accelerates without bound (absent a limit).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Logarithmic Scale</div>
+        <div class="glossary-def">A measurement axis where each tick mark represents a power of 10 (or another base) rather than an equal increment. It compresses wide ranges so exponential data appears as a straight line.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Logistic Growth</div>
+        <div class="glossary-def">An S-shaped growth pattern that starts exponential but decelerates as the population approaches its carrying capacity, creating a natural ceiling.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Carrying Capacity (K)</div>
+        <div class="glossary-def">The maximum sustainable population or value in a given environment or market. In logistic models, growth slows and asymptotes toward K.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Doubling Time (Td)</div>
+        <div class="glossary-def">The number of periods required for a value to double. For continuous growth: Td = ln(2) / r. For discrete growth: Td = ln(2) / ln(1+r). Shortcut: 72 divided by the rate %.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Base e / Euler's Number</div>
+        <div class="glossary-def">The irrational constant approximately equal to 2.71828. It is the natural base for continuous growth because the derivative of e^x equals e^x itself.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Asymptote</div>
+        <div class="glossary-def">A line that a curve approaches but never quite reaches. In logistic growth, K is the horizontal asymptote that limits the maximum value.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Compounding</div>
+        <div class="glossary-def">Earning returns on previously earned returns. Discrete compounding adds interest at set intervals; continuous compounding does so at every instant, maximizing the effective yield.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EDUCATIONAL SECTION ───────────────────── -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Exponential and Logistic Growth Forecasting</h2>
+
+    <p class="section-intro">Whether you are modeling a startup's user growth, a portfolio's compound returns, or an epidemic's spread, the underlying math is the same: a value grows in proportion to its current size. This guide explains the three core formulas, when to use each, and how to avoid common mistakes when projecting at scale.</p>
+
+    <h3>How to Use This Tool</h3>
+    <p>Select a preset to auto-fill realistic starting values, or choose "Custom Forecast" to enter your own. Use the Growth Type toggle to switch between continuous (e^rt) and discrete ((1+r)^t) compounding. Enable the logistic limit by entering a Carrying Capacity (K) larger than the Initial Value, which forces the model into S-curve mode. All outputs - the hero metrics, the SVG curve, and the 10-point schedule table - update instantly as you move any slider.</p>
+
+    <h3>Discrete vs. Continuous: Which Should You Use?</h3>
+    <p>Use discrete compounding when interest or returns are credited at defined intervals - annual salary raises, monthly bank statements, or quarterly dividends. Use continuous when modeling biological populations, viral app adoption, or any process where growth happens at every moment rather than at fixed checkpoints. Continuous growth always exceeds discrete at the same nominal rate because compounding never pauses.</p>
+
+    <h3>The Logistic Model and Market Saturation</h3>
+    <p>Pure exponential models eventually predict absurd outcomes - a social network cannot have more users than people exist on Earth. The logistic formula corrects this by incorporating carrying capacity K. Early in the S-curve, growth mimics exponential. As the value crosses roughly K/2, the growth rate peaks. Beyond that point, deceleration mirrors the acceleration from the early phase, and the curve asymptotes toward K. This is why viral product adoption, epidemic spread, and market share all produce S-curves in the real world.</p>
+
+    <h3>Handling Very Large Numbers</h3>
+    <p>Exponential math scales violently. A 20% annual rate compounding for 50 years turns $1,000 into over $9 million. Rates above 50% over long periods quickly exceed JavaScript's safe integer range (approximately 9 quadrillion). This tool automatically switches to scientific notation when values exceed 1 billion, and caps the chart's Y-axis to prevent rendering issues. If your inputs produce scientific notation output, consider whether the logistic model with a realistic K is more appropriate.</p>
+
+    <!-- Rule of 72 Cheat Sheet -->
+    <div class="rule72-box">
+      <h3>Rule of 72 Cheat Sheet</h3>
+      <p>The Rule of 72 is a mental math shortcut: divide 72 by the annual percentage rate to get the approximate doubling time in years. No calculator needed. It is accurate to within 1-2% for rates between 3% and 15%.</p>
+      <p style="margin-top:.5rem"><strong style="color:#fbbf24">Formula: Td = 72 / r%</strong></p>
+      <table class="rule72-table">
+        <thead>
+          <tr><th>Rate (%)</th><th>Approx. Doubling Time</th><th>Exact Doubling Time</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2%</td><td>36 years</td><td>35.0 years</td></tr>
+          <tr><td>4%</td><td>18 years</td><td>17.7 years</td></tr>
+          <tr><td>6%</td><td>12 years</td><td>11.9 years</td></tr>
+          <tr><td>8%</td><td>9 years</td><td>9.0 years</td></tr>
+          <tr><td>10%</td><td>7.2 years</td><td>7.3 years</td></tr>
+          <tr><td>12%</td><td>6 years</td><td>6.1 years</td></tr>
+          <tr><td>18%</td><td>4 years</td><td>4.2 years</td></tr>
+          <tr><td>24%</td><td>3 years</td><td>3.2 years</td></tr>
+          <tr><td>36%</td><td>2 years</td><td>2.3 years</td></tr>
+          <tr><td>72%</td><td>1 year</td><td>1.3 years</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FAQ -->
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item" id="faq1">
+      <button class="faq-question" onclick="toggleFaq('faq1')" aria-expanded="false">
+        What is the difference between continuous and discrete growth?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        Discrete growth compounds at fixed intervals using N(t) = N0 x (1+r)^t, adding a percentage each period on top of the running total. Continuous growth compounds at every instant using N(t) = N0 x e^(rt), where e is Euler's number (approximately 2.71828). Continuous always produces a slightly higher result for the same nominal rate because compounding never pauses between intervals. Banks advertise APR (discrete) but pay APY, which reflects continuous or frequent compounding. In biology and viral adoption, continuous is the more accurate model because organisms and networks grow at all times, not just at year-end.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq2">
+      <button class="faq-question" onclick="toggleFaq('faq2')" aria-expanded="false">
+        Why is the number e used in continuous growth formulas?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        Euler's number e (approximately 2.71828) is the unique base at which the rate of growth of a function equals the function itself. If N(t) = e^t, the slope of the curve at any point exactly equals its height at that point. This property makes e the natural base for any process where the rate of change is proportional to the current value, which is the defining characteristic of continuous exponential growth. It was discovered by Jacob Bernoulli while studying compound interest and formalized by Leonhard Euler.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq3">
+      <button class="faq-question" onclick="toggleFaq('faq3')" aria-expanded="false">
+        What is carrying capacity in a logistic growth model?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        Carrying capacity (K) is the maximum population or value that an environment or market can sustainably support. In the logistic formula N(t) = K / (1 + ((K - N0) / N0) x e^(-rt)), the curve starts exponential but decelerates as it approaches K, eventually leveling off into a flat asymptote. Real examples: a social network's user base approaching total internet users, a bacteria colony limited by nutrients, or a new product saturating its target market. Without a carrying capacity, pure exponential models eventually produce unrealistic results.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq4">
+      <button class="faq-question" onclick="toggleFaq('faq4')" aria-expanded="false">
+        How do you calculate the doubling time of an investment?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        For continuous growth: Td = ln(2) / r, where ln(2) is approximately 0.6931 and r is the decimal growth rate. For discrete growth: Td = ln(2) / ln(1+r). The Rule of 72 mental shortcut says to divide 72 by the percentage rate to get the approximate doubling time. A 6% annual return doubles in about 72 / 6 = 12 years. This is accurate to within 1-2% for rates between 3% and 15%, making it a fast sanity check without a calculator.
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq5">
+      <button class="faq-question" onclick="toggleFaq('faq5')" aria-expanded="false">
+        Why do viral trends eventually flatten out into an S-curve?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-answer">
+        Viral trends follow a logistic S-curve because every population has a finite ceiling. Early adoption is exponential: each new user can spread to many people who have not yet heard of the product. But as adoption rises, the pool of reachable non-users shrinks. Each new user has fewer potential converts to reach, so the growth rate decelerates. Eventually nearly everyone who would adopt the product already has, and growth flatlines at the carrying capacity. The same pattern governs epidemic spread, technology diffusion, and market saturation across industries.
+      </div>
+    </div>
+
+    <div class="tool-disclaimer">
+      This tool is for educational and planning purposes only. Growth projections are mathematical models, not guaranteed outcomes. Real-world results depend on market conditions, competition, and many factors this model cannot capture. Not financial advice.
+    </div>
+  </div>
+
+</main>
+
+<!-- AD PLACEMENT 2: Mobile Sticky Anchor (mobile only) -->
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+  /* ─────────────────────────────────────────────
+     STATE
+  ───────────────────────────────────────────── */
+  var growthType = 'continuous'; // 'continuous' | 'discrete'
+  var useLogistic = false;
+
+  /* ─────────────────────────────────────────────
+     PRESETS
+  ───────────────────────────────────────────── */
+  function applyPreset(val) {
+    switch (val) {
+      case 'compound':
+        setGrowthType('discrete');
+        setField('n0', 10000);
+        setField('r',  7);
+        setField('t',  30);
+        setField('k',  1000000);
+        useLogistic = false;
+        document.getElementById('k-hint').textContent = 'K not active - pure exponential mode';
+        break;
+      case 'viral':
+        setGrowthType('continuous');
+        setField('n0', 500);
+        setField('r',  35);
+        setField('t',  18);
+        setField('k',  1000000);
+        useLogistic = false;
+        document.getElementById('k-hint').textContent = 'K not active - pure exponential mode';
+        break;
+      case 'logistic':
+        setGrowthType('continuous');
+        setField('n0', 1000);
+        setField('r',  40);
+        setField('t',  24);
+        setField('k',  500000);
+        useLogistic = true;
+        document.getElementById('k-hint').textContent = 'Logistic mode active - S-curve limit enabled';
+        break;
+      default:
+        break;
+    }
+    compute();
+  }
+
+  function setField(id, val) {
+    document.getElementById('inp-' + id).value = val;
+    var sl = document.getElementById('sl-' + id);
+    if (sl) {
+      if (id === 'n0') sl.max = Math.max(val * 2, 1000000);
+      if (id === 'k')  sl.max = Math.max(val * 2, 10000000);
+      sl.value = Math.min(val, sl.max);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     TOGGLE
+  ───────────────────────────────────────────── */
+  function setGrowthType(type) {
+    growthType = type;
+    document.getElementById('btn-continuous').className = 'toggle-btn' + (type === 'continuous' ? ' active' : '');
+    document.getElementById('btn-discrete').className   = 'toggle-btn' + (type === 'discrete'   ? ' active' : '');
+    compute();
+  }
+
+  /* ─────────────────────────────────────────────
+     SLIDER / NUMBER SYNC
+  ───────────────────────────────────────────── */
+  function syncNum(id, val) {
+    document.getElementById('inp-' + id).value = val;
+    detectLogistic();
+    compute();
+  }
+  function syncSlider(id, val) {
+    var sl = document.getElementById('sl-' + id);
+    if (sl) {
+      if (id === 'n0' && parseFloat(val) > parseFloat(sl.max)) sl.max = parseFloat(val) * 2;
+      if (id === 'k'  && parseFloat(val) > parseFloat(sl.max)) sl.max = parseFloat(val) * 2;
+      sl.value = val;
+    }
+    detectLogistic();
+    compute();
+  }
+
+  function detectLogistic() {
+    var n0 = getN0(), k = getK();
+    if (k > n0 && k > 1) {
+      if (!useLogistic) {
+        useLogistic = true;
+        document.getElementById('k-hint').textContent = 'Logistic mode active - S-curve limit enabled';
+        // reset preset to custom when user manually adjusts
+        document.getElementById('preset-select').value = 'custom';
+      }
+    } else {
+      if (useLogistic) {
+        useLogistic = false;
+        document.getElementById('k-hint').textContent = 'Set K larger than N0 to enable logistic limit';
+        document.getElementById('preset-select').value = 'custom';
+      }
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     GETTERS
+  ───────────────────────────────────────────── */
+  function getN0() { return Math.max(1, parseFloat(document.getElementById('inp-n0').value) || 1); }
+  function getR()  { return Math.max(0.0001, parseFloat(document.getElementById('inp-r').value) || 0) / 100; }
+  function getT()  { return Math.max(1, parseInt(document.getElementById('inp-t').value) || 1); }
+  function getK()  { return Math.max(1, parseFloat(document.getElementById('inp-k').value) || 1); }
+
+  /* ─────────────────────────────────────────────
+     CORE MATH
+  ───────────────────────────────────────────── */
+  function calcN(t, n0, r, k) {
+    if (useLogistic && k > n0) {
+      // Logistic: N(t) = K / (1 + ((K - N0) / N0) * e^(-r*t))
+      var exponent = -r * t;
+      var eVal = Math.exp(exponent);
+      return k / (1 + ((k - n0) / n0) * eVal);
+    } else if (growthType === 'continuous') {
+      // Continuous: N(t) = N0 * e^(r*t)
+      return n0 * Math.exp(r * t);
+    } else {
+      // Discrete: N(t) = N0 * (1+r)^t
+      return n0 * Math.pow(1 + r, t);
+    }
+  }
+
+  function doublingTime(r) {
+    if (useLogistic) return null; // logistic doesn't have a fixed doubling time
+    if (growthType === 'continuous') return Math.log(2) / r;
+    return Math.log(2) / Math.log(1 + r);
+  }
+
+  /* ─────────────────────────────────────────────
+     NUMBER FORMATTING
+  ───────────────────────────────────────────── */
+  var BIG = 1e9;
+
+  function fmt(n) {
+    if (!isFinite(n) || isNaN(n)) return 'N/A';
+    if (Math.abs(n) > Number.MAX_SAFE_INTEGER) return n.toExponential(3);
+    if (Math.abs(n) >= BIG)  return n.toExponential(3);
+    if (Math.abs(n) >= 1000) return n.toLocaleString(undefined, {maximumFractionDigits: 2});
+    return n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  function fmtTime(t) {
+    return t.toLocaleString(undefined, {maximumFractionDigits: 2});
+  }
+
+  /* ─────────────────────────────────────────────
+     MAIN COMPUTE
+  ───────────────────────────────────────────── */
+  function compute() {
+    var n0 = getN0(), r = getR(), t = getT(), k = getK();
+
+    var finalVal = calcN(t, n0, r, k);
+    var td       = doublingTime(r);
+    var gain     = finalVal - n0;
+
+    // Hero metrics
+    document.getElementById('m-final').textContent  = fmt(finalVal);
+    document.getElementById('m-double').textContent = td !== null ? fmtTime(td) + ' periods' : 'N/A (logistic)';
+    document.getElementById('m-gain').textContent   = fmt(gain);
+
+    // Build 10 milestones
+    var milestones = [];
+    for (var i = 1; i <= 10; i++) {
+      milestones.push((t * i) / 10);
+    }
+
+    // Forecast table
+    var tbody = document.getElementById('forecast-tbody');
+    tbody.innerHTML = '';
+    for (var mi = 0; mi < milestones.length; mi++) {
+      var mt  = milestones[mi];
+      var mNt = calcN(mt, n0, r, k);
+      var mGain = mNt - n0;
+      var mPct  = n0 > 0 ? ((mNt - n0) / n0 * 100) : 0;
+      var isLast = mi === 9;
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>Milestone ' + (mi + 1) + '</td>' +
+        '<td>' + fmtTime(mt) + '</td>' +
+        '<td class="' + (isLast ? '' : 'highlight') + '">' + fmt(mNt) + '</td>' +
+        '<td>' + fmt(mGain) + '</td>' +
+        '<td>' + (isFinite(mPct) ? fmtTime(mPct) + '%' : 'N/A') + '</td>';
+      tbody.appendChild(tr);
+    }
+
+    // Draw chart
+    drawChart(n0, r, t, k);
+  }
+
+  /* ─────────────────────────────────────────────
+     SVG CHART
+  ───────────────────────────────────────────── */
+  function drawChart(n0, r, t, k) {
+    var svg    = document.getElementById('growth-svg');
+    var W = 760, H = 280;
+    var PAD = { top: 20, right: 20, bottom: 36, left: 66 };
+    var chartW = W - PAD.left - PAD.right;
+    var chartH = H - PAD.top - PAD.bottom;
+
+    // Sample 200 points
+    var pts = [];
+    var steps = 200;
+    var maxY = n0;
+    for (var i = 0; i <= steps; i++) {
+      var ti = (t * i) / steps;
+      var yi = calcN(ti, n0, r, k);
+      if (isFinite(yi) && !isNaN(yi)) {
+        pts.push({ x: ti, y: yi });
+        if (yi > maxY) maxY = yi;
+      }
+    }
+
+    // Cap Y axis to prevent freeze
+    var kLine = (useLogistic && k > n0) ? k : null;
+    if (kLine && kLine > maxY) maxY = kLine;
+    if (!isFinite(maxY) || maxY > Number.MAX_SAFE_INTEGER) maxY = 1e15;
+    if (maxY === n0) maxY = n0 * 2;
+
+    // Axis helpers
+    function xScale(v) { return PAD.left + (v / t) * chartW; }
+    function yScale(v) {
+      var ratio = Math.min(v, maxY * 1.05) / (maxY * 1.05);
+      return PAD.top + chartH - ratio * chartH;
+    }
+
+    // Y-axis tick labels
+    function yFmtAxis(v) {
+      if (v >= 1e12) return (v/1e12).toFixed(1) + 'T';
+      if (v >= 1e9)  return (v/1e9).toFixed(1) + 'B';
+      if (v >= 1e6)  return (v/1e6).toFixed(1) + 'M';
+      if (v >= 1e3)  return (v/1e3).toFixed(1) + 'K';
+      return v.toFixed(0);
+    }
+
+    // Build SVG
+    var html = '';
+
+    // Grid lines (5 horizontal)
+    for (var gi = 0; gi <= 4; gi++) {
+      var gy = PAD.top + (gi / 4) * chartH;
+      var gv = maxY * 1.05 * (1 - gi / 4);
+      html += '<line x1="' + PAD.left + '" y1="' + gy + '" x2="' + (W - PAD.right) + '" y2="' + gy + '" stroke="#2e3250" stroke-width="1"/>';
+      html += '<text x="' + (PAD.left - 6) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="10" fill="#8892a4">' + yFmtAxis(gv) + '</text>';
+    }
+
+    // X-axis ticks (5)
+    for (var xi = 0; xi <= 4; xi++) {
+      var xv = (t * xi) / 4;
+      var xx = xScale(xv);
+      html += '<line x1="' + xx + '" y1="' + PAD.top + '" x2="' + xx + '" y2="' + (H - PAD.bottom) + '" stroke="#2e3250" stroke-width="1" stroke-dasharray="3,3"/>';
+      html += '<text x="' + xx + '" y="' + (H - PAD.bottom + 16) + '" text-anchor="middle" font-size="10" fill="#8892a4">' + fmtTime(xv) + '</text>';
+    }
+
+    // X-axis label
+    html += '<text x="' + (W / 2) + '" y="' + (H - 2) + '" text-anchor="middle" font-size="10" fill="#8892a4">Time (t)</text>';
+
+    // Carrying capacity dashed amber line
+    if (kLine) {
+      var kY = yScale(kLine);
+      html += '<line x1="' + PAD.left + '" y1="' + kY + '" x2="' + (W - PAD.right) + '" y2="' + kY + '" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>';
+    }
+
+    // Growth curve path
+    if (pts.length > 1) {
+      var d = 'M ' + xScale(pts[0].x) + ' ' + yScale(pts[0].y);
+      for (var pi = 1; pi < pts.length; pi++) {
+        d += ' L ' + xScale(pts[pi].x) + ' ' + yScale(pts[pi].y);
+      }
+      // Area fill
+      var lastX = xScale(pts[pts.length - 1].x);
+      var baseY = PAD.top + chartH;
+      html += '<path d="' + d + ' L ' + lastX + ' ' + baseY + ' L ' + xScale(pts[0].x) + ' ' + baseY + ' Z" fill="#10B981" fill-opacity="0.1"/>';
+      // Line
+      html += '<path d="' + d + '" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linejoin="round"/>';
+
+      // Milestone dots (10)
+      for (var di = 1; di <= 10; di++) {
+        var dt = (t * di) / 10;
+        var dy = calcN(dt, n0, r, k);
+        if (isFinite(dy) && !isNaN(dy)) {
+          html += '<circle cx="' + xScale(dt) + '" cy="' + yScale(dy) + '" r="3.5" fill="#10B981" stroke="#0f1117" stroke-width="1.5"/>';
+        }
+      }
+    }
+
+    // Axes
+    html += '<line x1="' + PAD.left + '" y1="' + PAD.top + '" x2="' + PAD.left + '" y2="' + (H - PAD.bottom) + '" stroke="#2e3250" stroke-width="1.5"/>';
+    html += '<line x1="' + PAD.left + '" y1="' + (H - PAD.bottom) + '" x2="' + (W - PAD.right) + '" y2="' + (H - PAD.bottom) + '" stroke="#2e3250" stroke-width="1.5"/>';
+
+    svg.innerHTML = html;
+  }
+
+  /* ─────────────────────────────────────────────
+     FAQ ACCORDION
+  ───────────────────────────────────────────── */
+  function toggleFaq(id) {
+    var item   = document.getElementById(id);
+    var btn    = item.querySelector('.faq-question');
+    var answer = item.querySelector('.faq-answer');
+    var icon   = item.querySelector('.faq-icon');
+    var isOpen = answer.style.display === 'block';
+    answer.style.display = isOpen ? 'none' : 'block';
+    icon.textContent     = isOpen ? '+' : '-';
+    btn.setAttribute('aria-expanded', String(!isOpen));
+  }
+
+  /* ─────────────────────────────────────────────
+     INIT
+  ───────────────────────────────────────────── */
+  compute();
+</script>
+
+</body>
+</html>

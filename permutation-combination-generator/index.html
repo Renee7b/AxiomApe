@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Permutation and Combination Generator: Calculate All Possibilities from Custom Sets | AxiomApe</title>
+  <meta name="description" content="Free permutation and combination generator. Paste a custom set of items, choose a subset size, toggle order and repetition, and instantly see the total count with every possible arrangement listed. 100% client-side." />
+  <meta name="keywords" content="permutation calculator, combination calculator, permutation and combination generator, nPr nCr calculator, custom set permutation, combination with repetition, permutation without repetition, probability space calculator, factorial calculator, ordered arrangement calculator, multiset combination, permutation generator" />
+  <link rel="canonical" href="https://axiomape.com/permutation-combination-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Permutation and Combination Generator",
+        "description": "Free permutation and combination generator. Paste a custom set of items, choose a subset size, toggle order and repetition, and instantly see the total count with every possible arrangement listed. 100% client-side.",
+        "url": "https://axiomape.com/permutation-combination-generator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between a permutation and a combination?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A permutation counts arrangements where order matters: choosing A then B is different from choosing B then A. A combination counts selections where order does not matter: the group {A, B} and the group {B, A} are identical. Permutations always produce a count equal to or greater than combinations for the same inputs, because every combination can be rearranged in multiple ordered ways."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does allowing repetition drastically increase the number of possibilities?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Without repetition, each pick removes one item from the available pool, so options narrow with every selection. With repetition, the full pool is available at every pick because items are not consumed. For permutations the formula jumps from n!/(n-r)! to n^r, which grows exponentially faster as r increases."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is a padlock combination technically a permutation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The term 'combination lock' is a historical misnomer. Mathematically, a padlock requires you to enter digits in a specific sequence: 3-1-2 opens the lock while 1-2-3 does not. Because the order of the digits is critical to the outcome, the correct mathematical term is a permutation. A true combination lock would accept any arrangement of the correct digits, which no real lock does."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do factorials work in probability math?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A factorial (written n!) is the product of every whole number from 1 up to n. For example, 5! = 5 x 4 x 3 x 2 x 1 = 120. Factorials count the number of ways to arrange n distinct items in a sequence. Dividing one factorial by another cancels terms and gives the count of arrangements for a specific subset size."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if the subset size r is larger than the total set n?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When repetition is not allowed, it is impossible to choose more items than exist in the set. The result is 0 valid arrangements. When repetition is allowed, r can freely exceed n because each item can be used multiple times. For example, with n=2 items and r=5 picks with repetition, there are 2^5 = 32 possible sequences."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =============================================
+       RESET AND BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0d0f1a;
+      --surface:      #12152a;
+      --card:         #181c30;
+      --card-border:  #252a45;
+      --card-border-h:#3a4070;
+      --purple:       #8B5CF6;
+      --purple-lt:    #a78bfa;
+      --purple-dim:   rgba(139,92,246,0.13);
+      --purple-glow:  rgba(139,92,246,0.28);
+      --cyan:         #06B6D4;
+      --cyan-lt:      #22d3ee;
+      --cyan-dim:     rgba(6,182,212,0.13);
+      --cyan-glow:    rgba(6,182,212,0.28);
+      --green:        #10b981;
+      --green-dim:    rgba(16,185,129,0.1);
+      --amber:        #fbbf24;
+      --amber-dim:    rgba(251,191,36,0.12);
+      --danger:       #f87171;
+      --danger-dim:   rgba(248,113,113,0.1);
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+      --radius:       14px;
+      --radius-sm:    8px;
+      --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono:         'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      --ease:         0.18s ease;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--cyan-lt); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* site-chrome stubs hidden by site-chrome.js */
+    .site-topbar, .site-nav { display: none; }
+
+    /* =============================================
+       PAGE HEADER (tool title block - no role=banner)
+    ============================================= */
+    .page-header {
+      background: linear-gradient(135deg, #0d0f1a 0%, #1a0e2e 50%, #0d1829 100%);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 48px 32px 40px;
+      text-align: center;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 25% 50%, rgba(139,92,246,0.1) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 50%, rgba(6,182,212,0.08) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.35rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      position: relative;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 620px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* =============================================
+       MAIN LAYOUT
+    ============================================= */
+    .page-wrapper {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+    }
+
+    /* =============================================
+       CARD
+    ============================================= */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.38);
+    }
+    @media (max-width: 600px) { .card { padding: 22px 18px; } }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 22px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      background: var(--purple-dim);
+      flex-shrink: 0;
+    }
+
+    /* =============================================
+       INPUT MODE TABS
+    ============================================= */
+    .mode-tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 24px;
+      width: fit-content;
+      gap: 2px;
+    }
+    .mode-tab {
+      padding: 9px 22px;
+      font-size: 0.87rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--ease);
+      line-height: 1;
+    }
+    .mode-tab.active {
+      background: var(--purple);
+      color: #fff;
+      box-shadow: 0 2px 14px var(--purple-glow);
+    }
+    .mode-tab:not(.active):hover {
+      color: var(--text);
+      background: var(--card-border);
+    }
+
+    /* =============================================
+       INPUT PANELS
+    ============================================= */
+    .input-panel { display: none; }
+    .input-panel.active { display: block; }
+
+    /* =============================================
+       FORM ELEMENTS
+    ============================================= */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 7px; }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+    }
+    .field-hint {
+      font-size: 0.77rem;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+
+    textarea, input[type="number"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      transition: border-color var(--ease), box-shadow var(--ease);
+      -webkit-appearance: none;
+    }
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 0.87rem;
+      line-height: 1.6;
+    }
+    textarea:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px var(--purple-dim);
+      background: rgba(18,21,42,0.8);
+    }
+    textarea::placeholder, input[type="number"]::placeholder {
+      color: var(--text-dim);
+    }
+
+    .n-count-badge {
+      display: inline-block;
+      background: var(--purple-dim);
+      color: var(--purple-lt);
+      border: 1px solid rgba(139,92,246,0.28);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.79rem;
+      font-weight: 700;
+      margin-top: 4px;
+      width: fit-content;
+    }
+
+    /* =============================================
+       CONFIGURATION TOGGLES
+    ============================================= */
+    .config-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 580px) { .config-section { grid-template-columns: 1fr; } }
+
+    .toggle-card {
+      background: var(--surface);
+      border: 1.5px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+    .toggle-card-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 11px;
+    }
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 9px 12px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      transition: all var(--ease);
+    }
+    .radio-option:hover { background: rgba(255,255,255,0.04); border-color: var(--card-border-h); }
+    .radio-option input[type="radio"] { display: none; }
+    .radio-dot {
+      width: 17px; height: 17px;
+      border-radius: 50%;
+      border: 2px solid var(--card-border-h);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all var(--ease);
+      background: var(--surface);
+    }
+    .radio-dot::after {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      opacity: 0;
+      transition: opacity var(--ease);
+    }
+    .radio-option input[type="radio"]:checked ~ .radio-dot {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-dim);
+    }
+    .radio-option input[type="radio"]:checked ~ .radio-dot::after { opacity: 1; }
+    .radio-option input[type="radio"]:checked ~ .radio-label {
+      color: var(--cyan-lt);
+      font-weight: 600;
+    }
+    .radio-label {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+      transition: color var(--ease);
+    }
+
+    /* =============================================
+       FORMULA BADGE
+    ============================================= */
+    .formula-badge {
+      background: var(--purple-dim);
+      border: 1px solid rgba(139,92,246,0.22);
+      border-radius: 9px;
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .formula-name {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--purple-lt);
+      flex-shrink: 0;
+    }
+    .formula-text {
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* =============================================
+       RESULTS
+    ============================================= */
+    .result-hero {
+      text-align: center;
+      background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(6,182,212,0.09) 100%);
+      border: 1px solid rgba(139,92,246,0.22);
+      border-radius: 12px;
+      padding: 30px 20px;
+      margin-bottom: 20px;
+    }
+    .result-hero-label {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .result-hero-value {
+      font-size: clamp(2.4rem, 7vw, 4rem);
+      font-weight: 900;
+      color: var(--purple-lt);
+      line-height: 1;
+      margin-bottom: 8px;
+      font-family: var(--mono);
+      word-break: break-all;
+    }
+    .result-hero-value.zero { color: var(--danger); }
+    .result-hero-value.toobig { color: var(--cyan-lt); font-size: clamp(1.4rem, 4vw, 2rem); }
+    .result-hero-sub {
+      font-size: 0.84rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    .result-zero-msg {
+      background: var(--danger-dim);
+      border: 1px solid rgba(248,113,113,0.22);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--danger);
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* =============================================
+       LIST GENERATOR
+    ============================================= */
+    .list-section { margin-top: 20px; }
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .list-header-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--cyan-lt);
+    }
+    .list-count-badge {
+      font-size: 0.76rem;
+      background: var(--cyan-dim);
+      color: var(--cyan-lt);
+      border: 1px solid rgba(6,182,212,0.28);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-weight: 700;
+    }
+    .list-cap-notice {
+      background: var(--amber-dim);
+      border: 1px solid rgba(251,191,36,0.28);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: var(--amber);
+      margin-bottom: 10px;
+      display: none;
+    }
+    .list-output {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      max-height: 420px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: var(--text-muted);
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .list-output::-webkit-scrollbar { width: 6px; height: 6px; }
+    .list-output::-webkit-scrollbar-track { background: var(--surface); }
+    .list-output::-webkit-scrollbar-thumb { background: var(--card-border-h); border-radius: 3px; }
+    .list-empty {
+      color: var(--text-dim);
+      font-style: italic;
+      text-align: center;
+      padding: 24px 0;
+      font-family: var(--font);
+    }
+
+    /* =============================================
+       ANALOGY BLOCK
+    ============================================= */
+    .analogy-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    @media (max-width: 600px) { .analogy-block { grid-template-columns: 1fr; } }
+
+    .analogy-card {
+      background: var(--surface);
+      border: 1.5px solid var(--card-border);
+      border-radius: 10px;
+      padding: 22px 20px;
+      transition: border-color var(--ease);
+    }
+    .analogy-card.combination {
+      border-color: rgba(6,182,212,0.32);
+    }
+    .analogy-card.permutation {
+      border-color: rgba(139,92,246,0.32);
+    }
+    .analogy-icon { font-size: 2.2rem; margin-bottom: 11px; line-height: 1; }
+    .analogy-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .analogy-card.combination .analogy-title { color: var(--cyan-lt); }
+    .analogy-card.permutation .analogy-title { color: var(--purple-lt); }
+    .analogy-text {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 12px;
+    }
+    .analogy-verdict {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 6px 12px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+    .analogy-card.combination .analogy-verdict {
+      color: var(--cyan-lt);
+      background: var(--cyan-dim);
+    }
+    .analogy-card.permutation .analogy-verdict {
+      color: var(--purple-lt);
+      background: var(--purple-dim);
+    }
+
+    /* =============================================
+       GLOSSARY
+    ============================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--purple-lt);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* =============================================
+       EDUCATIONAL SECTION
+    ============================================= */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--purple-lt);
+      margin: 26px 0 10px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      line-height: 1.72;
+      margin-bottom: 20px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .formula-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 8px;
+      font-size: 0.86rem;
+    }
+    .formula-table th {
+      background: var(--surface);
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 10px 14px;
+      text-align: left;
+      border: 1px solid var(--card-border);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .formula-table td {
+      padding: 10px 14px;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+    .formula-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .formula-table .mono { font-family: var(--mono); color: var(--cyan-lt); }
+
+    /* =============================================
+       FAQ ACCORDION
+    ============================================= */
+    .faq-item {
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      cursor: pointer;
+      background: var(--surface);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+      gap: 14px;
+      transition: background var(--ease);
+    }
+    .faq-question:hover { background: rgba(255,255,255,0.05); }
+    .faq-chevron {
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      transition: transform var(--ease);
+    }
+    .faq-answer {
+      display: none;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.68;
+      border-top: 1px solid var(--card-border);
+      background: var(--card);
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .faq-item.open .faq-answer { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects the global header, footer, privacy badge, and disclaimer -->
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Permutation and Combination Generator</h1>
+      <p>Paste your custom items, choose a subset size, and instantly see the total count plus every possible arrangement listed. Four formula modes, real-time results, zero buttons.</p>
+    </header>
+
+    <!-- CALCULATOR CARD -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon">&#x3A3;</div>
+        Configure Your Set
+      </div>
+
+      <!-- INPUT MODE TABS -->
+      <div class="mode-tabs" role="tablist" aria-label="Input mode selector">
+        <button class="mode-tab active" role="tab" aria-selected="true"
+                id="tab-custom" aria-controls="panel-custom"
+                onclick="switchMode('custom')">Custom Array</button>
+        <button class="mode-tab" role="tab" aria-selected="false"
+                id="tab-numeric" aria-controls="panel-numeric"
+                onclick="switchMode('numeric')">Numbers Only</button>
+      </div>
+
+      <!-- Mode 1: Custom Array -->
+      <div class="input-panel active" id="panel-custom" role="tabpanel" aria-labelledby="tab-custom">
+        <div class="form-group" style="margin-bottom: 22px;">
+          <label class="field-label" for="customArray">Your Items (comma-separated)</label>
+          <textarea id="customArray"
+                    placeholder="Red, Blue, Green, Yellow, Orange"
+                    oninput="onArrayChange()">Red, Blue, Green, Yellow</textarea>
+          <span class="field-hint">Separate items with commas. Each unique entry counts as one element of your set (n).</span>
+          <span class="n-count-badge" id="nCountBadge">n = 4 items detected</span>
+        </div>
+      </div>
+
+      <!-- Mode 2: Numbers Only -->
+      <div class="input-panel" id="panel-numeric" role="tabpanel" aria-labelledby="tab-numeric">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label" for="nInput">Total Items (n)</label>
+            <input type="number" id="nInput" min="0" max="9999" value="4" oninput="compute()" />
+            <span class="field-hint">Total number of distinct items in your set.</span>
+          </div>
+          <div style="display:flex; align-items:flex-end; padding-bottom: 28px; color: var(--text-dim); font-size: 0.82rem;">
+            Items will appear in the list as 1, 2, 3 ... n
+          </div>
+        </div>
+      </div>
+
+      <!-- Subset size and config row -->
+      <div class="form-row" style="margin-top: 0;">
+        <div class="form-group">
+          <label class="field-label" for="rInput">Subset Size (r)</label>
+          <input type="number" id="rInput" min="0" max="9999" value="2" oninput="compute()" />
+          <span class="field-hint">How many items to choose from the set.</span>
+        </div>
+      </div>
+
+      <!-- CONFIGURATION TOGGLES -->
+      <div class="config-section">
+        <div class="toggle-card">
+          <div class="toggle-card-label">Order</div>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="orderType" value="perm" checked onchange="compute()" />
+              <span class="radio-dot"></span>
+              <span class="radio-label">Order Matters (Permutation)</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="orderType" value="comb" onchange="compute()" />
+              <span class="radio-dot"></span>
+              <span class="radio-label">Order Does Not Matter (Combination)</span>
+            </label>
+          </div>
+        </div>
+        <div class="toggle-card">
+          <div class="toggle-card-label">Repetition</div>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="repType" value="no" checked onchange="compute()" />
+              <span class="radio-dot"></span>
+              <span class="radio-label">No Repetition</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="repType" value="yes" onchange="compute()" />
+              <span class="radio-dot"></span>
+              <span class="radio-label">Allow Repetition</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMULA DISPLAY -->
+      <div class="formula-badge" id="formulaBadge">
+        <span class="formula-name" id="formulaName">Permutation, No Repetition</span>
+        <span class="formula-text" id="formulaText">P(n, r) = n! / (n - r)!</span>
+      </div>
+
+      <!-- RESULTS PANEL -->
+      <div class="result-hero">
+        <div class="result-hero-label">Total Possible Arrangements</div>
+        <div class="result-hero-value" id="resultValue">12</div>
+        <div class="result-hero-sub" id="resultSub">P(4, 2) = 4! / (4 - 2)! = 12</div>
+      </div>
+
+      <div class="result-zero-msg" id="resultZeroMsg">
+        Cannot choose more items than exist in the set when repetition is not allowed. There are 0 valid arrangements.
+      </div>
+
+      <!-- LIST GENERATOR -->
+      <div class="list-section">
+        <div class="list-header">
+          <span class="list-header-title">All Possible Arrangements</span>
+          <span class="list-count-badge" id="listCountBadge">Showing 12 of 12</span>
+        </div>
+        <div class="list-cap-notice" id="capNotice"></div>
+        <div class="list-output" id="listOutput"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- FRUIT BOWL VS. PADLOCK ANALOGY BLOCK -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon" style="background: var(--cyan-dim);">&#x1F4A1;</div>
+        The Fruit Bowl vs. Padlock Analogy
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.91rem; line-height: 1.68;">
+        The fastest way to lock in the permutation-combination difference is to picture two everyday objects.
+      </p>
+      <div class="analogy-block">
+        <div class="analogy-card combination">
+          <div class="analogy-icon">&#x1F34E;</div>
+          <div class="analogy-title">Fruit Bowl = Combination</div>
+          <p class="analogy-text">Imagine reaching into a bowl and grabbing an apple, an orange, and a banana. Does it matter which one your hand touched first? Of course not. You end up with the same three pieces of fruit regardless of order. {Apple, Orange, Banana} is identical to {Banana, Apple, Orange} because you only care about which items you have, not the sequence you picked them in.</p>
+          <div class="analogy-verdict">Order does NOT matter - use a Combination</div>
+        </div>
+        <div class="analogy-card permutation">
+          <div class="analogy-icon">&#x1F512;</div>
+          <div class="analogy-title">Padlock = Permutation (Not a Combination!)</div>
+          <p class="analogy-text">A padlock labeled "combination lock" is mathematically a misnomer. Entering 3-1-2 is completely different from entering 1-2-3 or 2-3-1. Each distinct sequence unlocks a different vault. The order of the digits is everything. Despite its name, every padlock in existence is a permutation problem - because sequence defines the correct answer.</p>
+          <div class="analogy-verdict">Order DOES matter - use a Permutation</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon">&#x1F4D6;</div>
+        Key Terms Explained
+      </div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Permutation</div>
+          <div class="glossary-def">An arrangement of items where order matters. Selecting A then B is a different permutation from selecting B then A, even though both use the same two items.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Combination</div>
+          <div class="glossary-def">A selection of items where order does not matter. {A, B} and {B, A} are the same combination because they contain the same elements in any sequence.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Factorial (n!)</div>
+          <div class="glossary-def">The product of all positive integers from 1 up to n. Example: 5! = 5 x 4 x 3 x 2 x 1 = 120. By definition, 0! = 1. Factorials count all possible orderings of n items.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Set</div>
+          <div class="glossary-def">The total pool of distinct items you are choosing from. The size of this pool is represented by n (Total Items) in all four formulas.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Subset</div>
+          <div class="glossary-def">A smaller group selected from the full set. The number of items to choose is called r (Subset Size). When repetition is off, r cannot exceed n.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Repetition</div>
+          <div class="glossary-def">Whether an item can appear more than once in a single selection. Allowing repetition significantly increases the total count, especially as r grows large.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Probability Space</div>
+          <div class="glossary-def">The complete set of all possible outcomes for a random experiment. The total count this tool produces is the size of the probability space for your scenario.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Ordered Pair</div>
+          <div class="glossary-def">A sequence of elements where position is significant. (A, B) is a different ordered pair from (B, A). Permutations produce ordered pairs or, for r items, ordered tuples.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Multiset</div>
+          <div class="glossary-def">A collection that allows repeated elements. Combinations with repetition produce multisets, where {A, A, B} is a valid result even if A appears only once in the source set.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Sample Space</div>
+          <div class="glossary-def">In probability theory, the sample space is every possible outcome of an experiment. Each arrangement listed by this tool is one member of the sample space for your configuration.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Permutations and Combinations</h2>
+
+      <p class="section-intro">Whether you are solving a statistics homework problem, designing a password policy, scheduling a tournament bracket, building a recommendation engine, or analyzing a lottery draw - you are working with permutations and combinations. This guide explains the four fundamental formulas, when to use each one, and how to interpret the numbers they produce.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Switch between Custom Array mode and Numbers Only mode using the tabs at the top of the calculator. In Custom Array mode, paste your actual items separated by commas (for example: Ace, King, Queen, Jack, Ten) and the tool counts them automatically to set n. In Numbers Only mode, type n directly and the list generator will use numbers 1 through n as placeholder item names.</p>
+      <p>Set r to control how many items you are choosing. Toggle the Order and Repetition options to select one of the four formula states. Every output - including the formula display, total count, and the arrangement list below - updates in real time with no button press required.</p>
+
+      <h3>The Four Formulas at a Glance</h3>
+      <table class="formula-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Repetition</th>
+            <th>Formula</th>
+            <th>n=4, r=2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Permutation</td>
+            <td>No</td>
+            <td class="mono">n! / (n - r)!</td>
+            <td>4! / 2! = 12</td>
+          </tr>
+          <tr>
+            <td>Permutation</td>
+            <td>Yes</td>
+            <td class="mono">n^r</td>
+            <td>4^2 = 16</td>
+          </tr>
+          <tr>
+            <td>Combination</td>
+            <td>No</td>
+            <td class="mono">n! / (r! x (n - r)!)</td>
+            <td>4! / (2! x 2!) = 6</td>
+          </tr>
+          <tr>
+            <td>Combination</td>
+            <td>Yes</td>
+            <td class="mono">(n+r-1)! / (r! x (n-1)!)</td>
+            <td>5! / (2! x 3!) = 10</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Why Does Repetition Increase the Count So Dramatically?</h3>
+      <p>Without repetition, every time you pick an item it is removed from the available pool, so your options narrow with each selection. If you have 4 items and choose 2, your first pick has 4 options and your second has only 3 - giving 4 x 3 = 12. With repetition, both picks have the full 4 options because the pool never shrinks: 4 x 4 = 16. As r grows, this gap becomes enormous. With n=10 and r=10 and no repetition, the result is 10! = 3,628,800. With repetition it is 10^10 = 10,000,000,000 - nearly 2,756 times larger.</p>
+
+      <h3>Real-World Applications</h3>
+      <p>Passwords and PINs use permutations with repetition: a 4-digit PIN from digits 0-9 has 10^4 = 10,000 possible values. Lottery draws use combinations without repetition: picking 6 numbers from 49 gives C(49,6) = 13,983,816 possible tickets. A round-robin sports tournament schedule uses combinations (which teams play each other) while playoff seedings use permutations (who finishes in which position). Cryptography, genetics (codon arrangements), and network routing all rely on these same four formulas at massive scale.</p>
+
+      <h3>Browser Safety and Large Numbers</h3>
+      <p>Factorials grow extremely fast. This tool uses JavaScript's built-in BigInt type to compute exact integer results for any n up to 5,000 and any r. When the result exceeds JavaScript's Number.MAX_SAFE_INTEGER (approximately 9 x 10^15), the total is displayed in scientific notation to avoid rounding errors. For values beyond BigInt precision, a log-based approximation is shown instead. The arrangement list is always capped at 500 entries to prevent browser slowdowns - a notice appears when the cap is active.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          What is the difference between a permutation and a combination?
+          <span class="faq-chevron">&#x25BC;</span>
+        </div>
+        <div class="faq-answer">
+          A permutation counts arrangements where order matters: choosing A then B is different from choosing B then A, so (A, B) and (B, A) are two separate permutations. A combination counts selections where order does not matter: {A, B} and {B, A} are the same group, so they count as one combination. Because every combination can be rearranged in multiple ordered ways, the permutation count is always equal to or greater than the combination count for the same n and r. Specifically, P(n,r) = C(n,r) x r! because every combination can be permuted in r! ways.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Why does allowing repetition drastically increase the number of possibilities?
+          <span class="faq-chevron">&#x25BC;</span>
+        </div>
+        <div class="faq-answer">
+          Without repetition, each pick removes one item from the available pool, so your options narrow with every selection. With repetition, the full pool is available at every pick because items are not consumed. For permutations the formula jumps from n!/(n-r)! to n^r. At small values the difference is minor, but as r approaches or exceeds n the gap becomes exponential. With n=26 letters and r=8 choices, no-repetition gives about 62 billion arrangements while repetition gives 26^8 = 208 billion - more than three times as many. Allowing repetition is what makes PINs, passwords, and padlocks generate so many more values than equivalent no-repetition problems.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          Why is a padlock combination technically a permutation?
+          <span class="faq-chevron">&#x25BC;</span>
+        </div>
+        <div class="faq-answer">
+          The term "combination lock" is a historical misnomer that has stuck in everyday language. Mathematically, a padlock requires you to enter digits in a specific sequence: 3-1-2 opens the lock while 1-2-3 does not. Because the order of the digits is critical to the correct result, the accurate mathematical term is a permutation, not a combination. A true combination lock - in the mathematical sense - would open with any ordering of the correct digits, which no real lock does. The padlock is actually a permutation with repetition, since the same digit can appear more than once.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          How do factorials work in probability math?
+          <span class="faq-chevron">&#x25BC;</span>
+        </div>
+        <div class="faq-answer">
+          A factorial (written n!) is the product of every whole number from 1 up to n. For example, 5! = 5 x 4 x 3 x 2 x 1 = 120. Factorials count the number of ways to arrange n distinct items in a sequence. Dividing one factorial by another cancels out shared terms efficiently: n!/(n-r)! is the same as multiplying just the top r descending terms (for n=5, r=3: that is 5 x 4 x 3 = 60). By convention, 0! = 1, which ensures the formulas produce correct results when r = 0 (one way to choose nothing: the empty selection) or when r = n (one way to arrange all items: the full set in order).
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFaq(this)">
+          What happens if the subset size r is larger than the total set n?
+          <span class="faq-chevron">&#x25BC;</span>
+        </div>
+        <div class="faq-answer">
+          When repetition is not allowed, it is physically impossible to choose more unique items than exist in the set - you would run out of items before reaching your target count. The result is exactly 0 valid arrangements, and this tool displays a warning when this condition is detected. When repetition is allowed, r can freely exceed n because items can be selected multiple times, so the pool never runs dry. For example, with n=2 items (Heads, Tails) and r=5 flips, there are 2^5 = 32 possible sequences even though r is far larger than n.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let currentMode = 'custom';
+    let customItems = ['Red', 'Blue', 'Green', 'Yellow'];
+    const CAP = 500;
+    const MAX_N_EXACT = 5000;
+
+    /* ============================================================
+       MODE SWITCHING
+    ============================================================ */
+    function switchMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.input-panel').forEach(p => p.classList.remove('active'));
+      const tabEl = document.getElementById('tab-' + mode);
+      const panelEl = document.getElementById('panel-' + mode);
+      tabEl.classList.add('active');
+      tabEl.setAttribute('aria-selected', 'true');
+      panelEl.classList.add('active');
+      compute();
+    }
+
+    /* ============================================================
+       ARRAY CHANGE HANDLER
+    ============================================================ */
+    function onArrayChange() {
+      const raw = document.getElementById('customArray').value;
+      customItems = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const n = customItems.length;
+      document.getElementById('nCountBadge').textContent =
+        'n = ' + n + ' item' + (n !== 1 ? 's' : '') + ' detected';
+      compute();
+    }
+
+    /* ============================================================
+       BIGINT FACTORIAL (exact, up to MAX_N_EXACT)
+    ============================================================ */
+    function factBig(n) {
+      if (n < 0) return 0n;
+      if (n <= 1) return 1n;
+      let r = 1n;
+      for (let i = 2n; i <= BigInt(n); i++) r *= i;
+      return r;
+    }
+
+    /* ============================================================
+       CALCULATE TOTAL (BigInt)
+    ============================================================ */
+    function calcTotal(n, r, isPerm, withRep) {
+      if (n < 0 || r < 0) return 0n;
+      if (!withRep && r > n) return 0n;
+      if (r === 0) return 1n;
+
+      if (isPerm) {
+        return withRep
+          ? BigInt(n) ** BigInt(r)
+          : factBig(n) / factBig(n - r);
+      } else {
+        if (withRep) {
+          if (n === 0) return 0n;
+          return factBig(n + r - 1) / (factBig(r) * factBig(n - 1));
+        } else {
+          return factBig(n) / (factBig(r) * factBig(n - r));
+        }
+      }
+    }
+
+    /* ============================================================
+       LOG-BASED APPROXIMATION for very large n
+    ============================================================ */
+    function logFact(n) {
+      let s = 0;
+      for (let i = 2; i <= n; i++) s += Math.log10(i);
+      return s;
+    }
+
+    function approxTotal(n, r, isPerm, withRep) {
+      let logVal;
+      if (isPerm) {
+        if (withRep) {
+          logVal = r * Math.log10(n);
+        } else {
+          logVal = 0;
+          for (let i = n - r + 1; i <= n; i++) logVal += Math.log10(i);
+        }
+      } else {
+        if (withRep) {
+          logVal = logFact(n + r - 1) - logFact(r) - logFact(n - 1);
+        } else {
+          logVal = logFact(n) - logFact(r) - logFact(n - r);
+        }
+      }
+      if (!isFinite(logVal) || isNaN(logVal) || logVal < 0) return '0';
+      const exp = Math.floor(logVal);
+      const mant = Math.pow(10, logVal - exp).toFixed(3);
+      return mant + ' x 10^' + exp;
+    }
+
+    /* ============================================================
+       FORMAT BIGINT
+    ============================================================ */
+    function formatBig(bigN) {
+      if (bigN === 0n) return '0';
+      const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+      if (bigN <= MAX_SAFE) return Number(bigN).toLocaleString();
+      const s = bigN.toString();
+      const exp = s.length - 1;
+      const mant = (s[0] + '.' + s.slice(1, 5)).replace(/\.?0+$/, '');
+      return mant + ' x 10^' + exp;
+    }
+
+    /* ============================================================
+       LIST GENERATORS (capped at CAP = 500)
+    ============================================================ */
+    function genPermNoRep(items, r) {
+      const res = [];
+      const used = new Array(items.length).fill(false);
+      function go(cur) {
+        if (res.length >= CAP) return;
+        if (cur.length === r) { res.push(cur.slice()); return; }
+        for (let i = 0; i < items.length; i++) {
+          if (!used[i]) {
+            used[i] = true; cur.push(items[i]);
+            go(cur);
+            cur.pop(); used[i] = false;
+            if (res.length >= CAP) return;
+          }
+        }
+      }
+      go([]);
+      return res;
+    }
+
+    function genPermWithRep(items, r) {
+      const res = [];
+      function go(cur) {
+        if (res.length >= CAP) return;
+        if (cur.length === r) { res.push(cur.slice()); return; }
+        for (let i = 0; i < items.length; i++) {
+          cur.push(items[i]);
+          go(cur);
+          cur.pop();
+          if (res.length >= CAP) return;
+        }
+      }
+      go([]);
+      return res;
+    }
+
+    function genCombNoRep(items, r) {
+      const res = [];
+      function go(start, cur) {
+        if (res.length >= CAP) return;
+        if (cur.length === r) { res.push(cur.slice()); return; }
+        for (let i = start; i < items.length; i++) {
+          cur.push(items[i]);
+          go(i + 1, cur);
+          cur.pop();
+          if (res.length >= CAP) return;
+        }
+      }
+      go(0, []);
+      return res;
+    }
+
+    function genCombWithRep(items, r) {
+      const res = [];
+      function go(start, cur) {
+        if (res.length >= CAP) return;
+        if (cur.length === r) { res.push(cur.slice()); return; }
+        for (let i = start; i < items.length; i++) {
+          cur.push(items[i]);
+          go(i, cur);
+          cur.pop();
+          if (res.length >= CAP) return;
+        }
+      }
+      go(0, []);
+      return res;
+    }
+
+    /* ============================================================
+       MAIN COMPUTE
+    ============================================================ */
+    function compute() {
+      let n, items;
+
+      if (currentMode === 'custom') {
+        items = customItems;
+        n = items.length;
+      } else {
+        n = Math.max(0, parseInt(document.getElementById('nInput').value) || 0);
+        items = Array.from({ length: n }, (_, i) => String(i + 1));
+      }
+
+      const r = Math.max(0, parseInt(document.getElementById('rInput').value) || 0);
+      const isPerm = document.querySelector('input[name="orderType"]:checked').value === 'perm';
+      const withRep = document.querySelector('input[name="repType"]:checked').value === 'yes';
+
+      /* Formula labels */
+      const formulaName = isPerm
+        ? (withRep ? 'Permutation, With Repetition' : 'Permutation, No Repetition')
+        : (withRep ? 'Combination, With Repetition' : 'Combination, No Repetition');
+
+      const formulaText = isPerm
+        ? (withRep ? 'P(n, r) = n^r' : 'P(n, r) = n! / (n - r)!')
+        : (withRep ? 'C(n, r) = (n + r - 1)! / (r! x (n - 1)!)' : 'C(n, r) = n! / (r! x (n - r)!)');
+
+      document.getElementById('formulaName').textContent = formulaName;
+      document.getElementById('formulaText').textContent = formulaText;
+
+      const resultEl = document.getElementById('resultValue');
+      const subEl    = document.getElementById('resultSub');
+      const zeroMsg  = document.getElementById('resultZeroMsg');
+      const listEl   = document.getElementById('listOutput');
+      const capEl    = document.getElementById('capNotice');
+      const badgeEl  = document.getElementById('listCountBadge');
+
+      /* Handle very large n with approximation */
+      if (n > MAX_N_EXACT) {
+        const approx = approxTotal(n, r, isPerm, withRep);
+        resultEl.textContent = approx;
+        resultEl.className = 'result-hero-value toobig';
+        subEl.textContent = 'Approximate value - n exceeds exact computation range.';
+        zeroMsg.style.display = 'none';
+        listEl.innerHTML = '<div class="list-empty">n is too large to enumerate arrangements. Increase r or reduce n to generate the list.</div>';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'List unavailable';
+        return;
+      }
+
+      /* Exact BigInt computation */
+      let total;
+      try { total = calcTotal(n, r, isPerm, withRep); }
+      catch(e) {
+        resultEl.textContent = 'Error';
+        resultEl.className = 'result-hero-value zero';
+        subEl.textContent = 'Computation error. Try reducing n or r.';
+        zeroMsg.style.display = 'none';
+        listEl.innerHTML = '<div class="list-empty">Unable to compute for these values.</div>';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'N/A';
+        return;
+      }
+
+      const totalFmt = formatBig(total);
+
+      /* Zero result */
+      if (total === 0n) {
+        resultEl.textContent = '0';
+        resultEl.className = 'result-hero-value zero';
+        subEl.textContent = 'r (' + r + ') > n (' + n + ') with no repetition allowed.';
+        zeroMsg.style.display = 'block';
+        listEl.innerHTML = '<div class="list-empty">No valid arrangements exist for this configuration.</div>';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'Showing 0 of 0';
+        return;
+      }
+
+      zeroMsg.style.display = 'none';
+      resultEl.className = 'result-hero-value';
+      resultEl.textContent = totalFmt;
+
+      /* Sub-line formula evaluation */
+      if (isPerm && withRep)      subEl.textContent = 'P(' + n + ', ' + r + ') = ' + n + '^' + r + ' = ' + totalFmt;
+      else if (isPerm && !withRep) subEl.textContent = 'P(' + n + ', ' + r + ') = ' + n + '! / (' + n + ' - ' + r + ')! = ' + totalFmt;
+      else if (!isPerm && !withRep) subEl.textContent = 'C(' + n + ', ' + r + ') = ' + n + '! / (' + r + '! x (' + n + ' - ' + r + ')!) = ' + totalFmt;
+      else subEl.textContent = 'C(' + n + ', ' + r + ') = (' + n + ' + ' + r + ' - 1)! / (' + r + '! x (' + n + ' - 1)!) = ' + totalFmt;
+
+      /* Edge case: r = 0 */
+      if (r === 0) {
+        listEl.textContent = '   1. (empty selection)';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'Showing 1 of 1';
+        return;
+      }
+
+      /* Edge case: n = 0 */
+      if (n === 0) {
+        listEl.innerHTML = '<div class="list-empty">No items in the set to select from.</div>';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'Showing 0 of 0';
+        return;
+      }
+
+      /* Generate arrangements */
+      let arr;
+      try {
+        if      (isPerm && !withRep)  arr = genPermNoRep(items, r);
+        else if (isPerm && withRep)   arr = genPermWithRep(items, r);
+        else if (!isPerm && !withRep) arr = genCombNoRep(items, r);
+        else                          arr = genCombWithRep(items, r);
+      } catch(e) {
+        listEl.innerHTML = '<div class="list-empty">Could not enumerate arrangements for these values.</div>';
+        capEl.style.display = 'none';
+        badgeEl.textContent = 'N/A';
+        return;
+      }
+
+      const shown = arr.length;
+      const isCapped = shown >= CAP && total > BigInt(CAP);
+
+      if (isCapped) {
+        capEl.textContent =
+          'Display capped at ' + CAP + ' results to maintain browser performance. Total possibilities: ' + totalFmt + '.';
+        capEl.style.display = 'block';
+      } else {
+        capEl.style.display = 'none';
+      }
+
+      badgeEl.textContent = 'Showing ' + shown.toLocaleString() + ' of ' + totalFmt;
+
+      const padLen = String(shown).length;
+      const lines = arr.map((row, idx) => {
+        const num = String(idx + 1).padStart(padLen, ' ');
+        return num + '. ' + row.join(', ');
+      });
+      listEl.textContent = lines.join('\n');
+    }
+
+    /* ============================================================
+       FAQ TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      el.closest('.faq-item').classList.toggle('open');
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    document.addEventListener('DOMContentLoaded', function() {
+      onArrayChange();
+    });
+  </script>
+</body>
+</html>

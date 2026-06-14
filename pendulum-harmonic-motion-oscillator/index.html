@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendulum Harmonic Motion Oscillator: Simulate Period, Velocity, and Energy | AxiomApe</title>
+  <meta name="description" content="Free pendulum harmonic motion simulator. Set string length, bob mass, release angle, and gravity to instantly calculate period, maximum velocity, and maximum energy. Live canvas animation with gravity presets for Earth, Moon, and Jupiter. 100% client-side." />
+  <meta name="keywords" content="pendulum calculator, pendulum period calculator, simple pendulum simulator, harmonic motion calculator, oscillation period calculator, pendulum swing calculator, pendulum length period, small angle approximation, pendulum kinetic energy, pendulum potential energy, physics pendulum simulator, SHM calculator, pendulum frequency, pendulum velocity calculator, pendulum gravity presets" />
+  <link rel="canonical" href="https://axiomape.com/pendulum-harmonic-motion-oscillator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Pendulum Harmonic Motion Oscillator",
+      "description": "Free pendulum harmonic motion simulator. Set string length, bob mass, release angle, and gravity to instantly calculate period, maximum velocity, and maximum energy. Live canvas animation with gravity presets for Earth, Moon, and Jupiter. 100% client-side.",
+      "url": "https://axiomape.com/pendulum-harmonic-motion-oscillator/",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why doesn't changing the mass of the pendulum affect its swing time (period)?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The period formula T = 2 pi times the square root of L divided by g contains no mass term. This is because gravity accelerates every object at the same rate regardless of mass (a 1 kg and a 10 kg bob experience the same gravitational acceleration). The restoring force on the bob is proportional to its mass, but so is its inertia, so the two cancel exactly. This mass-independence was demonstrated by Galileo and later derived rigorously by Newton."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the small-angle approximation and why is it used?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The true equation of motion for a pendulum involves sin(theta), which makes it nonlinear and impossible to solve in closed form. The small-angle approximation replaces sin(theta) with theta (in radians), which is accurate to within 1% for angles below about 15 degrees. This simplification converts the equation into simple harmonic motion, yielding the clean period formula T = 2 pi times sqrt(L divided by g). For larger angles, the actual period is longer than this formula predicts."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "At what point in the swing is the pendulum's velocity the highest?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The pendulum reaches its maximum velocity at the very bottom of the swing (the equilibrium position). At this point all potential energy has been converted to kinetic energy. At the top of each arc the pendulum momentarily stops before reversing direction, so velocity is zero at the extremes. The formula for maximum velocity is vmax = sqrt(2 times g times L times (1 minus cos(theta))), where theta is the initial release angle."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does moving a pendulum to the Moon affect its period?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "On the Moon, gravitational acceleration is about 1.62 m per second squared, compared to 9.81 m per second squared on Earth. Because period is proportional to 1 divided by the square root of g, a pendulum swings more slowly on the Moon. The period is roughly 2.46 times longer on the Moon than on Earth for the same string length. A clock pendulum calibrated on Earth would run slow on the Moon, losing about 59 minutes every hour."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the difference between a simple pendulum and a physical pendulum?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A simple pendulum (modeled here) assumes all the mass is concentrated at a single point at the end of a massless string. A physical (compound) pendulum is any rigid body that swings about a pivot, such as a rod or a clock pendulum with distributed mass. The period of a physical pendulum is T = 2 pi times sqrt(I divided by (m times g times d)), where I is the moment of inertia and d is the distance from the pivot to the center of mass. Simple pendulums are idealized models used in introductory physics."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+      font-size: clamp(1.35rem, 3vw, 1.9rem);
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+
+    .page-header p {
+      color: #94a3b8;
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ---- CARD ---- */
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 18px;
+    }
+
+    /* ---- CANVAS SECTION ---- */
+    .canvas-container {
+      background: #141721;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    #pendulumCanvas {
+      display: block;
+      width: 100%;
+      max-width: 600px;
+      height: 300px;
+    }
+
+    .canvas-label {
+      position: absolute;
+      bottom: 10px;
+      right: 14px;
+      font-size: 0.72rem;
+      color: #475569;
+      pointer-events: none;
+    }
+
+    /* ---- HERO METRICS ---- */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .metric-box {
+      background: #141721;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #F59E0B;
+      line-height: 1;
+    }
+
+    .metric-unit {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    /* Period is indigo, others amber */
+    .metric-box.period .metric-value { color: #818cf8; }
+    .metric-box.velocity .metric-value { color: #F59E0B; }
+    .metric-box.energy .metric-value { color: #34d399; }
+
+    /* ---- CONTROLS GRID ---- */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 560px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .metrics-row { grid-template-columns: 1fr; }
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .control-label span {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 6px;
+      background: #2d3748;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #F59E0B;
+      cursor: pointer;
+      border: 2px solid #0f1117;
+      transition: background 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #fbbf24;
+    }
+
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.3);
+    }
+
+    input[type="number"] {
+      width: 74px;
+      background: #141721;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #f8fafc;
+      font-size: 0.9rem;
+      padding: 5px 8px;
+      text-align: center;
+      outline: none;
+    }
+
+    input[type="number"]:focus {
+      border-color: #F59E0B;
+    }
+
+    select {
+      background: #141721;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #f8fafc;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    select:focus {
+      border-color: #F59E0B;
+    }
+
+    /* ---- UNIT + PRESET ROW ---- */
+    .toggles-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 560px) {
+      .toggles-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .toggle-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ---- ENERGY BREAKDOWN ---- */
+    .energy-card { margin-top: 0; }
+
+    .energy-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .energy-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .energy-row-label {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .energy-bar-track {
+      flex: 1;
+      height: 10px;
+      background: #141721;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .energy-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.05s linear;
+    }
+
+    .bar-ke { background: #F59E0B; }
+    .bar-pe { background: #4F46E5; }
+
+    .energy-row-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      width: 70px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .energy-desc {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-top: 6px;
+    }
+
+    /* ---- AD PLACEMENTS ---- */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      padding: 12px;
+      margin: 20px 0;
+      border: 1px dashed #2d3748;
+      border-radius: 8px;
+      color: #475569;
+      font-size: 0.78rem;
+    }
+
+    /* ---- EDU SECTION ---- */
+    .edu-section { padding: 28px; }
+
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 14px;
+    }
+
+    .section-intro {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 22px 0 10px;
+    }
+
+    .edu-section p {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .formula-box {
+      background: #141721;
+      border: 1px solid #2d3748;
+      border-left: 3px solid #4F46E5;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.92rem;
+      color: #818cf8;
+      margin: 14px 0;
+    }
+
+    /* ---- GLOSSARY ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .glossary-item {
+      background: #141721;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: #F59E0B;
+      margin-bottom: 4px;
+    }
+
+    .glossary-def {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* ---- FAQ ---- */
+    .faq-item {
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      background: #141721;
+      padding: 14px 18px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .faq-q:hover { background: #1a2035; }
+
+    .faq-q .faq-arrow {
+      color: #F59E0B;
+      font-size: 1.1rem;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      background: #1e2330;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.7;
+    }
+
+    .faq-a.open { display: block; }
+
+    /* ---- DISCLAIMER ---- */
+    .tool-disclaimer {
+      background: #141721;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Pendulum Harmonic Motion Oscillator: Simulate Period, Velocity, and Energy</h1>
+    <p>Adjust string length, bob mass, release angle, and gravity to see live pendulum animation and instant physics calculations. No data is sent anywhere - everything runs in your browser.</p>
+  </header>
+
+  <!-- ============================================================
+       CANVAS ANIMATOR
+  ============================================================ -->
+  <div class="card" style="padding: 16px;">
+    <div class="canvas-container">
+      <canvas id="pendulumCanvas" width="600" height="300"></canvas>
+      <div class="canvas-label">Live Animation</div>
+    </div>
+
+    <!-- HERO METRICS -->
+    <div class="metrics-row">
+      <div class="metric-box period">
+        <div class="metric-label">Period (T)</div>
+        <div class="metric-value" id="outPeriod">2.006</div>
+        <div class="metric-unit">seconds per cycle</div>
+      </div>
+      <div class="metric-box velocity">
+        <div class="metric-label">Max Velocity (v max)</div>
+        <div class="metric-value" id="outVelocity">1.304</div>
+        <div class="metric-unit">m/s at bottom</div>
+      </div>
+      <div class="metric-box energy">
+        <div class="metric-label">Max Energy (E max)</div>
+        <div class="metric-value" id="outEnergy">0.851</div>
+        <div class="metric-unit">Joules</div>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls-grid">
+
+      <div class="control-group">
+        <div class="control-label">
+          String Length (L)
+          <span id="lblLength">1.00 m</span>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="sliderLength" min="0.1" max="10" step="0.01" value="1.0" oninput="syncLength(this.value,'slider')">
+          <input type="number" id="numLength" min="0.1" max="10" step="0.01" value="1.0" oninput="syncLength(this.value,'num')">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          Bob Mass (m)
+          <span id="lblMass">1.00 kg</span>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="sliderMass" min="0.01" max="20" step="0.01" value="1.0" oninput="syncMass(this.value,'slider')">
+          <input type="number" id="numMass" min="0.01" max="20" step="0.01" value="1.0" oninput="syncMass(this.value,'num')">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          Release Angle (theta)
+          <span id="lblAngle">20 deg</span>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="sliderAngle" min="1" max="85" step="0.5" value="20" oninput="syncAngle(this.value,'slider')">
+          <input type="number" id="numAngle" min="1" max="85" step="0.5" value="20" oninput="syncAngle(this.value,'num')">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          Gravity (g)
+          <span id="lblGravity">9.810 m/s2</span>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="sliderGravity" min="0.1" max="50" step="0.01" value="9.81" oninput="syncGravity(this.value,'slider')">
+          <input type="number" id="numGravity" min="0.1" max="50" step="0.01" value="9.81" oninput="syncGravity(this.value,'num')">
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TOGGLES: PRESETS + UNITS -->
+    <div class="toggles-row">
+
+      <div class="toggle-group">
+        <label>Gravity Preset</label>
+        <select id="gravityPreset" onchange="applyGravityPreset(this.value)">
+          <option value="9.81" selected>Earth (9.81 m/s2)</option>
+          <option value="1.62">Moon (1.62 m/s2)</option>
+          <option value="24.79">Jupiter (24.79 m/s2)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="toggle-group">
+        <label>Length Unit</label>
+        <select id="lengthUnit" onchange="applyLengthUnit(this.value)">
+          <option value="m" selected>Meters (m)</option>
+          <option value="cm">Centimeters (cm)</option>
+          <option value="ft">Feet (ft)</option>
+          <option value="in">Inches (in)</option>
+        </select>
+      </div>
+
+      <div class="toggle-group">
+        <label>Mass Unit</label>
+        <select id="massUnit" onchange="applyMassUnit(this.value)">
+          <option value="kg" selected>Kilograms (kg)</option>
+          <option value="g">Grams (g)</option>
+          <option value="lbs">Pounds (lbs)</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ENERGY BREAKDOWN -->
+  <div class="card energy-card">
+    <div class="card-title">Conservation of Energy: Live Breakdown</div>
+    <div class="energy-bars">
+      <div class="energy-row">
+        <div class="energy-row-label">Potential Energy</div>
+        <div class="energy-bar-track">
+          <div class="energy-bar-fill bar-pe" id="barPE" style="width:100%"></div>
+        </div>
+        <div class="energy-row-val" id="valPE">0.851 J</div>
+      </div>
+      <div class="energy-row">
+        <div class="energy-row-label">Kinetic Energy</div>
+        <div class="energy-bar-track">
+          <div class="energy-bar-fill bar-ke" id="barKE" style="width:0%"></div>
+        </div>
+        <div class="energy-row-val" id="valKE">0.000 J</div>
+      </div>
+    </div>
+    <p class="energy-desc">
+      At release (top of arc), all energy is <strong style="color:#4F46E5">Potential Energy</strong> (PE = mgh). As the bob swings down, PE converts into <strong style="color:#F59E0B">Kinetic Energy</strong> (KE = 1/2 mv2). At the very bottom, all PE has become KE and velocity is at its peak. The total energy stays constant (Emax) throughout the swing - it just shifts form continuously.
+    </p>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       GLOSSARY
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Simple Harmonic Motion</div>
+        <div class="glossary-def">Oscillatory motion where the restoring force is proportional to displacement and directed toward the equilibrium position. A pendulum approximates SHM at small angles.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Period (T)</div>
+        <div class="glossary-def">The time for one complete swing and return (one full cycle), measured in seconds. For a simple pendulum: T = 2 pi times sqrt(L / g).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Frequency (f)</div>
+        <div class="glossary-def">The number of complete oscillations per second, in Hertz (Hz). Frequency is the reciprocal of the period: f = 1 / T.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Amplitude</div>
+        <div class="glossary-def">The maximum displacement from the equilibrium (rest) position. For a pendulum this is the initial release angle. Under small-angle SHM, the period is independent of amplitude.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Pendulum Bob</div>
+        <div class="glossary-def">The mass at the end of the string. In a simple pendulum model, all mass is assumed to be concentrated at this single point.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Small-Angle Approximation</div>
+        <div class="glossary-def">The substitution sin(theta) = theta (in radians), valid to within 1% for angles below roughly 15 degrees. This makes the pendulum equation solvable in closed form.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Kinetic Energy (KE)</div>
+        <div class="glossary-def">Energy of motion, equal to 1/2 mv2. Maximized at the bottom of the swing when the bob moves fastest.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Potential Energy (PE)</div>
+        <div class="glossary-def">Stored gravitational energy, equal to mgh above the lowest point. Maximized at the top of each arc where the bob momentarily stops.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Restoring Force</div>
+        <div class="glossary-def">The component of gravity that pulls the bob back toward the equilibrium position. Equal to -mg times sin(theta) and always directed toward center.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Isochronism</div>
+        <div class="glossary-def">The property of a pendulum by which its period remains (nearly) constant regardless of amplitude, as long as the angle stays small. Discovered by Galileo around 1602.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL SECTION
+  ============================================================ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Pendulum Harmonic Motion</h2>
+
+    <p class="section-intro">
+      A pendulum is one of the most elegant demonstrations in all of classical physics. From Galileo's legendary observations in Pisa Cathedral to the precision timekeeping of mechanical clocks, pendulums have shaped our understanding of oscillatory motion, gravity, and energy conservation. This simulator lets you explore all of it interactively in real time.
+    </p>
+
+    <h3>How to Use This Simulator</h3>
+    <p>
+      Start by setting the <strong>String Length</strong> and watch how the Period changes immediately - longer strings swing more slowly. Try the <strong>Gravity Preset</strong> dropdown to move your pendulum to the Moon or Jupiter. Notice that changing the <strong>Bob Mass</strong> has zero effect on the Period (T) but directly scales the Maximum Energy (Emax). Set a large <strong>Release Angle</strong> and watch the animation swing wider while the energy bars shift more dramatically at each extreme.
+    </p>
+
+    <h3>The Physics Behind the Period Formula</h3>
+    <p>
+      The period of a simple pendulum is given by:
+    </p>
+    <div class="formula-box">T = 2 * pi * sqrt(L / g)</div>
+    <p>
+      This formula tells you three important things at a glance. First, period scales with the square root of length - double the string length and the period increases by a factor of sqrt(2), roughly 1.41. Second, period is inversely proportional to the square root of gravity - move to a weaker gravitational field and the pendulum slows down. Third, mass is entirely absent from the formula, confirming that the pendulum's swing time is independent of the weight of its bob.
+    </p>
+
+    <h3>Velocity, Energy, and the Role of Mass</h3>
+    <p>
+      While mass does not affect the period, it absolutely affects the energy stored in the pendulum system. The maximum energy (all potential at the top of the arc, all kinetic at the bottom) is:
+    </p>
+    <div class="formula-box">E_max = m * g * L * (1 - cos(theta))</div>
+    <p>
+      And the maximum speed the bob reaches at the bottom of its arc is:
+    </p>
+    <div class="formula-box">v_max = sqrt(2 * g * L * (1 - cos(theta)))</div>
+    <p>
+      Note that v_max does not contain mass either - just like in free fall, all objects (light or heavy) reach the same speed at the bottom of an identical swing. But a heavier bob carries far more kinetic energy at that speed, because KE = 1/2 mv2.
+    </p>
+
+    <h3>Conservation of Energy in the Pendulum</h3>
+    <p>
+      The live energy bars above illustrate one of the most fundamental principles in physics: conservation of mechanical energy. At the moment of release (top of the arc), the bob has maximum height h = L(1 - cos(theta)) above its rest position and is momentarily stationary. All energy is potential (PE = mgh). As it swings downward, gravity does positive work, converting PE into KE. At the very bottom, height is zero, PE is zero, and all energy has become kinetic. On the upswing, the process reverses. Ignoring air resistance and string mass, this exchange continues indefinitely with the total energy Emax remaining constant.
+    </p>
+
+    <h3>Limits of the Simple Pendulum Model</h3>
+    <p>
+      The period formula is exact only in two limiting cases: zero amplitude (a pendulum at rest) and truly massless, inextensible strings. In practice, the formula is accurate to better than 1% for angles below about 15 degrees, to within 2% at 23 degrees, and to within 5% at 33 degrees. At 90 degrees the true period is about 18% longer than the formula predicts. For large-angle pendulums, the exact period requires an elliptic integral and is commonly approximated using additional correction terms.
+    </p>
+
+    <!-- FAQ -->
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Why doesn't changing the mass of the pendulum affect its swing time (period)?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        The period formula T = 2 pi times sqrt(L / g) contains no mass term. This is because gravity accelerates every object at the same rate regardless of mass. The gravitational restoring force on the bob is proportional to its mass, but so is its inertia, so the two effects cancel exactly. A 1 kg and a 100 kg bob on identical strings will complete each swing in exactly the same time. This mass-independence was observed by Galileo and formally derived by Newton.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the small-angle approximation and why is it used?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        The true equation of motion for a pendulum involves sin(theta), making it nonlinear and impossible to solve in a clean closed form. The small-angle approximation replaces sin(theta) with theta (in radians), which is accurate to within 1% for angles below about 15 degrees. This simplification makes the equation identical in form to that of a mass-on-a-spring, yielding the elegant period formula T = 2 pi times sqrt(L / g). For larger angles, the real period is longer than this formula predicts.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        At what point in the swing is the pendulum's velocity the highest?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        The pendulum reaches maximum velocity at the very bottom of the swing, the equilibrium position. At this point all gravitational potential energy has been fully converted to kinetic energy. At the top of each arc, the bob momentarily stops and reverses direction, so velocity is zero at the extremes. The maximum speed is v_max = sqrt(2 times g times L times (1 - cos(theta))), where theta is the initial release angle.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How does moving a pendulum to the Moon affect its period?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        On the Moon, gravitational acceleration is about 1.62 m/s2, compared to 9.81 m/s2 on Earth. Since period is proportional to 1 / sqrt(g), a pendulum on the Moon swings about 2.46 times more slowly for the same string length. A clock calibrated with a 1-meter pendulum on Earth (period about 2 seconds) would lose roughly 59 minutes every hour on the Moon. Try switching to the Moon gravity preset in the simulator to see the period change instantly.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between a simple pendulum and a physical pendulum?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        A simple pendulum (the model used here) assumes all mass is concentrated at a single point at the end of a massless, inextensible string. A physical (compound) pendulum is any real rigid body that swings about a fixed pivot, like a rod, a clock arm, or a human leg. Its period is T = 2 pi times sqrt(I / (m times g times d)), where I is the moment of inertia about the pivot and d is the distance from the pivot to the center of mass. Physical pendulums generally have longer periods than simple pendulums of the same length because mass is distributed away from the tip.
+      </div>
+    </div>
+
+    <div class="tool-disclaimer">
+      <strong>Educational Use Only:</strong> This simulator uses the small-angle period formula (T = 2 pi sqrt(L/g)) and energy-based velocity/energy equations. Results are ideal approximations that ignore air resistance, string mass, elasticity, and large-angle corrections. For angles above 30 degrees, actual period will be measurably longer than displayed. Not intended as a substitute for formal physics analysis.
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+const state = {
+  L_m: 1.0,      // meters
+  m_kg: 1.0,     // kilograms
+  theta_deg: 20, // degrees
+  g: 9.81,       // m/s^2
+  lengthUnit: 'm',
+  massUnit: 'kg'
+};
+
+/* ============================================================
+   UNIT CONVERSION HELPERS
+============================================================ */
+const toMeters = { m: 1, cm: 0.01, ft: 0.3048, in: 0.0254 };
+const toKg     = { kg: 1, g: 0.001, lbs: 0.453592 };
+const fromMeters = { m: 1, cm: 100, ft: 3.28084, in: 39.3701 };
+const fromKg     = { kg: 1, g: 1000, lbs: 2.20462 };
+
+function unitLabelLength(u) { return u; }
+function unitLabelMass(u)   { return u; }
+
+/* ============================================================
+   SYNC FUNCTIONS
+============================================================ */
+function syncLength(val, src) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v <= 0) return;
+  // convert displayed unit to meters
+  state.L_m = v * toMeters[state.lengthUnit];
+  if (src === 'slider') document.getElementById('numLength').value = v;
+  else document.getElementById('sliderLength').value = Math.min(Math.max(v * toMeters[state.lengthUnit] / toMeters[state.lengthUnit], 0.1), 10);
+  document.getElementById('lblLength').textContent = v.toFixed(2) + ' ' + state.lengthUnit;
+  recalc();
+}
+
+function syncMass(val, src) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v <= 0) return;
+  state.m_kg = v * toKg[state.massUnit];
+  if (src === 'slider') document.getElementById('numMass').value = v;
+  else document.getElementById('sliderMass').value = v;
+  document.getElementById('lblMass').textContent = v.toFixed(2) + ' ' + state.massUnit;
+  recalc();
+}
+
+function syncAngle(val, src) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v < 0 || v > 85) return;
+  state.theta_deg = v;
+  if (src === 'slider') document.getElementById('numAngle').value = v;
+  else document.getElementById('sliderAngle').value = v;
+  document.getElementById('lblAngle').textContent = v.toFixed(1) + ' deg';
+  recalc();
+}
+
+function syncGravity(val, src) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v <= 0) return;
+  state.g = v;
+  if (src === 'slider') document.getElementById('numGravity').value = v;
+  else document.getElementById('sliderGravity').value = v;
+  document.getElementById('lblGravity').textContent = v.toFixed(3) + ' m/s2';
+  document.getElementById('gravityPreset').value = 'custom';
+  recalc();
+}
+
+function applyGravityPreset(val) {
+  if (val === 'custom') return;
+  const g = parseFloat(val);
+  state.g = g;
+  document.getElementById('sliderGravity').value = g;
+  document.getElementById('numGravity').value = g;
+  document.getElementById('lblGravity').textContent = g.toFixed(3) + ' m/s2';
+  recalc();
+}
+
+function applyLengthUnit(unit) {
+  state.lengthUnit = unit;
+  // Re-display current L_m in new unit
+  const displayed = state.L_m / toMeters[unit];
+  const minInUnit = 0.1 / toMeters[unit];
+  const maxInUnit = 10 / toMeters[unit];
+  document.getElementById('sliderLength').min = minInUnit;
+  document.getElementById('sliderLength').max = maxInUnit;
+  document.getElementById('sliderLength').value = displayed;
+  document.getElementById('numLength').min = minInUnit;
+  document.getElementById('numLength').max = maxInUnit;
+  document.getElementById('numLength').value = displayed.toFixed(3);
+  document.getElementById('lblLength').textContent = displayed.toFixed(2) + ' ' + unit;
+  recalc();
+}
+
+function applyMassUnit(unit) {
+  state.massUnit = unit;
+  const displayed = state.m_kg / toKg[unit];
+  const minInUnit = 0.01 / toKg[unit];
+  const maxInUnit = 20 / toKg[unit];
+  document.getElementById('sliderMass').min = minInUnit;
+  document.getElementById('sliderMass').max = maxInUnit;
+  document.getElementById('sliderMass').value = displayed;
+  document.getElementById('numMass').min = minInUnit;
+  document.getElementById('numMass').max = maxInUnit;
+  document.getElementById('numMass').value = displayed.toFixed(3);
+  document.getElementById('lblMass').textContent = displayed.toFixed(2) + ' ' + unit;
+  recalc();
+}
+
+/* ============================================================
+   PHYSICS ENGINE
+============================================================ */
+function recalc() {
+  const L = state.L_m;
+  const m = state.m_kg;
+  const g = state.g;
+  const theta_rad = state.theta_deg * Math.PI / 180;
+
+  // Period: T = 2*pi*sqrt(L/g)
+  const T = 2 * Math.PI * Math.sqrt(L / g);
+
+  // Max velocity: vmax = sqrt(2*g*L*(1-cos(theta)))
+  const vmax = Math.sqrt(2 * g * L * (1 - Math.cos(theta_rad)));
+
+  // Max energy: Emax = m*g*L*(1-cos(theta))
+  const Emax = m * g * L * (1 - Math.cos(theta_rad));
+
+  document.getElementById('outPeriod').textContent  = T.toFixed(3);
+  document.getElementById('outVelocity').textContent = vmax.toFixed(3);
+  document.getElementById('outEnergy').textContent  = Emax.toFixed(3);
+
+  // Store for animation energy bars
+  window._Emax = Emax;
+  window._m    = m;
+  window._g    = g;
+  window._L    = L;
+  window._theta_rad = theta_rad;
+}
+
+/* ============================================================
+   PENDULUM ANIMATION
+============================================================ */
+const canvas  = document.getElementById('pendulumCanvas');
+const ctx     = canvas.getContext('2d');
+
+let animTheta   = 20 * Math.PI / 180; // current angle in radians
+let animOmega   = 0;                  // angular velocity
+let lastTime    = null;
+const PIVOT_X_FRAC = 0.5;
+const PIVOT_Y_FRAC = 0.12;
+
+function getPivotAndScale() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const px = W * PIVOT_X_FRAC;
+  const py = H * PIVOT_Y_FRAC;
+  // Scale rope length to canvas: max 80% of available height
+  const maxPx = H * 0.80;
+  const L = state.L_m;
+  // normalize: 10m = maxPx
+  const scale = maxPx / 10;
+  const ropeLen = Math.min(L * scale, maxPx);
+  return { px, py, ropeLen, W, H };
+}
+
+function drawPendulum(theta) {
+  const { px, py, ropeLen, W, H } = getPivotAndScale();
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#141721');
+  grad.addColorStop(1, '#0f1117');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Angle arc indicator
+  const arcR = 40;
+  ctx.beginPath();
+  ctx.arc(px, py, arcR, Math.PI / 2 - state.theta_deg * Math.PI / 180, Math.PI / 2 + state.theta_deg * Math.PI / 180);
+  ctx.strokeStyle = 'rgba(79,70,229,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Equilibrium dashed line
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px, py + ropeLen);
+  ctx.strokeStyle = 'rgba(148,163,184,0.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Compute bob position
+  const bx = px + ropeLen * Math.sin(theta);
+  const by = py + ropeLen * Math.cos(theta);
+
+  // Shadow rope
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(bx, by);
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Rope
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(bx, by);
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Pivot mount bracket
+  ctx.fillStyle = '#4F46E5';
+  ctx.beginPath();
+  ctx.roundRect(px - 22, py - 8, 44, 12, 4);
+  ctx.fill();
+
+  // Pivot point
+  ctx.beginPath();
+  ctx.arc(px, py, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#818cf8';
+  ctx.fill();
+
+  // Bob glow
+  const bobR = Math.max(10, Math.min(20, 12 + state.m_kg * 0.5));
+  const glow = ctx.createRadialGradient(bx, by, 0, bx, by, bobR * 2);
+  glow.addColorStop(0,   'rgba(245,158,11,0.45)');
+  glow.addColorStop(1,   'rgba(245,158,11,0)');
+  ctx.beginPath();
+  ctx.arc(bx, by, bobR * 2, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  // Bob
+  const bobGrad = ctx.createRadialGradient(bx - bobR * 0.3, by - bobR * 0.3, 0, bx, by, bobR);
+  bobGrad.addColorStop(0, '#fde68a');
+  bobGrad.addColorStop(0.5, '#F59E0B');
+  bobGrad.addColorStop(1, '#b45309');
+  ctx.beginPath();
+  ctx.arc(bx, by, bobR, 0, Math.PI * 2);
+  ctx.fillStyle = bobGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Height indicator line (dashed to equilibrium bottom)
+  const eqBottom = py + ropeLen;
+  if (by < eqBottom - 2) {
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(bx + bobR + 6, by);
+    ctx.lineTo(bx + bobR + 6, eqBottom);
+    ctx.strokeStyle = 'rgba(79,70,229,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // h label
+    const h = state.L_m * (1 - Math.cos(theta));
+    ctx.fillStyle = 'rgba(129,140,248,0.75)';
+    ctx.font = '10px system-ui';
+    ctx.fillText('h=' + h.toFixed(2) + 'm', bx + bobR + 10, (by + eqBottom) / 2 + 4);
+  }
+
+  // Angle label
+  ctx.fillStyle = 'rgba(79,70,229,0.85)';
+  ctx.font = '11px system-ui';
+  const angleDeg = (theta * 180 / Math.PI).toFixed(1);
+  ctx.fillText(angleDeg + 'deg', px + 8, py + arcR + 14);
+
+  // Energy bars (animated)
+  const Emax  = window._Emax || 0;
+  if (Emax > 0) {
+    const h_curr = state.L_m * (1 - Math.cos(theta));
+    const PE_curr = state.m_kg * state.g * h_curr;
+    const KE_curr = Math.max(0, Emax - PE_curr);
+    const pePct = Math.round((PE_curr / Emax) * 100);
+    const kePct = Math.round((KE_curr / Emax) * 100);
+    document.getElementById('barPE').style.width = pePct + '%';
+    document.getElementById('barKE').style.width = kePct + '%';
+    document.getElementById('valPE').textContent = PE_curr.toFixed(3) + ' J';
+    document.getElementById('valKE').textContent = KE_curr.toFixed(3) + ' J';
+  }
+}
+
+function animate(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+
+  // Euler step: angular acceleration = -(g/L)*sin(theta)
+  const alpha = -(state.g / state.L_m) * Math.sin(animTheta);
+  animOmega += alpha * dt;
+  animTheta += animOmega * dt;
+
+  // Soft clamp: if theta exceeds release angle, reset omega
+  const maxTheta = state.theta_deg * Math.PI / 180;
+  if (Math.abs(animTheta) > maxTheta * 1.02) {
+    animTheta = Math.sign(animTheta) * maxTheta;
+    animOmega = 0;
+  }
+
+  drawPendulum(animTheta);
+  requestAnimationFrame(animate);
+}
+
+// On angle change, reset the animation to start from the new angle
+function resetAnim() {
+  animTheta = state.theta_deg * Math.PI / 180;
+  animOmega = 0;
+}
+
+// Watch for angle changes to restart animation
+const _origSyncAngle = syncAngle;
+window.syncAngle = function(val, src) {
+  _origSyncAngle(val, src);
+  resetAnim();
+};
+
+/* ============================================================
+   FAQ TOGGLE
+============================================================ */
+function toggleFaq(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+/* ============================================================
+   CANVAS RESIZE
+============================================================ */
+function resizeCanvas() {
+  const container = canvas.parentElement;
+  const w = container.clientWidth;
+  canvas.width  = w;
+  canvas.height = Math.round(w * 0.5);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+/* ============================================================
+   INIT
+============================================================ */
+resizeCanvas();
+recalc();
+resetAnim();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

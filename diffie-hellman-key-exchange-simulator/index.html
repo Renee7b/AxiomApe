@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diffie-Hellman Key Exchange Simulator: Interactive Cryptographic Key Agreement Tool | AxiomApe</title>
+  <meta name="description" content="Free interactive Diffie-Hellman key exchange simulator. Watch Alice and Bob derive an identical shared secret without ever transmitting their private keys. Step-by-step modular exponentiation with live math. 100% client-side." />
+  <meta name="keywords" content="Diffie-Hellman key exchange, DH key exchange simulator, modular exponentiation, shared secret, public key cryptography, key agreement protocol, HTTPS TLS explained, cryptography education, prime number generator, discrete logarithm problem, man in the middle attack, key exchange animation, cryptographic simulator" />
+  <link rel="canonical" href="https://axiomape.com/diffie-hellman-key-exchange-simulator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Diffie-Hellman Key Exchange Simulator",
+        "description": "Free interactive Diffie-Hellman key exchange simulator. Watch Alice and Bob derive an identical shared secret without ever transmitting their private keys. Step-by-step modular exponentiation with live math. 100% client-side.",
+        "url": "https://axiomape.com/diffie-hellman-key-exchange-simulator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is Diffie-Hellman the foundation of HTTPS and SSL/TLS?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Every HTTPS connection you make begins with a key exchange handshake. The browser and the server need to agree on a shared encryption key, but they are communicating over a public network that anyone can monitor. Diffie-Hellman (and its elliptic curve variant, ECDHE) solves this by allowing two parties to derive an identical secret from exchanged public values, without that secret ever appearing on the wire. The shared secret then seeds a symmetric cipher (like AES) for the rest of the session. Without this mechanism, establishing an encrypted channel over an untrusted network would be impossible."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why can a hacker not just calculate the private keys from the public ones?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Computing a public key from a private key requires modular exponentiation: A = g^a mod p. This is fast in one direction. Reversing it - finding the exponent 'a' given A, g, and p - is known as the Discrete Logarithm Problem (DLP). When p is a large prime (2048 or 4096 bits in real-world use), no efficient algorithm exists to solve this in any practical timeframe. Even the fastest known algorithms would take longer than the age of the universe on classical hardware. The asymmetry between the easy direction (exponentiation) and the hard direction (discrete logarithm) is the mathematical trapdoor that makes Diffie-Hellman secure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the color mixing analogy for Diffie-Hellman?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Imagine Alice and Bob each take a secret private color known only to them. They both start with the same public shared color (yellow, like the generator g). Alice mixes her secret color into the yellow and sends the result to Bob. Bob does the same with his secret color and sends his result to Alice. Now each takes what they received and mixes in their own private color again. Remarkably, both end up with the same final mixture - the shared secret - even though they never exchanged their private colors directly. An eavesdropper who sees only the public mixed colors cannot easily determine what private color each person added, which maps to the hardness of the Discrete Logarithm Problem."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are the numbers used in this simulator secure for real-world encryption?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This simulator uses small prime numbers (like p=23) intentionally so that the math remains readable and the step-by-step calculations are visually clear. In real-world usage, the prime p must be at least 2048 bits long (a number with roughly 617 decimal digits) to resist modern attacks. With a small prime like 23, an attacker can simply try all possible private key values in milliseconds. The protocol logic is mathematically identical regardless of prime size, so small primes are perfect for learning the concept. For actual encryption, TLS 1.3 defaults to Elliptic Curve Diffie-Hellman (ECDHE) with curves like X25519, which provides equivalent security to 3072-bit DH with far shorter keys."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a Man-in-the-Middle attack and does Diffie-Hellman prevent it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In a Man-in-the-Middle (MitM) attack, an attacker intercepts communication between Alice and Bob, impersonating each party to the other. The attacker establishes a separate Diffie-Hellman exchange with Alice (pretending to be Bob) and another with Bob (pretending to be Alice). Both Alice and Bob believe they shared a secret directly, but the attacker controls both shared secrets and can read all messages. Diffie-Hellman alone does not prevent this because neither party can verify the identity of who they are communicating with. Real-world TLS prevents MitM by combining Diffie-Hellman with digital certificates (signed by trusted Certificate Authorities) that authenticate the server's identity before the key exchange proceeds."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =========================================================
+       FONTS
+    ========================================================= */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --bg2:       #161b27;
+      --bg3:       #1e2535;
+      --surface:   #232d42;
+      --border:    #2e3a52;
+      --text:      #e2e8f0;
+      --muted:     #8896b3;
+      --accent:    #38bdf8;
+      --green:     #4ade80;
+
+      /* Persona colors */
+      --alice:     #60A5FA;
+      --alice-dim: rgba(96,165,250,0.12);
+      --alice-glow:rgba(96,165,250,0.35);
+      --bob:       #FB923C;
+      --bob-dim:   rgba(251,146,60,0.12);
+      --bob-glow:  rgba(251,146,60,0.35);
+      --secret:    #A78BFA;
+      --secret-dim:rgba(167,139,250,0.14);
+
+      --radius:    12px;
+      --font:      'Inter', 'Segoe UI', sans-serif;
+      --mono:      'Source Code Pro', 'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* =========================================================
+       LAYOUT WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =========================================================
+       CARD
+    ========================================================= */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+      letter-spacing: 0.01em;
+    }
+
+    /* =========================================================
+       PUBLIC PARAMETERS PANEL
+    ========================================================= */
+    .params-panel {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 0.5rem;
+    }
+    .param-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex: 1;
+      min-width: 140px;
+    }
+    .param-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .param-group input[type="number"] {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1.15rem;
+      padding: 0.55rem 0.8rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    .param-group input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .preset-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      align-self: center;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .btn-preset {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+    .btn-preset:hover {
+      background: var(--surface);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* =========================================================
+       EXCHANGE ROOM - ALICE / BOB SIDE BY SIDE
+    ========================================================= */
+    .exchange-room {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1rem;
+      align-items: start;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 720px) {
+      .exchange-room { grid-template-columns: 1fr; }
+      .middle-col { display: none; }
+    }
+
+    /* --- persona panels --- */
+    .persona-panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .persona-panel.alice { border-top: 3px solid var(--alice); }
+    .persona-panel.bob   { border-top: 3px solid var(--bob); }
+
+    .persona-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .persona-panel.alice .persona-name { color: var(--alice); }
+    .persona-panel.bob   .persona-name { color: var(--bob); }
+
+    /* slider */
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .slider-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      justify-content: space-between;
+    }
+    .slider-val {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .persona-panel.alice .slider-val { color: var(--alice); }
+    .persona-panel.bob   .slider-val { color: var(--bob); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--bg3);
+      outline: none;
+      cursor: pointer;
+    }
+    .persona-panel.alice input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--alice);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--alice-glow);
+    }
+    .persona-panel.bob input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--bob);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--bob-glow);
+    }
+
+    /* step cards */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .step {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+    }
+    .step-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+    .step-math {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .persona-panel.alice .step-math span.highlight { color: var(--alice); }
+    .persona-panel.bob   .step-math span.highlight { color: var(--bob); }
+
+    .step-result {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .persona-panel.alice .step-result { color: var(--alice); }
+    .persona-panel.bob   .step-result { color: var(--bob); }
+
+    /* exchange button */
+    .btn-exchange {
+      display: block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: none;
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    }
+    .persona-panel.alice .btn-exchange {
+      background: var(--alice);
+      color: #0f1117;
+    }
+    .persona-panel.bob .btn-exchange {
+      background: var(--bob);
+      color: #0f1117;
+    }
+    .btn-exchange:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    .btn-exchange:active { transform: translateY(0); }
+    .btn-exchange:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* --- middle column --- */
+    .middle-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding-top: 3rem;
+      min-width: 64px;
+    }
+    .middle-col .arrow {
+      font-size: 1.5rem;
+      color: var(--border);
+      transition: color 0.4s;
+    }
+    .middle-col .arrow.lit { color: var(--accent); }
+    .lock-icon {
+      font-size: 2rem;
+      filter: grayscale(1) opacity(0.3);
+      transition: filter 0.5s;
+    }
+    .lock-icon.active { filter: none; }
+
+    /* =========================================================
+       SHARED SECRET REVEAL
+    ========================================================= */
+    .secret-box {
+      background: var(--secret-dim);
+      border: 2px solid var(--secret);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      transition: box-shadow 0.4s;
+    }
+    .secret-box.glow {
+      box-shadow: 0 0 28px rgba(167,139,250,0.35);
+    }
+    .secret-box .secret-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--secret);
+      margin-bottom: 0.5rem;
+    }
+    .secret-value {
+      font-family: var(--mono);
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      font-weight: 700;
+      color: var(--secret);
+      line-height: 1;
+      min-height: 1.2em;
+      transition: opacity 0.3s;
+    }
+    .secret-value.hidden { opacity: 0.15; color: var(--muted); }
+    .secret-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .secret-math-row {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .secret-math-item {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .secret-math-item span { font-weight: 600; color: var(--secret); }
+
+    /* =========================================================
+       ERROR / NOTIFICATION BANNER
+    ========================================================= */
+    .notify {
+      display: none;
+      background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.4);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      font-size: 0.85rem;
+      color: #fbbf24;
+      margin-bottom: 1rem;
+    }
+    .notify.show { display: block; }
+
+    /* =========================================================
+       FLOW LEGEND
+    ========================================================= */
+    .flow-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .flow-legend span { display: flex; align-items: center; gap: 0.35rem; }
+    .flow-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================
+       RESET ALL BUTTON
+    ========================================================= */
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.18s, color 0.18s;
+      display: block;
+      margin: 0 auto 1.5rem;
+    }
+    .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* =========================================================
+       AD PLACEMENTS
+    ========================================================= */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    /* =========================================================
+       EDUCATIONAL CONTENT
+    ========================================================= */
+    .edu-wrap { max-width: 860px; margin: 0 auto; }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .glossary-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+    }
+    .glossary-term {
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 0.3rem;
+    }
+    .glossary-def { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+    .edu-section h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 1.25rem 0 0.4rem;
+    }
+    .section-intro {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+    .edu-section p {
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    /* FAQ */
+    .faq-item { border-top: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: 1px solid var(--border); }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem 0;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+      gap: 1rem;
+    }
+    .faq-q:hover { color: var(--accent); }
+    .faq-icon {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+      transition: transform 0.25s, border-color 0.2s;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); border-color: var(--accent); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .faq-item.open .faq-a { max-height: 800px; }
+    .faq-a-inner { padding-bottom: 0.85rem; }
+
+    /* disclaimer */
+    .disclaimer {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Diffie-Hellman <span>Key Exchange</span> Simulator</h1>
+    <p>Watch Alice and Bob derive an identical shared secret over a public channel, without ever transmitting their private keys. Adjust every variable in real time and see the modular arithmetic update instantly.</p>
+  </header>
+
+  <!-- ============================================================
+       NOTIFICATION BANNER
+  ============================================================ -->
+  <div class="notify" id="notify"></div>
+
+  <!-- ============================================================
+       CARD 1: PUBLIC PARAMETERS
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Step 1 of 4 - Set Public Parameters (Shared Openly)</div>
+    <div class="params-panel">
+      <div class="param-group">
+        <label for="pInput">Public Prime (p)</label>
+        <input type="number" id="pInput" value="23" min="2" max="9999" />
+      </div>
+      <div class="param-group">
+        <label for="gInput">Generator / Primitive Root (g)</label>
+        <input type="number" id="gInput" value="5" min="2" max="9999" />
+      </div>
+    </div>
+    <div class="preset-row">
+      <span class="preset-label">Presets:</span>
+      <button class="btn-preset" onclick="applyPreset(23,5)">p=23, g=5</button>
+      <button class="btn-preset" onclick="applyPreset(47,3)">p=47, g=3</button>
+      <button class="btn-preset" onclick="applyPreset(97,5)">p=97, g=5</button>
+      <button class="btn-preset" onclick="applyPreset(211,2)">p=211, g=2</button>
+      <button class="btn-preset" onclick="applyPreset(257,3)">p=257, g=3</button>
+    </div>
+    <div class="flow-legend" style="margin-top:1rem;">
+      <span><span class="flow-dot" style="background:var(--accent)"></span>Public (visible to everyone)</span>
+      <span><span class="flow-dot" style="background:var(--alice)"></span>Alice's private values</span>
+      <span><span class="flow-dot" style="background:var(--bob)"></span>Bob's private values</span>
+      <span><span class="flow-dot" style="background:var(--secret)"></span>Shared secret (derived independently)</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CARD 2: EXCHANGE ROOM
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Steps 2-4 - The Exchange Room</div>
+
+    <div class="exchange-room">
+
+      <!-- ALICE -->
+      <div class="persona-panel alice">
+        <div class="persona-name">&#128100; Alice</div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Private Key (a)</span>
+            <span class="slider-val" id="aDisplay">6</span>
+          </div>
+          <input type="range" id="aSlider" min="2" max="22" value="6" oninput="onSliderChange()" />
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-label">Step 2 - Choose Private Key</div>
+            <div class="step-math">a = <span class="highlight" id="aVal">6</span></div>
+            <div class="step-result" id="aPrivLabel" style="font-size:0.8rem;color:var(--muted);font-weight:400;">(kept secret)</div>
+          </div>
+          <div class="step">
+            <div class="step-label">Step 3 - Compute Public Key (A)</div>
+            <div class="step-math" id="alicePublicMath">g<sup>a</sup> mod p</div>
+            <div class="step-result" id="alicePublicResult">?</div>
+          </div>
+          <div class="step" id="aliceReceivedStep" style="opacity:0.35;">
+            <div class="step-label">Step 4 - Receive Bob's Public Key (B)</div>
+            <div class="step-math" id="aliceReceiveMath">B = ?</div>
+          </div>
+          <div class="step" id="aliceSecretStep" style="opacity:0.35;">
+            <div class="step-label">Step 5 - Compute Shared Secret</div>
+            <div class="step-math" id="aliceSecretMath">B<sup>a</sup> mod p</div>
+            <div class="step-result" id="aliceSecretResult" style="color:var(--secret);">?</div>
+          </div>
+        </div>
+
+        <button class="btn-exchange" id="aliceExchangeBtn" onclick="doExchange('alice')">
+          Send Public Key A to Bob &#8594;
+        </button>
+      </div>
+
+      <!-- MIDDLE -->
+      <div class="middle-col">
+        <div class="arrow" id="arrowLeft">&#8594;</div>
+        <div class="lock-icon" id="lockIcon">&#128274;</div>
+        <div class="arrow" id="arrowRight">&#8594;</div>
+      </div>
+
+      <!-- BOB -->
+      <div class="persona-panel bob">
+        <div class="persona-name">&#128101; Bob</div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Private Key (b)</span>
+            <span class="slider-val" id="bDisplay">15</span>
+          </div>
+          <input type="range" id="bSlider" min="2" max="22" value="15" oninput="onSliderChange()" />
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-label">Step 2 - Choose Private Key</div>
+            <div class="step-math">b = <span class="highlight" id="bVal">15</span></div>
+            <div class="step-result" style="font-size:0.8rem;color:var(--muted);font-weight:400;">(kept secret)</div>
+          </div>
+          <div class="step">
+            <div class="step-label">Step 3 - Compute Public Key (B)</div>
+            <div class="step-math" id="bobPublicMath">g<sup>b</sup> mod p</div>
+            <div class="step-result" id="bobPublicResult">?</div>
+          </div>
+          <div class="step" id="bobReceivedStep" style="opacity:0.35;">
+            <div class="step-label">Step 4 - Receive Alice's Public Key (A)</div>
+            <div class="step-math" id="bobReceiveMath">A = ?</div>
+          </div>
+          <div class="step" id="bobSecretStep" style="opacity:0.35;">
+            <div class="step-label">Step 5 - Compute Shared Secret</div>
+            <div class="step-math" id="bobSecretMath">A<sup>b</sup> mod p</div>
+            <div class="step-result" id="bobSecretResult" style="color:var(--secret);">?</div>
+          </div>
+        </div>
+
+        <button class="btn-exchange" id="bobExchangeBtn" onclick="doExchange('bob')">
+          &#8592; Send Public Key B to Alice
+        </button>
+      </div>
+
+    </div><!-- end exchange-room -->
+
+    <button class="btn-reset" onclick="resetExchange()">&#8635; Reset Exchange</button>
+  </div>
+
+  <!-- ============================================================
+       SHARED SECRET REVEAL
+  ============================================================ -->
+  <div class="secret-box" id="secretBox">
+    <div class="secret-label">&#128272; Shared Secret</div>
+    <div class="secret-value hidden" id="secretValue">?</div>
+    <div class="secret-sub" id="secretSub">Complete the exchange above to reveal the shared secret.</div>
+    <div class="secret-math-row" id="secretMathRow" style="display:none;">
+      <div class="secret-math-item">Alice computed: B<sup>a</sup> mod p = <span id="aliceVerify">?</span></div>
+      <div class="secret-math-item">Bob computed: A<sup>b</sup> mod p = <span id="bobVerify">?</span></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL CONTENT
+  ============================================================ -->
+  <div class="edu-wrap">
+
+    <!-- Glossary -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Diffie-Hellman (DH)</div>
+          <div class="glossary-def">A cryptographic key exchange protocol invented in 1976 by Whitfield Diffie and Martin Hellman. It allows two parties to establish a shared secret over an insecure channel without prior contact.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Shared Secret</div>
+          <div class="glossary-def">The identical number that both Alice and Bob independently compute at the end of the exchange. It is never transmitted over the network yet both parties arrive at the same value.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Prime Number (p)</div>
+          <div class="glossary-def">A number divisible only by 1 and itself. The prime p is the public modulus in Diffie-Hellman. Its size determines the security level - real implementations use primes of 2048 bits or larger.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Generator (g)</div>
+          <div class="glossary-def">Also called a primitive root, g is a public base number chosen so that its powers modulo p cycle through all integers from 1 to p-1. This property is essential for the protocol to work.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Modular Exponentiation</div>
+          <div class="glossary-def">The operation g^x mod p - raise g to the power x, then find the remainder when dividing by p. It is fast to compute forward but computationally infeasible to reverse with large numbers.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Private Key</div>
+          <div class="glossary-def">A secret random number chosen by each party (a for Alice, b for Bob) that is never shared with anyone. All security rests on keeping this value secret.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Public Key</div>
+          <div class="glossary-def">A value derived from the private key via modular exponentiation (A = g^a mod p). It can be shared openly with anyone. Knowing the public key does not reveal the private key.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Man-in-the-Middle Attack</div>
+          <div class="glossary-def">An attack where an adversary intercepts the exchange, creating separate shared secrets with Alice and Bob. DH alone does not prevent this - authentication via certificates (as used in TLS) is required.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Discrete Logarithm Problem</div>
+          <div class="glossary-def">Given A, g, and p where A = g^a mod p, find a. This is believed to be computationally hard for large primes, forming the security foundation of Diffie-Hellman.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Educational section -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Diffie-Hellman Key Exchange</h2>
+
+      <p class="section-intro">Every time you visit a website with "https://" in the address bar, a key exchange happens invisibly in milliseconds. Your browser and the server agree on a secret encryption key without ever sending that key over the internet. The mechanism making this possible is, at its mathematical core, exactly what you are experimenting with above.</p>
+
+      <h3>How to Use This Simulator</h3>
+      <p>Start with the Presets to load verified working parameters. Alice and Bob's private key sliders update all the math instantly - watch how changing a private key changes the public key but the protocol still produces the same shared secret at the end. Click "Send Public Key" for each party to animate the exchange. Both will independently compute the same shared secret from the other's public key combined with their own private key. Hit Reset to try different combinations.</p>
+
+      <h3>The Mathematics Step by Step</h3>
+      <p>The public parameters p (prime) and g (generator) are agreed upon openly - anyone can know them. Alice picks a private integer a and computes her public key: A = g^a mod p. Bob picks a private integer b and computes his public key: B = g^b mod p. They exchange A and B over the public channel. Alice then computes the shared secret as B^a mod p. Bob independently computes it as A^b mod p. These two computations yield the same result because B^a mod p = (g^b)^a mod p = g^(ab) mod p = (g^a)^b mod p = A^b mod p. The exponent ab appears in both computations - it is the shared secret - but neither party ever transmitted it.</p>
+
+      <h3>Why Small Numbers Work for Learning</h3>
+      <p>This simulator uses small primes (p = 23 to 257) so that you can follow the arithmetic mentally or on paper. In real TLS connections, p is a 2048-bit prime - a number with roughly 617 decimal digits. The private keys are also hundreds of digits long. The protocol logic is identical at any scale, but with small numbers you can verify every step, which is exactly the point of an educational tool.</p>
+
+      <h3>The Color Mixing Intuition</h3>
+      <p>The most famous analogy for Diffie-Hellman uses paint mixing. Imagine everyone can see a shared bucket of yellow paint (the generator g). Alice pours in a secret color known only to her (her private key a) and sends the mixed result to Bob. Bob does the same - adds his own private color (b) to the yellow and sends his mixture to Alice. Now Alice takes what Bob sent and adds her secret color again. Bob takes what Alice sent and adds his secret color. Remarkably, both end up with the same three-color mixture - the shared secret - even though they only exchanged two-color mixtures in public. An eavesdropper who sees both two-color mixtures cannot easily determine the final three-color result without knowing at least one private color, which maps directly to the Discrete Logarithm Problem.</p>
+
+      <h3>Forward Secrecy</h3>
+      <p>Modern TLS implementations use Ephemeral Diffie-Hellman (DHE or ECDHE), where fresh private keys are generated for every single connection and immediately discarded afterward. This property is called Perfect Forward Secrecy. Even if an attacker recorded your encrypted traffic today and somehow obtained a long-term private key years from now, they still cannot decrypt your past sessions because the ephemeral keys used for those sessions no longer exist. This is one of the strongest security properties in modern cryptography.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why is Diffie-Hellman the foundation of HTTPS and SSL/TLS?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Every HTTPS connection begins with a handshake where your browser and the server must agree on a shared encryption key - but they are communicating over a public network that anyone can monitor. Diffie-Hellman (and its elliptic curve variant ECDHE) solves this by allowing both parties to derive an identical secret from exchanged public values, without that secret ever appearing on the wire. The shared secret then seeds a symmetric cipher like AES for the rest of the session. Without this mechanism, establishing an encrypted channel over an untrusted network would be impossible.</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why can a hacker not just calculate the private keys from the public ones?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Computing a public key from a private key requires modular exponentiation: A = g^a mod p. This is fast in one direction. Reversing it - finding the exponent a given A, g, and p - is the Discrete Logarithm Problem (DLP). When p is a large prime (2048 or 4096 bits in real-world use), no efficient algorithm exists to solve this in any practical timeframe. Even the fastest known algorithms would take longer than the age of the universe on classical hardware. The asymmetry between the easy direction (exponentiation) and the hard direction (discrete logarithm) is the mathematical trapdoor that makes Diffie-Hellman secure.</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the color mixing analogy for Diffie-Hellman?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">Imagine Alice and Bob each have a secret private color. They both start with the same public shared color (yellow, like the generator g). Alice mixes her secret color into yellow and sends the result to Bob. Bob does the same and sends his result to Alice. Now each takes what they received and mixes in their own private color again. Both end up with the same final mixture - the shared secret - even though they never exchanged their private colors directly. An eavesdropper who sees only the public mixed colors cannot easily determine what private color each person added. This maps to the Discrete Logarithm Problem: seeing A and knowing g and p does not reveal a.</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Are the numbers used in this simulator secure for real-world encryption?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">No. This simulator uses small prime numbers (like p=23) intentionally so that the math remains readable and each step is verifiable by hand. In real-world usage, the prime p must be at least 2048 bits long - a number with roughly 617 decimal digits. With a small prime like 23, an attacker can simply try all possible private key values in milliseconds. The protocol logic is mathematically identical regardless of prime size, so small primes are ideal for learning the concept. For actual encryption, TLS 1.3 defaults to Elliptic Curve Diffie-Hellman (ECDHE) with curves like X25519, which provides equivalent security to 3072-bit classic DH with far shorter keys.</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is a Man-in-the-Middle attack and does Diffie-Hellman prevent it?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          <div class="faq-a-inner">In a Man-in-the-Middle (MitM) attack, an attacker intercepts communication between Alice and Bob, impersonating each party to the other. The attacker establishes a separate Diffie-Hellman exchange with Alice (pretending to be Bob) and another with Bob (pretending to be Alice). Both Alice and Bob believe they have a shared secret with each other, but the attacker controls both secrets and can read every message. Diffie-Hellman alone does not prevent this because neither party can verify who they are actually communicating with. Real-world TLS solves this by combining Diffie-Hellman with digital certificates signed by trusted Certificate Authorities, which authenticate the server's identity before the key exchange begins.</div>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        This tool is for educational purposes only. The small prime numbers used here are not cryptographically secure and should never be used for real encryption. For production security, use established libraries and protocols such as TLS 1.3 with ECDHE. All calculations run entirely in your browser - no data is transmitted or stored.
+      </div>
+    </div>
+
+  </div><!-- end edu-wrap -->
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+let exchanged = { alice: false, bob: false };
+
+/* ============================================================
+   MODULAR EXPONENTIATION (fast, handles large bases)
+   Uses BigInt to avoid float overflow
+============================================================ */
+function modpow(base, exp, mod) {
+  if (mod === 1n) return 0n;
+  let result = 1n;
+  base = base % mod;
+  while (exp > 0n) {
+    if (exp % 2n === 1n) result = (result * base) % mod;
+    exp = exp / 2n;
+    base = (base * base) % mod;
+  }
+  return result;
+}
+
+/* ============================================================
+   VALIDATE & RECOMPUTE
+============================================================ */
+function getParams() {
+  const p = parseInt(document.getElementById('pInput').value, 10);
+  const g = parseInt(document.getElementById('gInput').value, 10);
+  const a = parseInt(document.getElementById('aSlider').value, 10);
+  const b = parseInt(document.getElementById('bSlider').value, 10);
+  return { p, g, a, b };
+}
+
+function showNotify(msg) {
+  const el = document.getElementById('notify');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function clearNotify() {
+  const el = document.getElementById('notify');
+  el.classList.remove('show');
+  el.textContent = '';
+}
+
+function updateSliderMax() {
+  const { p } = getParams();
+  const max = Math.max(2, p - 1);
+  const aSlider = document.getElementById('aSlider');
+  const bSlider = document.getElementById('bSlider');
+  if (parseInt(aSlider.max) !== max) {
+    aSlider.max = max;
+    if (parseInt(aSlider.value) >= p) aSlider.value = Math.min(max, Math.floor(p / 2));
+  }
+  if (parseInt(bSlider.max) !== max) {
+    bSlider.max = max;
+    if (parseInt(bSlider.value) >= p) bSlider.value = Math.max(2, Math.floor(p * 2 / 3));
+  }
+}
+
+function recompute() {
+  clearNotify();
+  updateSliderMax();
+
+  const { p, g, a, b } = getParams();
+
+  // Validate
+  let errors = [];
+  if (!Number.isInteger(p) || p < 2)  errors.push('p must be an integer >= 2.');
+  if (!Number.isInteger(g) || g < 2)  errors.push('g must be an integer >= 2.');
+  if (a >= p) errors.push('Private keys must be smaller than the Prime (p) for this demonstration.');
+  if (b >= p) errors.push('Private keys must be smaller than the Prime (p) for this demonstration.');
+  if (errors.length) { showNotify(errors[0]); return; }
+
+  const pB = BigInt(p), gB = BigInt(g), aB = BigInt(a), bB = BigInt(b);
+
+  // Public keys
+  const A = modpow(gB, aB, pB);
+  const B = modpow(gB, bB, pB);
+
+  // Shared secrets
+  const sAlice = modpow(B, aB, pB);
+  const sBob   = modpow(A, bB, pB);
+
+  // --- Update display ---
+  // Slider labels
+  document.getElementById('aDisplay').textContent = a;
+  document.getElementById('bDisplay').textContent = b;
+  document.getElementById('aVal').textContent = a;
+  document.getElementById('bVal').textContent = b;
+
+  // Alice public
+  document.getElementById('alicePublicMath').innerHTML =
+    `<span class="highlight">${g}</span><sup>${a}</sup> mod ${p} = `;
+  document.getElementById('alicePublicResult').textContent = A.toString();
+
+  // Bob public
+  document.getElementById('bobPublicMath').innerHTML =
+    `<span class="highlight">${g}</span><sup>${b}</sup> mod ${p} = `;
+  document.getElementById('bobPublicResult').textContent = B.toString();
+
+  // If exchange already done, update the received/secret steps too
+  if (exchanged.alice && exchanged.bob) {
+    document.getElementById('aliceReceiveMath').innerHTML = `B = <span class="highlight">${B}</span>`;
+    document.getElementById('bobReceiveMath').innerHTML = `A = <span class="highlight">${A}</span>`;
+    document.getElementById('aliceSecretMath').innerHTML =
+      `<span class="highlight">${B}</span><sup>${a}</sup> mod ${p}`;
+    document.getElementById('bobSecretMath').innerHTML =
+      `<span class="highlight">${A}</span><sup>${b}</sup> mod ${p}`;
+    document.getElementById('aliceSecretResult').textContent = sAlice.toString();
+    document.getElementById('bobSecretResult').textContent = sBob.toString();
+    revealSecret(sAlice, sBob, A, B, p, a, b);
+  } else if (exchanged.alice) {
+    document.getElementById('aliceSecretMath').innerHTML =
+      `<span class="highlight">${B}</span><sup>${a}</sup> mod ${p}`;
+  } else if (exchanged.bob) {
+    document.getElementById('bobSecretMath').innerHTML =
+      `<span class="highlight">${A}</span><sup>${b}</sup> mod ${p}`;
+  }
+}
+
+/* ============================================================
+   EXCHANGE ANIMATION
+============================================================ */
+function doExchange(who) {
+  const { p, g, a, b } = getParams();
+  if (parseInt(document.getElementById('aSlider').value) >= p ||
+      parseInt(document.getElementById('bSlider').value) >= p) {
+    showNotify('Fix the private key values before exchanging.');
+    return;
+  }
+
+  const pB = BigInt(p), gB = BigInt(g), aB = BigInt(a), bB = BigInt(b);
+  const A = modpow(gB, aB, pB);
+  const B = modpow(gB, bB, pB);
+
+  if (who === 'alice') {
+    exchanged.alice = true;
+    document.getElementById('aliceExchangeBtn').disabled = true;
+    // Bob receives A
+    document.getElementById('bobReceiveMath').innerHTML = `A = <span class="highlight">${A}</span>`;
+    document.getElementById('bobReceivedStep').style.opacity = '1';
+    // Animate arrow
+    document.getElementById('arrowLeft').classList.add('lit');
+    // Bob can now compute secret
+    document.getElementById('bobSecretStep').style.opacity = '1';
+    document.getElementById('bobSecretMath').innerHTML =
+      `<span class="highlight">${A}</span><sup>${b}</sup> mod ${p}`;
+    document.getElementById('bobSecretResult').textContent = modpow(A, bB, pB).toString();
+  } else {
+    exchanged.bob = true;
+    document.getElementById('bobExchangeBtn').disabled = true;
+    // Alice receives B
+    document.getElementById('aliceReceiveMath').innerHTML = `B = <span class="highlight">${B}</span>`;
+    document.getElementById('aliceReceivedStep').style.opacity = '1';
+    // Animate arrow
+    document.getElementById('arrowRight').classList.add('lit');
+    // Alice can now compute secret
+    document.getElementById('aliceSecretStep').style.opacity = '1';
+    document.getElementById('aliceSecretMath').innerHTML =
+      `<span class="highlight">${B}</span><sup>${a}</sup> mod ${p}`;
+    document.getElementById('aliceSecretResult').textContent = modpow(B, aB, pB).toString();
+  }
+
+  if (exchanged.alice && exchanged.bob) {
+    const sAlice = modpow(B, aB, pB);
+    const sBob   = modpow(A, bB, pB);
+    revealSecret(sAlice, sBob, A, B, p, a, b);
+  }
+}
+
+function revealSecret(sAlice, sBob, A, B, p, a, b) {
+  const box   = document.getElementById('secretBox');
+  const val   = document.getElementById('secretValue');
+  const sub   = document.getElementById('secretSub');
+  const row   = document.getElementById('secretMathRow');
+  const lock  = document.getElementById('lockIcon');
+
+  val.classList.remove('hidden');
+  val.textContent = sAlice.toString();
+  box.classList.add('glow');
+  lock.classList.add('active');
+  document.getElementById('arrowLeft').classList.add('lit');
+  document.getElementById('arrowRight').classList.add('lit');
+
+  document.getElementById('aliceVerify').textContent = sAlice.toString();
+  document.getElementById('bobVerify').textContent   = sBob.toString();
+  row.style.display = 'flex';
+
+  if (sAlice === sBob) {
+    sub.textContent = 'Both parties independently computed the same shared secret. The key exchange is complete.';
+    sub.style.color = '#4ade80';
+  } else {
+    sub.textContent = 'Warning: values do not match. Check that g is a primitive root of p.';
+    sub.style.color = '#f87171';
+  }
+}
+
+/* ============================================================
+   RESET
+============================================================ */
+function resetExchange() {
+  exchanged = { alice: false, bob: false };
+
+  // Buttons
+  document.getElementById('aliceExchangeBtn').disabled = false;
+  document.getElementById('bobExchangeBtn').disabled = false;
+
+  // Steps
+  ['aliceReceivedStep','aliceSecretStep','bobReceivedStep','bobSecretStep'].forEach(id => {
+    document.getElementById(id).style.opacity = '0.35';
+  });
+
+  // Math text placeholders
+  document.getElementById('aliceReceiveMath').textContent = 'B = ?';
+  document.getElementById('bobReceiveMath').textContent   = 'A = ?';
+  document.getElementById('aliceSecretMath').textContent  = 'B^a mod p';
+  document.getElementById('bobSecretMath').textContent    = 'A^b mod p';
+  document.getElementById('aliceSecretResult').textContent = '?';
+  document.getElementById('bobSecretResult').textContent   = '?';
+
+  // Arrows / lock
+  document.getElementById('arrowLeft').classList.remove('lit');
+  document.getElementById('arrowRight').classList.remove('lit');
+  document.getElementById('lockIcon').classList.remove('active');
+
+  // Secret box
+  const val = document.getElementById('secretValue');
+  val.classList.add('hidden');
+  val.textContent = '?';
+  document.getElementById('secretBox').classList.remove('glow');
+  document.getElementById('secretSub').textContent = 'Complete the exchange above to reveal the shared secret.';
+  document.getElementById('secretSub').style.color = '';
+  document.getElementById('secretMathRow').style.display = 'none';
+
+  clearNotify();
+  recompute();
+}
+
+/* ============================================================
+   PRESETS
+============================================================ */
+function applyPreset(p, g) {
+  document.getElementById('pInput').value = p;
+  document.getElementById('gInput').value = g;
+  // Reset slider values to sensible defaults within new range
+  const aDefault = Math.min(6, p - 1);
+  const bDefault = Math.min(Math.floor(p * 2 / 3), p - 1);
+  document.getElementById('aSlider').value = aDefault;
+  document.getElementById('bSlider').value = bDefault;
+  resetExchange();
+}
+
+/* ============================================================
+   EVENT WIRING
+============================================================ */
+function onSliderChange() { recompute(); }
+
+document.getElementById('pInput').addEventListener('input', resetExchange);
+document.getElementById('gInput').addEventListener('input', resetExchange);
+document.getElementById('aSlider').addEventListener('input', recompute);
+document.getElementById('bSlider').addEventListener('input', recompute);
+
+/* ============================================================
+   FAQ TOGGLE
+============================================================ */
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+recompute();
+</script>
+
+</body>
+</html>

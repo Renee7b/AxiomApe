@@ -275,6 +275,9 @@ Legend: [x] done, [ ] not started
 ## Batch 48 (new tools, built directly to template) - DONE
 - [x] sql-formatter
 
+## Batch 115 (new tools, built directly to template) - DONE
+- [x] periodic-table
+
 ## Remaining tools (alphabetical)
 None. Rollout complete: all tools have been updated to the site-wide template.
 
@@ -528,3 +531,156 @@ None. Rollout complete: all tools have been updated to the site-wide template.
 
 ## Batch 93 (new tools, built directly to template) - DONE
 - [x] social-media-aspect-resizer
+
+## Batch 94 (new tools, built directly to template) - DONE
+- [x] instagram-clean-caption-spacer
+
+## Batch 95 (new tools, built directly to template) - DONE
+- [x] twitch-stream-revenue-estimator
+
+## Batch 94 (new tools, built directly to template) - DONE
+- [x] podcast-episode-file-bitrate-estimator
+## Batch 95 (new tools, built directly to template) - DONE
+- [x] link-in-bio-generator
+
+## Batch 96 (new tools, built directly to template) - DONE
+- [x] ctr-impact-predictor
+
+
+## Batch 96 (new tools, built directly to template) - DONE
+- [x] social-handle-checker
+
+## Batch 97 (new tools, built directly to template) - DONE
+- [x] hex-dump-inspector
+
+## Batch 97 (new tools, built directly to template) - DONE
+- [x] sponsorship-rate-evaluator
+
+## Batch 96 (new tools, built directly to template) - DONE
+- [x] morse-code-audio-synthesizer
+
+## Batch 98 (new tools, built directly to template) - DONE
+- [x] bip39-mnemonic-generator
+
+## Batch 99 (new tools, built directly to template) - DONE
+- [x] yaml-to-json-converter
+
+## Batch 99 (new tools, built directly to template) - DONE
+- [x] markdown-table-grid-builder
+
+## Batch 99 (new tools, built directly to template) - DONE
+- [x] vigenere-cipher
+
+## Batch 99 (new tools, built directly to template) - DONE
+- [x] caesar-cipher-matrix
+
+## Batch 100 (new tools, built directly to template) - DONE
+- [x] levenshtein-distance
+
+## Batch 101 (new tools, built directly to template) - DONE
+- [x] sql-input-sanitizer
+
+## Batch 101 (new tools, built directly to template) - DONE
+- [x] diffie-hellman-key-exchange-simulator
+
+## Batch 102 (new tools, built directly to template) - DONE
+- [x] ohms-law-calculator
+
+## Batch 103 (new tools, built directly to template) - DONE
+- [x] multi-stage-kinematics-calculator
+
+## Batch 104 (new tools, built directly to template) - DONE
+- [x] wave-mechanics-solver
+
+## Batch 104 (new tools, built directly to template) - DONE
+- [x] gravitational-attraction-calculator
+
+## Batch 104 (new tools, built directly to template) - DONE
+- [x] reynolds-number-calculator
+
+## Batch 104 (new tools, built directly to template) - DONE
+- [x] half-life-radioactive-decay-visualizer
+
+## Batch 105 (new tools, built directly to template) - DONE
+- [x] projectile-motion-vector-animator
+
+## Batch 106 (new tools, built directly to template) - DONE
+- [x] pendulum-harmonic-motion-oscillator
+
+## Batch 107 (new tools, built directly to template) - DONE
+- [x] centripetal-force-rotation-estimator
+
+## Batch 108 (new tools, built directly to template) - DONE
+- [x] ideal-gas-law
+
+## Batch 105 (new tools, built directly to template) - DONE
+- [x] classical-kinematics-calculator
+
+## Batch 109 (new tools, built directly to template) - DONE
+- [x] matrix-determinant-solver
+
+## Batch 109 (new tools, built directly to template) - DONE
+- [x] linear-regression-trend-calculator
+
+## Batch 110 (new tools, built directly to template) - DONE
+- [x] vector-dot-cross-product-computer
+
+## Batch 110 (new tools, built directly to template) - DONE
+- [x] prime-factorization-engine
+
+## Batch 111 (new tools, built directly to template) - DONE
+- [x] quadratic-formula-solver
+
+## Batch 110 (new tools, built directly to template) - DONE
+- [x] permutation-combination-generator
+
+## Batch 112 (new tools, built directly to template) - DONE
+- [x] base-n-radix-calculator
+
+## Batch 113 (new tools, built directly to template) - DONE
+- [x] bayes-theorem-calculator
+
+## Batch 114 (new tools, built directly to template) - DONE
+- [x] logarithmic-exponential-growth-computer
+
+## Batch 112 (new tools, built directly to template) - DONE
+- [x] fibonacci-matrix-visualizer
+
+## Batch 115 (new tools, built directly to template) - DONE
+- [x] chemical-equation-balancer
+
+## Batch 116 (new tools, built directly to template) - DONE
+- [x] molarity-solution-dilution-calculator
+
+## Batch 117 (new tools, built directly to template) - DONE
+- [x] empirical-formula-calculator
+
+## Batch 117 (new tools, built directly to template) - DONE
+- [x] molecular-weight-calculator
+
+## Batch 118 (new tools, built directly to template) - DONE
+- [x] ph-hydrogen-ion-concentration-solver
+
+## Batch 119 (new tools, built directly to template) - DONE
+- [x] gas-law-comparator
+
+## Batch 120 (new tools, built directly to template) - DONE
+- [x] specific-heat-capacity-calculator
+
+## Batch 121 (new tools, built directly to template) - DONE
+- [x] golden-ratio-layout-grid-configurator
+
+## Batch 121 (new tools, built directly to template) - DONE
+- [x] fluid-typography-clamp-generator
+
+## Batch 122 (new tools, built directly to template) - DONE
+- [x] radioactive-isotope-half-life-computer
+
+## Batch 123 (new tools, built directly to template) - DONE
+- [x] css-aspect-ratio-box-sizing-visualizer
+
+## Batch 121 (new tools, built directly to template) - DONE
+- [x] electron-configuration-solver
+
+## Batch 121 (new tools, built directly to template) - DONE
+- [x] svg-path-shape-morphing-playground

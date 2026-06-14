@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linear Regression Trend Calculator: Plot Scatter Points and Output Formulas Instantly | AxiomApe</title>
+  <meta name="description" content="Free linear regression calculator with live scatter plot. Enter X and Y coordinates manually or paste from Excel. Instantly plots the line of best fit and outputs the slope, y-intercept, Pearson r, and R-squared. 100% client-side, nothing sent to any server." />
+  <meta name="keywords" content="linear regression calculator, scatter plot generator, line of best fit, OLS regression, slope calculator, y-intercept calculator, Pearson correlation coefficient, R-squared calculator, least squares method, regression equation, trend line calculator, data analysis tool, statistics calculator, correlation calculator, best fit line" />
+  <link rel="canonical" href="https://axiomape.com/linear-regression-trend-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Linear Regression Trend Calculator",
+        "description": "Free linear regression calculator with live scatter plot. Enter X and Y coordinates manually or paste from Excel. Instantly plots the line of best fit and outputs the slope, y-intercept, Pearson r, and R-squared. 100% client-side, nothing sent to any server.",
+        "url": "https://axiomape.com/linear-regression-trend-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between r and R-squared in linear regression?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "r is the Pearson Correlation Coefficient, a value between -1 and 1 that measures the strength and direction of the linear relationship between X and Y. R-squared (also written R2) is simply r multiplied by itself. While r tells you the direction (positive or negative) and strength of the correlation, R-squared tells you the proportion of variance in Y that is explained by X. For example, r = 0.9 means a strong positive correlation, and R-squared = 0.81 means 81% of the variation in Y is accounted for by the regression model. R-squared is always between 0 and 1, so it loses the directional sign that r carries."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does a single outlier affect the line of best fit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A single outlier can dramatically shift the line of best fit, especially in small datasets. The Ordinary Least Squares method minimizes the sum of squared vertical distances from each point to the line. Because errors are squared, a point far from the cluster contributes a disproportionately large penalty and pulls the regression line toward itself. In a dataset of 5 points, one extreme outlier can swing the slope by 50% or more and artificially inflate or deflate R-squared. Always inspect your scatter plot for outliers before trusting a regression equation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is it dangerous to extrapolate data beyond the scatter plot?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Extrapolation means using the regression equation to predict Y values for X values outside the range of your observed data. The line of best fit is only calibrated to the data you have. Beyond that range, the relationship may curve, plateau, reverse, or behave in ways your model cannot predict. For example, a model trained on population growth from 2000 to 2010 will not reliably forecast 2050. Extrapolated predictions are often wildly wrong, and the further you go beyond the data range, the less trustworthy the estimate becomes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a strong correlation or high R-squared prove causation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Correlation measures how closely two variables move together, but it cannot tell you why. A high R-squared only means the regression model explains a large share of the variance in Y using X. It does not mean X causes Y. Both variables might be driven by a third confounding variable, or the relationship could be coincidental. For example, ice cream sales and drowning rates are both high in summer - they correlate strongly, but ice cream does not cause drowning. Establishing causation requires controlled experiments or careful study design, not regression alone."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does a negative slope mean in a regression equation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A negative slope means that as X increases, Y tends to decrease. The two variables move in opposite directions. For example, as study hours increase, errors on a test tend to decrease - a negative slope. The magnitude of the slope tells you the rate: a slope of -2.5 means Y drops by 2.5 units for every 1-unit increase in X. A negative slope does not mean the relationship is weak. The strength is measured by r and R-squared independently of the direction. A slope of -0.01 is weak; a slope of -50 with R-squared near 1.0 is a very strong negative relationship."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0D1117;
+      --bg-card:       #161B22;
+      --bg-input:      #0D1117;
+      --border:        #30363D;
+      --border-active: #F59E0B;
+      --text:          #E6EDF3;
+      --text-muted:    #8B949E;
+      --text-dim:      #484F58;
+
+      --yellow:        #F59E0B;
+      --yellow-dim:    rgba(245,158,11,0.15);
+      --cyan:          #06B6D4;
+      --cyan-dim:      rgba(6,182,212,0.15);
+      --red:           #EF4444;
+      --red-dim:       rgba(239,68,68,0.15);
+      --green:         #22C55E;
+      --green-dim:     rgba(34,197,94,0.15);
+      --purple:        #A855F7;
+
+      --mono:   'Courier New', Courier, monospace;
+      --sans:   system-ui, -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ---- Layout ---- */
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ---- Card ---- */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--yellow);
+      margin-bottom: 1rem;
+      letter-spacing: 0.03em;
+    }
+
+    /* ---- Canvas / Plot ---- */
+    #scatter-canvas {
+      width: 100%;
+      height: 380px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: block;
+    }
+    .plot-label {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 0.4rem;
+    }
+
+    /* ---- Hero Outputs ---- */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .hero-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.2rem;
+      text-align: center;
+    }
+    .hero-box .hero-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3rem;
+    }
+    .hero-box .hero-value {
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .hero-box.eq .hero-value {
+      color: var(--yellow);
+      font-size: 1rem;
+    }
+    .hero-box.r2-box .hero-value {
+      color: var(--green);
+    }
+    .hero-box.r-box .hero-value {
+      color: var(--purple);
+    }
+
+    /* ---- Dual Entry ---- */
+    .entry-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .tab-btn {
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      border-color: var(--yellow);
+      background: var(--yellow-dim);
+      color: var(--yellow);
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ---- Data Table ---- */
+    .data-table-wrap {
+      overflow-x: auto;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    table.data-table th {
+      text-align: center;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    table.data-table td {
+      padding: 0.3rem 0.4rem;
+      text-align: center;
+      vertical-align: middle;
+    }
+    table.data-table td input[type="number"] {
+      width: 100px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.35rem 0.5rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    table.data-table td input[type="number"]:focus {
+      border-color: var(--cyan);
+    }
+    .row-num {
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      width: 30px;
+    }
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .del-btn:hover { color: var(--red); }
+
+    .add-row-btn {
+      margin-top: 0.8rem;
+      padding: 0.45rem 1rem;
+      background: var(--cyan-dim);
+      border: 1px solid var(--cyan);
+      border-radius: var(--radius-sm);
+      color: var(--cyan);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .add-row-btn:hover { background: rgba(6,182,212,0.25); }
+
+    /* ---- Bulk Import ---- */
+    .bulk-textarea {
+      width: 100%;
+      min-height: 160px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      padding: 0.75rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .bulk-textarea:focus { border-color: var(--cyan); }
+    .bulk-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+    .bulk-status {
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+      font-weight: 600;
+      min-height: 1.2em;
+    }
+    .bulk-status.ok { color: var(--green); }
+    .bulk-status.err { color: var(--red); }
+
+    /* ---- Correlation Guide ---- */
+    .guide-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 0.75rem;
+    }
+    .guide-table th {
+      text-align: left;
+      padding: 0.5rem 0.7rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    .guide-table td {
+      padding: 0.55rem 0.7rem;
+      border-bottom: 1px solid rgba(48,54,61,0.5);
+      vertical-align: top;
+    }
+    .guide-table tr:last-child td { border-bottom: none; }
+    .strength-badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    /* ---- Glossary ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .glossary-item {}
+    .glossary-term {
+      font-weight: 700;
+      color: var(--cyan);
+      font-size: 0.88rem;
+      margin-bottom: 0.2rem;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ---- Educational section ---- */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--yellow);
+      margin-top: 1.2rem;
+      margin-bottom: 0.4rem;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ---- FAQ ---- */
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.9rem 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .faq-q::after {
+      content: '+';
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-q.open::after { transform: rotate(45deg); }
+    .faq-a {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.2s;
+    }
+    .faq-a.open {
+      max-height: 600px;
+      padding-bottom: 1rem;
+    }
+
+    /* ---- Empty state ---- */
+    .empty-hint {
+      display: none;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-dim);
+      font-size: 0.88rem;
+    }
+
+    /* ---- Ad placements ---- */
+    .axiom-ad-leaderboard { margin: 1.5rem 0; }
+    .axiom-ad-mobile-anchor {}
+
+    /* ---- Responsive ---- */
+    @media (max-width: 600px) {
+      table.data-table td input[type="number"] { width: 80px; }
+      .hero-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Linear Regression Trend Calculator</h1>
+    <p>Plot coordinate scatter points and output the line of best fit, slope, y-intercept, Pearson r, and R-squared instantly. 100% local, nothing ever sent anywhere.</p>
+  </header>
+
+  <!-- ============================================================
+       SCATTER PLOT + HERO OUTPUTS
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Scatter Plot with Line of Best Fit</div>
+    <canvas id="scatter-canvas"></canvas>
+    <p class="plot-label" id="plot-label">Add at least 2 data points to see the regression line.</p>
+
+    <div class="hero-grid" id="hero-outputs" style="display:none">
+      <div class="hero-box eq">
+        <div class="hero-label">Regression Equation</div>
+        <div class="hero-value" id="out-eq">y = mx + b</div>
+      </div>
+      <div class="hero-box">
+        <div class="hero-label">Slope (m)</div>
+        <div class="hero-value" id="out-slope">--</div>
+      </div>
+      <div class="hero-box">
+        <div class="hero-label">Y-Intercept (b)</div>
+        <div class="hero-value" id="out-b">--</div>
+      </div>
+      <div class="hero-box r-box">
+        <div class="hero-label">Pearson r</div>
+        <div class="hero-value" id="out-r">--</div>
+      </div>
+      <div class="hero-box r2-box">
+        <div class="hero-label">R-Squared (R2)</div>
+        <div class="hero-value" id="out-r2">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       DUAL DATA ENTRY
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Enter Your Data</div>
+
+    <div class="entry-tabs">
+      <button class="tab-btn active" onclick="switchTab('manual', this)">Manual Grid</button>
+      <button class="tab-btn" onclick="switchTab('bulk', this)">Bulk Import (Paste from Excel)</button>
+    </div>
+
+    <!-- Manual Grid -->
+    <div class="tab-panel active" id="panel-manual">
+      <div class="data-table-wrap">
+        <table class="data-table" id="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>X</th>
+              <th>Y</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="data-tbody">
+          </tbody>
+        </table>
+      </div>
+      <button class="add-row-btn" onclick="addRow()">+ Add Row</button>
+    </div>
+
+    <!-- Bulk Import -->
+    <div class="tab-panel" id="panel-bulk">
+      <textarea
+        class="bulk-textarea"
+        id="bulk-textarea"
+        placeholder="Paste X,Y pairs here. One pair per line. Comma, tab, or space separated. Example:
+1, 2.5
+2, 4.1
+3, 6.8
+4, 8.2
+5, 10.0"
+        oninput="parseBulk()"
+      ></textarea>
+      <div class="bulk-hint">Supports comma, tab, or space delimiters. Extra whitespace and blank lines are ignored. Parsing instantly populates the manual grid.</div>
+      <div class="bulk-status" id="bulk-status"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CORRELATION STRENGTH GUIDE
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Correlation Strength Guide</div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">Use this table to interpret your R-squared value in real-world terms.</p>
+    <table class="guide-table">
+      <thead>
+        <tr>
+          <th>R-Squared Range</th>
+          <th>Pearson r Range</th>
+          <th>Strength</th>
+          <th>What It Means in Practice</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>0.90 - 1.00</strong></td>
+          <td>r: 0.95 - 1.00 (or -0.95 to -1.00)</td>
+          <td><span class="strength-badge" style="background:rgba(34,197,94,0.2);color:#22C55E">Very Strong</span></td>
+          <td>The line fits the data almost perfectly. Rare in real-world behavioral or social data. Common in controlled physical experiments.</td>
+        </tr>
+        <tr>
+          <td><strong>0.70 - 0.89</strong></td>
+          <td>r: 0.84 - 0.94 (or -0.84 to -0.94)</td>
+          <td><span class="strength-badge" style="background:rgba(6,182,212,0.2);color:#06B6D4">Strong</span></td>
+          <td>Most of the variance in Y is explained by X. A reliable model for forecasting within your data range.</td>
+        </tr>
+        <tr>
+          <td><strong>0.50 - 0.69</strong></td>
+          <td>r: 0.71 - 0.83 (or -0.71 to -0.83)</td>
+          <td><span class="strength-badge" style="background:rgba(168,85,247,0.2);color:#A855F7">Moderate</span></td>
+          <td>A meaningful relationship exists, but other variables also influence Y. Useful for trend direction, not precise prediction.</td>
+        </tr>
+        <tr>
+          <td><strong>0.30 - 0.49</strong></td>
+          <td>r: 0.55 - 0.70 (or -0.55 to -0.70)</td>
+          <td><span class="strength-badge" style="background:rgba(245,158,11,0.2);color:#F59E0B">Weak</span></td>
+          <td>Some linear signal, but the model explains less than half the variance. Other factors likely dominate.</td>
+        </tr>
+        <tr>
+          <td><strong>0.00 - 0.29</strong></td>
+          <td>r: 0.00 - 0.54 (or -0.00 to -0.54)</td>
+          <td><span class="strength-badge" style="background:rgba(239,68,68,0.2);color:#EF4444">Very Weak / None</span></td>
+          <td>Little to no linear relationship between X and Y. A straight-line model is not appropriate for this data.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       GLOSSARY
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Linear Regression</div>
+        <div class="glossary-def">A statistical method that models the relationship between two variables using a straight line. Given a set of data points, it finds the line that best predicts Y from X.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Scatter Plot</div>
+        <div class="glossary-def">A graph that displays individual data points on a two-dimensional plane, with one variable on each axis. Reveals the shape, direction, and spread of a relationship.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Line of Best Fit</div>
+        <div class="glossary-def">The single straight line that minimizes the total squared distance between all data points and the line itself. Also called the regression line or trend line.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Slope (m)</div>
+        <div class="glossary-def">How steeply the line rises or falls. A slope of 3 means Y increases by 3 units for every 1-unit increase in X. A negative slope means Y decreases as X increases.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Y-Intercept (b)</div>
+        <div class="glossary-def">The value of Y when X equals zero. It is the point where the regression line crosses the Y-axis. In many real-world datasets, the y-intercept is a baseline or starting value.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Pearson Correlation Coefficient (r)</div>
+        <div class="glossary-def">A number from -1 to 1 measuring the strength and direction of the linear relationship. Values near 1 or -1 are strong; values near 0 indicate little linear association.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">R-Squared (R2)</div>
+        <div class="glossary-def">The proportion of variance in Y explained by the regression model. R2 = 0.80 means 80% of the variation in Y is accounted for by its linear relationship with X.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Least Squares Method</div>
+        <div class="glossary-def">The algorithm behind Ordinary Least Squares (OLS) regression. It finds the slope and intercept that minimize the sum of the squares of the vertical residuals (errors).</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Outlier</div>
+        <div class="glossary-def">A data point that lies far from the general pattern of the other points. Outliers can have an outsized influence on the slope and intercept of the regression line.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Extrapolation</div>
+        <div class="glossary-def">Using the regression equation to predict Y for X values outside the range of the observed data. Extrapolation is risky because the linear relationship may not hold beyond the data range.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL SECTION
+  ============================================================ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Linear Regression and Scatter Plot Analysis</h2>
+    <p class="section-intro">
+      Whether you are a student running a science experiment, an analyst building a business forecast, or a researcher looking for patterns in survey data, linear regression is the most widely used tool in quantitative analysis. This guide explains the math, the interpretation, and the pitfalls, so you can go beyond plugging numbers into a formula and actually understand what the output means.
+    </p>
+
+    <h3>How to Use This Calculator</h3>
+    <p class="section-intro">
+      There are two ways to get your data in. Use the <strong>Manual Grid</strong> tab to type X and Y pairs row by row - click "Add Row" to expand the table as needed. Use the <strong>Bulk Import</strong> tab to paste a column of data directly from Excel, Google Sheets, or any plain text source. Comma, tab, and space delimiters all work. Pasting into the bulk textarea instantly populates the manual grid, so you can fine-tune individual points after importing. The scatter plot, regression line, and all statistical outputs update in real time as you type - no calculate button needed.
+    </p>
+
+    <h3>The Math Behind the Line</h3>
+    <p class="section-intro">
+      This tool uses Ordinary Least Squares (OLS), the standard method for simple linear regression. Given n data points (x1, y1), (x2, y2), ..., (xn, yn), the formulas are:
+    </p>
+    <p class="section-intro" style="font-family:var(--mono);font-size:0.88rem;color:var(--cyan)">
+      m = (n * sum(xy) - sum(x) * sum(y)) / (n * sum(x2) - sum(x)^2)<br>
+      b = (sum(y) - m * sum(x)) / n
+    </p>
+    <p class="section-intro">
+      The Pearson Correlation Coefficient (r) is computed from the same building blocks, and R-squared is simply r multiplied by itself. When R-squared is 1.0, all points fall exactly on the line. When it is 0, the line explains none of the variation in Y.
+    </p>
+
+    <h3>Reading the Scatter Plot</h3>
+    <p class="section-intro">
+      Look at the plot before you trust the numbers. The scatter of the points around the regression line (in red) tells you a lot: if all the points cluster tightly around the line, R-squared will be high. If they form a curve rather than a straight line, linear regression is the wrong model for your data - no matter how high R-squared appears, a curved pattern means the linear assumption is violated. Also look for outliers: a single point far from the cluster often has more influence on the slope than a dozen well-behaved points.
+    </p>
+
+    <h3>Frequently Asked Questions</h3>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">What is the difference between r and R-squared in linear regression?</button>
+      <div class="faq-a">r is the Pearson Correlation Coefficient: a value between -1 and 1 that measures the strength and direction of the linear relationship. R-squared is r multiplied by itself, always between 0 and 1. While r tells you direction (positive or negative), R-squared tells you the proportion of variance in Y that the model explains. For example, r = 0.9 means a strong positive correlation; R-squared = 0.81 means 81% of the variation in Y is accounted for by the linear model. R-squared loses the sign, so you need r to know whether the relationship is positive or negative.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">How does a single outlier affect the line of best fit?</button>
+      <div class="faq-a">A single outlier can dramatically shift the regression line, especially in small datasets. The Ordinary Least Squares method minimizes the sum of squared residuals. Because errors are squared, a point far from the cluster contributes a disproportionately large penalty and pulls the line toward itself. In a dataset of 5 points, one extreme outlier can swing the slope by 50% or more and artificially inflate or deflate R-squared. Always inspect your scatter plot for outliers before trusting a regression equation - the visual check catches problems the numbers alone miss.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Why is it dangerous to extrapolate data beyond the scatter plot?</button>
+      <div class="faq-a">Extrapolation means predicting Y for X values outside the range of your observed data. The regression line is calibrated only to the data you have. Beyond that range, the relationship may curve, plateau, reverse direction, or behave in ways your model cannot predict. A model trained on population growth from 2000 to 2010 will not reliably forecast 2050. Extrapolated predictions are often wildly wrong, and the further you go beyond the observed X range, the wider the uncertainty becomes. Stick to interpolation (predicting within the observed range) whenever possible.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Does a strong correlation or high R-squared prove causation?</button>
+      <div class="faq-a">No. Correlation measures how closely two variables move together, but it cannot tell you why. A high R-squared only means the regression model explains a large share of the variance in Y using X. Both variables might be driven by a third confounding variable, or the relationship might be coincidental. For example, ice cream sales and drowning rates are both high in summer - they correlate strongly, but ice cream does not cause drowning. Establishing causation requires controlled experiments or rigorous study design, not regression statistics alone.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">What does a negative slope mean in a regression equation?</button>
+      <div class="faq-a">A negative slope means that as X increases, Y tends to decrease - the two variables move in opposite directions. For example, as outdoor temperature rises, heating costs tend to fall: a negative slope. The magnitude of the slope tells you the rate of change: a slope of -2.5 means Y drops by 2.5 units for every 1-unit increase in X. A negative slope does not imply weakness. Strength is measured by r and R-squared independently of direction. A slope of -50 with R-squared near 1.0 is an extremely strong negative relationship.</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+/* =============================================================
+   DATA MODEL
+============================================================= */
+var points = [
+  { x: 1, y: 2.5 },
+  { x: 2, y: 3.8 },
+  { x: 3, y: 5.1 },
+  { x: 4, y: 7.2 },
+  { x: 5, y: 8.9 }
+];
+
+/* =============================================================
+   CALCULATIONS (OLS)
+============================================================= */
+function calcRegression(pts) {
+  var n = pts.length;
+  if (n < 2) return null;
+
+  var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  for (var i = 0; i < n; i++) {
+    sumX  += pts[i].x;
+    sumY  += pts[i].y;
+    sumXY += pts[i].x * pts[i].y;
+    sumX2 += pts[i].x * pts[i].x;
+    sumY2 += pts[i].y * pts[i].y;
+  }
+
+  var denom = n * sumX2 - sumX * sumX;
+  if (Math.abs(denom) < 1e-12) {
+    return { vertical: true };
+  }
+
+  var m = (n * sumXY - sumX * sumY) / denom;
+  var b = (sumY - m * sumX) / n;
+
+  // Pearson r
+  var rNum = n * sumXY - sumX * sumY;
+  var rDen = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  var r = rDen < 1e-12 ? 0 : rNum / rDen;
+  var r2 = r * r;
+
+  return { m: m, b: b, r: r, r2: r2, vertical: false };
+}
+
+/* =============================================================
+   SCATTER PLOT RENDERING
+============================================================= */
+var canvas = document.getElementById('scatter-canvas');
+var ctx = canvas.getContext('2d');
+
+function getValidPoints() {
+  return points.filter(function(p) {
+    return typeof p.x === 'number' && typeof p.y === 'number' &&
+           isFinite(p.x) && isFinite(p.y);
+  });
+}
+
+function drawPlot() {
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  var W = rect.width;
+  var H = rect.height;
+
+  var PAD = { top: 24, right: 24, bottom: 44, left: 54 };
+  var plotW = W - PAD.left - PAD.right;
+  var plotH = H - PAD.top  - PAD.bottom;
+
+  // Colors
+  var BG      = '#0D1117';
+  var GRID    = '#1E252D';
+  var AXIS    = '#30363D';
+  var LABEL   = '#8B949E';
+  var CYAN    = '#06B6D4';
+  var RED     = '#EF4444';
+
+  // Background
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  var pts = getValidPoints();
+  var reg = pts.length >= 2 ? calcRegression(pts) : null;
+
+  // Scale
+  var xs = pts.map(function(p){ return p.x; });
+  var ys = pts.map(function(p){ return p.y; });
+
+  var xMin, xMax, yMin, yMax;
+  if (pts.length === 0) {
+    xMin = -1; xMax = 10; yMin = -1; yMax = 10;
+  } else if (pts.length === 1) {
+    xMin = pts[0].x - 2; xMax = pts[0].x + 2;
+    yMin = pts[0].y - 2; yMax = pts[0].y + 2;
+  } else {
+    xMin = Math.min.apply(null, xs);
+    xMax = Math.max.apply(null, xs);
+    yMin = Math.min.apply(null, ys);
+    yMax = Math.max.apply(null, ys);
+
+    // Pad by 15%
+    var xRange = xMax - xMin || 1;
+    var yRange = yMax - yMin || 1;
+    xMin -= xRange * 0.15;
+    xMax += xRange * 0.15;
+    yMin -= yRange * 0.15;
+    yMax += yRange * 0.15;
+  }
+
+  function toCanvasX(x) { return PAD.left + ((x - xMin) / (xMax - xMin)) * plotW; }
+  function toCanvasY(y) { return PAD.top  + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+  // Grid lines and axis labels
+  var nGridX = 6, nGridY = 5;
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (var gi = 0; gi <= nGridX; gi++) {
+    var gx = xMin + gi * (xMax - xMin) / nGridX;
+    var cx = toCanvasX(gx);
+    ctx.strokeStyle = GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, PAD.top);
+    ctx.lineTo(cx, PAD.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = LABEL;
+    ctx.fillText(numFmt(gx), cx, PAD.top + plotH + 16);
+  }
+  for (var gj = 0; gj <= nGridY; gj++) {
+    var gy = yMin + gj * (yMax - yMin) / nGridY;
+    var cy = toCanvasY(gy);
+    ctx.strokeStyle = GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, cy);
+    ctx.lineTo(PAD.left + plotW, cy);
+    ctx.stroke();
+    ctx.fillStyle = LABEL;
+    ctx.textAlign = 'right';
+    ctx.fillText(numFmt(gy), PAD.left - 8, cy);
+    ctx.textAlign = 'center';
+  }
+
+  // Axes
+  ctx.strokeStyle = AXIS;
+  ctx.lineWidth = 1.5;
+  // X axis
+  if (yMin <= 0 && yMax >= 0) {
+    var axisY = toCanvasY(0);
+    ctx.beginPath(); ctx.moveTo(PAD.left, axisY); ctx.lineTo(PAD.left + plotW, axisY); ctx.stroke();
+  }
+  // Y axis
+  if (xMin <= 0 && xMax >= 0) {
+    var axisX = toCanvasX(0);
+    ctx.beginPath(); ctx.moveTo(axisX, PAD.top); ctx.lineTo(axisX, PAD.top + plotH); ctx.stroke();
+  }
+  // Border box
+  ctx.strokeStyle = AXIS;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(PAD.left, PAD.top, plotW, plotH);
+
+  // Axis labels
+  ctx.fillStyle = LABEL;
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('X', PAD.left + plotW / 2, H - 4);
+  ctx.save();
+  ctx.translate(13, PAD.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Y', 0, 0);
+  ctx.restore();
+
+  // Regression line
+  if (reg && !reg.vertical) {
+    var x1 = xMin, y1 = reg.m * x1 + reg.b;
+    var x2 = xMax, y2 = reg.m * x2 + reg.b;
+    var cx1 = toCanvasX(x1), cy1 = toCanvasY(y1);
+    var cx2 = toCanvasX(x2), cy2 = toCanvasY(y2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(PAD.left, PAD.top, plotW, plotH);
+    ctx.clip();
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(cx1, cy1);
+    ctx.lineTo(cx2, cy2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Scatter points
+  for (var pi = 0; pi < pts.length; pi++) {
+    var px = toCanvasX(pts[pi].x);
+    var py = toCanvasY(pts[pi].y);
+    ctx.beginPath();
+    ctx.arc(px, py, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = CYAN;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(6,182,212,0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+/* =============================================================
+   FORMAT HELPERS
+============================================================= */
+function numFmt(v) {
+  if (!isFinite(v)) return '--';
+  if (Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0)) {
+    return v.toExponential(2);
+  }
+  return parseFloat(v.toFixed(4)).toString();
+}
+
+function fmt4(v) {
+  if (!isFinite(v)) return '--';
+  return v.toFixed(4);
+}
+
+/* =============================================================
+   UPDATE ALL OUTPUTS
+============================================================= */
+function updateAll() {
+  drawPlot();
+
+  var pts = getValidPoints();
+  var reg = pts.length >= 2 ? calcRegression(pts) : null;
+  var heroEl = document.getElementById('hero-outputs');
+  var labelEl = document.getElementById('plot-label');
+
+  if (!reg) {
+    heroEl.style.display = 'none';
+    labelEl.textContent = pts.length === 1
+      ? 'Add at least one more data point to compute the regression line.'
+      : 'Add at least 2 data points to see the regression line.';
+    return;
+  }
+
+  heroEl.style.display = 'grid';
+
+  if (reg.vertical) {
+    document.getElementById('out-eq').textContent    = 'Undefined Slope (Vertical Line)';
+    document.getElementById('out-slope').textContent = 'Undefined';
+    document.getElementById('out-b').textContent     = '--';
+    document.getElementById('out-r').textContent     = '--';
+    document.getElementById('out-r2').textContent    = '--';
+    labelEl.textContent = 'All X values are identical - slope is undefined (vertical line).';
+    return;
+  }
+
+  var mSign = reg.m >= 0 ? '+' : '';
+  var bSign = reg.b >= 0 ? ' + ' : ' - ';
+  var bAbs  = Math.abs(reg.b);
+
+  document.getElementById('out-eq').textContent    = 'y = ' + fmt4(reg.m) + 'x' + bSign + fmt4(bAbs);
+  document.getElementById('out-slope').textContent = fmt4(reg.m);
+  document.getElementById('out-b').textContent     = fmt4(reg.b);
+  document.getElementById('out-r').textContent     = fmt4(reg.r);
+  document.getElementById('out-r2').textContent    = fmt4(reg.r2) + ' (' + (reg.r2 * 100).toFixed(2) + '%)';
+  labelEl.textContent = pts.length + ' data points plotted. Line of best fit in red.';
+}
+
+/* =============================================================
+   TABLE MANAGEMENT
+============================================================= */
+var rowSeq = 0;
+
+function buildRow(x, y) {
+  rowSeq++;
+  var seq = rowSeq;
+  var tr = document.createElement('tr');
+  tr.dataset.seq = seq;
+
+  var xVal = (x !== undefined && x !== null && x !== '') ? x : '';
+  var yVal = (y !== undefined && y !== null && y !== '') ? y : '';
+
+  tr.innerHTML =
+    '<td class="row-num">' + (document.getElementById('data-tbody').children.length + 1) + '</td>' +
+    '<td><input type="number" step="any" value="' + xVal + '" oninput="onCellChange(this)" placeholder="0" /></td>' +
+    '<td><input type="number" step="any" value="' + yVal + '" oninput="onCellChange(this)" placeholder="0" /></td>' +
+    '<td><button class="del-btn" onclick="deleteRow(this)" title="Remove row">x</button></td>';
+  return tr;
+}
+
+function addRow(x, y) {
+  var tbody = document.getElementById('data-tbody');
+  var tr = buildRow(x, y);
+  tbody.appendChild(tr);
+  reindexRows();
+  // Add new point as NaN until user fills in
+  points.push({ x: NaN, y: NaN });
+  readTableToPoints();
+  updateAll();
+}
+
+function deleteRow(btn) {
+  var tr = btn.closest('tr');
+  var tbody = document.getElementById('data-tbody');
+  var idx = Array.prototype.indexOf.call(tbody.children, tr);
+  tbody.removeChild(tr);
+  points.splice(idx, 1);
+  reindexRows();
+  updateAll();
+}
+
+function reindexRows() {
+  var rows = document.getElementById('data-tbody').querySelectorAll('tr');
+  rows.forEach(function(tr, i) {
+    var numCell = tr.querySelector('.row-num');
+    if (numCell) numCell.textContent = i + 1;
+  });
+}
+
+function onCellChange(input) {
+  readTableToPoints();
+  updateAll();
+}
+
+function readTableToPoints() {
+  var rows = document.getElementById('data-tbody').querySelectorAll('tr');
+  points = [];
+  rows.forEach(function(tr) {
+    var inputs = tr.querySelectorAll('input[type="number"]');
+    var xv = parseFloat(inputs[0].value);
+    var yv = parseFloat(inputs[1].value);
+    points.push({ x: xv, y: yv });
+  });
+}
+
+function populateTable(pairs) {
+  var tbody = document.getElementById('data-tbody');
+  tbody.innerHTML = '';
+  rowSeq = 0;
+  points = [];
+  pairs.forEach(function(p) {
+    var tr = buildRow(p[0], p[1]);
+    tbody.appendChild(tr);
+    points.push({ x: p[0], y: p[1] });
+  });
+  reindexRows();
+  updateAll();
+}
+
+/* =============================================================
+   BULK IMPORT PARSING
+============================================================= */
+function parseBulk() {
+  var raw = document.getElementById('bulk-textarea').value;
+  var statusEl = document.getElementById('bulk-status');
+  var lines = raw.split(/[\r\n]+/).filter(function(l){ return l.trim() !== ''; });
+
+  if (lines.length === 0) {
+    statusEl.textContent = '';
+    statusEl.className = 'bulk-status';
+    return;
+  }
+
+  var pairs = [];
+  var errors = 0;
+
+  lines.forEach(function(line) {
+    // Split on comma, tab, or multiple spaces
+    var parts = line.trim().split(/[\t,]+|\s+/);
+    if (parts.length < 2) { errors++; return; }
+    var x = parseFloat(parts[0]);
+    var y = parseFloat(parts[1]);
+    if (!isFinite(x) || !isFinite(y)) { errors++; return; }
+    pairs.push([x, y]);
+  });
+
+  if (pairs.length === 0) {
+    statusEl.textContent = 'No valid X, Y pairs found. Check your formatting.';
+    statusEl.className = 'bulk-status err';
+    return;
+  }
+
+  var msg = 'Imported ' + pairs.length + ' row' + (pairs.length !== 1 ? 's' : '');
+  if (errors > 0) msg += ' (' + errors + ' row' + (errors !== 1 ? 's' : '') + ' skipped - could not parse)';
+  statusEl.textContent = msg;
+  statusEl.className = 'bulk-status ok';
+
+  // Populate manual grid
+  populateTable(pairs);
+}
+
+/* =============================================================
+   TABS
+============================================================= */
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* =============================================================
+   FAQ
+============================================================= */
+function toggleFaq(btn) {
+  var ans = btn.nextElementSibling;
+  var open = ans.classList.contains('open');
+  document.querySelectorAll('.faq-a').forEach(function(el){ el.classList.remove('open'); });
+  document.querySelectorAll('.faq-q').forEach(function(el){ el.classList.remove('open'); });
+  if (!open) {
+    ans.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+/* =============================================================
+   CANVAS RESIZE OBSERVER
+============================================================= */
+var resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function(){ drawPlot(); }, 80);
+});
+
+/* =============================================================
+   INIT: Populate table with seed data and draw
+============================================================= */
+(function init() {
+  var tbody = document.getElementById('data-tbody');
+  tbody.innerHTML = '';
+  rowSeq = 0;
+  points.forEach(function(p) {
+    var tr = buildRow(p.x, p.y);
+    tbody.appendChild(tr);
+  });
+  reindexRows();
+  // Defer plot until canvas has measured size
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      updateAll();
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

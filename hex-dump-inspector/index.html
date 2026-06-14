@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hex Dump and Binary Stream Inspector: Parse Files Down to Raw Bytes | AxiomApe</title>
+  <meta name="description" content="Free browser-based hex dump viewer and binary stream inspector. Upload any file to see its raw bytes in a color-coded offset, hex, and ASCII table. Search magic bytes, toggle endianness, and export a clean text hex dump. 100% client-side." />
+  <meta name="keywords" content="hex dump viewer, binary file inspector, hex editor online, magic bytes identifier, file header viewer, hexadecimal viewer, binary stream parser, ascii hex viewer, offset hex dump, file format analyzer, binary data viewer, hex viewer browser, file forensics tool, hex dump tool" />
+  <link rel="canonical" href="https://axiomape.com/hex-dump-inspector/" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <style>
+    /* ===================================================
+       RESET AND BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:        #1a3a5c;
+      --navy-dark:   #0d1f33;
+      --navy-light:  #1e4a7a;
+      --green:       #10b981;
+      --accent:      #f59e0b;
+      --bg:          #f0f2f5;
+      --card:        #ffffff;
+      --border:      #dde3ea;
+      --text:        #1c2b3a;
+      --muted:       #6b7c8d;
+      --shadow:      0 4px 24px rgba(26,58,92,0.09);
+      --radius:      12px;
+
+      /* Forensics HUD palette */
+      --hud-bg:        #111827;
+      --hud-row-alt:   #161f2e;
+      --hud-border:    #374151;
+      --hud-chrome:    #1f2937;
+      --hud-chrome-dk: #1a2233;
+      --col-offset:    #6B7280;
+      --col-hex:       #F59E0B;
+      --col-ascii:     #10B981;
+      --col-null:      #374151;
+      --col-hi-bg:     #7c3aed;
+      --col-hi-fg:     #ffffff;
+      --mono:          'IBM Plex Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--navy); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--navy-light); }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: linear-gradient(135deg, #0a1929 0%, #0d2540 45%, #123356 100%);
+      color: #fff;
+      padding: 52px 20px 42px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.45rem, 3.8vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 800px;
+      margin: 0 auto 14px;
+      letter-spacing: -0.015em;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: #8cb4d4;
+      max-width: 660px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) { .card { padding: 20px 14px; } }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    /* ===================================================
+       UPLOAD ZONE
+    =================================================== */
+    .upload-zone {
+      border: 2px dashed #c5cdd6;
+      border-radius: 10px;
+      padding: 52px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #f8fafc;
+    }
+    .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: #fffbeb;
+    }
+    .upload-zone:hover { border-color: var(--navy-light); }
+    .upload-icon { font-size: 3rem; margin-bottom: 14px; display: block; }
+    .upload-label { font-size: 1.15rem; font-weight: 700; color: var(--navy); }
+    .upload-sub { font-size: 0.88rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    .upload-btn {
+      margin-top: 20px;
+      display: inline-block;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 28px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .upload-btn:hover { background: var(--navy-light); }
+    #file-input { display: none; }
+
+    /* ===================================================
+       HUD WRAPPER
+    =================================================== */
+    .hud-wrapper { display: none; margin-top: 20px; }
+    .hud-wrapper.visible { display: block; }
+
+    /* Control bar */
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      padding: 13px 16px;
+      background: var(--hud-chrome);
+      border: 1px solid var(--hud-border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 8px; }
+    .ctrl-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+    .ctrl-select {
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      color: #e5e7eb;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: var(--mono);
+    }
+    .ctrl-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .endian-toggle {
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--hud-border);
+    }
+    .endian-btn {
+      padding: 5px 13px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      background: var(--hud-bg);
+      color: #9ca3af;
+      transition: background 0.15s, color 0.15s;
+      font-family: var(--mono);
+    }
+    .endian-btn.active { background: var(--accent); color: #111827; }
+
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 180px;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 6px;
+      padding: 0 10px;
+      gap: 6px;
+      flex: 1;
+    }
+    .search-box input {
+      background: transparent;
+      border: none;
+      color: #e5e7eb;
+      font-family: var(--mono);
+      font-size: 0.875rem;
+      padding: 5px 0;
+      width: 100%;
+      outline: none;
+    }
+    .search-box input::placeholder { color: #4b5563; }
+    .search-icon { color: #6b7280; font-size: 0.85rem; flex-shrink: 0; }
+    .match-badge {
+      font-size: 0.76rem;
+      font-family: var(--mono);
+      color: var(--accent);
+      white-space: nowrap;
+      min-width: 70px;
+    }
+    .match-badge.no-match { color: #ef4444; }
+
+    /* File info bar */
+    .file-info-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      padding: 9px 16px;
+      background: var(--hud-chrome-dk);
+      border: 1px solid var(--hud-border);
+      border-top: none;
+      border-bottom: none;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+    .info-chip { display: flex; gap: 5px; align-items: center; }
+    .info-chip-lbl { color: #4b5563; }
+    .info-chip-val { color: #d1d5db; font-weight: 500; }
+
+    /* Column header row */
+    .hud-col-header {
+      display: flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 12px;
+      background: var(--hud-chrome);
+      border: 1px solid var(--hud-border);
+      border-top: 1px solid #4b5563;
+      border-bottom: 1px solid #4b5563;
+    }
+    .hud-lbl {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+    .hud-lbl.lbl-offset { width: 88px; flex-shrink: 0; }
+    .hud-lbl.lbl-hex    { flex: 1; }
+    .hud-lbl.lbl-ascii  { padding-left: 14px; flex-shrink: 0; }
+
+    /* Scroll viewport */
+    .hud-scroll {
+      height: 500px;
+      overflow-y: auto;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      position: relative;
+    }
+    .hud-scroll::-webkit-scrollbar { width: 8px; }
+    .hud-scroll::-webkit-scrollbar-track { background: var(--hud-chrome); }
+    .hud-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    .hud-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    .hud-inner { position: relative; }
+    .hud-spacer { display: block; width: 100%; }
+
+    /* Data rows */
+    .hud-row {
+      display: flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 12px;
+      border-bottom: 1px solid #1a2233;
+    }
+    .hud-row:nth-child(odd)  { background: var(--hud-bg); }
+    .hud-row:nth-child(even) { background: var(--hud-row-alt); }
+
+    .col-offset {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--col-offset);
+      width: 88px;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+    }
+    .col-hex-cells {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .hex-byte {
+      width: 2.15em;
+      text-align: center;
+      color: var(--col-hex);
+      border-radius: 3px;
+    }
+    .hex-byte.b-null { color: var(--col-null); }
+    .hex-byte.b-hi   { background: var(--col-hi-bg); color: var(--col-hi-fg); border-radius: 3px; }
+    .hex-gap { width: 10px; flex-shrink: 0; }
+    .hex-pad { width: 2.15em; visibility: hidden; }
+    .hex-pad-gap { width: 10px; visibility: hidden; }
+
+    .col-ascii {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--col-ascii);
+      padding-left: 14px;
+      flex-shrink: 0;
+      white-space: pre;
+      display: flex;
+      align-items: center;
+    }
+    .ascii-ch { display: inline-block; }
+    .ascii-ch.a-null { color: var(--col-null); }
+    .ascii-ch.a-hi   { background: var(--col-hi-bg); color: var(--col-hi-fg); }
+
+    /* Placeholder */
+    .hud-ph {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 200px;
+      color: #374151;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+    .hud-ph-icon { font-size: 2.2rem; }
+
+    /* Action bar */
+    .action-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 0 4px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.18s, background 0.18s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary   { background: var(--navy); color: #fff; }
+    .btn-secondary { background: #374151; color: #e5e7eb; }
+
+    /* ===================================================
+       AD PLACEMENTS
+    =================================================== */
+    .axiom-ad-leaderboard { text-align: center; padding: 16px 0; color: var(--muted); font-size: 0.8rem; margin-bottom: 8px; }
+    .axiom-ad-mobile-anchor { text-align: center; padding: 8px 0; color: var(--muted); font-size: 0.8rem; }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .glossary-term { font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 6px; }
+    .glossary-def  { font-size: 0.86rem; color: #4a5568; line-height: 1.55; }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .edu-section h2 { font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 14px; }
+    .section-intro  { font-size: 1rem; color: #4a5568; margin-bottom: 22px; line-height: 1.7; }
+    .edu-section h3 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin: 26px 0 10px; }
+    .edu-section p  { color: #4a5568; line-height: 1.7; margin-bottom: 12px; }
+    .edu-section ul { padding-left: 20px; color: #4a5568; line-height: 1.7; margin-bottom: 12px; }
+    .edu-section li { margin-bottom: 5px; }
+
+    .magic-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 14px 0 4px; }
+    .magic-table th { background: var(--navy); color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; }
+    .magic-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); color: #4a5568; }
+    .magic-table td:nth-child(2) { font-family: var(--mono); font-size: 0.82rem; color: #f59e0b; }
+    .magic-table td:nth-child(3) { font-family: var(--mono); font-size: 0.82rem; color: #10b981; }
+    .magic-table tr:last-child td { border-bottom: none; }
+    .magic-table tr:nth-child(even) td { background: #f8fafc; }
+    @media (max-width: 580px) {
+      .magic-table td:nth-child(3) { display: none; }
+      .magic-table th:nth-child(3) { display: none; }
+    }
+
+    /* FAQ */
+    .faq-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+    .faq-question {
+      width: 100%; text-align: left; background: #f8fafc; border: none;
+      padding: 15px 18px; font-size: 0.95rem; font-weight: 600; color: var(--navy);
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; transition: background 0.15s;
+    }
+    .faq-question:hover { background: #eef1f5; }
+    .faq-question[aria-expanded="true"] { background: var(--navy); color: #fff; }
+    .faq-chev { font-size: 0.75rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-question[aria-expanded="true"] .faq-chev { transform: rotate(180deg); }
+    .faq-answer { display: none; padding: 15px 18px; font-size: 0.9rem; color: #4a5568; line-height: 1.72; background: #fff; }
+    .faq-answer.open { display: block; }
+    .faq-answer p { margin-bottom: 8px; }
+    .faq-answer p:last-child { margin-bottom: 0; }
+
+    /* ===================================================
+       RESPONSIVE
+    =================================================== */
+    @media (max-width: 720px) {
+      .hud-scroll { height: 360px; }
+      .col-offset { width: 66px; font-size: 0.72rem; }
+      .hex-byte, .hex-pad { width: 1.95em; font-size: 0.74rem; }
+      .col-ascii { font-size: 0.74rem; padding-left: 8px; }
+      .hud-lbl.lbl-offset { width: 66px; }
+      .hud-lbl.lbl-ascii  { padding-left: 8px; }
+      .hex-gap, .hex-pad-gap { width: 6px; }
+    }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Hex Dump and Binary Stream Inspector",
+        "description": "Free browser-based hex dump viewer and binary stream inspector. Upload any file to see its raw bytes in a color-coded offset, hex, and ASCII table. Search magic bytes, toggle endianness, and export a clean text hex dump. 100% client-side.",
+        "url": "https://axiomape.com/hex-dump-inspector/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a hex dump used for?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A hex dump is a raw, uninterpreted view of a file's binary contents displayed in hexadecimal (base-16) notation, alongside its ASCII text representation. Developers and security researchers use hex dumps to inspect file headers and magic bytes to confirm a file's true format, to recover data from corrupted files by locating intact regions, to reverse-engineer proprietary binary formats, to detect embedded payloads or obfuscated code in files, and to understand how data structures are physically laid out in memory or on disk. Hex dumps are a foundational tool in low-level debugging, digital forensics, malware analysis, and embedded systems development."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I identify a file's type using its magic bytes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Magic bytes are a fixed sequence of bytes at the very beginning of a file that identify its format. To identify a file type, load the file in a hex viewer and look at the first few bytes at offset 00000000. Common signatures include FF D8 FF for JPEG images, 89 50 4E 47 for PNG images, 25 50 44 46 for PDF files, 50 4B 03 04 for ZIP archives (which also covers .xlsx, .docx, and .jar files), 7F 45 4C 46 for ELF Linux executables, and 4D 5A for Windows PE executables (.exe and .dll files). File extensions can be renamed to disguise a file's true type, but the magic bytes always reveal the real format. Use the Search Hex box to paste a hex sequence and instantly locate all matching positions in the file."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does Big Endian mean in binary data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Endianness describes the order in which bytes of a multi-byte value are stored in memory. In Big Endian byte order, the most significant byte is stored first, at the lowest memory address. This is the natural, human-readable order: the number 1000 in hexadecimal is 0x000003E8, and in Big Endian memory it appears as 00 00 03 E8 from left to right. In Little Endian byte order, the least significant byte is stored first, so the same number appears as E8 03 00 00. Little Endian is used by most modern desktop processors (x86 and ARM), while Big Endian is common in networking protocols (sometimes called network byte order), older RISC architectures, and certain file formats."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my file data processed on a server or locally in my browser?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Your file is processed entirely inside your own browser using the Web File API (FileReader.readAsArrayBuffer) and the JavaScript Uint8Array typed array. No bytes of your file are ever uploaded to a server, sent over a network connection, or stored anywhere outside your local browser tab. The hex rendering, search, and export functions all run as pure client-side JavaScript. You can verify this by loading the page, disconnecting from the internet, and uploading a file - the tool will continue to work perfectly with no network activity. This is especially important for sensitive files such as documents containing personal data, proprietary source code, firmware images, or encrypted archives."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the ASCII column in a hex dump showing me?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The ASCII column shows a text interpretation of each byte. ASCII maps values 32 through 126 to printable characters: letters, digits, punctuation, and spaces. For each byte in the hex column, the ASCII column shows the corresponding printable character if one exists, or a dot placeholder for bytes that do not map to a printable character (values 0 through 31, which are control codes, and 127 through 255, which are outside the printable ASCII range). The ASCII column lets you quickly spot embedded strings, file format markers, and human-readable metadata inside binary files. For example, a PDF file will show %PDF near the very beginning of its ASCII column, and a ZIP file will show PK."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do some bytes show as dots in the ASCII view?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Dots in the ASCII column represent bytes whose values do not correspond to a printable ASCII character. Bytes with values 0 through 31 are ASCII control codes (such as null, tab, carriage return, and line feed) and bytes with values 127 through 255 are either the delete character or extended values outside the printable ASCII range. These bytes have legitimate roles in binary files as structural markers, padding, binary integers, compressed data, or encoded media samples, but they cannot be meaningfully displayed as readable text. Replacing them with a dot keeps the ASCII column perfectly aligned with the hex column and lets you scan printable string content at a glance."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>Hex Dump and Binary Stream Inspector</h1>
+    <p>Upload any file to parse its raw bytes into a color-coded offset, hex, and ASCII table. Search magic byte signatures, toggle endianness, and export a clean dump - all inside your browser.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         TOOL CARD
+    ============================================================ -->
+    <div class="card" style="padding-bottom: 20px;">
+
+      <!-- Upload zone (hidden after file loads) -->
+      <div class="upload-zone" id="upload-zone">
+        <span class="upload-icon">&#128190;</span>
+        <div class="upload-label">Drop any file here to inspect its bytes</div>
+        <div class="upload-sub">Supports all file types - images, archives, executables, documents, firmware images<br>Maximum file size: 200 MB. Nothing leaves your browser.</div>
+        <button class="upload-btn" onclick="document.getElementById('file-input').click()">Choose File</button>
+        <input type="file" id="file-input" />
+      </div>
+
+      <!-- HUD (shown after file loads) -->
+      <div class="hud-wrapper" id="hud-wrapper">
+
+        <!-- Control bar -->
+        <div class="control-bar">
+
+          <div class="ctrl-group">
+            <span class="ctrl-label">Bytes/Row</span>
+            <select class="ctrl-select" id="bpr-select">
+              <option value="8">8</option>
+              <option value="16" selected>16</option>
+              <option value="32">32</option>
+            </select>
+          </div>
+
+          <div class="ctrl-group">
+            <span class="ctrl-label">Endian</span>
+            <div class="endian-toggle">
+              <button class="endian-btn active" id="btn-be" onclick="setEndian(false)">Big</button>
+              <button class="endian-btn" id="btn-le" onclick="setEndian(true)">Little</button>
+            </div>
+          </div>
+
+          <div class="ctrl-group search-wrap">
+            <span class="ctrl-label">Search Hex</span>
+            <div class="search-box">
+              <span class="search-icon">&#128269;</span>
+              <input type="text" id="hex-search" placeholder="e.g. FF D8 FF or ffd8ff" oninput="onSearch()" spellcheck="false" autocomplete="off" />
+            </div>
+            <span class="match-badge" id="match-badge"></span>
+          </div>
+
+        </div>
+
+        <!-- File info bar -->
+        <div class="file-info-bar">
+          <div class="info-chip"><span class="info-chip-lbl">File:</span><span class="info-chip-val" id="info-name">-</span></div>
+          <div class="info-chip"><span class="info-chip-lbl">Size:</span><span class="info-chip-val" id="info-size">-</span></div>
+          <div class="info-chip"><span class="info-chip-lbl">Bytes:</span><span class="info-chip-val" id="info-bytes">-</span></div>
+          <div class="info-chip"><span class="info-chip-lbl">Rows:</span><span class="info-chip-val" id="info-rows">-</span></div>
+        </div>
+
+        <!-- Column header labels -->
+        <div class="hud-col-header">
+          <span class="hud-lbl lbl-offset">Offset</span>
+          <span class="hud-lbl lbl-hex">Hex Bytes</span>
+          <span class="hud-lbl lbl-ascii">ASCII</span>
+        </div>
+
+        <!-- Scrollable hex viewport (virtual scroll) -->
+        <div class="hud-scroll" id="hud-scroll">
+          <div class="hud-inner" id="hud-inner">
+            <div id="hud-ph" class="hud-ph">
+              <span class="hud-ph-icon">&#9654;</span>
+              <span>Loading file...</span>
+            </div>
+            <div class="hud-spacer" id="spacer-top"></div>
+            <div id="rows-container"></div>
+            <div class="hud-spacer" id="spacer-bottom"></div>
+          </div>
+        </div>
+
+        <!-- Action bar -->
+        <div class="action-bar">
+          <button class="btn btn-secondary" onclick="clearFile()">&#10005; Clear</button>
+          <button class="btn btn-primary" id="export-btn" onclick="exportHexDump()">&#11123; Export Hex Dump</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+
+        <div class="glossary-item">
+          <div class="glossary-term">Hexadecimal</div>
+          <div class="glossary-def">A base-16 number system using digits 0-9 and letters A-F. Each hex digit represents exactly 4 bits (a nibble), so two hex digits represent a full byte. Hex is the standard notation for inspecting raw binary data because it is compact yet directly convertible to binary.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Byte</div>
+          <div class="glossary-def">The fundamental unit of digital storage, consisting of 8 binary bits. A byte can hold values from 0 (hex 00) to 255 (hex FF). Every file on a computer is ultimately a sequence of bytes, and a hex dump shows those bytes one by one in order.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Binary</div>
+          <div class="glossary-def">A base-2 number system using only 0 and 1. All digital data is stored as binary (on/off electrical states). Binary notation is too verbose for humans to read comfortably, which is why hexadecimal is used in its place for binary file inspection.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Offset</div>
+          <div class="glossary-def">The position of a byte relative to the start of a file or data stream, shown in the leftmost column of a hex dump. An offset of 00000010 means the byte is 16 positions from the beginning. Offsets are shown in hexadecimal notation.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">ASCII</div>
+          <div class="glossary-def">American Standard Code for Information Interchange - a character encoding that maps numeric values 32 through 126 to printable characters. The ASCII column in a hex dump shows which bytes correspond to readable text characters and which do not (shown as dots).</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Endianness</div>
+          <div class="glossary-def">The order in which bytes of a multi-byte integer are stored in memory. Big Endian stores the most significant byte first (lowest address), which is the human-readable order. Little Endian stores the least significant byte first, and is used by most modern x86 and ARM processors.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">Magic Bytes</div>
+          <div class="glossary-def">A fixed byte signature at the beginning of a file that identifies its format. JPEG files always start with FF D8 FF, PNG files with 89 50 4E 47, and PDF files with 25 50 44 46 (%PDF in ASCII). Magic bytes reveal a file's true type regardless of its extension.</div>
+        </div>
+
+        <div class="glossary-item">
+          <div class="glossary-term">File Header</div>
+          <div class="glossary-def">The structured data at the start of a file that describes its format, version, encoding, and internal organization. Headers typically contain the magic bytes, metadata fields (dimensions, compression type, creation date), and pointers to data sections further into the file.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Hex Dumps and Binary Inspection</h2>
+      <p class="section-intro">When a file behaves unexpectedly - an image that will not open, an archive that refuses to extract, or an executable flagged by security software - the only way to understand what is really inside is to look at the raw bytes. A hex dump gives you exactly that: an unfiltered, byte-by-byte view of a file's true contents, with no interpretation layer obscuring the data.</p>
+
+      <h3>How to Use This Tool</h3>
+      <p>Drag and drop any file onto the upload zone, or click Choose File. The hex viewer appears instantly, showing each byte in three columns: the Offset (position from the start, in hex), the Hex column (each byte's value in base-16), and the ASCII column (printable characters or dots for non-printable bytes).</p>
+      <p>Use the Bytes Per Row control to adjust how many bytes appear on each line. 16 is the standard for most forensics work and aligns well with most binary structures. 32 is useful for scanning large files quickly. 8 can help when analyzing data with known 8-byte alignment. The Endian toggle switches between Big Endian (bytes in their natural stored order, ideal for file header analysis) and Little Endian (bytes within each 4-byte word are reversed, useful for analyzing data written by x86 processors). Use the Search Hex box to type any hex sequence - for example FF D8 FF for a JPEG header - and every matching byte position is highlighted in the viewer as you type. Click Export Hex Dump to download the full dump as a clean, portable text file.</p>
+
+      <h3>What to Look for at Offset 00000000</h3>
+      <p>The very first bytes of any file are the most informative. Compare what you see against the magic byte signatures below to identify the file format. A mismatch between a file's extension and its magic bytes is a red flag in security analysis.</p>
+
+      <table class="magic-table">
+        <thead>
+          <tr><th>Format</th><th>Magic Bytes (Hex)</th><th>ASCII Hint</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>JPEG Image</td><td>FF D8 FF</td><td>(binary header)</td></tr>
+          <tr><td>PNG Image</td><td>89 50 4E 47 0D 0A 1A 0A</td><td>.PNG....</td></tr>
+          <tr><td>PDF Document</td><td>25 50 44 46 2D</td><td>%PDF-</td></tr>
+          <tr><td>ZIP / DOCX / XLSX / JAR</td><td>50 4B 03 04</td><td>PK..</td></tr>
+          <tr><td>GIF Image</td><td>47 49 46 38</td><td>GIF8</td></tr>
+          <tr><td>ELF Executable (Linux)</td><td>7F 45 4C 46</td><td>.ELF</td></tr>
+          <tr><td>Windows PE (.exe / .dll)</td><td>4D 5A</td><td>MZ</td></tr>
+          <tr><td>MP3 (ID3 tag)</td><td>49 44 33</td><td>ID3</td></tr>
+          <tr><td>SQLite Database</td><td>53 51 4C 69 74 65 20 33</td><td>SQLite 3</td></tr>
+          <tr><td>Java / .NET Class File</td><td>CA FE BA BE</td><td>(binary)</td></tr>
+          <tr><td>WebP Image</td><td>52 49 46 46 .. .. .. .. 57 45 42 50</td><td>RIFF....WEBP</td></tr>
+          <tr><td>Zstandard Archive</td><td>28 B5 2F FD</td><td>(binary)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Virtual Scrolling for Large Files</h3>
+      <p>For large files such as firmware images, video files, or disk images, a naive hex dump would try to render hundreds of thousands of rows at once, which would freeze any browser. This tool uses virtual scrolling: only the rows currently visible in the viewport (plus a small buffer above and below) are rendered as DOM elements at any given moment. As you scroll, rows are added and removed in real time, while the scrollbar height reflects the full file size. A 100 MB file scrolls as smoothly as a 100 byte file.</p>
+
+      <h3>Practical Uses in Forensics, Security, and Development</h3>
+      <p>Hex inspection is a core skill across several technical disciplines. In digital forensics, investigators use hex dumps to recover deleted file fragments, identify file types regardless of extension, and locate timestamps embedded in binary metadata. In malware analysis, security researchers look for encoded payloads, obfuscated strings, and unusual byte sequences that antivirus heuristics might miss. In reverse engineering, hex dumps reveal how proprietary binary protocols lay out their fields - which is the first step toward writing a parser. In embedded systems development, engineers inspect firmware images to verify flash memory contents, locate bootloader headers, and confirm that compiled code matches expected byte patterns.</p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is a hex dump used for?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>A hex dump is a raw, uninterpreted view of a file's binary contents displayed in hexadecimal (base-16) notation, alongside its ASCII text representation. Developers and security researchers use hex dumps to inspect file headers and magic bytes to confirm a file's true format, to recover data from corrupted files by locating intact regions, to reverse-engineer proprietary binary formats, to detect embedded payloads or obfuscated code in files, and to understand how data structures are physically laid out in memory or on disk.</p>
+          <p>Hex dumps are a foundational tool in low-level debugging, digital forensics, malware analysis, and embedded systems development. Any time you need to see what a file truly contains - without any operating system or application layer filtering the view - a hex dump is the right tool.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How do I identify a file's type using its magic bytes?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Magic bytes are a fixed sequence of bytes at the very beginning (or sometimes end) of a file that identify its format. They are called magic bytes because they act like a signature that reveals what a file truly is, regardless of its filename extension. Load the file in this tool and look at the first few bytes at offset 00000000. Compare those bytes against the reference table in the section above.</p>
+          <p>File extensions can be renamed to disguise a file's true type - a malicious executable renamed to .jpg will still show 4D 5A (MZ) at its start rather than FF D8 FF. Use the Search Hex box to paste a known magic byte sequence and the tool will immediately highlight every match in the file, making it easy to find embedded file structures within larger binary streams such as memory dumps or disk images.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What does Big Endian mean in binary data?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Endianness describes the order in which bytes of a multi-byte value are stored in memory. In Big Endian byte order, the most significant byte (the highest-value part of the number) is stored first, at the lowest memory address. This is the natural, human-readable order: the number 1000 in hexadecimal is 0x000003E8, and in Big Endian memory it appears as 00 00 03 E8 reading left to right.</p>
+          <p>In Little Endian byte order, the least significant byte is stored first, so the same number appears as E8 03 00 00. Little Endian is used by most modern desktop processors (x86 and ARM in little-endian mode), while Big Endian is common in networking protocols (sometimes called network byte order), PowerPC and SPARC architectures, and certain file formats such as AIFF and TIFF (in one of its modes). When analyzing binary data, knowing which endianness was used when the data was written is critical for correctly interpreting multi-byte integers, floating-point numbers, and memory addresses.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Is my file data processed on a server or locally in my browser?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Your file is processed entirely inside your own browser using the Web File API (FileReader.readAsArrayBuffer) and the JavaScript Uint8Array typed array. No bytes of your file are ever uploaded to a server, sent over a network connection, or stored anywhere outside your local browser tab. The hex rendering, search, and export functions all run as pure client-side JavaScript.</p>
+          <p>You can verify this yourself: load the page, disconnect from the internet, and upload a file. The tool will continue to work perfectly with no network activity whatsoever. This is especially important for sensitive files such as documents containing personal data, proprietary source code, firmware images, or encrypted archives - files you should never send through an online service you do not fully control.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is the ASCII column in a hex dump showing me?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>The ASCII column shows a text interpretation of each byte. ASCII (American Standard Code for Information Interchange) maps values 32 through 126 to printable characters: letters, digits, punctuation, and spaces. For each byte in the hex column, the ASCII column shows the corresponding printable character if one exists, or a dot placeholder for bytes outside that range.</p>
+          <p>The ASCII column lets you quickly spot embedded strings, file format markers, and human-readable metadata inside binary files without needing to decode hex values manually. A PDF file shows %PDF near the beginning of its ASCII column. A ZIP file shows PK. A SQLite database shows SQLite 3. Even in heavily binary files, readable strings embedded in the data - error messages, copyright notices, URLs, and configuration keys - will stand out clearly in the ASCII column.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Why do some bytes show as dots in the ASCII view?
+          <span class="faq-chev">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          <p>Dots in the ASCII column represent bytes whose values do not correspond to a printable ASCII character. Bytes with values 0 through 31 are ASCII control codes (null, tab, carriage return, line feed, escape, and others) and bytes with values 127 through 255 are either the delete character or extended values outside the 7-bit ASCII printable range.</p>
+          <p>These bytes have completely legitimate roles in binary files: they serve as structural markers, integer fields, padding, compressed data blocks, encoded media samples, and memory addresses. But they cannot be meaningfully displayed as readable text characters. Replacing them with a dot keeps the ASCII column perfectly aligned with the hex column and lets you scan the printable string content at a glance, without the display being corrupted by invisible or ambiguous control characters.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let fileBytes    = null;
+    let fileName     = '';
+    let fileSize     = 0;
+    let bytesPerRow  = 16;
+    let littleEndian = false;
+    let matchByteSet = new Set(); // original file-byte indices that are part of a search match
+
+    const ROW_HEIGHT  = 28;
+    const BUFFER_ROWS = 10;
+    const MAX_BYTES   = 200 * 1024 * 1024;
+
+    /* ============================================================
+       DOM REFS
+    ============================================================ */
+    const uploadZone  = document.getElementById('upload-zone');
+    const fileInput   = document.getElementById('file-input');
+    const hudWrapper  = document.getElementById('hud-wrapper');
+    const hudScroll   = document.getElementById('hud-scroll');
+    const hudPh       = document.getElementById('hud-ph');
+    const spacerTop   = document.getElementById('spacer-top');
+    const spacerBot   = document.getElementById('spacer-bottom');
+    const rowsCont    = document.getElementById('rows-container');
+    const bprSelect   = document.getElementById('bpr-select');
+    const hexSearch   = document.getElementById('hex-search');
+    const matchBadge  = document.getElementById('match-badge');
+    const infoName    = document.getElementById('info-name');
+    const infoSize    = document.getElementById('info-size');
+    const infoBytes   = document.getElementById('info-bytes');
+    const infoRows    = document.getElementById('info-rows');
+
+    /* ============================================================
+       FILE LOADING
+    ============================================================ */
+    uploadZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) loadFile(f);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) loadFile(fileInput.files[0]);
+    });
+
+    function loadFile(file) {
+      if (file.size > MAX_BYTES) {
+        alert('File size exceeds the 200 MB limit. Please choose a smaller file.');
+        return;
+      }
+      fileName = file.name;
+      fileSize = file.size;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        fileBytes = new Uint8Array(ev.target.result);
+        hexSearch.value = '';
+        matchByteSet.clear();
+        matchBadge.textContent = '';
+        matchBadge.className = 'match-badge';
+        showHud();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function showHud() {
+      uploadZone.style.display = 'none';
+      hudWrapper.classList.add('visible');
+      updateInfoBar();
+      hudScroll.scrollTop = 0;
+      renderAll();
+    }
+
+    function clearFile() {
+      fileBytes = null;
+      uploadZone.style.display = '';
+      hudWrapper.classList.remove('visible');
+      fileInput.value = '';
+      rowsCont.innerHTML = '';
+      spacerTop.style.height = '0';
+      spacerBot.style.height = '0';
+      hudPh.style.display = '';
+      matchByteSet.clear();
+    }
+
+    function updateInfoBar() {
+      const n = fileName;
+      infoName.textContent  = n.length > 44 ? n.slice(0, 41) + '...' : n;
+      infoSize.textContent  = fmtBytes(fileSize);
+      infoBytes.textContent = fileBytes.length.toLocaleString();
+      infoRows.textContent  = Math.ceil(fileBytes.length / bytesPerRow).toLocaleString();
+    }
+
+    function fmtBytes(n) {
+      if (n < 1024)             return n + ' B';
+      if (n < 1024 * 1024)      return (n / 1024).toFixed(1) + ' KB';
+      if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(2) + ' MB';
+      return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    }
+
+    /* ============================================================
+       CONTROLS
+    ============================================================ */
+    bprSelect.addEventListener('change', () => {
+      if (!fileBytes) return;
+      bytesPerRow = parseInt(bprSelect.value);
+      updateInfoBar();
+      hudScroll.scrollTop = 0;
+      renderAll();
+    });
+
+    function setEndian(le) {
+      littleEndian = le;
+      document.getElementById('btn-be').classList.toggle('active', !le);
+      document.getElementById('btn-le').classList.toggle('active',  le);
+      if (fileBytes) renderVisible();
+    }
+
+    function onSearch() {
+      recomputeSearch();
+      if (fileBytes) renderVisible();
+    }
+
+    function recomputeSearch() {
+      matchByteSet.clear();
+      const raw = hexSearch.value.replace(/\s+/g, '').toLowerCase();
+
+      if (raw.length === 0) { matchBadge.textContent = ''; matchBadge.className = 'match-badge'; return; }
+      if (raw.length % 2 !== 0 || /[^0-9a-f]/.test(raw)) { matchBadge.textContent = 'invalid hex'; matchBadge.className = 'match-badge no-match'; return; }
+
+      const needle = [];
+      for (let i = 0; i < raw.length; i += 2) needle.push(parseInt(raw.slice(i, i + 2), 16));
+      if (!fileBytes || needle.length === 0) return;
+
+      let count = 0;
+      const len = needle.length;
+      const lim = fileBytes.length - len;
+      for (let i = 0; i <= lim; i++) {
+        let ok = true;
+        for (let j = 0; j < len; j++) { if (fileBytes[i + j] !== needle[j]) { ok = false; break; } }
+        if (ok) {
+          count++;
+          for (let j = 0; j < len; j++) matchByteSet.add(i + j);
+        }
+      }
+
+      if (count === 0) {
+        matchBadge.textContent = '0 matches';
+        matchBadge.className = 'match-badge no-match';
+      } else {
+        matchBadge.textContent = count.toLocaleString() + ' match' + (count > 1 ? 'es' : '');
+        matchBadge.className = 'match-badge';
+      }
+    }
+
+    /* ============================================================
+       VIRTUAL SCROLL RENDER
+    ============================================================ */
+    hudScroll.addEventListener('scroll', () => { if (fileBytes) renderVisible(); });
+
+    function renderAll() {
+      if (!fileBytes) return;
+      hudPh.style.display = 'none';
+      renderVisible();
+    }
+
+    function renderVisible() {
+      if (!fileBytes) return;
+      const totalRows  = Math.ceil(fileBytes.length / bytesPerRow);
+      const scrollTop  = hudScroll.scrollTop;
+      const viewH      = hudScroll.clientHeight;
+
+      const first = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
+      const last  = Math.min(totalRows - 1, Math.ceil((scrollTop + viewH) / ROW_HEIGHT) + BUFFER_ROWS);
+
+      spacerTop.style.height = (first * ROW_HEIGHT) + 'px';
+      spacerBot.style.height = Math.max(0, (totalRows - last - 1) * ROW_HEIGHT) + 'px';
+
+      let html = '';
+      for (let r = first; r <= last; r++) html += buildRow(r);
+      rowsCont.innerHTML = html;
+    }
+
+    /* buildRow: renders one row of the hex dump */
+    function buildRow(rowIdx) {
+      const offset   = rowIdx * bytesPerRow;
+      const end      = Math.min(offset + bytesPerRow, fileBytes.length);
+      const count    = end - offset;
+      const offsetHx = offset.toString(16).padStart(8, '0').toUpperCase();
+
+      /* Build display order and original-index mapping */
+      const dispBytes  = [];
+      const dispToFile = [];  // dispToFile[i] = original file byte index
+
+      if (littleEndian) {
+        for (let g = 0; g < count; g += 4) {
+          const gEnd = Math.min(g + 4, count);
+          for (let j = gEnd - 1; j >= g; j--) {
+            dispBytes.push(fileBytes[offset + j]);
+            dispToFile.push(offset + j);
+          }
+        }
+      } else {
+        for (let i = 0; i < count; i++) {
+          dispBytes.push(fileBytes[offset + i]);
+          dispToFile.push(offset + i);
+        }
+      }
+
+      /* Hex cells */
+      let hexHtml = '';
+      for (let i = 0; i < bytesPerRow; i++) {
+        if (i > 0 && i % 8 === 0) {
+          hexHtml += i < count || i === 8
+            ? '<span class="hex-gap"></span>'
+            : '<span class="hex-pad-gap"></span>';
+        }
+        if (i >= count) {
+          hexHtml += '<span class="hex-pad">00</span>';
+          continue;
+        }
+        const b    = dispBytes[i];
+        const fidx = dispToFile[i];
+        const hi   = matchByteSet.has(fidx);
+        let cls    = 'hex-byte';
+        if (hi) cls += ' b-hi';
+        else if (b === 0) cls += ' b-null';
+        hexHtml += `<span class="${cls}">${b.toString(16).padStart(2, '0').toUpperCase()}</span>`;
+      }
+
+      /* ASCII cells */
+      let ascHtml = '';
+      for (let i = 0; i < count; i++) {
+        const b    = dispBytes[i];
+        const fidx = dispToFile[i];
+        const hi   = matchByteSet.has(fidx);
+        const printable = b >= 32 && b <= 126;
+        const ch   = printable ? escHtml(String.fromCharCode(b)) : '.';
+        let cls    = 'ascii-ch';
+        if (hi)         cls += ' a-hi';
+        else if (!printable) cls += ' a-null';
+        ascHtml += `<span class="${cls}">${ch}</span>`;
+      }
+
+      return `<div class="hud-row"><span class="col-offset">${offsetHx}</span><div class="col-hex-cells">${hexHtml}</div><div class="col-ascii">${ascHtml}</div></div>`;
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* ============================================================
+       EXPORT HEX DUMP
+    ============================================================ */
+    function exportHexDump() {
+      if (!fileBytes) return;
+      const btn = document.getElementById('export-btn');
+
+      if (fileBytes.length > 50 * 1024 * 1024) {
+        if (!confirm('This file is large. Generating the hex dump text may take a few seconds. Continue?')) return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      setTimeout(() => {
+        const bpr    = bytesPerRow;
+        const total  = Math.ceil(fileBytes.length / bpr);
+        const lines  = new Array(total);
+
+        for (let r = 0; r < total; r++) {
+          const off   = r * bpr;
+          const end   = Math.min(off + bpr, fileBytes.length);
+          const offHx = off.toString(16).padStart(8, '0').toUpperCase();
+
+          const raw = Array.from(fileBytes.slice(off, end));
+          let disp = raw;
+          if (littleEndian) {
+            const tmp = [];
+            for (let g = 0; g < raw.length; g += 4) tmp.push(...raw.slice(g, g + 4).reverse());
+            disp = tmp;
+          }
+
+          const hexPart = disp.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+          const padded  = hexPart.padEnd(bpr * 3 - 1, ' ');
+          const ascPart = disp.map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.').join('');
+          lines[r] = `${offHx}  ${padded}  |${ascPart}|`;
+        }
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = (fileName || 'file') + '.hexdump.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        btn.disabled = false;
+        btn.innerHTML = '&#11123; Export Hex Dump';
+      }, 30);
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(btn) {
+      const ans      = btn.nextElementSibling;
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      ans.classList.toggle('open', !expanded);
+    }
+  </script>
+
+</body>
+</html>

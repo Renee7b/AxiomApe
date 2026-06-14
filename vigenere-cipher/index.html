@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigenere Cipher Engine: Polyalphabetic Cryptographic Variable Shifting Utility | AxiomApe</title>
+  <meta name="description" content="Free Vigenere cipher encoder and decoder. Enter any text and a keyword to encrypt or decrypt using the classic polyalphabetic tabula recta method. Includes a live keyword visualizer. 100% client-side." />
+  <meta name="keywords" content="Vigenere cipher, polyalphabetic cipher, tabula recta, cipher encoder, cipher decoder, Vigenere encryption, Vigenere decryption, keyword cipher, classic cryptography, Caesar cipher, frequency analysis, cryptographic tool, online cipher, text encryption, Beaufort cipher" />
+  <link rel="canonical" href="https://axiomape.com/vigenere-cipher/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Vigenere Cipher Engine",
+        "description": "Free Vigenere cipher encoder and decoder. Enter any text and a keyword to encrypt or decrypt using the classic polyalphabetic tabula recta method. Includes a live keyword visualizer. 100% client-side.",
+        "url": "https://axiomape.com/vigenere-cipher/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What makes the Vigenere cipher stronger than a standard Caesar cipher?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A Caesar cipher uses a single fixed shift applied to every letter, so all 'A's become 'D's, all 'B's become 'E's, and so on. This makes it trivially breakable with frequency analysis since the most common letter in the ciphertext will almost always correspond to 'E'. The Vigenere cipher uses a keyword to apply a different shift to each letter position. With a keyword of length N, there are N different Caesar ciphers interleaved. This means the same plaintext letter can map to many different ciphertext letters and vice versa, which dramatically flattens the frequency distribution and defeats simple frequency analysis."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if my keyword is the same length as my message?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When your keyword is exactly as long as your message (and each keyword letter is used only once), the Vigenere cipher becomes a one-time pad. A one-time pad is theoretically unbreakable with perfect randomness and strict single-use, because every possible plaintext of that length is equally probable given the ciphertext. The keyword never repeats, so the statistical patterns that Kasiski examination exploits cannot appear. This is why intelligence agencies have used one-time pads for the most sensitive communications."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I crack a Vigenere cipher?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The classic attack is the Kasiski examination: scan the ciphertext for repeated trigrams (3-letter sequences). The distances between repetitions are likely multiples of the keyword length. Find the greatest common divisor of those distances and you have a strong guess for the keyword length. Once you know the keyword length N, split the ciphertext into N groups - every Nth letter. Each group is now a simple Caesar cipher, which you break with index-of-coincidence analysis or straight frequency analysis (the most common letter in each group is likely a shift of 'E'). Reconstruct the keyword from the N individual shifts. Modern computer tools can do this in seconds for most short keywords."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is the Vigenere cipher secure enough for sensitive modern data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. The Vigenere cipher is a classical cipher and provides no meaningful security for sensitive modern data. It was considered unbreakable for centuries but Charles Babbage and Friedrich Kasiski independently demonstrated its weakness in the mid-1800s. Today, it can be broken programmatically in milliseconds with basic statistical tools. For protecting real data, use modern authenticated encryption such as AES-GCM or ChaCha20-Poly1305, ideally through a well-audited library or protocol like TLS, Signal Protocol, or age. The Vigenere cipher is valuable as a learning tool for understanding how polyalphabetic substitution works and why key reuse is catastrophic."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is frequency analysis in cryptography?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Frequency analysis is the study of how often letters, pairs (bigrams), or triples (trigrams) appear in a ciphertext, then comparing those frequencies to known patterns in the target language. In English, 'E' appears about 12.7% of the time, 'T' about 9.1%, 'A' about 8.2%, and so on. In a simple substitution cipher, the most frequent ciphertext letter almost certainly represents 'E'. The Vigenere cipher resists single-letter frequency analysis because each plaintext letter is shifted by a different amount depending on its position in the keyword cycle, but it remains vulnerable to the Kasiski examination once the keyword length is known."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0d1117;
+      --bg2:           #161b22;
+      --bg3:           #21262d;
+      --card:          #1c2128;
+      --border:        #30363d;
+      --border2:       #444c56;
+      --text:          #e6edf3;
+      --muted:         #8b949e;
+      --dim:           #6e7681;
+
+      /* Accent: Logic Indigo */
+      --indigo:        #6366F1;
+      --indigo-dim:    #3730a3;
+      --indigo-bg:     rgba(99,102,241,0.08);
+      --indigo-border: rgba(99,102,241,0.30);
+      --indigo-hover:  #818cf8;
+
+      /* Accent: Cipher Emerald */
+      --emerald:       #10B981;
+      --emerald-dim:   #065f46;
+      --emerald-bg:    rgba(16,185,129,0.08);
+      --emerald-border:rgba(16,185,129,0.30);
+      --emerald-hover: #34d399;
+
+      --shadow:        0 8px 32px rgba(0,0,0,0.45);
+      --shadow-sm:     0 2px 8px rgba(0,0,0,0.25);
+      --radius:        12px;
+      --radius-sm:     8px;
+      --mono:          'JetBrains Mono', 'Courier New', Courier, monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    a { color: var(--indigo-hover); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--indigo); }
+
+    /* ── PAGE HEADER ─────────────────────────────────────────── */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #131624 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 0%, rgba(16,185,129,0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 820px;
+      margin: 0 auto 14px;
+      background: linear-gradient(135deg, #818cf8 0%, #6366F1 40%, #10B981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header .subtitle {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 660px;
+      margin: 0 auto;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────────── */
+    .page-wrapper {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 16px 0;
+    }
+
+    /* ── CARDS ───────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .card { padding: 18px 16px; } }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .ct-accent {
+      color: var(--indigo);
+    }
+
+    /* ── MODE TOGGLE ─────────────────────────────────────────── */
+    .mode-toggle {
+      display: flex;
+      gap: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      width: fit-content;
+      margin-bottom: 22px;
+    }
+    .mode-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 8px 24px;
+      border: none;
+      border-radius: calc(var(--radius-sm) - 2px);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      background: transparent;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .mode-btn.active-encrypt {
+      background: var(--indigo);
+      color: #fff;
+      box-shadow: 0 0 0 1px var(--indigo), 0 2px 8px rgba(99,102,241,0.35);
+    }
+    .mode-btn.active-decrypt {
+      background: var(--emerald);
+      color: #fff;
+      box-shadow: 0 0 0 1px var(--emerald), 0 2px 8px rgba(16,185,129,0.35);
+    }
+    .mode-btn:not(.active-encrypt):not(.active-decrypt):hover {
+      color: var(--text);
+      background: var(--bg3);
+    }
+
+    /* ── WORKSPACE GRID ──────────────────────────────────────── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 700px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    /* ── PANEL ───────────────────────────────────────────────── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+    }
+    .panel-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── TEXTAREAS ───────────────────────────────────────────── */
+    .cipher-textarea {
+      width: 100%;
+      min-height: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      padding: 14px 16px;
+      resize: vertical;
+      transition: border-color 0.18s;
+      outline: none;
+    }
+    .cipher-textarea:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .cipher-textarea.output {
+      border-color: var(--emerald-border);
+      color: var(--emerald-hover);
+    }
+    .cipher-textarea.output:focus {
+      border-color: var(--emerald);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+    }
+    .cipher-textarea::placeholder { color: var(--dim); }
+
+    /* ── KEYWORD INPUT ───────────────────────────────────────── */
+    .keyword-row {
+      margin-top: 18px;
+    }
+    .keyword-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .keyword-label .kl-icon { font-size: 0.9rem; }
+    .keyword-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--indigo-border);
+      border-radius: var(--radius-sm);
+      color: var(--indigo-hover);
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 11px 16px;
+      outline: none;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .keyword-input:focus {
+      border-color: var(--indigo);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+      color: #fff;
+    }
+    .keyword-input::placeholder {
+      color: var(--dim);
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+    }
+    .keyword-hint {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--dim);
+    }
+
+    /* ── KEYWORD VISUALIZER ──────────────────────────────────── */
+    .visualizer-wrap {
+      margin-top: 16px;
+    }
+    .visualizer-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 8px;
+    }
+    .visualizer-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      overflow-x: auto;
+      min-height: 68px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .vis-row {
+      display: flex;
+      gap: 3px;
+      flex-wrap: nowrap;
+    }
+    .vis-cell {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 500;
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+      border-radius: 3px;
+      padding: 1px 0;
+    }
+    .vis-cell.plain  { color: var(--muted); }
+    .vis-cell.key    { color: var(--indigo-hover); background: var(--indigo-bg); }
+    .vis-cell.space  { color: var(--dim); }
+    .vis-empty {
+      color: var(--dim);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+    .vis-row-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--dim);
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+
+    /* ── OUTPUT PANEL ────────────────────────────────────────── */
+    .output-panel .panel-label { color: var(--emerald); }
+
+    .output-copy-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .copy-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 14px;
+      background: var(--emerald-bg);
+      border: 1px solid var(--emerald-border);
+      border-radius: 20px;
+      color: var(--emerald);
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.02em;
+    }
+    .copy-btn:hover { background: var(--emerald); color: #fff; }
+    .copy-btn.copied { background: var(--emerald); color: #fff; }
+
+    /* ── STATS BAR ───────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      font-size: 0.75rem;
+      color: var(--dim);
+      font-family: var(--mono);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .stat-chip span { color: var(--indigo-hover); font-weight: 600; }
+
+    /* ── CONFIG ROW (mode + keyword) ─────────────────────────── */
+    .config-card {
+      box-shadow: var(--shadow);
+    }
+
+    /* ── AD PLACEMENTS ───────────────────────────────────────── */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 8px 0 24px;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      font-size: 0.78rem;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      font-size: 0.78rem;
+    }
+
+    /* ── GLOSSARY ────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--indigo-hover);
+      margin-bottom: 5px;
+      letter-spacing: 0.02em;
+    }
+    .glossary-def {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── EDU SECTION ─────────────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+    .section-intro {
+      font-size: 0.97rem;
+      color: var(--muted);
+      margin-bottom: 22px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1.0rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 24px 0 10px;
+    }
+    .edu-section p {
+      font-size: 0.93rem;
+      color: var(--muted);
+      line-height: 1.72;
+      margin-bottom: 12px;
+    }
+    .edu-section strong { color: var(--text); }
+
+    /* ── FAQ ─────────────────────────────────────────────────── */
+    .faq-list { margin-top: 8px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: var(--bg2);
+      border: none;
+      padding: 16px 18px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--bg3); }
+    .faq-q .faq-chevron {
+      font-size: 0.85rem;
+      color: var(--indigo);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-q.open .faq-chevron { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 18px 16px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      line-height: 1.72;
+    }
+    .faq-a.open { display: block; }
+
+    /* ── TABULA RECTA SAMPLE ─────────────────────────────────── */
+    .tabula-preview {
+      overflow-x: auto;
+      margin: 14px 0;
+    }
+    .tabula-preview table {
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+    }
+    .tabula-preview th, .tabula-preview td {
+      width: 22px;
+      height: 22px;
+      text-align: center;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0;
+    }
+    .tabula-preview th {
+      background: var(--bg3);
+      color: var(--indigo-hover);
+      font-weight: 700;
+    }
+    .tabula-preview td.diag {
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    /* ── FOOTER SPACER ───────────────────────────────────────── */
+    .footer-spacer { height: 40px; }
+
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>Vigenere Cipher Engine: Polyalphabetic Cryptographic Variable Shifting Utility</h1>
+    <p class="subtitle">Encrypt or decrypt text using the classic tabula recta method. Enter a keyword to apply a different Caesar shift at each letter position. Live keyword alignment visualizer included.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- CONFIG CARD: mode toggle + keyword -->
+    <div class="card config-card">
+      <div class="card-title"><span class="ct-accent">&#9881;</span> Cipher Configuration</div>
+
+      <!-- Mode Toggle -->
+      <div class="mode-toggle" role="group" aria-label="Cipher mode">
+        <button class="mode-btn active-encrypt" id="btn-encrypt" onclick="setMode('encrypt')">Encrypt</button>
+        <button class="mode-btn" id="btn-decrypt" onclick="setMode('decrypt')">Decrypt</button>
+      </div>
+
+      <!-- Keyword Input -->
+      <div class="keyword-row">
+        <div class="keyword-label"><span class="kl-icon">&#128273;</span> Keyword</div>
+        <input
+          class="keyword-input"
+          id="keyword-input"
+          type="text"
+          placeholder="e.g. SECRET"
+          maxlength="64"
+          autocomplete="off"
+          spellcheck="false"
+          oninput="onKeywordChange()"
+        />
+        <div class="keyword-hint">The keyword determines the shifting pattern. Longer keywords are harder to crack.</div>
+      </div>
+    </div>
+
+    <!-- WORKSPACE: input + output panels -->
+    <div class="workspace">
+
+      <!-- INPUT PANEL -->
+      <div class="panel">
+        <div class="panel-label">Plaintext / Ciphertext Input</div>
+        <textarea
+          class="cipher-textarea"
+          id="input-text"
+          placeholder="Type or paste your message here..."
+          spellcheck="false"
+          oninput="onInputChange()"
+        ></textarea>
+        <div class="stats-bar" id="input-stats">
+          <div class="stat-chip">chars: <span id="stat-total">0</span></div>
+          <div class="stat-chip">alpha: <span id="stat-alpha">0</span></div>
+        </div>
+      </div>
+
+      <!-- OUTPUT PANEL -->
+      <div class="panel output-panel">
+        <div class="output-copy-row">
+          <div class="panel-label">Output</div>
+          <button class="copy-btn" id="copy-btn" onclick="copyOutput()">Copy</button>
+        </div>
+        <textarea
+          class="cipher-textarea output"
+          id="output-text"
+          readonly
+          placeholder="Output will appear here..."
+          spellcheck="false"
+        ></textarea>
+
+        <!-- Keyword Visualizer -->
+        <div class="visualizer-wrap">
+          <div class="visualizer-label">Keyword Alignment Visualizer</div>
+          <div class="visualizer-box" id="visualizer-box">
+            <div class="vis-empty">Enter text and a keyword to see alignment.</div>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat-chip">keyword: <span id="stat-kw">none</span></div>
+          <div class="stat-chip">mode: <span id="stat-mode">encrypt</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- AD PLACEMENT 1 -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title"><span class="ct-accent">&#128218;</span> Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Vigenere Cipher</div>
+          <div class="glossary-def">A polyalphabetic substitution cipher that uses a repeating keyword to apply a different Caesar shift to each letter of the plaintext. Named after Blaise de Vigenere, though earlier described by Giovan Battista Bellaso.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Polyalphabetic</div>
+          <div class="glossary-def">Using multiple different cipher alphabets within a single message. The opposite of monoalphabetic, where every letter maps to exactly one other letter. Polyalphabetic ciphers resist simple frequency analysis.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Tabula Recta</div>
+          <div class="glossary-def">A 26x26 grid of letters where each row is the alphabet shifted one position further. Also called the Vigenere square. The intersection of a keyword letter (row) and a plaintext letter (column) gives the ciphertext letter.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Keyword</div>
+          <div class="glossary-def">The secret word or phrase that controls the Vigenere cipher. It is repeated (cycled) over the length of the message. A longer, more random keyword makes the cipher significantly harder to crack.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Ciphertext</div>
+          <div class="glossary-def">The encrypted, unreadable output produced by running plaintext through a cipher. Without knowing the keyword and algorithm, ciphertext should reveal nothing about the original message.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Plaintext</div>
+          <div class="glossary-def">The original, human-readable message before encryption. In decryption, it is the recovered message after the cipher is reversed. Also called cleartext.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Frequency Analysis</div>
+          <div class="glossary-def">A cryptanalysis technique that exploits the fact that certain letters appear more often in a language. In English, E, T, and A are the most common. By counting ciphertext letter frequencies, an attacker can deduce the substitution mapping.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Kasiski Examination</div>
+          <div class="glossary-def">An attack on the Vigenere cipher that finds repeated trigrams in the ciphertext. The gaps between repetitions are likely multiples of the keyword length, revealing it to the attacker.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to the Vigenere Polyalphabetic Cipher</h2>
+      <p class="section-intro">
+        The Vigenere cipher was called "le chiffre indechiffrable" (the indecipherable cipher) for over 300 years. It takes the simple Caesar cipher and adds a repeating keyword that makes each letter shift differently, producing ciphertext that resists the frequency analysis attacks that trivially break single-substitution ciphers. This guide explains exactly how it works, why it was historically significant, and where it ultimately fails.
+      </p>
+
+      <h3>How to Use This Tool</h3>
+      <p>
+        Select <strong>Encrypt</strong> or <strong>Decrypt</strong> mode at the top. Enter your keyword in the <strong>Keyword</strong> field - only letters are used, so spaces and numbers are ignored. Type or paste your message in the left panel. The right panel shows the result instantly.
+      </p>
+      <p>
+        The <strong>Keyword Alignment Visualizer</strong> below the output shows you exactly which key letter is applied to each plaintext letter in real time. Non-alphabetic characters (spaces, punctuation, digits) are passed through unchanged and consume no keyword position, so the keyword only advances on alphabetic characters.
+      </p>
+
+      <h3>The Math Behind the Cipher</h3>
+      <p>
+        Every letter is mapped to a number: A=0, B=1, C=2, ... Z=25. For encryption, the formula at each alphabetic position i is: <strong>Cipher[i] = (Plain[i] + Key[i mod keyLength]) mod 26</strong>. Decryption reverses it: <strong>Plain[i] = (Cipher[i] - Key[i mod keyLength] + 26) mod 26</strong>. Adding 26 before the modulo prevents negative results.
+      </p>
+      <p>
+        Example with keyword KEY (K=10, E=4, Y=24): encrypting HELLO gives H(7)+K(10)=17=R, E(4)+E(4)=8=I, L(11)+Y(24)=35 mod 26=9=J, L(11)+K(10)=21=V, O(14)+E(4)=18=S. HELLO becomes RIJVS.
+      </p>
+
+      <h3>A Partial Tabula Recta (Vigenere Square)</h3>
+      <p>The rows are keyword letters (A-E shown), columns are plaintext letters (A-E shown). Each cell is the ciphertext produced by that row-column pair. The diagonal is highlighted - it represents encrypting with key=A, which leaves the letter unchanged (a shift of zero).</p>
+      <div class="tabula-preview">
+        <table>
+          <tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>
+          <tr><th>A</th><td class="diag">A</td><td>B</td><td>C</td><td>D</td><td>E</td></tr>
+          <tr><th>B</th><td>B</td><td class="diag">C</td><td>D</td><td>E</td><td>F</td></tr>
+          <tr><th>C</th><td>C</td><td>D</td><td class="diag">E</td><td>F</td><td>G</td></tr>
+          <tr><th>D</th><td>D</td><td>E</td><td>F</td><td class="diag">G</td><td>H</td></tr>
+          <tr><th>E</th><td>E</td><td>F</td><td>G</td><td>H</td><td class="diag">I</td></tr>
+        </table>
+      </div>
+
+      <h3>Historical Context</h3>
+      <p>
+        Giovan Battista Bellaso described the core idea in 1553. Blaise de Vigenere published a stronger autokey variant in 1586 - yet the simpler repeating-keyword version became known by his name. For nearly three centuries, the cipher was considered unbreakable. Charles Babbage cracked it in the 1840s (unpublished), and Friedrich Kasiski independently published the attack in 1863. The cipher's weakness: a repeating keyword creates periodic structure. If the keyword is 5 letters long, every 5th letter in the ciphertext is shifted by the same amount - reducing it to five simultaneous Caesar ciphers.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What makes the Vigenere cipher stronger than a standard Caesar cipher?
+            <span class="faq-chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            A Caesar cipher uses a single fixed shift applied to every letter, so all "A"s become "D"s, all "B"s become "E"s, and so on. This makes it trivially breakable with frequency analysis since the most common letter in the ciphertext will almost always correspond to "E". The Vigenere cipher uses a keyword to apply a different shift to each letter position. With a keyword of length N, there are N different Caesar ciphers interleaved. This means the same plaintext letter can map to many different ciphertext letters and vice versa, which dramatically flattens the frequency distribution and defeats simple frequency analysis.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What happens if my keyword is the same length as my message?
+            <span class="faq-chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            When your keyword is exactly as long as your message (and each keyword letter is used only once), the Vigenere cipher becomes a one-time pad. A one-time pad is theoretically unbreakable with perfect randomness and strict single-use, because every possible plaintext of that length is equally probable given the ciphertext. The keyword never repeats, so the statistical patterns that Kasiski examination exploits cannot appear. This is why intelligence agencies have used one-time pads for the most sensitive communications.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How do I crack a Vigenere cipher?
+            <span class="faq-chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            The classic attack is the Kasiski examination: scan the ciphertext for repeated trigrams (3-letter sequences). The distances between repetitions are likely multiples of the keyword length. Find the greatest common divisor of those distances and you have a strong guess for the keyword length. Once you know the keyword length N, split the ciphertext into N groups - every Nth letter. Each group is now a simple Caesar cipher, which you break with index-of-coincidence analysis or straight frequency analysis (the most common letter in each group is likely a shift of "E"). Reconstruct the keyword from the N individual shifts. Modern computer tools can do this in seconds for most short keywords.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Is this encryption method secure enough for sensitive modern data?
+            <span class="faq-chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            No. The Vigenere cipher is a classical cipher and provides no meaningful security for sensitive modern data. It was considered unbreakable for centuries but Charles Babbage and Friedrich Kasiski independently demonstrated its weakness in the mid-1800s. Today, it can be broken programmatically in milliseconds with basic statistical tools. For protecting real data, use modern authenticated encryption such as AES-GCM or ChaCha20-Poly1305, ideally through a well-audited library or protocol like TLS, Signal Protocol, or age. The Vigenere cipher is valuable as a learning tool for understanding how polyalphabetic substitution works and why key reuse is catastrophic.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What is frequency analysis in cryptography?
+            <span class="faq-chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Frequency analysis is the study of how often letters, pairs (bigrams), or triples (trigrams) appear in a ciphertext, then comparing those frequencies to known patterns in the target language. In English, "E" appears about 12.7% of the time, "T" about 9.1%, "A" about 8.2%, and so on. In a simple substitution cipher, the most frequent ciphertext letter almost certainly represents "E". The Vigenere cipher resists single-letter frequency analysis because each plaintext letter is shifted by a different amount depending on its position in the keyword cycle, but it remains vulnerable to the Kasiski examination once the keyword length is known.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AD PLACEMENT 2 -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <div class="footer-spacer"></div>
+
+  <script>
+    /* ============================================================
+       VIGENERE CIPHER ENGINE - 100% client-side
+       No network calls. No data ever leaves the browser.
+    ============================================================ */
+
+    let currentMode = 'encrypt';
+    let debounceTimer = null;
+    const DEBOUNCE_MS = 120;
+
+    /* ── Core cipher math ──────────────────────────────────────── */
+
+    function processVigenere(text, keyword, mode) {
+      if (!keyword || keyword.length === 0) return { output: text, keyStream: [] };
+
+      // Strip non-alpha from keyword and uppercase
+      const key = keyword.replace(/[^a-zA-Z]/g, '').toUpperCase();
+      if (key.length === 0) return { output: text, keyStream: [] };
+
+      const keyLen = key.length;
+      let output = '';
+      let keyIndex = 0;
+      const keyStream = []; // parallel array: one entry per char in text
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const code = ch.charCodeAt(0);
+        const isUpper = code >= 65 && code <= 90;
+        const isLower = code >= 97 && code <= 122;
+
+        if (isUpper || isLower) {
+          const base = isUpper ? 65 : 97;
+          const plain = code - base;
+          const shift = key.charCodeAt(keyIndex % keyLen) - 65;
+          let result;
+          if (mode === 'encrypt') {
+            result = (plain + shift) % 26;
+          } else {
+            result = ((plain - shift) + 26) % 26;
+          }
+          output += String.fromCharCode(result + base);
+          keyStream.push({ type: 'alpha', keyChar: key[keyIndex % keyLen], plainChar: ch.toUpperCase() });
+          keyIndex++;
+        } else {
+          output += ch;
+          keyStream.push({ type: 'other', keyChar: null, plainChar: ch });
+        }
+      }
+      return { output, keyStream };
+    }
+
+    /* ── Visualizer renderer ───────────────────────────────────── */
+
+    const VIS_MAX = 60; // max chars to show in visualizer
+
+    function renderVisualizer(keyStream) {
+      const box = document.getElementById('visualizer-box');
+      if (!keyStream || keyStream.length === 0) {
+        box.innerHTML = '<div class="vis-empty">Enter text and a keyword to see alignment.</div>';
+        return;
+      }
+
+      // Show only first VIS_MAX chars
+      const slice = keyStream.slice(0, VIS_MAX);
+      const more = keyStream.length > VIS_MAX;
+
+      // Row 1: plaintext chars
+      // Row 2: key chars (aligned to alpha positions, blank for non-alpha)
+      const plainRow = document.createElement('div');
+      plainRow.className = 'vis-row';
+
+      const keyRow = document.createElement('div');
+      keyRow.className = 'vis-row';
+
+      const labelPlain = document.createElement('div');
+      labelPlain.className = 'vis-row-label';
+      labelPlain.textContent = 'text:';
+
+      const labelKey = document.createElement('div');
+      labelKey.className = 'vis-row-label';
+      labelKey.textContent = 'key: ';
+
+      slice.forEach(entry => {
+        const pc = document.createElement('span');
+        pc.className = 'vis-cell ' + (entry.type === 'alpha' ? 'plain' : 'space');
+        pc.textContent = entry.plainChar === ' ' ? '·' : entry.plainChar;
+        plainRow.appendChild(pc);
+
+        const kc = document.createElement('span');
+        kc.className = 'vis-cell ' + (entry.type === 'alpha' ? 'key' : 'space');
+        kc.textContent = entry.type === 'alpha' ? entry.keyChar : ' ';
+        keyRow.appendChild(kc);
+      });
+
+      if (more) {
+        const ellipsis = document.createElement('span');
+        ellipsis.className = 'vis-cell space';
+        ellipsis.textContent = '...';
+        plainRow.appendChild(ellipsis);
+
+        const ke2 = ellipsis.cloneNode(true);
+        keyRow.appendChild(ke2);
+      }
+
+      box.innerHTML = '';
+      // Use a flex column wrapper for labels+rows
+      const wrapPlain = document.createElement('div');
+      wrapPlain.style.cssText = 'display:flex;align-items:center;gap:6px;';
+      wrapPlain.appendChild(labelPlain);
+      wrapPlain.appendChild(plainRow);
+
+      const wrapKey = document.createElement('div');
+      wrapKey.style.cssText = 'display:flex;align-items:center;gap:6px;';
+      wrapKey.appendChild(labelKey);
+      wrapKey.appendChild(keyRow);
+
+      box.appendChild(wrapPlain);
+      box.appendChild(wrapKey);
+    }
+
+    /* ── Stats updater ─────────────────────────────────────────── */
+
+    function updateStats(text, keyword) {
+      const total = text.length;
+      const alpha = (text.match(/[a-zA-Z]/g) || []).length;
+      const kw = keyword.replace(/[^a-zA-Z]/g, '') || 'none';
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-alpha').textContent = alpha;
+      document.getElementById('stat-kw').textContent = kw.toUpperCase() || 'none';
+      document.getElementById('stat-mode').textContent = currentMode;
+    }
+
+    /* ── Main process ──────────────────────────────────────────── */
+
+    function process() {
+      const text = document.getElementById('input-text').value;
+      const keyword = document.getElementById('keyword-input').value;
+      const { output, keyStream } = processVigenere(text, keyword, currentMode);
+      document.getElementById('output-text').value = output;
+      renderVisualizer(keyStream);
+      updateStats(text, keyword);
+    }
+
+    /* ── Debounced event handlers ──────────────────────────────── */
+
+    function onInputChange() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(process, DEBOUNCE_MS);
+    }
+
+    function onKeywordChange() {
+      // Mirror keyword to uppercase in real time
+      const el = document.getElementById('keyword-input');
+      const val = el.value.toUpperCase().replace(/[^A-Z]/g, '');
+      el.value = val;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(process, DEBOUNCE_MS);
+    }
+
+    /* ── Mode toggle ───────────────────────────────────────────── */
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btnE = document.getElementById('btn-encrypt');
+      const btnD = document.getElementById('btn-decrypt');
+      btnE.className = 'mode-btn' + (mode === 'encrypt' ? ' active-encrypt' : '');
+      btnD.className = 'mode-btn' + (mode === 'decrypt' ? ' active-decrypt' : '');
+      process();
+    }
+
+    /* ── Copy output ───────────────────────────────────────────── */
+
+    function copyOutput() {
+      const val = document.getElementById('output-text').value;
+      if (!val) return;
+      navigator.clipboard.writeText(val).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    }
+
+    /* ── FAQ accordion ─────────────────────────────────────────── */
+
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling;
+      const isOpen = answer.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-a.open').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.faq-q.open').forEach(q => q.classList.remove('open'));
+      // Open this one if it was closed
+      if (!isOpen) {
+        answer.classList.add('open');
+        btn.classList.add('open');
+      }
+    }
+
+    /* ── Init ──────────────────────────────────────────────────── */
+    process();
+  </script>
+
+</body>
+</html>

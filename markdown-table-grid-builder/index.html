@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown Table Grid Builder: Interactive Sheet Array Formatting Utility | AxiomApe</title>
+  <meta name="description" content="Free Markdown Table Grid Builder. Add rows and columns in a live spreadsheet-style editor, pick alignment, and instantly get formatted pipe-table syntax with a visual preview. 100% client-side." />
+  <meta name="keywords" content="markdown table generator, pipe table builder, GFM table, markdown table formatter, table to markdown, markdown table alignment, markdown table editor, github flavored markdown table, interactive markdown table, pipe table syntax" />
+  <link rel="canonical" href="https://axiomape.com/markdown-table-grid-builder/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Markdown Table Grid Builder",
+        "description": "Free Markdown Table Grid Builder. Add rows and columns in a live spreadsheet-style editor, pick alignment, and instantly get formatted pipe-table syntax with a visual preview. 100% client-side.",
+        "url": "https://axiomape.com/markdown-table-grid-builder/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between standard Markdown tables and GFM?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Standard Markdown (CommonMark) does not include table syntax at all - tables are not part of the core specification. GFM (GitHub Flavored Markdown) added pipe table support as an extension. Most modern Markdown editors, documentation platforms, and static site generators implement GFM or a superset of it, so pipe tables are widely supported today. If a platform does not render your table, it is most likely using strict CommonMark without extensions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I align text in a Markdown table?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Alignment is controlled by colons in the separator row - the row of hyphens between the header and the data rows. A colon on the left only (:---) means left alignment. A colon on the right only (---:) means right alignment. Colons on both sides (:---:) means center alignment. No colons (---) defaults to left alignment in most renderers."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I embed links within Markdown table cells?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Standard Markdown inline syntax works inside table cells. You can use [link text](https://example.com) for hyperlinks, **bold**, *italic*, and even inline code with backticks. The one character you must escape is the pipe character (|) - if your cell content contains a pipe, write it as \\| so the table parser does not treat it as a column separator. This tool handles that escaping for you automatically."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does my Markdown table not render correctly in some editors?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The most common causes are: (1) the platform uses strict CommonMark without the GFM table extension; (2) the header separator row is missing or malformed - every GFM table requires at least one hyphen per cell in the second row; (3) the column count in a data row does not match the header row - mismatched column counts cause many renderers to drop the row entirely; (4) an unescaped pipe character inside a cell is being parsed as a column separator, shifting all following columns."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does the alignment syntax in the separator row look like?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The separator row uses hyphens and colons to signal alignment. Left: | :--- |, Center: | :---: |, Right: | ---: |. You need at least one hyphen, but adding more (like ---) is purely cosmetic and makes the raw Markdown easier to read in a plain-text editor. This tool pads hyphens to match the widest cell in each column for maximum readability."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:        #3B82F6;
+      --accent-hover:  #2563EB;
+      --accent-light:  rgba(59,130,246,0.12);
+      --accent-border: rgba(59,130,246,0.35);
+      --grid-gray:     #4B5563;
+      --success:       #22C55E;
+      --danger:        #EF4444;
+
+      /* Dark theme */
+      --bg:            #0F1117;
+      --bg-card:       #1A1D27;
+      --bg-input:      #12151F;
+      --bg-table-head: #1E2235;
+      --border:        #2A2D3E;
+      --border-focus:  #3B82F6;
+      --text:          #E2E8F0;
+      --text-muted:    #94A3B8;
+      --text-dim:      #64748B;
+      --radius:        10px;
+      --shadow:        0 4px 24px rgba(0,0,0,0.4);
+      --font:          'Inter', 'Roboto', 'Segoe UI', system-ui, sans-serif;
+      --mono:          'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Legacy nav hidden by site-chrome */
+    .top-bar { display: none; }
+
+    /* =========================================================
+       GOOGLE FONTS
+    ========================================================= */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+    /* =========================================================
+       PAGE WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.55rem, 4vw, 2.1rem);
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .page-header h1 span { color: var(--accent); }
+    .page-header p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 620px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =========================================================
+       CARD
+    ========================================================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    /* =========================================================
+       TOOLBAR
+    ========================================================= */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .toolbar-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .toolbar-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 13px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--grid-gray); border-color: #6B7280; }
+    .btn.btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn.btn-danger { border-color: #4B1818; color: #FCA5A5; }
+    .btn.btn-danger:hover { background: #4B1818; border-color: var(--danger); color: #fff; }
+    .btn.btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+
+    select.btn {
+      padding-right: 28px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394A3B8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 9px center;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    select.btn option { background: #1A1D27; }
+
+    /* =========================================================
+       GRID EDITOR TABLE
+    ========================================================= */
+    .grid-scroll {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    #grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 400px;
+      table-layout: auto;
+    }
+
+    #grid-table thead tr {
+      background: var(--bg-table-head);
+    }
+
+    #grid-table th,
+    #grid-table td {
+      padding: 0;
+      border: 1px solid var(--border);
+      min-width: 100px;
+    }
+
+    #grid-table th:first-child,
+    #grid-table td:first-child {
+      width: 34px;
+      min-width: 34px;
+      max-width: 34px;
+      background: var(--bg-table-head);
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      user-select: none;
+      padding: 0 4px;
+    }
+
+    .grid-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      outline: none;
+      transition: background 0.12s;
+    }
+    .grid-input::placeholder { color: var(--text-dim); }
+    .grid-input:focus { background: var(--accent-light); }
+
+    #grid-table thead .grid-input {
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .header-row-indicator {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 2px 4px 0;
+    }
+
+    /* col delete button */
+    .col-del-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 0 4px;
+    }
+    .col-del-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .col-del-btn:hover { background: #4B1818; color: var(--danger); }
+
+    /* row delete button cell */
+    .row-del-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      width: 100%;
+      padding: 6px 0;
+      transition: color 0.12s;
+    }
+    .row-del-btn:hover { color: var(--danger); }
+
+    /* =========================================================
+       TWO-PANEL LAYOUT (preview + output)
+    ========================================================= */
+    .panel-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 680px) {
+      .panel-row { grid-template-columns: 1fr; }
+    }
+
+    /* =========================================================
+       LIVE PREVIEW TABLE
+    ========================================================= */
+    #preview-wrap {
+      overflow-x: auto;
+    }
+    #preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    #preview-table th,
+    #preview-table td {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+    }
+    #preview-table thead th {
+      background: var(--bg-table-head);
+      color: #fff;
+      font-weight: 700;
+    }
+    #preview-table tbody tr:nth-child(even) td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .preview-empty {
+      color: var(--text-dim);
+      font-size: 0.875rem;
+      font-style: italic;
+      padding: 10px 0;
+    }
+
+    /* =========================================================
+       CODE OUTPUT
+    ========================================================= */
+    .code-wrap {
+      position: relative;
+    }
+    #md-output {
+      display: block;
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: #A5F3FC;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+      min-height: 90px;
+      tab-size: 2;
+    }
+    .copy-btn-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    /* =========================================================
+       GLOSSARY
+    ========================================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       EDUCATIONAL SECTION
+    ========================================================= */
+    .edu-section h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .section-intro {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .edu-section code {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      background: var(--bg-input);
+      color: #A5F3FC;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .edu-section pre {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: #A5F3FC;
+      overflow-x: auto;
+      margin: 10px 0 16px;
+      line-height: 1.6;
+    }
+
+    /* =========================================================
+       FAQ
+    ========================================================= */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--text);
+      user-select: none;
+    }
+    .faq-q:hover { color: var(--accent); }
+    .faq-icon {
+      color: var(--accent);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .faq-icon.open { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 0 0 14px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .faq-a.open { display: block; }
+    .faq-a code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--bg-input);
+      color: #A5F3FC;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+    @media (max-width: 560px) {
+      .toolbar { gap: 6px; }
+      .btn { padding: 5px 10px; font-size: 0.78rem; }
+      .grid-input { font-size: 0.82rem; padding: 7px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="https://axiomape.com">axiomape.com</a> &mdash; <a href="https://axiomape.com">All Tools</a>
+  </div>
+
+  <main class="page-wrapper" id="main">
+
+    <header class="page-header">
+      <h1>Markdown Table <span>Grid Builder</span></h1>
+      <p>Interactive spreadsheet-style editor that generates formatted pipe-table syntax in real time - with live visual preview and one-click copy.</p>
+    </header>
+
+    <!-- ============================================================
+         TOOL CARD: GRID EDITOR
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Grid Editor</div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-label">Rows</span>
+          <button class="btn" onclick="addRow()" title="Add data row">+ Row</button>
+          <button class="btn btn-danger" onclick="removeRow()" title="Remove last data row">- Row</button>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">Columns</span>
+          <button class="btn" onclick="addCol()" title="Add column">+ Col</button>
+          <button class="btn btn-danger" onclick="removeCol()" title="Remove last column">- Col</button>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">Alignment</span>
+          <select class="btn" id="align-select" onchange="renderAll()">
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div class="toolbar-group" style="margin-left:auto">
+          <button class="btn btn-danger" onclick="resetGrid()" title="Reset to default empty grid">Reset</button>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <div class="grid-scroll">
+        <table id="grid-table">
+          <thead id="grid-head"></thead>
+          <tbody id="grid-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         TWO-PANEL: LIVE PREVIEW + CODE OUTPUT
+    ============================================================ -->
+    <div class="panel-row">
+
+      <!-- Live Preview -->
+      <div class="card">
+        <div class="card-title">Live Preview</div>
+        <div id="preview-wrap">
+          <p class="preview-empty">Fill in the grid above to see your table here.</p>
+        </div>
+      </div>
+
+      <!-- Code Output -->
+      <div class="card">
+        <div class="card-title">Markdown Output</div>
+        <div class="code-wrap">
+          <code id="md-output"></code>
+        </div>
+        <div class="copy-btn-wrap">
+          <button class="btn btn-primary" id="copy-btn" onclick="copyMarkdown()">Copy to Clipboard</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">Markdown</div>
+          <div class="glossary-def">A lightweight plain-text markup language that converts to HTML. Created by John Gruber in 2004, it uses minimal punctuation to add formatting without needing a rich-text editor.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Pipe Table</div>
+          <div class="glossary-def">A table format using the vertical bar character (|) as a column separator. Each row is a line of text, cells are divided by pipes, and the second row defines alignment with hyphens.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Syntax</div>
+          <div class="glossary-def">The set of rules that define how characters must be arranged to be correctly interpreted by a Markdown parser. Using the wrong character in the wrong position produces broken output.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Header Separator</div>
+          <div class="glossary-def">The mandatory second row in a GFM table, made of hyphens and optional colons. It tells the renderer where the header row ends and data rows begin. Without it, many parsers will not render the table.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Alignment Syntax</div>
+          <div class="glossary-def">Colon placement inside the separator row that controls text alignment: :--- (left), :---: (center), ---: (right). The colons override default left-alignment on a column-by-column basis.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Escaping</div>
+          <div class="glossary-def">Prepending a backslash to a character so the Markdown parser treats it as literal text rather than syntax. In tables, a pipe inside a cell must be written as \| to prevent it from being parsed as a column separator.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">GFM</div>
+          <div class="glossary-def">GitHub Flavored Markdown - GitHub's extension of CommonMark that adds pipe tables, task lists, strikethrough, and autolinks. It became the de facto standard and is supported by most documentation tools and static site generators.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Column Padding</div>
+          <div class="glossary-def">Adding extra spaces inside each cell so that pipe characters line up vertically when viewing the raw Markdown in a code editor. It does not affect rendering but makes the source file far easier to read and edit.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Markdown Tables</h2>
+
+      <p class="section-intro">
+        Markdown tables let you present structured data in plain text that renders as a clean HTML table in any GFM-compatible renderer. Whether you are writing documentation on GitHub, building a README, authoring a static site post, or drafting content in Notion or Obsidian, knowing how to construct a well-formed pipe table is essential. This tool takes the tedium out of counting pipes and colons by building the syntax for you as you type.
+      </p>
+
+      <h3>How to use this tool</h3>
+      <p>
+        Start typing in the header row (the first row of the grid, labeled "H"). Each cell you fill becomes a column header. Use "+ Col" to add more columns or "- Col" to remove the last one. Add data rows with "+ Row" and type your content into each cell. Pick a global alignment from the dropdown - Left, Center, or Right - and it is applied to every column at once. The Markdown Output panel updates with every keystroke. When you are happy with the result, click "Copy to Clipboard" and paste directly into your project.
+      </p>
+      <p>
+        You do not need to worry about pipe characters in your content. If a cell contains a literal | character, this tool automatically converts it to \| so the table parser does not misread it as a column boundary.
+      </p>
+
+      <h3>Anatomy of a Markdown table</h3>
+      <p>Every valid GFM pipe table has exactly three parts:</p>
+      <pre>| Header A   | Header B   | Header C   |
+| :--------- | :--------- | :--------- |
+| row 1 col1 | row 1 col2 | row 1 col3 |
+| row 2 col1 | row 2 col2 | row 2 col3 |</pre>
+      <p>
+        Row 1 is the header row. Row 2 is the separator row (required). All subsequent rows are data rows. The separator must have at least one hyphen per cell. Alignment colons are optional but control how cells are rendered.
+      </p>
+
+      <h3>Alignment in detail</h3>
+      <p>
+        Left alignment uses <code>:---</code>, center uses <code>:---:</code>, and right uses <code>---:</code>. You can mix alignments across columns in the raw separator row even though this tool applies one global alignment. For mixed alignments, copy the output and manually edit the separator row - the rest of the table will remain intact.
+      </p>
+
+      <h3>Where Markdown tables render</h3>
+      <p>
+        Pipe tables are supported natively in GitHub and GitLab README files, GitHub Wiki pages, Obsidian, Notion, GitBook, MkDocs, Docusaurus, Hugo, Jekyll (with GFM or Kramdown), VS Code's Markdown preview, most JetBrains IDEs, and the vast majority of modern static site generators. They are not part of strict CommonMark, so platforms that use a minimal CommonMark-only renderer (rare today) will display the raw pipes as plain text.
+      </p>
+
+      <h3>Tips for readable raw Markdown</h3>
+      <p>
+        This tool pads cells with spaces so pipes align vertically in the source. While the extra spaces have no effect on rendering, they make maintaining large tables by hand significantly easier. If you paste the output into an editor that reformats on save (like Prettier with the Markdown plugin), the formatting will be preserved.
+      </p>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between standard Markdown tables and GFM?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          Standard Markdown (CommonMark) does not include table syntax at all - tables are not part of the core specification. GFM (GitHub Flavored Markdown) added pipe table support as an extension. Most modern Markdown editors, documentation platforms, and static site generators implement GFM or a superset of it, so pipe tables are widely supported today. If a platform does not render your table, it is most likely using strict CommonMark without extensions.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How do I align text in a Markdown table?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          Alignment is controlled by colons in the separator row. A colon on the left only (<code>:---</code>) means left alignment. A colon on the right only (<code>---:</code>) means right alignment. Colons on both sides (<code>:---:</code>) means center alignment. No colons (<code>---</code>) defaults to left in most renderers. This tool applies your chosen global alignment to every column automatically.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Can I embed links within Markdown table cells?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          Yes. Standard Markdown inline syntax works inside table cells. You can use <code>[link text](https://example.com)</code> for hyperlinks, <code>**bold**</code>, <code>*italic*</code>, and inline code with backticks. The one character you must escape is the pipe character (|). If your cell content contains a pipe, write it as <code>\|</code> so the table parser does not treat it as a column separator. This tool handles that escaping for you automatically.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Why does my Markdown table not render correctly in some editors?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          The most common causes are: the platform uses strict CommonMark without the GFM table extension; the header separator row is missing or malformed (every GFM table requires at least one hyphen per cell in the second row); the column count in a data row does not match the header row (mismatched column counts cause many renderers to drop the row entirely); or an unescaped pipe character inside a cell is being parsed as a column separator, shifting all following columns.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What does the alignment syntax in the separator row look like?
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-a">
+          The separator row uses hyphens and colons to signal alignment. Left: <code>| :--- |</code>, Center: <code>| :---: |</code>, Right: <code>| ---: |</code>. You need at least one hyphen, but adding more is purely cosmetic. This tool pads hyphens to match the widest cell in each column for maximum readability in a plain-text editor.
+        </div>
+      </div>
+
+    </div><!-- end edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       STATE
+    ============================================================ */
+    let ROWS = 3;  // data rows (excludes header)
+    let COLS = 3;
+
+    // data[0] = header row array, data[1..] = data rows
+    let data = [];
+
+    function initData() {
+      data = [];
+      // header row
+      data.push(Array.from({length: COLS}, (_, i) => 'Header ' + (i + 1)));
+      // data rows
+      for (let r = 0; r < ROWS; r++) {
+        data.push(Array(COLS).fill(''));
+      }
+    }
+
+    /* ============================================================
+       RENDER GRID
+    ============================================================ */
+    function renderGrid() {
+      const head = document.getElementById('grid-head');
+      const body = document.getElementById('grid-body');
+
+      // ---- HEADER ROW ----
+      let htr = '<tr>';
+      // row label cell
+      htr += '<th><div class="header-row-indicator">H</div></th>';
+      for (let c = 0; c < COLS; c++) {
+        const val = esc(data[0][c]);
+        htr += `<th>
+          <div class="col-del-wrap">
+            <button class="col-del-btn" onclick="deleteCol(${c})" title="Delete column ${c+1}">x col</button>
+          </div>
+          <input class="grid-input" placeholder="Header ${c+1}" value="${val}"
+            oninput="updateCell(0,${c},this.value)" />
+        </th>`;
+      }
+      htr += '</tr>';
+      head.innerHTML = htr;
+
+      // ---- DATA ROWS ----
+      let bodyHtml = '';
+      for (let r = 1; r < data.length; r++) {
+        bodyHtml += '<tr>';
+        // row label + delete
+        bodyHtml += `<td>
+          <button class="row-del-btn" onclick="deleteRow(${r})" title="Delete row ${r}">x</button>
+        </td>`;
+        for (let c = 0; c < COLS; c++) {
+          const val = esc(data[r][c]);
+          bodyHtml += `<td>
+            <input class="grid-input" placeholder="" value="${val}"
+              oninput="updateCell(${r},${c},this.value)" />
+          </td>`;
+        }
+        bodyHtml += '</tr>';
+      }
+      body.innerHTML = bodyHtml;
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    /* ============================================================
+       CELL UPDATE
+    ============================================================ */
+    function updateCell(row, col, val) {
+      data[row][col] = val;
+      renderOutputs();
+    }
+
+    /* ============================================================
+       GRID CONTROLS
+    ============================================================ */
+    function addRow() {
+      ROWS++;
+      data.push(Array(COLS).fill(''));
+      renderGrid();
+      renderOutputs();
+    }
+
+    function removeRow() {
+      if (data.length <= 2) return; // keep at least 1 data row
+      ROWS--;
+      data.pop();
+      renderGrid();
+      renderOutputs();
+    }
+
+    function addCol() {
+      COLS++;
+      for (let r = 0; r < data.length; r++) {
+        data[r].push(r === 0 ? 'Header ' + COLS : '');
+      }
+      renderGrid();
+      renderOutputs();
+    }
+
+    function removeCol() {
+      if (COLS <= 1) return;
+      COLS--;
+      for (let r = 0; r < data.length; r++) {
+        data[r].pop();
+      }
+      renderGrid();
+      renderOutputs();
+    }
+
+    function deleteRow(rowIndex) {
+      if (data.length <= 2) return;
+      data.splice(rowIndex, 1);
+      ROWS--;
+      renderGrid();
+      renderOutputs();
+    }
+
+    function deleteCol(colIndex) {
+      if (COLS <= 1) return;
+      COLS--;
+      for (let r = 0; r < data.length; r++) {
+        data[r].splice(colIndex, 1);
+      }
+      renderGrid();
+      renderOutputs();
+    }
+
+    function resetGrid() {
+      ROWS = 3;
+      COLS = 3;
+      initData();
+      renderGrid();
+      renderOutputs();
+    }
+
+    /* ============================================================
+       MARKDOWN FORMATTING ENGINE
+    ============================================================ */
+    function escapePipes(str) {
+      return String(str).replace(/\|/g, '\\|');
+    }
+
+    function buildMarkdown() {
+      const align = document.getElementById('align-select').value;
+
+      // Compute column widths (minimum 3 for separator)
+      const colWidths = Array(COLS).fill(3);
+      for (let r = 0; r < data.length; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const len = escapePipes(data[r][c] || '').length;
+          colWidths[c] = Math.max(colWidths[c], len);
+        }
+      }
+
+      // Header row
+      const headers = data[0].map((cell, c) => {
+        return padCell(escapePipes(cell), colWidths[c], align);
+      });
+      const headerLine = '| ' + headers.join(' | ') + ' |';
+
+      // Separator row
+      const separators = colWidths.map(w => {
+        const dashes = '-'.repeat(w);
+        if (align === 'left')   return ':' + dashes;
+        if (align === 'right')  return dashes + ':';
+        if (align === 'center') return ':' + dashes.slice(1) + ':';
+        return dashes;
+      });
+      const sepLine = '| ' + separators.join(' | ') + ' |';
+
+      // Data rows
+      const dataLines = data.slice(1).map(row => {
+        const cells = row.map((cell, c) => padCell(escapePipes(cell), colWidths[c], align));
+        return '| ' + cells.join(' | ') + ' |';
+      });
+
+      return [headerLine, sepLine, ...dataLines].join('\n');
+    }
+
+    function padCell(str, width, align) {
+      const s = str || '';
+      const pad = width - s.length;
+      if (pad <= 0) return s;
+      if (align === 'right')  return ' '.repeat(pad) + s;
+      if (align === 'center') {
+        const left  = Math.floor(pad / 2);
+        const right = pad - left;
+        return ' '.repeat(left) + s + ' '.repeat(right);
+      }
+      // left (default)
+      return s + ' '.repeat(pad);
+    }
+
+    /* ============================================================
+       LIVE PREVIEW
+    ============================================================ */
+    function buildPreview() {
+      const align = document.getElementById('align-select').value;
+      const alignStyle = align === 'right' ? 'right' : align === 'center' ? 'center' : 'left';
+
+      const headers = data[0];
+      const rows = data.slice(1);
+
+      // Check if any header has content
+      const hasContent = headers.some(h => h.trim() !== '') || rows.some(r => r.some(c => c.trim() !== ''));
+      if (!hasContent) {
+        return '<p class="preview-empty">Fill in the grid above to see your table here.</p>';
+      }
+
+      let html = '<table id="preview-table"><thead><tr>';
+      headers.forEach(h => {
+        html += `<th style="text-align:${alignStyle}">${htmlEncode(h) || '&nbsp;'}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      rows.forEach(row => {
+        html += '<tr>';
+        row.forEach(cell => {
+          html += `<td style="text-align:${alignStyle}">${htmlEncode(cell) || '&nbsp;'}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function htmlEncode(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ============================================================
+       RENDER ALL OUTPUTS
+    ============================================================ */
+    function renderAll() {
+      renderOutputs();
+    }
+
+    function renderOutputs() {
+      const md = buildMarkdown();
+      document.getElementById('md-output').textContent = md;
+      document.getElementById('preview-wrap').innerHTML = buildPreview();
+    }
+
+    /* ============================================================
+       COPY TO CLIPBOARD
+    ============================================================ */
+    function copyMarkdown() {
+      const md = buildMarkdown();
+      navigator.clipboard.writeText(md).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-primary');
+        setTimeout(() => {
+          btn.textContent = 'Copy to Clipboard';
+          btn.classList.remove('btn-success');
+          btn.classList.add('btn-primary');
+        }, 2000);
+      }).catch(() => {
+        // Fallback for browsers without clipboard API
+        const el = document.createElement('textarea');
+        el.value = md;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-primary');
+        setTimeout(() => {
+          btn.textContent = 'Copy to Clipboard';
+          btn.classList.remove('btn-success');
+          btn.classList.add('btn-primary');
+        }, 2000);
+      });
+    }
+
+    /* ============================================================
+       FAQ TOGGLE
+    ============================================================ */
+    function toggleFaq(el) {
+      const icon = el.querySelector('.faq-icon');
+      const answer = el.nextElementSibling;
+      icon.classList.toggle('open');
+      answer.classList.toggle('open');
+    }
+
+    /* ============================================================
+       INIT
+    ============================================================ */
+    initData();
+    renderGrid();
+    renderOutputs();
+  </script>
+
+</body>
+</html>

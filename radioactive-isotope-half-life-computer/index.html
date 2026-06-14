@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radioactive Isotope Half-Life Computer: Track Decay Curves | AxiomApe</title>
+  <meta name="description" content="Free radioactive isotope half-life computer. Select from 20+ preset isotopes or enter custom values, solve for final amount or time elapsed, and watch the exponential decay curve render live with half-life markers. 100% client-side." />
+  <meta name="keywords" content="radioactive isotope half-life calculator, decay curve calculator, carbon-14 half-life, uranium-238 decay, iodine-131 half-life, cobalt-60 half-life, technetium-99m, exponential decay calculator, decay constant lambda, radioactive decay formula, isotope decay computer, nuclear physics calculator, radiometric dating, half life solver, Nt N0 calculator" />
+  <link rel="canonical" href="https://axiomape.com/radioactive-isotope-half-life-computer/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Radioactive Isotope Half-Life Computer",
+        "description": "Free radioactive isotope half-life computer. Select from 20+ preset isotopes or enter custom values, solve for final amount or time elapsed, and watch the exponential decay curve render live with half-life markers. 100% client-side.",
+        "url": "https://axiomape.com/radioactive-isotope-half-life-computer/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does a radioactive substance ever truly disappear to zero?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Mathematically, no. The exponential decay formula Nt = N0 times e raised to the power of negative lambda times t approaches zero asymptotically. Each half-life cuts the remaining amount in half, so there is always half of something left, no matter how small. In practice, atoms are discrete particles: you eventually reach one atom, and it either decays or it does not at a random moment. But the continuous exponential model - accurate for large populations of atoms - never produces an exact zero. After about 20 half-lives, the remaining fraction is roughly one-millionth of the original, which is why the calculator switches to scientific notation at that scale."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is Carbon-14 used for dating ancient artifacts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Living organisms continuously absorb Carbon-14 from the atmosphere, maintaining a known ratio of C-14 to stable C-12. When an organism dies, absorption stops and the existing C-14 decays with a half-life of 5,730 years. Scientists measure the current C-14 fraction in a sample and compare it to the known initial ratio. By solving the decay formula for time (t = negative ln(Nt divided by N0) divided by lambda), they calculate how many years ago the organism died. The technique is reliable for objects up to about 50,000 years old. Beyond that, too little C-14 remains to measure accurately, and longer-lived isotopes such as Uranium-238 or Potassium-40 are used instead."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between biological half-life and physical half-life?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Physical (or radiological) half-life is the time for half of a radioactive isotope's atoms to decay, governed purely by nuclear forces. Biological half-life is the time for the body to eliminate half of a substance through metabolism, excretion, and other physiological processes - it applies to any drug or chemical, not just radioactive ones. In nuclear medicine, the effective half-life combines both: it is the time for the radioactive dose in the body to fall by half due to both physical decay and biological elimination. For Iodine-131, the physical half-life is about 8 days, but the effective half-life in the thyroid is shorter because the body also metabolises iodine. This calculator models physical half-life only."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the decay curve flatten out over time but never immediately hit the bottom?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The shape of the exponential decay curve follows the formula Nt = N0 times e raised to the power of negative lambda times t. Because the exponent is a negative multiple of time, the rate of decrease is proportional to the current amount remaining - not a fixed quantity per unit time. When a large amount is present, the absolute decrease per unit time is large, so the curve drops steeply. As the amount shrinks, the absolute decrease per unit time shrinks in proportion, and the curve flattens. This self-similar property means the curve can never reach zero in finite time: the smaller the amount, the slower the absolute rate of loss, producing the characteristic asymptotic approach to the x-axis."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f1117;
+      --surface:    #1a1d27;
+      --surface2:   #1e2235;
+      --surface3:   #252a3a;
+      --border:     #2e3250;
+      --text:       #e2e8f0;
+      --muted:      #8892a4;
+      --green:      #84CC16;
+      --green-dim:  rgba(132,204,22,0.12);
+      --green-glow: rgba(132,204,22,0.25);
+      --yellow:     #EAB308;
+      --yellow-dim: rgba(234,179,8,0.12);
+      --yellow-glow:rgba(234,179,8,0.25);
+      --red:        #ef4444;
+      --radius:     10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    #main {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    header.page-header {
+      text-align: center;
+      padding: 32px 0 24px;
+    }
+    header.page-header h1 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    header.page-header p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ---- Cards ---- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 1.1rem; }
+
+    /* ---- Mode tabs ---- */
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .mode-tab.active {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-dim);
+    }
+
+    /* ---- Isotope search ---- */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .search-wrap input[type="text"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 12px 10px 36px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-wrap input[type="text"]:focus { border-color: var(--green); }
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+    .iso-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface3);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      z-index: 50;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+    }
+    .iso-dropdown.open { display: block; }
+    .iso-option {
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .iso-option:last-child { border-bottom: none; }
+    .iso-option:hover { background: var(--green-dim); }
+    .iso-option .iso-name { color: var(--text); font-weight: 600; }
+    .iso-option .iso-meta { color: var(--muted); font-size: 0.8rem; }
+    .iso-selected-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.88rem;
+      color: var(--green);
+      margin-bottom: 14px;
+    }
+    .iso-selected-badge button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .iso-selected-badge button:hover { color: var(--red); }
+
+    /* ---- Form controls ---- */
+    label.field-label {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="number"], select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+    input[type="number"]:focus, select:focus { border-color: var(--green); }
+    input[type="number"].field-active { border-color: var(--yellow); box-shadow: 0 0 0 2px var(--yellow-glow); }
+
+    .field-row { margin-bottom: 16px; }
+    .inline-group {
+      display: flex;
+      gap: 8px;
+    }
+    .inline-group input[type="number"] { flex: 1; min-width: 0; }
+    .inline-group select { width: auto; flex-shrink: 0; min-width: 120px; }
+
+    /* ---- Time-unit global bar ---- */
+    .time-unit-bar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .time-unit-bar .tu-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .tu-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tu-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface3);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tu-pill.active {
+      background: var(--yellow-dim);
+      border-color: var(--yellow);
+      color: var(--yellow);
+    }
+
+    /* ---- Calc grid ---- */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 620px) { .calc-grid { grid-template-columns: 1fr; } }
+
+    .var-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      transition: border-color 0.2s;
+    }
+    .var-block.vb-active  { border-color: var(--yellow); }
+    .var-block.vb-solved  { border-color: var(--green);  }
+
+    .vb-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .vb-symbol {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-style: italic;
+      color: var(--text);
+    }
+    .vb-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .tag-input  { background: var(--yellow-dim); color: var(--yellow); }
+    .tag-solved { background: var(--green-dim);  color: var(--green); }
+    .tag-empty  { background: rgba(136,146,164,0.1); color: var(--muted); }
+
+    .vb-name {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .solved-display {
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--green);
+      word-break: break-all;
+      min-height: 42px;
+    }
+
+    /* ---- Status bar ---- */
+    .status-bar {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      text-align: center;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .status-bar.ok    { background: var(--green-dim);  border-color: var(--green);  color: var(--green); }
+    .status-bar.warn  { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+    .status-bar.error { background: rgba(239,68,68,0.1); border-color: #ef4444; color: #ef4444; }
+
+    /* ---- Output metric cards ---- */
+    .metric-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 500px) { .metric-row { grid-template-columns: 1fr; } }
+
+    .metric-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .metric-card.mc-green { border-color: var(--green); background: var(--green-dim); }
+    .metric-card.mc-yellow { border-color: var(--yellow); background: var(--yellow-dim); }
+
+    .mc-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .mc-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .mc-green .mc-value  { color: var(--green); }
+    .mc-yellow .mc-value { color: var(--yellow); }
+    .mc-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ---- SVG Decay Curve ---- */
+    .graph-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .graph-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #decay-svg-wrap {
+      background: #0b0e18;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    #decay-svg {
+      display: block;
+      width: 100%;
+    }
+
+    /* ---- Glossary ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item { }
+    .glossary-term {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ---- Educational section ---- */
+    .edu-section h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--yellow);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+
+    /* ---- FAQ ---- */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.93rem;
+      transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--surface3); }
+    .faq-q .faq-arrow {
+      color: var(--green);
+      font-size: 0.85rem;
+      transition: transform 0.2s;
+    }
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .faq-a.open { display: block; }
+
+    /* ---- Ad placements ---- */
+    .axiom-ad-leaderboard, .axiom-ad-mobile-anchor {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Radioactive Isotope Half-Life Computer</h1>
+    <p>Select a preset isotope or enter custom values. Solve for final amount or time elapsed. The exponential decay curve renders live.</p>
+  </header>
+
+  <!-- ============================================================
+       TOOL CARD
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title"><span class="icon">&#9762;</span> Isotope Selection</div>
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-preset" onclick="switchMode('preset')">Select Known Isotope</button>
+      <button class="mode-tab" id="tab-custom" onclick="switchMode('custom')">Custom Isotope</button>
+    </div>
+
+    <!-- Mode A: Preset searchable -->
+    <div id="panel-preset">
+      <div id="selected-badge" style="display:none;" class="iso-selected-badge">
+        <span id="selected-label"></span>
+        <button onclick="clearIsotope()" title="Clear selection">&#10005;</button>
+      </div>
+      <div class="search-wrap" id="search-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="iso-search" placeholder="Search isotopes (e.g. Carbon, Iodine, Uranium...)"
+               oninput="filterIsotopes()" onfocus="openDropdown()" autocomplete="off" />
+        <div class="iso-dropdown" id="iso-dropdown"></div>
+      </div>
+    </div>
+
+    <!-- Mode B: Custom -->
+    <div id="panel-custom" style="display:none;">
+      <div class="field-row">
+        <label class="field-label" for="custom-name">Isotope Name (optional)</label>
+        <input type="text" id="custom-name" placeholder="e.g. Thorium-228" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:10px 12px;font-size:0.95rem;width:100%;outline:none;" />
+      </div>
+    </div>
+
+    <!-- Half-life input (shared) -->
+    <div class="field-row">
+      <label class="field-label" for="hl-val">Half-Life</label>
+      <div class="inline-group">
+        <input type="number" id="hl-val" placeholder="e.g. 5730" min="0" step="any" oninput="compute()" onchange="compute()" />
+        <select id="hl-unit" onchange="compute()">
+          <option value="s">Seconds</option>
+          <option value="m">Minutes</option>
+          <option value="h">Hours</option>
+          <option value="d">Days</option>
+          <option value="y" selected>Years</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Global time unit bar -->
+    <div class="time-unit-bar">
+      <span class="tu-label">Time unit for elapsed:</span>
+      <div class="tu-pills" id="tu-pills">
+        <button class="tu-pill" data-u="s" onclick="setTimeUnit('s')">Seconds</button>
+        <button class="tu-pill" data-u="m" onclick="setTimeUnit('m')">Minutes</button>
+        <button class="tu-pill" data-u="h" onclick="setTimeUnit('h')">Hours</button>
+        <button class="tu-pill active" data-u="d" onclick="setTimeUnit('d')">Days</button>
+        <button class="tu-pill" data-u="y" onclick="setTimeUnit('y')">Years</button>
+      </div>
+    </div>
+
+    <!-- Tri-variable grid -->
+    <div class="calc-grid">
+      <!-- N0: Initial Amount -->
+      <div class="var-block" id="vb-n0">
+        <div class="vb-header">
+          <span class="vb-symbol">N<sub>0</sub></span>
+          <span class="vb-tag tag-empty" id="tag-n0">Empty</span>
+        </div>
+        <div class="vb-name">Initial Amount</div>
+        <div class="inline-group">
+          <input type="number" id="val-n0" placeholder="e.g. 100" min="0" step="any"
+                 oninput="compute()" onchange="compute()" />
+          <select id="unit-n0" onchange="compute()">
+            <option value="g">Grams</option>
+            <option value="mg">Milligrams</option>
+            <option value="ug">Micrograms</option>
+            <option value="pct">Percent %</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- t: Time Elapsed -->
+      <div class="var-block" id="vb-t">
+        <div class="vb-header">
+          <span class="vb-symbol">t</span>
+          <span class="vb-tag tag-empty" id="tag-t">Empty</span>
+        </div>
+        <div class="vb-name">Time Elapsed</div>
+        <input type="number" id="val-t" placeholder="Leave blank to solve" min="0" step="any"
+               oninput="compute()" onchange="compute()" />
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:6px;" id="t-unit-display">Unit: Days</div>
+      </div>
+
+      <!-- Nt: Final Amount -->
+      <div class="var-block" id="vb-nt">
+        <div class="vb-header">
+          <span class="vb-symbol">N<sub>t</sub></span>
+          <span class="vb-tag tag-empty" id="tag-nt">Empty</span>
+        </div>
+        <div class="vb-name">Final Amount</div>
+        <input type="number" id="val-nt" placeholder="Leave blank to solve" min="0" step="any"
+               oninput="compute()" onchange="compute()" />
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:6px;" id="nt-unit-display">Same unit as N0</div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar">Enter a half-life and initial amount, then fill either Time Elapsed or Final Amount to solve for the other.</div>
+
+    <!-- Output metrics -->
+    <div class="metric-row" id="metric-row" style="display:none;">
+      <div class="metric-card mc-green" id="mc-result">
+        <div class="mc-label" id="mc-result-label">Result</div>
+        <div class="mc-value" id="mc-result-val">-</div>
+        <div class="mc-sub" id="mc-result-sub"></div>
+      </div>
+      <div class="metric-card mc-yellow">
+        <div class="mc-label">Decay Constant (lambda)</div>
+        <div class="mc-value" id="mc-lambda">-</div>
+        <div class="mc-sub" id="mc-lambda-sub">lambda = ln(2) / half-life</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SVG DECAY CURVE
+  ============================================================ -->
+  <div class="graph-card" id="graph-card" style="display:none;">
+    <div class="graph-title">&#9632; Exponential Decay Curve - 5 Half-Life Intervals</div>
+    <div id="decay-svg-wrap">
+      <svg id="decay-svg" viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- rendered by JS -->
+      </svg>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       GLOSSARY
+  ============================================================ -->
+  <div class="card">
+    <div class="card-title"><span class="icon">&#128218;</span> Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Half-Life (t1/2)</div>
+        <div class="glossary-def">The time required for exactly half of the atoms in a radioactive sample to decay. It is a fixed, characteristic property of each isotope and is independent of the sample size or external conditions such as temperature and pressure.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Radioactive Decay</div>
+        <div class="glossary-def">The spontaneous disintegration of an unstable atomic nucleus, releasing energy in the form of alpha particles, beta particles, or gamma rays. Decay transforms the parent isotope into a different element or a lower-energy state.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Isotope</div>
+        <div class="glossary-def">Atoms of the same element (same number of protons) that have different numbers of neutrons. Carbon-12, Carbon-13, and Carbon-14 are all isotopes of carbon. Isotopes with unstable nuclei are radioactive; those with stable nuclei are not.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Decay Constant (lambda)</div>
+        <div class="glossary-def">A probability measure indicating how quickly an isotope decays per unit of time. Calculated as lambda = ln(2) divided by the half-life. A large lambda means rapid decay; a small lambda means the isotope is long-lived.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Exponential Decay</div>
+        <div class="glossary-def">A mathematical pattern in which a quantity decreases at a rate proportional to its current value. The formula Nt = N0 times e raised to the power of negative lambda times t describes this curve. The characteristic shape falls steeply at first and then flattens asymptotically toward zero.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Radiocarbon Dating</div>
+        <div class="glossary-def">A technique that uses the known half-life of Carbon-14 (5,730 years) to estimate the age of once-living organic material. Scientists measure the ratio of C-14 to stable C-12 remaining in a sample and solve the decay equation for time elapsed since the organism died.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Activity</div>
+        <div class="glossary-def">The rate at which a radioactive sample produces decay events, expressed in becquerels (Bq) or curies (Ci). Activity equals the decay constant multiplied by the number of atoms currently present: A = lambda times N. As atoms decay, activity decreases over time along the same exponential curve.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Parent and Daughter Isotopes</div>
+        <div class="glossary-def">The parent isotope is the unstable atom that decays. The daughter isotope is the product created after decay. Some daughters are themselves radioactive, forming a chain (for example, Uranium-238 decays through 14 steps before reaching stable Lead-206).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDUCATIONAL SECTION
+  ============================================================ -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Radioactive Half-Life and Exponential Decay</h2>
+
+    <p class="section-intro">Whether you are a student calculating how much Carbon-14 remains in an archaeological sample, a nuclear medicine professional estimating when a patient's dose will clear, or simply someone curious about how scientists date ancient objects and predict isotope behavior, this tool handles the math. Below is everything you need to understand what is happening under the hood.</p>
+
+    <h3>How to Use This Calculator</h3>
+    <p>Start by selecting an isotope from the searchable list or switch to Custom mode to enter any half-life value you like. Choose the time unit (Seconds, Minutes, Hours, Days, or Years) that fits your scenario - the same unit will apply to both the half-life field and the time elapsed field. Then fill in the Initial Amount and one of the two remaining variables. The tool will instantly solve for the missing variable, display the Decay Constant, and draw the exponential curve scaled to exactly five half-life intervals.</p>
+    <p>The unit selector for the Initial Amount lets you work in Grams, Milligrams, Micrograms, or Percentage. All calculations are internally standardized so that the half-life and time elapsed are always compared in the same unit before any formula is applied. This prevents scale-mismatch errors that can occur when, for example, a half-life is entered in days but the elapsed time is mentally imagined in hours.</p>
+
+    <h3>The Mathematics Behind the Curve</h3>
+    <p>The exponential decay formula is Nt = N0 multiplied by e raised to the power of negative lambda multiplied by t, where N0 is the initial amount, Nt is the amount remaining after time t, and lambda is the decay constant. Lambda is derived from the half-life using lambda = ln(2) divided by t1/2. To solve for time when you know the final amount, rearrange the formula to t = negative ln(Nt divided by N0) divided by lambda.</p>
+    <p>The calculator uses JavaScript's Math.log (natural logarithm) and Math.exp (e raised to a power) to apply these formulas with full floating-point precision. When the result becomes very small - for instance, after more than 20 half-lives have passed - the output switches to scientific notation such as 1.24e-6 rather than displaying an inaccurate rounded zero.</p>
+
+    <h3>Reading the Decay Curve</h3>
+    <p>The SVG graph scales its X-axis to show exactly five half-life intervals based on your current half-life input. Dot markers appear at each interval, labeling the percentage of the original amount remaining at that point: 50% after one half-life, 25% after two, 12.5% after three, 6.25% after four, and 3.125% after five. A subtle grid overlay helps you read intermediate values. If you have entered a Time Elapsed value, a vertical marker shows where that specific moment falls on the curve.</p>
+
+    <h3>Common Applications by Isotope Type</h3>
+    <p>Medical isotopes such as Technetium-99m (half-life 6.01 hours) and Iodine-131 (8.02 days) are used in diagnostic imaging and cancer treatment. Their short half-lives mean the patient's radiation exposure decreases quickly. Industrial isotopes such as Cobalt-60 (5.27 years) are used in radiography and sterilization, while Cesium-137 (30.17 years) appears in gauges and some historical nuclear accidents. Geological and dating isotopes such as Carbon-14 (5,730 years), Potassium-40 (1.25 billion years), and Uranium-238 (4.47 billion years) span timescales from human history to the age of the solar system.</p>
+
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Does a radioactive substance ever truly disappear to zero?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Mathematically, no. The exponential decay formula Nt = N0 times e raised to the power of negative lambda times t approaches zero asymptotically. Each half-life cuts the remaining amount in half, so there is always half of something left, no matter how small. In practice, atoms are discrete particles: you eventually reach one atom, and it either decays or it does not at a random moment. But the continuous exponential model - accurate for large populations of atoms - never produces an exact zero. After about 20 half-lives, the remaining fraction is roughly one-millionth of the original, which is why the calculator switches to scientific notation at that scale.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How is Carbon-14 used for dating ancient artifacts?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Living organisms continuously absorb Carbon-14 from the atmosphere, maintaining a known ratio of C-14 to stable C-12. When an organism dies, absorption stops and the existing C-14 decays with a half-life of 5,730 years. Scientists measure the current C-14 fraction in a sample and compare it to the known initial ratio. By solving the decay formula for time (t = negative ln(Nt divided by N0) divided by lambda), they calculate how many years ago the organism died. The technique is reliable for objects up to about 50,000 years old. Beyond that, too little C-14 remains to measure accurately, and longer-lived isotopes such as Uranium-238 or Potassium-40 are used instead.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the difference between biological half-life and physical half-life?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        Physical (or radiological) half-life is the time for half of a radioactive isotope's atoms to decay, governed purely by nuclear forces. Biological half-life is the time for the body to eliminate half of a substance through metabolism, excretion, and other physiological processes - it applies to any drug or chemical, not just radioactive ones. In nuclear medicine, the effective half-life combines both: it is the time for the radioactive dose in the body to fall by half due to both physical decay and biological elimination. For Iodine-131, the physical half-life is about 8 days, but the effective half-life in the thyroid is shorter because the body also metabolises iodine. This calculator models physical half-life only.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Why does the decay curve flatten out over time but never immediately hit the bottom?
+        <span class="faq-arrow">&#9660;</span>
+      </div>
+      <div class="faq-a">
+        The shape of the exponential decay curve follows the formula Nt = N0 times e raised to the power of negative lambda times t. Because the exponent is a negative multiple of time, the rate of decrease is proportional to the current amount remaining - not a fixed quantity per unit time. When a large amount is present, the absolute decrease per unit time is large, so the curve drops steeply. As the amount shrinks, the absolute decrease per unit time shrinks in proportion, and the curve flattens. This self-similar property means the curve can never reach zero in finite time: the smaller the amount, the slower the absolute rate of loss, producing the characteristic asymptotic approach to the x-axis.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+// =============================================
+// ISOTOPE DATA (20+ preset isotopes)
+// halfLifeVal is in the unit specified by halfLifeUnit
+// =============================================
+const ISOTOPES = [
+  { name: "Carbon-14",         symbol: "C-14",    halfLifeVal: 5730,        halfLifeUnit: "y",  category: "Dating" },
+  { name: "Uranium-238",       symbol: "U-238",   halfLifeVal: 4.468e9,     halfLifeUnit: "y",  category: "Geological" },
+  { name: "Uranium-235",       symbol: "U-235",   halfLifeVal: 703800000,   halfLifeUnit: "y",  category: "Geological" },
+  { name: "Iodine-131",        symbol: "I-131",   halfLifeVal: 8.0197,      halfLifeUnit: "d",  category: "Medical" },
+  { name: "Technetium-99m",    symbol: "Tc-99m",  halfLifeVal: 6.0067,      halfLifeUnit: "h",  category: "Medical" },
+  { name: "Cobalt-60",         symbol: "Co-60",   halfLifeVal: 5.2714,      halfLifeUnit: "y",  category: "Industrial" },
+  { name: "Cesium-137",        symbol: "Cs-137",  halfLifeVal: 30.17,       halfLifeUnit: "y",  category: "Industrial" },
+  { name: "Strontium-90",      symbol: "Sr-90",   halfLifeVal: 28.8,        halfLifeUnit: "y",  category: "Industrial" },
+  { name: "Plutonium-239",     symbol: "Pu-239",  halfLifeVal: 24110,       halfLifeUnit: "y",  category: "Nuclear" },
+  { name: "Radium-226",        symbol: "Ra-226",  halfLifeVal: 1600,        halfLifeUnit: "y",  category: "Historical" },
+  { name: "Radon-222",         symbol: "Rn-222",  halfLifeVal: 3.8235,      halfLifeUnit: "d",  category: "Environmental" },
+  { name: "Polonium-210",      symbol: "Po-210",  halfLifeVal: 138.376,     halfLifeUnit: "d",  category: "Historical" },
+  { name: "Thorium-232",       symbol: "Th-232",  halfLifeVal: 1.405e10,    halfLifeUnit: "y",  category: "Geological" },
+  { name: "Potassium-40",      symbol: "K-40",    halfLifeVal: 1.248e9,     halfLifeUnit: "y",  category: "Geological" },
+  { name: "Tritium (H-3)",     symbol: "H-3",     halfLifeVal: 12.32,       halfLifeUnit: "y",  category: "Research" },
+  { name: "Fluorine-18",       symbol: "F-18",    halfLifeVal: 109.77,      halfLifeUnit: "m",  category: "Medical" },
+  { name: "Gallium-67",        symbol: "Ga-67",   halfLifeVal: 3.2617,      halfLifeUnit: "d",  category: "Medical" },
+  { name: "Indium-111",        symbol: "In-111",  halfLifeVal: 2.8047,      halfLifeUnit: "d",  category: "Medical" },
+  { name: "Phosphorus-32",     symbol: "P-32",    halfLifeVal: 14.268,      halfLifeUnit: "d",  category: "Research" },
+  { name: "Sulfur-35",         symbol: "S-35",    halfLifeVal: 87.51,       halfLifeUnit: "d",  category: "Research" },
+  { name: "Americium-241",     symbol: "Am-241",  halfLifeVal: 432.2,       halfLifeUnit: "y",  category: "Industrial" },
+  { name: "Berkelium-247",     symbol: "Bk-247",  halfLifeVal: 1380,        halfLifeUnit: "y",  category: "Research" },
+  { name: "Nickel-63",         symbol: "Ni-63",   halfLifeVal: 100.1,       halfLifeUnit: "y",  category: "Industrial" }
+];
+
+// =============================================
+// STATE
+// =============================================
+let currentMode = 'preset';
+let selectedIsotope = null;
+let activeTimeUnit = 'd';
+let dropdownOpen = false;
+let filteredIsotopes = [...ISOTOPES];
+
+// =============================================
+// TIME UNIT CONVERSION (to seconds as base)
+// =============================================
+const TO_SECONDS = { s: 1, m: 60, h: 3600, d: 86400, y: 31557600 };
+const UNIT_LABELS = { s: 'Seconds', m: 'Minutes', h: 'Hours', d: 'Days', y: 'Years' };
+
+function toSeconds(val, unit) { return val * TO_SECONDS[unit]; }
+function fromSeconds(val, unit) { return val / TO_SECONDS[unit]; }
+
+// =============================================
+// MODE SWITCHING
+// =============================================
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-preset').classList.toggle('active', mode === 'preset');
+  document.getElementById('tab-custom').classList.toggle('active', mode === 'custom');
+  document.getElementById('panel-preset').style.display = mode === 'preset' ? '' : 'none';
+  document.getElementById('panel-custom').style.display = mode === 'custom' ? '' : 'none';
+  if (mode === 'custom') {
+    selectedIsotope = null;
+    document.getElementById('hl-val').value = '';
+    document.getElementById('hl-unit').value = 'y';
+  }
+  compute();
+}
+
+// =============================================
+// ISOTOPE SEARCH / DROPDOWN
+// =============================================
+function buildDropdown(list) {
+  const dd = document.getElementById('iso-dropdown');
+  dd.innerHTML = '';
+  if (list.length === 0) {
+    dd.innerHTML = '<div class="iso-option"><span class="iso-name" style="color:var(--muted)">No matches found</span></div>';
+    return;
+  }
+  list.forEach(iso => {
+    const el = document.createElement('div');
+    el.className = 'iso-option';
+    el.innerHTML = `<span class="iso-name">${iso.name}</span><span class="iso-meta">${iso.symbol} - ${iso.halfLifeVal} ${UNIT_LABELS[iso.halfLifeUnit]} (${iso.category})</span>`;
+    el.onclick = () => selectIsotope(iso);
+    dd.appendChild(el);
+  });
+}
+
+function filterIsotopes() {
+  const q = document.getElementById('iso-search').value.toLowerCase();
+  filteredIsotopes = ISOTOPES.filter(i =>
+    i.name.toLowerCase().includes(q) ||
+    i.symbol.toLowerCase().includes(q) ||
+    i.category.toLowerCase().includes(q)
+  );
+  buildDropdown(filteredIsotopes);
+  openDropdown();
+}
+
+function openDropdown() {
+  if (selectedIsotope) return;
+  buildDropdown(filteredIsotopes.length ? filteredIsotopes : ISOTOPES);
+  document.getElementById('iso-dropdown').classList.add('open');
+  dropdownOpen = true;
+}
+
+function closeDropdown() {
+  document.getElementById('iso-dropdown').classList.remove('open');
+  dropdownOpen = false;
+}
+
+function selectIsotope(iso) {
+  selectedIsotope = iso;
+  document.getElementById('selected-label').textContent = iso.name + ' - ' + iso.symbol + ' (t1/2 = ' + iso.halfLifeVal + ' ' + UNIT_LABELS[iso.halfLifeUnit] + ')';
+  document.getElementById('selected-badge').style.display = 'flex';
+  document.getElementById('search-wrap').style.display = 'none';
+  document.getElementById('hl-val').value = iso.halfLifeVal;
+  document.getElementById('hl-unit').value = iso.halfLifeUnit;
+  closeDropdown();
+  compute();
+}
+
+function clearIsotope() {
+  selectedIsotope = null;
+  document.getElementById('selected-badge').style.display = 'none';
+  document.getElementById('search-wrap').style.display = '';
+  document.getElementById('iso-search').value = '';
+  filteredIsotopes = [...ISOTOPES];
+  document.getElementById('hl-val').value = '';
+  compute();
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!document.getElementById('search-wrap').contains(e.target)) closeDropdown();
+});
+
+// =============================================
+// TIME UNIT PILLS
+// =============================================
+function setTimeUnit(u) {
+  activeTimeUnit = u;
+  document.querySelectorAll('.tu-pill').forEach(p => p.classList.toggle('active', p.dataset.u === u));
+  document.getElementById('t-unit-display').textContent = 'Unit: ' + UNIT_LABELS[u];
+  compute();
+}
+
+// =============================================
+// FORMAT NUMBERS
+// =============================================
+function fmt(val) {
+  if (val === null || val === undefined || isNaN(val)) return '-';
+  if (Math.abs(val) === 0) return '0';
+  const abs = Math.abs(val);
+  if (abs > 0 && abs < 1e-4) return val.toExponential(4);
+  if (abs >= 1e12) return val.toExponential(4);
+  if (Number.isInteger(val) || (abs >= 100 && Math.abs(val - Math.round(val)) < 1e-9)) {
+    return val.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+  return val.toPrecision(6).replace(/\.?0+$/, '');
+}
+
+// =============================================
+// COMPUTE ENGINE
+// =============================================
+function compute() {
+  const hlValRaw = parseFloat(document.getElementById('hl-val').value);
+  const hlUnit   = document.getElementById('hl-unit').value;
+  const n0Raw    = parseFloat(document.getElementById('val-n0').value);
+  const tRaw     = parseFloat(document.getElementById('val-t').value);
+  const ntRaw    = parseFloat(document.getElementById('val-nt').value);
+  const n0Unit   = document.getElementById('unit-n0').value;
+
+  // Update var block states
+  setVbState('vb-n0', 'tag-n0', !isNaN(n0Raw) && n0Raw > 0);
+  setVbState('vb-t',  'tag-t',  !isNaN(tRaw)  && tRaw  >= 0);
+  setVbState('vb-nt', 'tag-nt', !isNaN(ntRaw) && ntRaw >= 0);
+
+  const hasHL = !isNaN(hlValRaw) && hlValRaw > 0;
+  const hasN0 = !isNaN(n0Raw)   && n0Raw > 0;
+  const hasT  = !isNaN(tRaw)    && tRaw >= 0;
+  const hasNt = !isNaN(ntRaw)   && ntRaw >= 0;
+
+  const status = document.getElementById('status-bar');
+  const metricRow = document.getElementById('metric-row');
+  const graphCard = document.getElementById('graph-card');
+
+  if (!hasHL) {
+    setStatus('Enter a half-life value to begin.', '');
+    metricRow.style.display = 'none';
+    graphCard.style.display = 'none';
+    return;
+  }
+  if (!hasN0) {
+    setStatus('Enter the initial amount (N0).', '');
+    metricRow.style.display = 'none';
+    graphCard.style.display = 'none';
+    return;
+  }
+
+  // Standardise: half-life in seconds
+  const hlSec = toSeconds(hlValRaw, hlUnit);
+  const lambda = Math.LN2 / hlSec; // per second
+  const lambdaDisplay = Math.LN2 / hlValRaw; // per half-life unit (for display)
+
+  // Convert elapsed-time unit label
+  document.getElementById('t-unit-display').textContent = 'Unit: ' + UNIT_LABELS[activeTimeUnit];
+
+  if (hasT && !hasNt) {
+    // Solve for Nt
+    const tSec = toSeconds(tRaw, activeTimeUnit);
+    const nt = n0Raw * Math.exp(-lambda * tSec);
+    // Display
+    setStatus('Calculated: Final Amount (Nt) after ' + fmt(tRaw) + ' ' + UNIT_LABELS[activeTimeUnit], 'ok');
+    showResults(nt, null, n0Raw, n0Unit, tRaw, lambda, lambdaDisplay, hlValRaw, hlUnit, hlSec);
+    markSolved('vb-nt', 'tag-nt');
+    renderCurve(n0Raw, lambda, hlSec, tRaw, activeTimeUnit, null);
+    graphCard.style.display = '';
+    metricRow.style.display = '';
+  } else if (hasNt && !hasT) {
+    // Solve for t
+    if (ntRaw >= n0Raw) {
+      setStatus('Final Amount must be less than Initial Amount for decay.', 'error');
+      metricRow.style.display = 'none';
+      graphCard.style.display = 'none';
+      return;
+    }
+    const tSec = -Math.log(ntRaw / n0Raw) / lambda;
+    const tDisplay = fromSeconds(tSec, activeTimeUnit);
+    // Display
+    setStatus('Calculated: Time Elapsed to reach ' + fmt(ntRaw) + ' ' + unitLabel(n0Unit), 'ok');
+    showResults(null, tDisplay, n0Raw, n0Unit, null, lambda, lambdaDisplay, hlValRaw, hlUnit, hlSec);
+    markSolved('vb-t', 'tag-t');
+    renderCurve(n0Raw, lambda, hlSec, tDisplay, activeTimeUnit, tDisplay);
+    graphCard.style.display = '';
+    metricRow.style.display = '';
+  } else if (hasT && hasNt) {
+    setStatus('Both Time Elapsed and Final Amount are filled - clear one to solve for the other.', 'warn');
+    metricRow.style.display = 'none';
+    graphCard.style.display = 'none';
+  } else {
+    setStatus('Fill either Time Elapsed or Final Amount to solve for the other.', '');
+    metricRow.style.display = 'none';
+    // Still draw curve if HL + N0 known
+    if (hasHL && hasN0) {
+      renderCurve(n0Raw, lambda, hlSec, null, activeTimeUnit, null);
+      graphCard.style.display = '';
+    } else {
+      graphCard.style.display = 'none';
+    }
+  }
+}
+
+function unitLabel(u) {
+  return { g: 'g', mg: 'mg', ug: 'ug', pct: '%' }[u] || u;
+}
+
+function setVbState(blockId, tagId, hasValue) {
+  const block = document.getElementById(blockId);
+  const tag   = document.getElementById(tagId);
+  block.classList.remove('vb-active', 'vb-solved');
+  if (hasValue) {
+    block.classList.add('vb-active');
+    tag.className = 'vb-tag tag-input';
+    tag.textContent = 'Input';
+  } else {
+    tag.className = 'vb-tag tag-empty';
+    tag.textContent = 'Empty';
+  }
+}
+
+function markSolved(blockId, tagId) {
+  const block = document.getElementById(blockId);
+  const tag   = document.getElementById(tagId);
+  block.classList.remove('vb-active');
+  block.classList.add('vb-solved');
+  tag.className = 'vb-tag tag-solved';
+  tag.textContent = 'Solved';
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status-bar');
+  el.textContent = msg;
+  el.className = 'status-bar' + (cls ? ' ' + cls : '');
+}
+
+function showResults(nt, t, n0, n0Unit, tVal, lambda, lambdaDisplay, hlVal, hlUnit, hlSec) {
+  const lbl  = document.getElementById('mc-result-label');
+  const val  = document.getElementById('mc-result-val');
+  const sub  = document.getElementById('mc-result-sub');
+  const lam  = document.getElementById('mc-lambda');
+  const lsub = document.getElementById('mc-lambda-sub');
+
+  if (nt !== null) {
+    const pct = (nt / n0 * 100).toPrecision(4);
+    lbl.textContent = 'Final Amount (Nt)';
+    val.textContent = fmt(nt) + ' ' + unitLabel(n0Unit);
+    sub.textContent = pct + '% of original remains';
+  } else {
+    lbl.textContent = 'Time Elapsed (t)';
+    val.textContent = fmt(t) + ' ' + UNIT_LABELS[activeTimeUnit];
+    sub.textContent = 'To reach specified final amount';
+  }
+
+  // Lambda: display per the HL unit chosen
+  lam.textContent = fmt(lambdaDisplay) + ' per ' + UNIT_LABELS[hlUnit].toLowerCase().replace(/s$/, '');
+  lsub.textContent = 'lambda = ln(2) / ' + fmt(hlVal) + ' ' + UNIT_LABELS[hlUnit];
+}
+
+// =============================================
+// SVG DECAY CURVE
+// =============================================
+function renderCurve(n0, lambdaPerSec, hlSec, markerTime, markerUnit, solvedT) {
+  const svg = document.getElementById('decay-svg');
+  const W = 700, H = 300;
+  const padL = 52, padR = 20, padT = 20, padB = 44;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // X axis covers 5 half-lives
+  const xMaxSec = 5 * hlSec;
+
+  // Build path points
+  const pts = 300;
+  const pathPts = [];
+  for (let i = 0; i <= pts; i++) {
+    const tSec = (i / pts) * xMaxSec;
+    const y = n0 * Math.exp(-lambdaPerSec * tSec);
+    const px = padL + (i / pts) * plotW;
+    const py = padT + plotH - (y / n0) * plotH;
+    pathPts.push(`${px.toFixed(2)},${py.toFixed(2)}`);
+  }
+
+  // Half-life marker info
+  const hlMarkers = [1,2,3,4,5];
+  const hlPercents = [50, 25, 12.5, 6.25, 3.125];
+
+  // Grid lines (horizontal: 100%,75%,50%,25%,0%)
+  let gridLines = '';
+  [0,25,50,75,100].forEach(pct => {
+    const y = padT + plotH - (pct/100) * plotH;
+    gridLines += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL+plotW}" y2="${y.toFixed(1)}" stroke="#1e2550" stroke-width="1"/>`;
+    gridLines += `<text x="${(padL-6).toFixed(0)}" y="${(y+4).toFixed(0)}" fill="#4a5478" font-size="9" text-anchor="end">${pct}%</text>`;
+  });
+
+  // Vertical grid lines at each half-life
+  let vGridLines = '';
+  hlMarkers.forEach(n => {
+    const x = padL + (n/5) * plotW;
+    vGridLines += `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${padT+plotH}" stroke="#1e2550" stroke-width="1" stroke-dasharray="4,4"/>`;
+  });
+
+  // HL dot markers
+  let hlDots = '';
+  hlMarkers.forEach((n, i) => {
+    const tSec = n * hlSec;
+    const pct = hlPercents[i];
+    const px = padL + (n/5) * plotW;
+    const py = padT + plotH - (pct/100) * plotH;
+    hlDots += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="#84CC16" filter="url(#glow)" stroke="#0f1117" stroke-width="1.5"/>`;
+    // Label above dot
+    const labelX = px;
+    const labelY = py - 12;
+    hlDots += `<text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" fill="#84CC16" font-size="9" text-anchor="middle" font-weight="bold">${pct}%</text>`;
+    // X axis label
+    const xLabelY = padT + plotH + 16;
+    hlDots += `<text x="${px.toFixed(1)}" y="${xLabelY}" fill="#4a5478" font-size="9" text-anchor="middle">t1/2 x${n}</text>`;
+  });
+
+  // Solved-time vertical marker
+  let tMarker = '';
+  if (markerTime !== null && solvedT !== null) {
+    const tSec = toSeconds(markerTime, markerUnit);
+    if (tSec <= xMaxSec) {
+      const mx = padL + (tSec / xMaxSec) * plotW;
+      tMarker = `<line x1="${mx.toFixed(1)}" y1="${padT}" x2="${mx.toFixed(1)}" y2="${padT+plotH}" stroke="#EAB308" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      const ntPct = (Math.exp(-lambdaPerSec * tSec) * 100).toPrecision(4);
+      tMarker += `<text x="${(mx+4).toFixed(0)}" y="${(padT+14)}" fill="#EAB308" font-size="9">t = ${fmt(markerTime)} (${ntPct}%)</text>`;
+    }
+  }
+
+  // Axes
+  const axes = `
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#2e3250" stroke-width="1.5"/>
+    <line x1="${padL}" y1="${padT+plotH}" x2="${padL+plotW}" y2="${padT+plotH}" stroke="#2e3250" stroke-width="1.5"/>
+    <text x="${(padL+plotW/2).toFixed(0)}" y="${H-4}" fill="#4a5478" font-size="10" text-anchor="middle">Time (half-life intervals)</text>
+    <text x="11" y="${(padT+plotH/2).toFixed(0)}" fill="#4a5478" font-size="10" text-anchor="middle" transform="rotate(-90,11,${(padT+plotH/2).toFixed(0)})">Amount Remaining</text>
+  `;
+
+  svg.innerHTML = `
+    <defs>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    ${gridLines}${vGridLines}${axes}${tMarker}
+    <polyline points="${pathPts.join(' ')}" fill="none" stroke="#84CC16" stroke-width="2.5" filter="url(#glow)" stroke-linejoin="round"/>
+    ${hlDots}
+  `;
+}
+
+// =============================================
+// FAQ TOGGLE
+// =============================================
+function toggleFaq(el) {
+  const answer = el.nextElementSibling;
+  el.classList.toggle('open');
+  answer.classList.toggle('open');
+}
+
+// =============================================
+// INIT
+// =============================================
+buildDropdown(ISOTOPES);
+compute();
+</script>
+</body>
+</html>

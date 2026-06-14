@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free CSS Aspect-Ratio Box Sizing Visualizer: set container dimensions and aspect-ratio, pick object-fit and object-position, and instantly see pixel crop math, letterbox gaps, and distortion percentage with a live resizable preview. 100% client-side." />
+  <meta name="keywords" content="css aspect ratio visualizer, object-fit calculator, object-fit cover contain fill, css aspect-ratio property, letterbox calculator, image crop pixels, intrinsic size extrinsic sizing, responsive design tool, css box sizing, object-position tool, padding-bottom hack replacement, css image fitting, frontend css tool, web developer css utility" />
+  <title>CSS Aspect-Ratio Box Sizing Visualizer: Match Media Bounds Across Structural Boxes | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/css-aspect-ratio-box-sizing-visualizer/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "CSS Aspect-Ratio Box Sizing Visualizer",
+        "description": "Free CSS Aspect-Ratio Box Sizing Visualizer: set container dimensions and aspect-ratio, pick object-fit and object-position, and instantly see pixel crop math, letterbox gaps, and distortion percentage with a live resizable preview. 100% client-side.",
+        "url": "https://axiomape.com/css-aspect-ratio-box-sizing-visualizer/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between object-fit cover and contain?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "cover scales the image up until it fully fills the container, cropping whatever hangs outside the edges. No letterbox gap appears, but pixels outside the box are hidden. contain scales the image down (or up) until the entire image fits inside the container without cropping, which leaves empty space (letterboxing) on two sides whenever the container and image aspect ratios differ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does my image look stretched when I set a fixed height and width?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "When you set explicit width and height on an img element without also setting object-fit, the browser defaults to object-fit: fill, which stretches the image to match the container exactly regardless of the image's intrinsic (native) proportions. The fix is to add object-fit: cover or object-fit: contain to preserve the original aspect ratio."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the aspect-ratio property replace the old padding-bottom hack?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The classic padding-bottom trick (e.g. padding-bottom: 56.25% for 16:9) exploits the fact that percentage padding is relative to the parent width, forcing a responsive height. The modern aspect-ratio property (e.g. aspect-ratio: 16 / 9) does the same thing in one declaration without the extra wrapper div or the fragile math. Browsers that support aspect-ratio will automatically compute the height from the width, making the hack unnecessary."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use aspect-ratio on standard div containers, or just media?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "aspect-ratio works on any block-level or replaced element, including div, section, article, span (when display is changed), img, video, iframe, and canvas. It is not limited to media elements. A common pattern is to set aspect-ratio on a container div and then use object-fit on an img or video child inside it."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does object-position do and how does it interact with object-fit cover?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "object-position controls which part of the image is visible when object-fit: cover crops the image. The default is center center, showing the middle. Setting it to top keeps the top of the image in frame, bottom preserves the bottom, and left or right shift the focal point horizontally. Think of it as the anchor point for the crop window."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* AxiomApe dark theme */
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface-2:    #22263a;
+      --border:       #2e3347;
+      --border-hover: #3d4260;
+
+      /* Accent palette */
+      --teal:         #0d9488;
+      --teal-light:   #14b8a6;
+      --teal-dim:     rgba(13,148,136,0.18);
+      --purple:       #a855f7;
+      --purple-light: #c084fc;
+      --purple-dim:   rgba(168,85,247,0.18);
+
+      /* Text */
+      --text:         #e2e8f0;
+      --text-muted:   #94a3b8;
+      --text-dim:     #64748b;
+
+      /* Misc */
+      --radius:       14px;
+      --radius-sm:    8px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+      --ease:         0.18s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Tool header ───────────────────────────────────────────── */
+    .tool-header {
+      background: linear-gradient(135deg, #0a0f1a 0%, #0f1a2e 45%, #0d1f2d 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 20px 36px;
+      text-align: center;
+    }
+    .tool-header h1 {
+      font-size: clamp(20px, 4vw, 30px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--teal-light) 0%, var(--purple-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tool-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--teal-light);
+      margin-bottom: 16px;
+    }
+
+    /* ── Control panel layout ──────────────────────────────────── */
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Label + input ─────────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .field { margin-bottom: 14px; }
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    input[type="number"]:focus,
+    input[type="text"]:focus,
+    select:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-dim);
+    }
+    select { cursor: pointer; }
+    option { background: var(--surface-2); }
+
+    /* ── Inline row ────────────────────────────────────────────── */
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    /* ── Toggle button groups ──────────────────────────────────── */
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .tog {
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all var(--ease);
+      letter-spacing: 0.02em;
+    }
+    .tog:hover { border-color: var(--teal); color: var(--teal-light); }
+    .tog.active-teal {
+      background: var(--teal-dim);
+      border-color: var(--teal);
+      color: var(--teal-light);
+    }
+    .tog.active-purple {
+      background: var(--purple-dim);
+      border-color: var(--purple);
+      color: var(--purple-light);
+    }
+
+    /* ── Aspect ratio presets ──────────────────────────────────── */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .preset-btn {
+      padding: 5px 11px;
+      border-radius: 5px;
+      border: 1.5px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Inter', monospace;
+      cursor: pointer;
+      transition: all var(--ease);
+    }
+    .preset-btn:hover, .preset-btn.active { border-color: var(--purple); color: var(--purple-light); background: var(--purple-dim); }
+
+    /* ── Output card grid ──────────────────────────────────────── */
+    .output-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Code block ────────────────────────────────────────────── */
+    .code-block {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #a5f3fc;
+      white-space: pre;
+      overflow-x: auto;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all var(--ease);
+    }
+    .copy-btn:hover { border-color: var(--teal); color: var(--teal-light); }
+    .copy-btn.copied { border-color: var(--teal); color: var(--teal-light); }
+
+    /* ── Math breakdown card ───────────────────────────────────── */
+    .math-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .math-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+    .math-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .math-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--teal-light);
+    }
+    .math-value.warn { color: #fb923c; }
+    .math-value.purple { color: var(--purple-light); }
+    .math-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Live preview ──────────────────────────────────────────── */
+    .preview-outer {
+      background: #070a10;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .preview-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      align-self: flex-start;
+    }
+    .preview-stage {
+      position: relative;
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* The resizable container shown to user */
+    #preview-container {
+      position: relative;
+      border: 2px dashed var(--teal);
+      border-radius: 6px;
+      overflow: hidden;
+      resize: both;
+      min-width: 80px;
+      min-height: 40px;
+      max-width: 500px;
+      max-height: 400px;
+      /* dimensions controlled by JS */
+    }
+
+    /* Resize handle accent */
+    #preview-container::-webkit-resizer {
+      background: var(--teal);
+      border-radius: 0 0 4px 0;
+    }
+
+    /* The mock media element */
+    #preview-media {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      /* object-fit and object-position controlled by JS */
+      opacity: 0.88;
+      /* checkerboard + color gradient to reveal cropping */
+      background:
+        repeating-linear-gradient(
+          45deg,
+          rgba(168,85,247,0.25) 0px,
+          rgba(168,85,247,0.25) 10px,
+          transparent 10px,
+          transparent 20px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(13,148,136,0.25) 0px,
+          rgba(13,148,136,0.25) 10px,
+          transparent 10px,
+          transparent 20px
+        ),
+        linear-gradient(135deg, #1a0a2e 0%, #0a1f2e 50%, #0a2e1a 100%);
+    }
+
+    /* Overflow ghost - shows the "invisible" cropped portion */
+    #overflow-ghost {
+      position: absolute;
+      pointer-events: none;
+      border: 1.5px dashed rgba(251,146,60,0.5);
+      border-radius: 4px;
+      background:
+        repeating-linear-gradient(
+          45deg,
+          rgba(251,146,60,0.07) 0px,
+          rgba(251,146,60,0.07) 8px,
+          transparent 8px,
+          transparent 16px
+        );
+      /* positioned by JS */
+    }
+
+    .resize-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── Info pills on preview ─────────────────────────────────── */
+    .preview-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    .pill-teal { background: var(--teal-dim); border-color: var(--teal); color: var(--teal-light); }
+    .pill-purple { background: var(--purple-dim); border-color: var(--purple); color: var(--purple-light); }
+    .pill-orange { background: rgba(251,146,60,0.15); border-color: #f97316; color: #fb923c; }
+
+    /* ── Educational section ───────────────────────────────────── */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--teal-light);
+      margin: 20px 0 8px;
+    }
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      line-height: 1.7;
+    }
+    .section-intro {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.75;
+      margin-bottom: 16px;
+    }
+
+    /* ── Glossary ──────────────────────────────────────────────── */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--purple-light);
+      margin-bottom: 5px;
+    }
+    .glossary-def {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── FAQ accordion ─────────────────────────────────────────── */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: var(--surface-2);
+      border: none;
+      padding: 14px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background var(--ease);
+    }
+    .faq-q:hover { background: var(--border); }
+    .faq-arrow {
+      font-size: 18px;
+      color: var(--teal);
+      transition: transform var(--ease);
+      flex-shrink: 0;
+    }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    /* ── Steps list ────────────────────────────────────────────── */
+    .steps { list-style: none; counter-reset: steps; padding: 0; }
+    .steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .steps li::before {
+      content: counter(steps);
+      background: var(--teal-dim);
+      border: 1px solid var(--teal);
+      color: var(--teal-light);
+      font-weight: 700;
+      font-size: 11px;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Code tokens ───────────────────────────────────────────── */
+    .tok-prop { color: #7dd3fc; }
+    .tok-val  { color: #86efac; }
+    .tok-sel  { color: #f9a8d4; }
+    .tok-com  { color: #475569; font-style: italic; }
+
+    /* ── Section divider ───────────────────────────────────────── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .math-grid { grid-template-columns: 1fr; }
+      .row-2, .row-3 { grid-template-columns: 1fr; }
+      .control-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="tool-header">
+    <h1>CSS Aspect-Ratio Box Sizing Visualizer</h1>
+    <p>Set container dimensions, pick an aspect-ratio and object-fit mode, then watch the live pixel math update instantly. No guessing - exact crop, letterbox, and distortion numbers in real time.</p>
+  </header>
+
+  <main class="page-wrap" id="main">
+
+    <!-- ============================================================
+         CONTROL PANEL
+    ============================================================ -->
+    <div class="control-grid">
+
+      <!-- Container Settings -->
+      <div class="card">
+        <div class="card-title">Container Settings</div>
+
+        <div class="section-title">Width</div>
+        <div class="row-2 field">
+          <div>
+            <label for="cont-w">Width Value</label>
+            <input type="number" id="cont-w" value="400" min="1" max="2000" oninput="recalc()" />
+          </div>
+          <div>
+            <label for="cont-w-unit">Unit</label>
+            <select id="cont-w-unit" onchange="recalc()">
+              <option value="px" selected>px</option>
+              <option value="%">% (of 800px ref)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-bottom:10px;">Aspect Ratio</div>
+        <div class="preset-row" id="ratio-presets">
+          <button class="preset-btn active" data-w="16" data-h="9"  onclick="setRatioPreset(this,16,9)">16:9</button>
+          <button class="preset-btn"        data-w="4"  data-h="3"  onclick="setRatioPreset(this,4,3)">4:3</button>
+          <button class="preset-btn"        data-w="1"  data-h="1"  onclick="setRatioPreset(this,1,1)">1:1</button>
+          <button class="preset-btn"        data-w="21" data-h="9"  onclick="setRatioPreset(this,21,9)">21:9</button>
+          <button class="preset-btn"        data-w="9"  data-h="16" onclick="setRatioPreset(this,9,16)">9:16</button>
+          <button class="preset-btn" id="custom-preset-btn" onclick="setRatioPreset(this,0,0)">Custom</button>
+        </div>
+        <div class="row-3 field">
+          <div>
+            <label for="ratio-w">W</label>
+            <input type="number" id="ratio-w" value="16" min="1" max="999" oninput="clearPreset();recalc()" />
+          </div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:10px;justify-content:center;font-size:18px;color:var(--text-dim);">/</div>
+          <div>
+            <label for="ratio-h">H</label>
+            <input type="number" id="ratio-h" value="9"  min="1" max="999" oninput="clearPreset();recalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Media Settings -->
+      <div class="card">
+        <div class="card-title">Media Settings (Intrinsic Size)</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">The native pixel dimensions of your image or video - what the browser knows before any CSS is applied.</p>
+
+        <div class="row-2 field">
+          <div>
+            <label for="med-w">Intrinsic Width (px)</label>
+            <input type="number" id="med-w" value="1920" min="1" max="9999" oninput="recalc()" />
+          </div>
+          <div>
+            <label for="med-h">Intrinsic Height (px)</label>
+            <input type="number" id="med-h" value="1080" min="1" max="9999" oninput="recalc()" />
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-bottom:8px;">Common Presets</div>
+        <div class="preset-row">
+          <button class="preset-btn active" onclick="setMediaPreset(this,1920,1080)">1920x1080</button>
+          <button class="preset-btn" onclick="setMediaPreset(this,1280,720)">1280x720</button>
+          <button class="preset-btn" onclick="setMediaPreset(this,3840,2160)">4K 3840x2160</button>
+          <button class="preset-btn" onclick="setMediaPreset(this,1080,1920)">Portrait 1080x1920</button>
+          <button class="preset-btn" onclick="setMediaPreset(this,800,600)">800x600</button>
+        </div>
+      </div>
+
+      <!-- Object-Fit Controls -->
+      <div class="card">
+        <div class="card-title">Object-Fit Controls</div>
+
+        <div class="section-title" style="margin-bottom:8px;">object-fit</div>
+        <div class="toggle-group" id="fit-group">
+          <button class="tog active-teal" onclick="setFit(this,'cover')">cover</button>
+          <button class="tog" onclick="setFit(this,'contain')">contain</button>
+          <button class="tog" onclick="setFit(this,'fill')">fill</button>
+          <button class="tog" onclick="setFit(this,'scale-down')">scale-down</button>
+          <button class="tog" onclick="setFit(this,'none')">none</button>
+        </div>
+
+        <div class="section-title" style="margin-bottom:8px;">object-position</div>
+        <div class="toggle-group" id="pos-group">
+          <button class="tog active-purple" onclick="setPos(this,'center center')">Center</button>
+          <button class="tog" onclick="setPos(this,'top center')">Top</button>
+          <button class="tog" onclick="setPos(this,'bottom center')">Bottom</button>
+          <button class="tog" onclick="setPos(this,'center left')">Left</button>
+          <button class="tog" onclick="setPos(this,'center right')">Right</button>
+        </div>
+
+        <div class="field">
+          <label for="custom-pos">Custom position (e.g. 30% 70%)</label>
+          <input type="text" id="custom-pos" placeholder="center center" oninput="setCustomPos(this.value)" />
+        </div>
+      </div>
+
+    </div><!-- /control-grid -->
+
+    <!-- ============================================================
+         OUTPUT SECTION
+    ============================================================ -->
+    <div class="output-grid">
+
+      <!-- CSS Output -->
+      <div class="card">
+        <div class="card-title">Generated CSS</div>
+        <div style="position:relative;">
+          <pre class="code-block" id="css-output">/* waiting for input */</pre>
+          <button class="copy-btn" id="copy-btn" onclick="copyCSS()">Copy</button>
+        </div>
+      </div>
+
+      <!-- Pixel Math -->
+      <div class="card">
+        <div class="card-title">Pixel Math Breakdown</div>
+        <div class="math-grid" id="math-grid">
+          <div class="math-item">
+            <div class="math-label">Container (rendered)</div>
+            <div class="math-value" id="m-cont-size">-</div>
+            <div class="math-note">width x height in px</div>
+          </div>
+          <div class="math-item">
+            <div class="math-label">Media aspect ratio</div>
+            <div class="math-value purple" id="m-media-ratio">-</div>
+            <div class="math-note">intrinsic W/H ratio</div>
+          </div>
+          <div class="math-item" id="m-crop-box">
+            <div class="math-label" id="m-crop-label">Crop / Loss</div>
+            <div class="math-value warn" id="m-crop-val">-</div>
+            <div class="math-note" id="m-crop-note">-</div>
+          </div>
+          <div class="math-item">
+            <div class="math-label" id="m-extra-label">Extra Space / Distortion</div>
+            <div class="math-value" id="m-extra-val">-</div>
+            <div class="math-note" id="m-extra-note">-</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /output-grid -->
+
+    <!-- ============================================================
+         LIVE PREVIEW
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Live Interactive Preview</div>
+      <div class="preview-outer">
+        <span class="preview-label">Drag the corner handle to resize the container</span>
+        <div class="preview-stage">
+          <div id="preview-container">
+            <div id="overflow-ghost"></div>
+            <div id="preview-media"></div>
+          </div>
+        </div>
+        <div class="preview-pills">
+          <span class="pill pill-teal" id="pill-fit">cover</span>
+          <span class="pill pill-purple" id="pill-pos">center center</span>
+          <span class="pill pill-orange" id="pill-size">400 x 225 px</span>
+        </div>
+        <span class="resize-hint">&#8597; Dashed teal border = container bounds. Orange dashes = cropped (invisible) media region.</span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">aspect-ratio</div>
+          <div class="glossary-def">A CSS property that locks the width-to-height proportion of a box. Writing aspect-ratio: 16 / 9 tells the browser to compute the height automatically from whatever the width resolves to.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">object-fit</div>
+          <div class="glossary-def">Controls how a replaced element (img, video, canvas) fills its layout box. Values include cover, contain, fill, scale-down, and none - each with different cropping and scaling behavior.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">object-position</div>
+          <div class="glossary-def">Sets the anchor point for the rendered image inside its container. Accepts keywords (top, center, bottom, left, right) or percentages. Only has a visible effect when object-fit is cover or none.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Intrinsic Size</div>
+          <div class="glossary-def">The natural pixel dimensions of a resource, defined by its content rather than CSS. A 1920x1080 JPEG has an intrinsic size of 1920 wide by 1080 tall regardless of how the containing box is sized.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Extrinsic Sizing</div>
+          <div class="glossary-def">Dimensions that come from outside the element itself - from CSS, parent layout constraints, or the viewport - rather than from the element's own content. A div with width: 100% is extrinsically sized.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Letterboxing</div>
+          <div class="glossary-def">The empty bars that appear above/below (or left/right of) an image when object-fit: contain is used and the container and image have different aspect ratios. The background color of the container shows through these gaps.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Responsive Design</div>
+          <div class="glossary-def">An approach to building layouts that adapt fluidly to different viewport sizes. The aspect-ratio property is a key tool because it maintains proportional boxes without hard-coded pixel heights.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Replaced Element</div>
+          <div class="glossary-def">An element whose content is defined outside CSS, such as an img, video, iframe, or canvas. These elements have an intrinsic size and respond to object-fit and object-position, which generic divs do not.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to CSS Aspect Ratio and Object-Fit</h2>
+
+      <p class="section-intro">If you have ever wrestled with a layout that looks perfect on a 1440px monitor and breaks completely on a 375px phone, you have felt the pain of hardcoded pixel heights. The CSS aspect-ratio property and object-fit family of values solve this at the browser level - no JavaScript, no padding hacks, no extra wrappers.</p>
+
+      <h3>How to Use This Tool</h3>
+      <ol class="steps">
+        <li>Set the container width in the Container Settings panel. Choose px for an absolute size or % for a fluid column width (the tool uses 800px as the reference container).</li>
+        <li>Pick or type an aspect ratio. The container height is computed automatically from width divided by ratio.</li>
+        <li>Enter the intrinsic dimensions of your media - the actual pixel size of the image or video file.</li>
+        <li>Click an object-fit toggle to see how the browser would scale or crop the media. The pixel math cards update instantly.</li>
+        <li>Adjust object-position to shift the crop anchor point - useful for keeping a face or logo in frame when using cover.</li>
+        <li>Grab the resize handle (bottom-right corner of the teal dashed box in the preview) to manually resize the container and watch all numbers recalculate live.</li>
+      </ol>
+
+      <h3>Understanding the Pixel Math</h3>
+      <p>When you use <strong style="color:var(--teal-light)">cover</strong>, the browser scales the image so its shorter side fills the container, then hides the overflow. This tool calculates exactly how many pixels are cropped from each axis so you know how much of your image is invisible.</p>
+      <p>With <strong style="color:var(--purple-light)">contain</strong>, the image shrinks until its longer side fits inside the container. The tool calculates the letterbox gap - the empty pixel height or width of the bars that appear on either side.</p>
+      <p><strong style="color:#fb923c">fill</strong> stretches the image to match the container exactly. Since no cropping or empty space occurs, the distortion is purely a ratio stretch. The tool expresses this as a percentage change in either axis.</p>
+      <p><strong style="color:var(--text-muted)">scale-down</strong> behaves like contain if the image would need to be enlarged, or like none if the image is already smaller than the container. No scaling larger than the intrinsic size ever occurs.</p>
+      <p><strong style="color:var(--text-muted)">none</strong> renders the image at its intrinsic dimensions with no scaling. If it is larger than the container, the overflow is hidden; if smaller, it floats at the object-position anchor surrounded by the container background.</p>
+
+      <h3>The aspect-ratio Property vs. the Padding-Bottom Hack</h3>
+      <p>Before aspect-ratio landed in browsers (broadly supported from mid-2021), developers faked responsive height using percentage padding. The trick relied on the fact that padding-top and padding-bottom percentages are calculated relative to the element's width, not its height. A 16:9 ratio required padding-bottom: 56.25% (9/16 = 0.5625) plus an absolutely-positioned inner element to hold actual content - awkward, fragile, and hard to read.</p>
+      <p>With aspect-ratio: 16 / 9 you write one property and remove the wrapper div entirely. The browser computes the height automatically whenever the width changes - whether from a CSS grid, flexbox, or viewport resizing.</p>
+
+      <h3>FAQ</h3>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What is the difference between object-fit cover and contain?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-a">cover scales the image up until it fully fills the container, cropping whatever hangs outside the edges. No letterbox gap appears, but pixels outside the box are hidden. contain scales the image down (or up) until the entire image fits inside the container without cropping, which leaves empty space (letterboxing) on two sides whenever the container and image aspect ratios differ.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Why does my image look stretched when I set a fixed height and width?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-a">When you set explicit width and height on an img element without also setting object-fit, the browser defaults to object-fit: fill, which stretches the image to match the container exactly regardless of the image's intrinsic (native) proportions. The fix is to add object-fit: cover or object-fit: contain to preserve the original aspect ratio.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How does the aspect-ratio property replace the old padding-bottom hack?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-a">The classic padding-bottom trick (e.g. padding-bottom: 56.25% for 16:9) exploits the fact that percentage padding is relative to the parent width, forcing a responsive height. The modern aspect-ratio property (e.g. aspect-ratio: 16 / 9) does the same thing in one declaration without the extra wrapper div or the fragile math. Browsers that support aspect-ratio will automatically compute the height from the width, making the hack unnecessary.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Can I use aspect-ratio on standard div containers, or just media?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-a">aspect-ratio works on any block-level or replaced element, including div, section, article, span (when display is changed), img, video, iframe, and canvas. It is not limited to media elements. A common pattern is to set aspect-ratio on a container div and then use object-fit on an img or video child inside it.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What does object-position do and how does it interact with object-fit cover?
+          <span class="faq-arrow">&#8964;</span>
+        </button>
+        <div class="faq-a">object-position controls which part of the image is visible when object-fit: cover crops the image. The default is center center, showing the middle. Setting it to top keeps the top of the image in frame, bottom preserves the bottom, and left or right shift the focal point horizontally. Think of it as the anchor point for the crop window.</div>
+      </div>
+
+    </div><!-- /edu-section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ════════════════════════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════════════════════════ */
+    let state = {
+      contW: 400,
+      contWUnit: 'px',
+      ratioW: 16,
+      ratioH: 9,
+      medW: 1920,
+      medH: 1080,
+      fit: 'cover',
+      pos: 'center center'
+    };
+
+    /* ════════════════════════════════════════════════════════════
+       HELPERS
+    ════════════════════════════════════════════════════════════ */
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+    function rnd(n) { return Math.round(n * 10) / 10; }
+    function fmt(n) { return n.toLocaleString('en-US', {maximumFractionDigits: 1}); }
+
+    function getContainerPx() {
+      let w = state.contW;
+      if (state.contWUnit === '%') w = (w / 100) * 800;
+      const h = w * (state.ratioH / state.ratioW);
+      return { w: Math.round(w), h: Math.round(h) };
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       MAIN RECALC
+    ════════════════════════════════════════════════════════════ */
+    function recalc() {
+      readInputs();
+      const cont = getContainerPx();
+      const mW = state.medW, mH = state.medH;
+      const fit = state.fit, pos = state.pos;
+
+      // Ratio strings
+      const cg = gcd(cont.w, cont.h);
+      const contRatioStr = (cont.w/cg) + ':' + (cont.h/cg);
+      const mg = gcd(mW, mH);
+      const medRatioStr = (mW/mg) + ':' + (mH/mg);
+
+      // Per-fit math
+      let cropLabel = 'Crop / Loss';
+      let cropVal = '-';
+      let cropNote = '';
+      let extraLabel = 'Extra Space / Distortion';
+      let extraVal = '-';
+      let extraNote = '';
+      let ghostData = null; // for overflow ghost
+
+      if (fit === 'cover') {
+        // Scale so shorter dimension fills the container
+        const scaleByW = cont.w / mW;
+        const scaleByH = cont.h / mH;
+        const scale = Math.max(scaleByW, scaleByH);
+        const scaledW = mW * scale;
+        const scaledH = mH * scale;
+        const cropX = Math.max(0, scaledW - cont.w);
+        const cropY = Math.max(0, scaledH - cont.h);
+        if (cropX > 0) {
+          cropVal = fmt(cropX) + 'px';
+          cropNote = 'cropped ' + fmt(cropX/2) + 'px each side (X axis)';
+        } else if (cropY > 0) {
+          cropVal = fmt(cropY) + 'px';
+          cropNote = 'cropped ' + fmt(cropY/2) + 'px each side (Y axis)';
+        } else {
+          cropVal = '0px';
+          cropNote = 'aspect ratios match, no crop';
+        }
+        extraVal = '0px';
+        extraNote = 'no letterbox with cover';
+        // ghost: scaled media positioned by object-position
+        ghostData = { scaledW, scaledH, cropX, cropY };
+      }
+
+      else if (fit === 'contain') {
+        const scaleByW = cont.w / mW;
+        const scaleByH = cont.h / mH;
+        const scale = Math.min(scaleByW, scaleByH);
+        const scaledW = mW * scale;
+        const scaledH = mH * scale;
+        const gapX = Math.max(0, cont.w - scaledW);
+        const gapY = Math.max(0, cont.h - scaledH);
+        cropVal = '0px';
+        cropNote = 'no cropping with contain';
+        if (gapY > 0) {
+          extraVal = fmt(gapY) + 'px';
+          extraNote = 'letterbox: ' + fmt(gapY/2) + 'px top + bottom';
+        } else if (gapX > 0) {
+          extraVal = fmt(gapX) + 'px';
+          extraNote = 'pillarbox: ' + fmt(gapX/2) + 'px left + right';
+        } else {
+          extraVal = '0px';
+          extraNote = 'perfect fit, no gap';
+        }
+      }
+
+      else if (fit === 'fill') {
+        const stretchX = rnd((cont.w / mW) * 100);
+        const stretchY = rnd((cont.h / mH) * 100);
+        const distX = rnd(Math.abs(stretchX - stretchY));
+        cropVal = '0px';
+        cropNote = 'fill never crops';
+        extraLabel = 'Distortion';
+        extraVal = fmt(distX) + '%';
+        extraNote = 'X scaled ' + fmt(stretchX) + '%, Y scaled ' + fmt(stretchY) + '%';
+      }
+
+      else if (fit === 'scale-down') {
+        // Behaves like contain if image > container, else like none
+        const needsScale = mW > cont.w || mH > cont.h;
+        if (needsScale) {
+          const scale = Math.min(cont.w / mW, cont.h / mH);
+          const scaledW = mW * scale;
+          const scaledH = mH * scale;
+          const gapX = Math.max(0, cont.w - scaledW);
+          const gapY = Math.max(0, cont.h - scaledH);
+          cropVal = '0px';
+          cropNote = 'scaled down to fit (no crop)';
+          extraVal = gapY > 0 ? fmt(gapY) + 'px gap Y' : fmt(gapX) + 'px gap X';
+          extraNote = 'acts like contain (image larger than box)';
+        } else {
+          cropVal = '0px';
+          cropNote = 'image smaller than container';
+          extraVal = fmt(cont.w - mW) + 'px x, ' + fmt(cont.h - mH) + 'px y';
+          extraNote = 'acts like none (image smaller than box)';
+        }
+      }
+
+      else if (fit === 'none') {
+        const cropX = Math.max(0, mW - cont.w);
+        const cropY = Math.max(0, mH - cont.h);
+        const gapX = Math.max(0, cont.w - mW);
+        const gapY = Math.max(0, cont.h - mH);
+        if (cropX > 0 || cropY > 0) {
+          cropVal = (cropX > 0 ? fmt(cropX) + 'px W' : '') + (cropX > 0 && cropY > 0 ? ', ' : '') + (cropY > 0 ? fmt(cropY) + 'px H' : '');
+          cropNote = 'image larger than container: overflow hidden';
+        } else {
+          cropVal = '0px';
+          cropNote = 'image fits inside container';
+        }
+        extraVal = (gapX > 0 || gapY > 0) ? fmt(gapX) + 'px W, ' + fmt(gapY) + 'px H' : '0px';
+        extraNote = 'empty gap around image (if smaller than box)';
+      }
+
+      // ── Update math cards ────────────────────────────────────
+      document.getElementById('m-cont-size').textContent  = cont.w + ' x ' + cont.h + ' px';
+      document.getElementById('m-media-ratio').textContent = medRatioStr;
+      document.getElementById('m-crop-label').textContent = cropLabel;
+      document.getElementById('m-crop-val').textContent   = cropVal;
+      document.getElementById('m-crop-note').textContent  = cropNote;
+      document.getElementById('m-extra-label').textContent = extraLabel;
+      document.getElementById('m-extra-val').textContent  = extraVal;
+      document.getElementById('m-extra-note').textContent = extraNote;
+
+      // ── Update CSS output ────────────────────────────────────
+      const ratioW = state.ratioW, ratioH = state.ratioH;
+      const wVal = state.contWUnit === '%' ? state.contW + '%' : state.contW + 'px';
+      const cssText =
+        '.container {\n' +
+        '  width: ' + wVal + ';\n' +
+        '  aspect-ratio: ' + ratioW + ' / ' + ratioH + ';\n' +
+        '  overflow: hidden;\n' +
+        '}\n\n' +
+        '.media-element {\n' +
+        '  width: 100%;\n' +
+        '  height: 100%;\n' +
+        '  object-fit: ' + fit + ';\n' +
+        '  object-position: ' + pos + ';\n' +
+        '}';
+      document.getElementById('css-output').textContent = cssText;
+
+      // ── Update preview ───────────────────────────────────────
+      updatePreview(cont, ghostData);
+
+      // ── Update pills ─────────────────────────────────────────
+      document.getElementById('pill-fit').textContent  = fit;
+      document.getElementById('pill-pos').textContent  = pos;
+      document.getElementById('pill-size').textContent = cont.w + ' x ' + cont.h + ' px';
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       LIVE PREVIEW
+    ════════════════════════════════════════════════════════════ */
+    function updatePreview(cont, ghostData) {
+      const pc = document.getElementById('preview-container');
+      const pm = document.getElementById('preview-media');
+      const pg = document.getElementById('overflow-ghost');
+
+      // Scale to fit the stage (max 500px wide)
+      const maxW = Math.min(cont.w, 500);
+      const scale = maxW / cont.w;
+      const dispW = Math.round(cont.w * scale);
+      const dispH = Math.round(cont.h * scale);
+
+      pc.style.width  = dispW + 'px';
+      pc.style.height = dispH + 'px';
+
+      // Apply object-fit and position to the media element
+      pm.style.objectFit      = state.fit;
+      pm.style.objectPosition = state.pos;
+
+      // Show overflow ghost for cover/none
+      if (ghostData && state.fit === 'cover') {
+        const { scaledW, scaledH, cropX, cropY } = ghostData;
+        const gW = Math.round(scaledW * scale);
+        const gH = Math.round(scaledH * scale);
+        const gL = Math.round(-cropX / 2 * scale);
+        const gT = Math.round(-cropY / 2 * scale);
+        pg.style.display = 'block';
+        pg.style.width   = gW + 'px';
+        pg.style.height  = gH + 'px';
+        pg.style.left    = gL + 'px';
+        pg.style.top     = gT + 'px';
+      } else {
+        pg.style.display = 'none';
+      }
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       ResizeObserver - watch the preview container being dragged
+    ════════════════════════════════════════════════════════════ */
+    (function() {
+      const pc = document.getElementById('preview-container');
+      let rafId = null;
+      const ro = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          // Back-calculate state from rendered size
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            // Update inputs to match dragged size
+            const ratio = state.ratioW / state.ratioH;
+            // Keep width-driven: approximate back to full px
+            const maxW = Math.min(state.contW, 500);
+            const scale = maxW / state.contW;
+            const newContW = Math.round(width / scale);
+            state.contW = newContW;
+            if (state.contWUnit === 'px') {
+              document.getElementById('cont-w').value = newContW;
+            }
+            const cont = getContainerPx();
+            updatePreview(cont, null);
+            document.getElementById('m-cont-size').textContent  = cont.w + ' x ' + cont.h + ' px';
+            document.getElementById('pill-size').textContent    = cont.w + ' x ' + cont.h + ' px';
+          });
+        }
+      });
+      ro.observe(pc);
+    })();
+
+    /* ════════════════════════════════════════════════════════════
+       INPUT READERS
+    ════════════════════════════════════════════════════════════ */
+    function readInputs() {
+      state.contW    = parseFloat(document.getElementById('cont-w').value)    || 400;
+      state.contWUnit= document.getElementById('cont-w-unit').value;
+      state.ratioW   = parseFloat(document.getElementById('ratio-w').value)   || 16;
+      state.ratioH   = parseFloat(document.getElementById('ratio-h').value)   || 9;
+      state.medW     = parseFloat(document.getElementById('med-w').value)     || 1920;
+      state.medH     = parseFloat(document.getElementById('med-h').value)     || 1080;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       TOGGLE SETTERS
+    ════════════════════════════════════════════════════════════ */
+    function setFit(btn, val) {
+      document.querySelectorAll('#fit-group .tog').forEach(b => b.classList.remove('active-teal'));
+      btn.classList.add('active-teal');
+      state.fit = val;
+      recalc();
+    }
+
+    function setPos(btn, val) {
+      document.querySelectorAll('#pos-group .tog').forEach(b => b.classList.remove('active-purple'));
+      btn.classList.add('active-purple');
+      state.pos = val;
+      document.getElementById('custom-pos').value = '';
+      recalc();
+    }
+
+    function setCustomPos(val) {
+      if (!val.trim()) return;
+      document.querySelectorAll('#pos-group .tog').forEach(b => b.classList.remove('active-purple'));
+      state.pos = val.trim();
+      recalc();
+    }
+
+    function setRatioPreset(btn, w, h) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (w > 0) {
+        document.getElementById('ratio-w').value = w;
+        document.getElementById('ratio-h').value = h;
+        state.ratioW = w;
+        state.ratioH = h;
+      }
+      recalc();
+    }
+
+    function clearPreset() {
+      document.querySelectorAll('#ratio-presets .preset-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('custom-preset-btn').classList.add('active');
+    }
+
+    function setMediaPreset(btn, w, h) {
+      document.querySelectorAll('.preset-row .preset-btn').forEach(b => {
+        if (b.closest('.card') && b.closest('.card').querySelector('label[for="med-w"]')) b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      document.getElementById('med-w').value = w;
+      document.getElementById('med-h').value = h;
+      state.medW = w;
+      state.medH = h;
+      recalc();
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       COPY CSS
+    ════════════════════════════════════════════════════════════ */
+    function copyCSS() {
+      const text = document.getElementById('css-output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       FAQ ACCORDION
+    ════════════════════════════════════════════════════════════ */
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       INIT
+    ════════════════════════════════════════════════════════════ */
+    recalc();
+  </script>
+
+</body>
+</html>

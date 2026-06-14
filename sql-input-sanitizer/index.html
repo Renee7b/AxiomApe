@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQL Input Sanitizer: Escape and Harden SQL String Inputs Safely | AxiomApe</title>
+  <meta name="description" content="Free client-side SQL input sanitizer. Paste raw user input, select your database dialect, and get a safely escaped string with real-time security scoring. 100% private - nothing leaves your browser." />
+  <meta name="keywords" content="sql injection sanitizer, sql escape tool, sql input sanitization, prevent sql injection, sql string escaper, mysql escape, postgresql escape, sql security tool, parameterized queries, sql hardening, sql sanitizer online" />
+  <link rel="canonical" href="https://axiomape.com/sql-input-sanitizer/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "SQL Input Sanitizer",
+        "description": "Free client-side SQL input sanitizer. Paste raw user input, select your database dialect, and get a safely escaped string with real-time security scoring. 100% private - nothing leaves your browser.",
+        "url": "https://axiomape.com/sql-input-sanitizer/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why is manual escaping less secure than using Prepared Statements?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Manual escaping is error-prone because it depends on a developer remembering to apply the correct escaping function every single time user input touches a SQL string. If even one input is missed - in a rarely used code path, an edge case, or a future update - the application is immediately vulnerable. Prepared Statements (Parameterized Queries) solve this at the architecture level: the SQL structure and the data values are sent to the database separately, so the database engine itself can never confuse a data value for SQL syntax, no matter what characters the user types. Manual escaping is a useful last-resort defense in legacy systems, but it should never be the primary strategy."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between MySQL and PostgreSQL escaping?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The core rule is the same in both: a single quote inside a string literal is escaped by doubling it. The main difference is the backslash. MySQL in its default mode treats the backslash as an escape character inside strings, meaning a lone backslash can be used to escape the quote character, so backslashes themselves must also be escaped. PostgreSQL, by contrast, does not treat backslashes as special inside standard single-quoted strings, so they do not need to be doubled. SQL Server also does not use backslash escaping - only single-quote doubling applies. Selecting the correct database dialect in this tool ensures the right rules are applied."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I rely solely on this tool for database security?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This tool is a teaching aid and a quick-reference utility for understanding what SQL escaping looks like in practice. For production applications, always use your database driver's built-in Prepared Statements or Parameterized Query API - for example PDO in PHP, psycopg2 in Python, JDBC in Java, or the parameterized query methods in your ORM. Manual string escaping, even when done correctly, is inherently fragile compared to the structural separation that Prepared Statements provide. Use this tool to learn, inspect suspicious input, or sanitize one-off scripts - not as a replacement for proper parameterized queries in live code."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does this tool store or transmit my query strings?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. All processing happens entirely inside your web browser using JavaScript. Your input is never sent to any server, logged, or stored anywhere. You can disconnect from the internet after loading this page and the sanitization engine will continue to work perfectly. This is especially important for developers working with real query inputs that may contain sensitive data such as passwords, personal information, or proprietary business logic."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does the Security Score pill mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Safe means the input contained no recognizable SQL injection patterns and required no escaping. Sanitized means the input contained characters that needed escaping (such as single quotes or comment sequences) and those have been handled. Risk Detected means the input contained high-risk patterns such as UNION SELECT, DROP TABLE, or SHUTDOWN that suggest a deliberate injection attempt - in this case escaping alone may not be sufficient and the tool displays an additional warning recommending Prepared Statements."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    /* =========================================================
+       RESET AND BASE
+    ========================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:          #0B1120;
+      --surface:     #131F35;
+      --surface-2:   #0E1A2E;
+      --border:      #1E3255;
+      --border-hi:   #2A4070;
+      --text:        #DBE8F5;
+      --text-muted:  #7A94B0;
+      --text-dim:    #4A6480;
+      --blue:        #3B82F6;
+      --blue-10:     rgba(59, 130, 246, 0.10);
+      --blue-20:     rgba(59, 130, 246, 0.20);
+      --blue-40:     rgba(59, 130, 246, 0.40);
+      --amber:       #F59E0B;
+      --amber-10:    rgba(245, 158, 11, 0.10);
+      --amber-20:    rgba(245, 158, 11, 0.20);
+      --amber-40:    rgba(245, 158, 11, 0.40);
+      --green:       #10B981;
+      --green-10:    rgba(16, 185, 129, 0.10);
+      --green-20:    rgba(16, 185, 129, 0.20);
+      --red:         #EF4444;
+      --red-10:      rgba(239, 68, 68, 0.10);
+      --red-40:      rgba(239, 68, 68, 0.40);
+      --mono:        'Fira Code', 'Courier New', monospace;
+      --sans:        'Segoe UI', system-ui, -apple-system, sans-serif;
+      --radius:      10px;
+      --shadow:      0 8px 32px rgba(0, 0, 0, 0.55);
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* =========================================================
+       TOP NAV BAR (hidden by site-chrome, fallback only)
+    ========================================================= */
+    .top-bar {
+      text-align: center;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .top-bar a { font-weight: 600; font-size: 0.9rem; }
+
+    /* =========================================================
+       PAGE WRAPPER
+    ========================================================= */
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* =========================================================
+       PAGE HEADER
+    ========================================================= */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      color: #fff;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .page-header h1 .accent-blue { color: var(--blue); }
+    .page-header p {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 620px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* =========================================================
+       CARDS
+    ========================================================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .card-body { padding: 24px; }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      margin-bottom: 16px;
+    }
+
+    /* =========================================================
+       CONFIG ROW - DROPDOWNS
+    ========================================================= */
+    .config-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 540px) { .config-row { flex-direction: column; } }
+
+    .config-group {
+      flex: 1;
+    }
+    .config-group label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .config-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-family: var(--sans);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237A94B0' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+    .config-group select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-20);
+    }
+    .config-group select option {
+      background: #1A2A44;
+      color: var(--text);
+    }
+
+    /* =========================================================
+       PANELS GRID - INPUT / OUTPUT
+    ========================================================= */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) { .panels-grid { grid-template-columns: 1fr; } }
+
+    .panel { display: flex; flex-direction: column; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      min-height: 28px;
+    }
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    /* ---- Score Pill ---- */
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 11px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      border: 1.5px solid transparent;
+    }
+    .score-pill.safe {
+      background: var(--green-10);
+      color: var(--green);
+      border-color: var(--green-20);
+    }
+    .score-pill.sanitized {
+      background: var(--blue-10);
+      color: var(--blue);
+      border-color: var(--blue-20);
+    }
+    .score-pill.risk {
+      background: var(--amber-10);
+      color: var(--amber);
+      border-color: var(--amber-40);
+    }
+
+    /* ---- Textareas ---- */
+    .panel-ta {
+      flex: 1;
+      width: 100%;
+      min-height: 240px;
+      resize: vertical;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.75;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      tab-size: 2;
+    }
+    .panel-ta::placeholder { color: var(--text-dim); font-style: italic; }
+    #input-ta:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-10);
+    }
+    #output-ta {
+      cursor: default;
+      color: #A8D5A2;
+    }
+    #output-ta.risk-border {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-10);
+    }
+
+    /* ---- Panel buttons ---- */
+    .panel-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-hi);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .btn-action:hover {
+      background: var(--blue-10);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .btn-action.danger:hover {
+      background: var(--red-10);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* =========================================================
+       HIGH-RISK WARNING BOX
+    ========================================================= */
+    .high-risk-warning {
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: var(--amber-10);
+      border: 1.5px solid var(--amber-40);
+      border-left: 4px solid var(--amber);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--amber);
+      line-height: 1.6;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .high-risk-warning[hidden] { display: none; }
+    .warning-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* =========================================================
+       CHAR COUNT / INFO ROW
+    ========================================================= */
+    .info-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .info-item {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+    .info-item span {
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .info-sep { color: var(--border-hi); font-size: 0.9rem; }
+
+    /* =========================================================
+       AD PLACEMENTS - inherited from site-chrome.js
+    ========================================================= */
+
+    /* =========================================================
+       DIVIDER
+    ========================================================= */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+
+    /* =========================================================
+       DISCLAIMER
+    ========================================================= */
+    .disclaimer {
+      background: var(--blue-10);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--blue);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+    .disclaimer strong { color: var(--blue); }
+
+    /* =========================================================
+       GLOSSARY
+    ========================================================= */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .glossary-term {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* =========================================================
+       EDUCATIONAL SECTION
+    ========================================================= */
+    .edu-section h2 {
+      font-size: clamp(1.2rem, 3vw, 1.55rem);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .edu-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+    .section-intro {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+
+    /* ---- How-to Steps ---- */
+    .how-to-steps {
+      counter-reset: step;
+      list-style: none;
+      margin: 0 0 20px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .how-to-steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .how-to-steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      background: var(--blue-20);
+      border: 1px solid var(--blue-40);
+      border-radius: 50%;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .how-to-steps li strong { color: var(--text); }
+
+    /* ---- FAQ Accordion ---- */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-question {
+      width: 100%;
+      text-align: left;
+      background: var(--surface-2);
+      border: none;
+      padding: 15px 20px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+      line-height: 1.4;
+    }
+    .faq-question:hover { background: var(--blue-10); }
+    .faq-question .faq-icon {
+      font-size: 1.1rem;
+      color: var(--blue);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .faq-question[aria-expanded="true"] .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      display: none;
+      padding: 0 20px 16px;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      background: var(--surface-2);
+      border-top: 1px solid var(--border);
+    }
+    .faq-answer p + p { margin-top: 10px; }
+    .faq-answer strong { color: var(--text); }
+    .faq-answer code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.83em;
+      font-family: var(--mono);
+      color: #A8D5A2;
+    }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* =========================================================
+       TOAST
+    ========================================================= */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0B1120;
+      border: 1px solid var(--blue-40);
+      color: var(--blue);
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* =========================================================
+       FOOTER (hidden by site-chrome, fallback only)
+    ========================================================= */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 18px 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    footer nav {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    footer nav a { color: var(--text-muted); font-weight: 600; }
+    footer nav a:hover { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+  <!-- Fallback nav (hidden by site-chrome.js) -->
+  <div class="top-bar">
+    Free tools from <a href="/">axiomape.com</a>
+  </div>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================= -->
+    <header class="page-header">
+      <h1>SQL Input <span class="accent-blue">Sanitizer</span>: Escape and Harden SQL String Inputs Safely</h1>
+      <p>Paste raw user input below. Select your database and context. The engine escapes every injection vector in real time - all inside your browser.</p>
+    </header>
+
+    <!-- =========================================================
+         MAIN TOOL CARD
+    ========================================================= -->
+    <div class="card">
+      <div class="card-body">
+
+        <!-- Config Row -->
+        <div class="config-row">
+
+          <div class="config-group">
+            <label for="dialect-select">Target Database System</label>
+            <select id="dialect-select" onchange="runSanitize()" aria-label="Target database system">
+              <option value="mysql">MySQL / MariaDB</option>
+              <option value="postgresql">PostgreSQL</option>
+              <option value="sqlite">SQLite</option>
+              <option value="sqlserver">SQL Server (T-SQL)</option>
+            </select>
+          </div>
+
+          <div class="config-group">
+            <label for="context-select">Usage Context</label>
+            <select id="context-select" onchange="runSanitize()" aria-label="Usage context">
+              <option value="string">Standard String Query</option>
+              <option value="like">LIKE Clause (wildcard safe)</option>
+              <option value="numeric">Numeric Cast</option>
+            </select>
+          </div>
+
+        </div>
+        <!-- END Config Row -->
+
+        <!-- Panels Grid -->
+        <div class="panels-grid">
+
+          <!-- INPUT PANEL -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-label">Raw Input</span>
+            </div>
+            <textarea
+              id="input-ta"
+              class="panel-ta"
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+              placeholder="Paste or type raw user input here...
+
+Example injection attempt:
+' OR '1'='1
+-- DROP TABLE users
+UNION SELECT * FROM passwords"
+              oninput="runSanitize()"
+              aria-label="Raw SQL input to sanitize"
+            ></textarea>
+            <div class="panel-actions">
+              <button class="btn-action danger" onclick="clearInput()" aria-label="Clear input">Clear</button>
+              <button class="btn-action" onclick="loadExample()" aria-label="Load injection example">Load Example</button>
+            </div>
+          </div>
+
+          <!-- OUTPUT PANEL -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-label">Sanitized Output</span>
+              <span class="score-pill safe" id="score-pill" role="status" aria-live="polite">
+                &#9632; Safe
+              </span>
+            </div>
+            <textarea
+              id="output-ta"
+              class="panel-ta"
+              readonly
+              aria-label="Sanitized output - read only"
+              placeholder="Sanitized result will appear here..."
+            ></textarea>
+            <div class="panel-actions">
+              <button class="btn-action" onclick="copyOutput()" aria-label="Copy sanitized output to clipboard">Copy Output</button>
+            </div>
+          </div>
+
+        </div>
+        <!-- END Panels Grid -->
+
+        <!-- High-Risk Warning Box -->
+        <div class="high-risk-warning" id="high-risk-warning" hidden role="alert">
+          <span class="warning-icon">&#9888;</span>
+          <span>
+            <strong>Warning: High-risk pattern detected.</strong>
+            Always use Prepared Statements (Parameterized Queries) instead of string concatenation whenever possible.
+            Manual escaping is a last resort - parameterized queries eliminate injection risk at the architecture level.
+          </span>
+        </div>
+
+        <!-- Info Row -->
+        <div class="info-row" role="status" aria-live="polite">
+          <div class="info-item">Input chars: <span id="info-in">0</span></div>
+          <div class="info-sep">|</div>
+          <div class="info-item">Output chars: <span id="info-out">0</span></div>
+          <div class="info-sep">|</div>
+          <div class="info-item">Changes made: <span id="info-changes">0</span></div>
+          <div class="info-sep">|</div>
+          <div class="info-item">Dialect: <span id="info-dialect">MySQL / MariaDB</span></div>
+        </div>
+
+      </div><!-- END card-body -->
+    </div><!-- END tool card -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Disclaimer -->
+    <div class="disclaimer" role="note">
+      <strong>Security Notice:</strong>
+      This tool processes all input locally in your browser. Nothing you type is sent to any server.
+      This sanitizer demonstrates escaping techniques for educational and legacy-code purposes.
+      For all new production code, use Parameterized Queries or Prepared Statements - do not rely on string escaping as your sole defense.
+    </div>
+
+    <!-- =========================================================
+         GLOSSARY
+    ========================================================= -->
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">SQL Injection (SQLi)</div>
+            <div class="glossary-def">An attack where a malicious user inserts SQL syntax into an input field, tricking the database into running unintended commands such as returning all rows or deleting tables.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Prepared Statements</div>
+            <div class="glossary-def">A database feature that pre-compiles a SQL template with placeholders for values. Because the structure is fixed before data arrives, injected SQL syntax is treated as plain text and cannot alter the query.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Parameterized Queries</div>
+            <div class="glossary-def">The practice of passing user-supplied values as separate parameters to a database driver rather than concatenating them directly into a SQL string. Effectively the same protection as Prepared Statements.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Escape Character</div>
+            <div class="glossary-def">A character or sequence that signals to the database parser that the following character should be treated as literal data rather than SQL syntax. In standard SQL, doubling a single quote (two apostrophes) is the escape method.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Wildcard Injection</div>
+            <div class="glossary-def">An attack specific to LIKE clauses where a user supplies % or _ characters to broaden a search query, potentially exposing data the user should not see (e.g. searching for all records by entering a bare % sign).</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Database Driver</div>
+            <div class="glossary-def">A software library that sits between your application code and the database server, handling connection, query formatting, and parameter binding. Examples include PDO (PHP), psycopg2 (Python), and JDBC (Java).</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Sanitization vs. Validation</div>
+            <div class="glossary-def">Sanitization transforms potentially dangerous input (for example, escaping quotes). Validation checks whether input meets expected rules (for example, confirming an email address is formatted correctly). Both are needed - validation prevents bad data, sanitization prevents bad execution.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         EDUCATIONAL SECTION
+    ========================================================= -->
+    <div class="card edu-section">
+      <div class="card-body">
+        <h2>The Complete Guide to SQL Input Sanitization and Injection Defense</h2>
+
+        <p class="section-intro">
+          SQL injection remains one of the most exploited vulnerability classes in web applications, consistently
+          appearing in the OWASP Top 10 year after year. Understanding why it happens - and how escaping addresses
+          (and fails to fully address) the problem - is foundational knowledge for every developer who touches a database.
+        </p>
+
+        <h3>How to Use This Tool</h3>
+        <ol class="how-to-steps">
+          <li><strong>Select your database system</strong> from the first dropdown. MySQL and MariaDB require backslash escaping in addition to quote doubling; PostgreSQL, SQLite, and SQL Server use quote doubling only.</li>
+          <li><strong>Select the Usage Context.</strong> Standard String Query applies quote and comment escaping. LIKE Clause also escapes wildcard characters so a user cannot widen your search unexpectedly. Numeric Cast strips all non-numeric characters, safe for use in WHERE id = ... clauses.</li>
+          <li><strong>Paste or type raw user input</strong> into the left panel. The sanitized result appears instantly in the right panel.</li>
+          <li><strong>Check the Security Score pill.</strong> "Safe" means no changes were needed. "Sanitized" means dangerous characters were escaped. "Risk Detected" means a high-risk injection pattern was found - heed the warning and use Prepared Statements.</li>
+          <li><strong>Copy the output</strong> with the Copy button and embed it in your SQL string, surrounded by your own single quotes.</li>
+        </ol>
+
+        <h3>Why Escaping Works - and Where It Breaks Down</h3>
+        <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px;">
+          The fundamental goal of SQL string escaping is to ensure that a single quote typed by a user closes
+          a string literal only in the way you intended. By doubling every quote (converting <code>'</code> to
+          <code>''</code>), the database parser reads the pair as a literal apostrophe character inside the string
+          rather than as the string terminator. This is the standard SQL mechanism, defined in the ISO/IEC 9075
+          specification and supported by every major RDBMS.
+        </p>
+        <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px;">
+          The mechanism breaks down when escaping is applied inconsistently - missed in one code path, applied
+          at the wrong stage in a processing pipeline, or bypassed by encoding tricks such as multi-byte character
+          sequences. It also provides no protection against second-order injection, where sanitized data is stored
+          safely but later retrieved and concatenated into a new query without re-escaping.
+        </p>
+        <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.75;margin-bottom:20px;">
+          Prepared Statements sidestep all of these failure modes because the separation between SQL structure and
+          data is enforced by the database engine itself, not by application-layer string manipulation. Think of it
+          as the difference between drawing a container on paper (escaping) versus manufacturing a physical container
+          with fixed, sealed walls (parameterized queries).
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item open">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="true">
+            Why is manual escaping less secure than using Prepared Statements?
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              Manual escaping is error-prone because it depends on a developer remembering to apply the correct
+              escaping function every single time user input touches a SQL string. If even one input is missed -
+              in a rarely used code path, an edge case, or a future update - the application is immediately vulnerable.
+            </p>
+            <p>
+              <strong>Prepared Statements (Parameterized Queries)</strong> solve this at the architecture level:
+              the SQL structure and the data values are sent to the database separately, so the database engine itself
+              can never confuse a data value for SQL syntax, no matter what characters the user types. The developer
+              cannot accidentally "forget" to escape because there is no escaping step - the data channel is
+              structurally separate from the command channel.
+            </p>
+            <p>
+              Manual escaping is a useful last-resort defense in legacy systems, but it should never be the primary
+              strategy for new code. Use this tool to understand the mechanics, not as your production security layer.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What is the difference between MySQL and PostgreSQL escaping?
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              The core rule is the same in both: a single quote inside a string literal is escaped by doubling it
+              (<code>''</code> instead of <code>'</code>). The main difference is the <strong>backslash</strong>.
+            </p>
+            <p>
+              MySQL in its default <code>sql_mode</code> treats the backslash (<code>\</code>) as an escape character
+              inside strings. A lone backslash before a quote - <code>\'</code> - is an alternative way to escape the
+              quote, which means a bare backslash in user input can potentially be used as an escape bypass.
+              This tool escapes backslashes to <code>\\</code> when MySQL is selected.
+            </p>
+            <p>
+              PostgreSQL (in standard <code>E''</code> escape-string syntax, and in its default standard-conforming
+              mode) does <em>not</em> treat backslashes as special inside single-quoted strings.
+              SQL Server and SQLite similarly rely only on quote-doubling, with no special backslash handling.
+              Selecting the correct dialect in this tool applies the right rule set automatically.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Can I rely solely on this tool for database security?
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              No. This tool is a teaching aid and a quick-reference utility for understanding what SQL escaping
+              looks like in practice. For production applications, <strong>always use your database driver's
+              built-in Prepared Statements or Parameterized Query API</strong> - for example:
+              <code>PDO</code> with named placeholders in PHP,
+              <code>psycopg2</code> with <code>%s</code> parameters in Python,
+              <code>JDBC PreparedStatement</code> in Java, or
+              the parameterized query methods in your ORM.
+            </p>
+            <p>
+              Manual string escaping, even when done correctly, is inherently fragile compared to the structural
+              separation that Prepared Statements provide. Use this tool to learn, to inspect suspicious input,
+              or to sanitize one-off scripts - not as a replacement for proper parameterized queries in live code.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            Does this tool store or transmit my query strings?
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              No. All processing happens entirely inside your web browser using JavaScript. Your input is never
+              sent to any server, logged, or stored anywhere. You can disconnect from the internet after loading
+              this page and the sanitization engine will continue to work perfectly.
+            </p>
+            <p>
+              This is especially important for developers working with real query inputs that may contain
+              sensitive data such as passwords, personal information, or proprietary business logic. The
+              moment you close or refresh the tab, all input is gone. We do not use cookies, analytics
+              trackers, or session storage for your input data.
+            </p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
+            What does the Security Score pill mean?
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>
+              <strong>Safe</strong> means the input contained no recognizable SQL injection patterns and required
+              no escaping. The output is identical to the input.
+            </p>
+            <p>
+              <strong>Sanitized</strong> means the input contained characters that needed escaping - such as single
+              quotes, backslashes (MySQL), comment sequences, or wildcards - and those have been handled. The output
+              is now safe to embed inside a SQL string literal, but you should still prefer Prepared Statements.
+            </p>
+            <p>
+              <strong>Risk Detected</strong> means the input contained high-risk patterns such as
+              <code>UNION SELECT</code>, <code>DROP TABLE</code>, or <code>SHUTDOWN</code> that strongly
+              suggest a deliberate injection attempt. In this case, escaping alone may not be sufficient
+              and the tool displays an additional warning. Consider logging the event and investigating
+              the source of the input.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- END educational section -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- Fallback footer (hidden by site-chrome.js) -->
+  <footer>
+    <nav aria-label="Footer navigation">
+      <a href="/about.html">About</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+    <div>&copy; <span id="footer-year"></span> <a href="/">AxiomApe</a>. All rights reserved.</div>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- =========================================================
+       JAVASCRIPT - SANITIZATION ENGINE
+  ========================================================= -->
+  <script>
+    "use strict";
+
+    /* ----------------------------------------------------------
+       DOM REFS
+    ---------------------------------------------------------- */
+    const inputTa       = document.getElementById("input-ta");
+    const outputTa      = document.getElementById("output-ta");
+    const scorePill     = document.getElementById("score-pill");
+    const warningBox    = document.getElementById("high-risk-warning");
+    const dialectSel    = document.getElementById("dialect-select");
+    const contextSel    = document.getElementById("context-select");
+    const infoIn        = document.getElementById("info-in");
+    const infoOut       = document.getElementById("info-out");
+    const infoChanges   = document.getElementById("info-changes");
+    const infoDialect   = document.getElementById("info-dialect");
+    const toast         = document.getElementById("toast");
+
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    /* ----------------------------------------------------------
+       HIGH-RISK PATTERNS - suggest deliberate injection attempt
+    ---------------------------------------------------------- */
+    const HIGH_RISK_RE = [
+      /UNION\s+(?:ALL\s+)?SELECT/i,
+      /DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|TRIGGER|PROCEDURE|FUNCTION)/i,
+      /TRUNCATE\s+TABLE/i,
+      /ALTER\s+TABLE/i,
+      /EXEC(?:UTE)?\s*\(/i,
+      /xp_cmdshell/i,
+      /SHUTDOWN/i,
+      /LOAD_FILE\s*\(/i,
+      /INTO\s+OUTFILE/i,
+      /INFORMATION_SCHEMA/i,
+      /SLEEP\s*\(\s*\d/i,
+      /BENCHMARK\s*\(/i,
+      /WAITFOR\s+DELAY/i,
+    ];
+
+    /* INJECTION SIGNALS - for score "Sanitized" vs "Safe" distinction */
+    const SIGNAL_RE = [
+      /'\s*(?:OR|AND)\s*['"]?\s*\d\s*=\s*\d/i,
+      /'\s*;\s*(?:DROP|DELETE|INSERT|UPDATE|CREATE|TRUNCATE)/i,
+      /--\s/,
+      /\/\*/,
+    ];
+
+    /* ----------------------------------------------------------
+       DIALECT LABEL MAP
+    ---------------------------------------------------------- */
+    const DIALECT_LABELS = {
+      mysql:      "MySQL / MariaDB",
+      postgresql: "PostgreSQL",
+      sqlite:     "SQLite",
+      sqlserver:  "SQL Server (T-SQL)"
+    };
+
+    /* ----------------------------------------------------------
+       SANITIZATION ENGINE
+    ---------------------------------------------------------- */
+    function sanitizeInput(raw, dialect, context) {
+      /* Numeric context: strip everything non-numeric */
+      if (context === "numeric") {
+        const stripped = raw.replace(/[^0-9.\-+eE]/g, "");
+        const num = parseFloat(stripped);
+        if (isNaN(num)) return String(parseFloat("0") || "0");
+        return String(num);
+      }
+
+      let s = raw;
+
+      /* STEP 1 - Escape backslashes first (MySQL only, before quote escaping) */
+      if (dialect === "mysql") {
+        s = s.replace(/\\/g, "\\\\");
+      }
+
+      /* STEP 2 - Escape single quotes (all dialects for string/LIKE contexts) */
+      s = s.replace(/'/g, "''");
+
+      /* STEP 3 - Neutralize SQL line comment sequences */
+      s = s.replace(/--/g, "- -");
+
+      /* STEP 4 - Neutralize block comment openers and closers */
+      s = s.replace(/\/\*/g, "/ *").replace(/\*\//g, "* /");
+
+      /* STEP 5 - LIKE clause wildcard escaping */
+      if (context === "like") {
+        if (dialect === "sqlserver") {
+          /* SQL Server uses bracket escaping for wildcards */
+          s = s.replace(/\[/g, "[[]");
+          s = s.replace(/%/g, "[%]");
+          s = s.replace(/_/g, "[_]");
+        } else {
+          /* MySQL, PostgreSQL, SQLite use ESCAPE '\' */
+          /* Backslash was already doubled for MySQL in step 1 if applicable */
+          s = s.replace(/%/g, "\\%");
+          s = s.replace(/_/g, "\\_");
+        }
+      }
+
+      return s;
+    }
+
+    /* ----------------------------------------------------------
+       SCORE AND STATE DETECTION
+    ---------------------------------------------------------- */
+    function detectScore(raw, sanitized, context) {
+      const hasHighRisk = HIGH_RISK_RE.some(re => re.test(raw));
+      if (hasHighRisk) return "risk";
+      const hasSignal   = SIGNAL_RE.some(re => re.test(raw));
+      const hasChanges  = (raw !== sanitized);
+      if (hasSignal || hasChanges) return "sanitized";
+      return "safe";
+    }
+
+    function countDiffs(a, b) {
+      /* Estimate the number of character-level substitutions made */
+      if (a === b) return 0;
+      let count = 0;
+      let i = 0, j = 0;
+      while (i < a.length) {
+        if (a[i] !== (b[j] || "")) count++;
+        i++; j++;
+      }
+      return Math.max(count, a.length !== b.length ? Math.abs(a.length - b.length) : 1);
+    }
+
+    /* ----------------------------------------------------------
+       MAIN SANITIZE RUNNER
+    ---------------------------------------------------------- */
+    function runSanitize() {
+      const raw     = inputTa.value;
+      const dialect = dialectSel.value;
+      const context = contextSel.value;
+
+      const sanitized = sanitizeInput(raw, dialect, context);
+      const score     = detectScore(raw, sanitized, context);
+      const changes   = (raw === sanitized) ? 0 : countDiffs(raw, sanitized);
+
+      /* Update output */
+      outputTa.value = sanitized;
+
+      /* Update info row */
+      infoIn.textContent      = raw.length.toLocaleString();
+      infoOut.textContent     = sanitized.length.toLocaleString();
+      infoChanges.textContent = changes.toLocaleString();
+      infoDialect.textContent = DIALECT_LABELS[dialect] || dialect;
+
+      /* Update score pill */
+      scorePill.className = "score-pill " + score;
+      if (score === "safe")      scorePill.innerHTML = "&#9632; Safe";
+      if (score === "sanitized") scorePill.innerHTML = "&#9632; Sanitized";
+      if (score === "risk")      scorePill.innerHTML = "&#9888; Risk Detected";
+
+      /* Toggle output border */
+      outputTa.classList.toggle("risk-border", score === "risk");
+
+      /* Toggle warning box */
+      warningBox.hidden = (score !== "risk");
+    }
+
+    /* ----------------------------------------------------------
+       UTILITY FUNCTIONS
+    ---------------------------------------------------------- */
+    function clearInput() {
+      inputTa.value  = "";
+      outputTa.value = "";
+      outputTa.classList.remove("risk-border");
+      warningBox.hidden = true;
+      scorePill.className = "score-pill safe";
+      scorePill.innerHTML = "&#9632; Safe";
+      infoIn.textContent      = "0";
+      infoOut.textContent     = "0";
+      infoChanges.textContent = "0";
+      inputTa.focus();
+    }
+
+    function loadExample() {
+      inputTa.value =
+        "' OR '1'='1\n" +
+        "admin'--\n" +
+        "'; DROP TABLE users; --\n" +
+        "UNION SELECT username, password FROM accounts\n" +
+        "test%' AND 1=1--\n" +
+        "O'Brien\n" +
+        "It's a wonderful life";
+      runSanitize();
+    }
+
+    function copyOutput() {
+      const text = outputTa.value;
+      if (!text.trim()) { showToast("Nothing to copy."); return; }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast("Copied to clipboard!"))
+          .catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    }
+
+    function fallbackCopy() {
+      outputTa.select();
+      try {
+        document.execCommand("copy");
+        showToast("Copied to clipboard!");
+      } catch (e) {
+        showToast("Select and copy manually.");
+      }
+      window.getSelection().removeAllRanges();
+    }
+
+    /* ----------------------------------------------------------
+       TOAST
+    ---------------------------------------------------------- */
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    /* ----------------------------------------------------------
+       FAQ ACCORDION
+    ---------------------------------------------------------- */
+    function toggleFaq(btn) {
+      const item   = btn.parentElement;
+      const isOpen = item.classList.contains("open");
+      document.querySelectorAll(".faq-item").forEach(el => {
+        el.classList.remove("open");
+        el.querySelector(".faq-question").setAttribute("aria-expanded", "false");
+      });
+      if (!isOpen) {
+        item.classList.add("open");
+        btn.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    /* ----------------------------------------------------------
+       INIT - run on load so dropdowns reflect defaults
+    ---------------------------------------------------------- */
+    runSanitize();
+
+  </script>
+</body>
+</html>

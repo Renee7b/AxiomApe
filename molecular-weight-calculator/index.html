@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Molecular Weight Calculator: Find Molar Mass and Percent Composition | AxiomApe</title>
+  <meta name="description" content="Free Molecular Weight Calculator: type any chemical formula and instantly get the molar mass in g/mol plus a full percent composition breakdown by element. Handles parentheses, hydrates, and all 118 elements. 100% client-side." />
+  <meta name="keywords" content="molecular weight calculator, molar mass calculator, percent composition calculator, chemical formula mass, atomic mass calculator, molar mass of compounds, stoichiometry calculator, chemistry calculator, element percent composition, hydrate molar mass, formula weight calculator, g per mol, periodic table calculator, chemistry homework help, molar mass tool" />
+  <link rel="canonical" href="https://axiomape.com/molecular-weight-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Molecular Weight Calculator",
+        "description": "Free Molecular Weight Calculator: type any chemical formula and instantly get the molar mass in g/mol plus a full percent composition breakdown by element. Handles parentheses, hydrates, and all 118 elements. 100% client-side.",
+        "url": "https://axiomape.com/molecular-weight-calculator/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the difference between molar mass and molecular weight?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Molar mass and molecular weight refer to the same concept but with slightly different technical meanings. Molecular weight (or molecular mass) is the mass of a single molecule, measured in atomic mass units (amu or Da). Molar mass is the mass of one mole (6.022 x 10^23 molecules) of that substance, expressed in grams per mole (g/mol). Numerically they are identical: the molar mass of water is 18.015 g/mol and the molecular weight of one water molecule is 18.015 amu. In everyday chemistry usage, the terms are interchangeable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why are the atomic masses on the periodic table not whole numbers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Atomic masses on the periodic table are weighted averages of all naturally occurring isotopes of each element. Isotopes are atoms of the same element with different numbers of neutrons, giving them slightly different masses. Chlorine, for example, exists as Cl-35 (about 75.77% natural abundance) and Cl-37 (about 24.23%), which averages out to the listed 35.45 amu. Because these isotope ratios are consistent throughout nature, the averaged values are exactly what you need for lab calculations involving real-world samples of elements."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do you calculate the molar mass of a hydrate?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A hydrate is a compound that has water molecules incorporated into its crystal structure. Its formula is written with a dot or asterisk separating the base salt from the water portion, for example CuSO4 * 5H2O (copper(II) sulfate pentahydrate). To find the molar mass, you calculate the mass of the base salt and then ADD the mass of the water molecules. For CuSO4 * 5H2O: CuSO4 is 159.609 g/mol, and 5 x H2O is 5 x 18.015 = 90.075 g/mol, giving a total of 249.685 g/mol. This calculator handles the dot or asterisk notation automatically."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is percent mass composition?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Percent mass composition tells you what fraction of a compound's total mass comes from each element. It is calculated by dividing the total mass contribution of one element by the overall molar mass of the compound, then multiplying by 100. For water (H2O, molar mass 18.015 g/mol): hydrogen contributes 2 x 1.008 = 2.016 g/mol, so it is 2.016 / 18.015 x 100 = 11.19%; oxygen contributes 15.999 / 18.015 x 100 = 88.81%. Percent composition is essential for verifying empirical formulas and for converting between mass and moles of specific elements in a compound."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do we use grams per mole (g/mol) as the standard unit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The gram per mole (g/mol) unit bridges the atomic scale and the laboratory scale. Individual atoms are so tiny that working with single molecules is impractical. A mole (6.022 x 10^23 particles) is defined so that one mole of any element's atoms in grams equals its atomic mass in amu. This means you can directly convert between a readable mass on a scale and the number of molecules you have, using only the molar mass as a conversion factor. It is the fundamental bridge between chemistry at the molecular level and chemistry in the real-world lab."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does the parser handle nested parentheses like Al2(SO4)3?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The parser uses a recursive stack-based algorithm. When it encounters an opening parenthesis, it pushes the current atom counts onto a stack and starts a fresh count. When it encounters a closing parenthesis followed by a number, it multiplies every atom count in the inner group by that number, then merges the result back into the previous group on the stack. For Al2(SO4)3: the parser reads Al=2 at the top level, then enters the parentheses and finds S=1, O=4. The closing )3 multiplies those by 3, giving S=3, O=12, which are merged with the outer Al=2 to produce the final count Al=2, S=3, O=12."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0D1117;
+      --bg-card:     #161B22;
+      --bg-input:    #0D1117;
+      --border:      #30363D;
+      --text:        #E6EDF3;
+      --text-muted:  #8B949E;
+      --text-dim:    #484F58;
+
+      --blue:        #3B82F6;
+      --blue-dim:    rgba(59,130,246,0.13);
+      --blue-glow:   rgba(59,130,246,0.28);
+
+      --cyan:        #06B6D4;
+      --cyan-dim:    rgba(6,182,212,0.13);
+      --cyan-glow:   rgba(6,182,212,0.28);
+
+      --green:       #10B981;
+      --green-dim:   rgba(16,185,129,0.13);
+
+      --orange:      #F97316;
+      --orange-dim:  rgba(249,115,22,0.13);
+
+      --radius:      10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+
+    .page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 3.5vw, 2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .page-header p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* ---- Card ---- */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ---- Preset dropdown ---- */
+    .preset-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .preset-row label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    select#preset {
+      flex: 1;
+      min-width: 220px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B949E' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select#preset:focus { outline: none; border-color: var(--blue); }
+
+    /* ---- Formula input ---- */
+    .formula-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    #formula-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1.5rem;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 14px 16px;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s;
+    }
+    #formula-input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-dim);
+    }
+    #formula-input::placeholder { color: var(--text-dim); font-size: 1.1rem; }
+
+    /* ---- Subscript preview ---- */
+    #subscript-preview {
+      margin-top: 10px;
+      min-height: 32px;
+      font-size: 1.25rem;
+      color: var(--cyan);
+      font-family: 'Courier New', Courier, monospace;
+      letter-spacing: 0.05em;
+      padding: 4px 2px;
+    }
+    #subscript-preview sub { font-size: 0.65em; vertical-align: sub; }
+
+    /* ---- Result hero ---- */
+    .result-hero {
+      margin-top: 22px;
+      background: var(--blue-dim);
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .result-hero .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .result-hero .value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--blue);
+      line-height: 1;
+    }
+    .result-hero .unit {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .result-hero.empty { display: none; }
+
+    /* ---- Error ---- */
+    #error-msg {
+      margin-top: 12px;
+      color: #F87171;
+      font-size: 0.9rem;
+      min-height: 20px;
+    }
+
+    /* ---- Composition table ---- */
+    #comp-section { display: none; margin-top: 22px; }
+    #comp-section .section-label {
+      font-size: 0.85rem;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .comp-table th {
+      background: rgba(6,182,212,0.1);
+      color: var(--cyan);
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .comp-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(48,54,61,0.6);
+      color: var(--text);
+    }
+    .comp-table tr:last-child td { border-bottom: none; }
+    .comp-table tr:hover td { background: rgba(59,130,246,0.05); }
+    .comp-table .el-sym {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      color: var(--blue);
+    }
+    .comp-table .pct-bar-cell { min-width: 120px; }
+    .pct-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pct-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .pct-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      transition: width 0.3s;
+    }
+    .pct-num { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
+
+    /* ---- Ad placements ---- */
+    .axiom-ad-leaderboard,
+    .axiom-ad-mobile-anchor { text-align: center; color: var(--text-dim); font-size: 0.78rem; }
+
+    /* ---- Glossary ---- */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: rgba(13,17,23,0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 600;
+      color: var(--blue);
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+    }
+    .glossary-def { color: var(--text-muted); font-size: 0.83rem; line-height: 1.5; }
+
+    /* ---- Educational section ---- */
+    .edu-section h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin: 20px 0 8px;
+    }
+    .section-intro, .edu-section p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; margin-bottom: 10px; }
+
+    /* ---- FAQ accordion ---- */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%;
+      background: var(--bg-input);
+      border: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .faq-q:hover { background: rgba(59,130,246,0.08); }
+    .faq-icon { color: var(--blue); font-size: 1.1rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      background: rgba(13,17,23,0.5);
+    }
+    .faq-item.open .faq-a { max-height: 400px; }
+    .faq-a p { padding: 14px 16px; color: var(--text-muted); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+
+    /* ---- Reference table ---- */
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .ref-table th {
+      background: rgba(59,130,246,0.1);
+      color: var(--blue);
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(48,54,61,0.6);
+      color: var(--text);
+    }
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table tr:hover td { background: rgba(59,130,246,0.05); }
+    .ref-sym {
+      font-family: 'Courier New', Courier, monospace;
+      color: var(--cyan);
+      font-weight: 600;
+    }
+    .ref-mass { font-weight: 700; color: var(--blue); }
+
+    @media (max-width: 600px) {
+      #formula-input { font-size: 1.1rem; }
+      .result-hero .value { font-size: 1.7rem; }
+      .comp-table th, .comp-table td { padding: 7px 8px; }
+    }
+  </style>
+</head>
+
+<body>
+<main class="page-wrapper" id="main">
+
+  <header class="page-header">
+    <h1>Molecular Weight Calculator: Find Molar Mass and Percent Composition</h1>
+    <p>Type any chemical formula and instantly get the total molar mass in g/mol plus a full element-by-element breakdown. Handles parentheses, hydrates, and all 118 elements.</p>
+  </header>
+
+  <!-- ===== TOOL CARD ===== -->
+  <div class="card">
+    <div class="card-title">Chemical Formula Input</div>
+
+    <!-- Preset dropdown -->
+    <div class="preset-row">
+      <label for="preset">Common molecules:</label>
+      <select id="preset" onchange="applyPreset()">
+        <option value="">-- Select a preset --</option>
+        <option value="C6H12O6">Glucose (C6H12O6)</option>
+        <option value="(NH4)2SO4">Ammonium Sulfate ((NH4)2SO4)</option>
+        <option value="CuSO4*5H2O">Copper(II) Sulfate Pentahydrate (CuSO4*5H2O)</option>
+        <option value="C8H10N4O2">Caffeine (C8H10N4O2)</option>
+      </select>
+    </div>
+
+    <!-- Formula input -->
+    <label class="formula-label" for="formula-input">Chemical Formula</label>
+    <input
+      id="formula-input"
+      type="text"
+      placeholder="e.g. H2O, NaCl, Al2(SO4)3"
+      oninput="onFormulaChange()"
+      onchange="onFormulaChange()"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    />
+
+    <!-- Real-time subscript preview -->
+    <div id="subscript-preview"></div>
+
+    <!-- Error message -->
+    <div id="error-msg"></div>
+
+    <!-- Hero result -->
+    <div class="result-hero empty" id="result-hero">
+      <span class="label">Total Molar Mass</span>
+      <span class="value" id="result-value">--</span>
+      <span class="unit">g/mol</span>
+    </div>
+
+    <!-- Composition table -->
+    <div id="comp-section">
+      <div class="section-label">Percent Composition by Element</div>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Symbol</th>
+            <th>Atoms</th>
+            <th>Mass Contrib. (g/mol)</th>
+            <th class="pct-bar-cell">Mass %</th>
+          </tr>
+        </thead>
+        <tbody id="comp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+       Google AdSense 728x90 - shown on screens larger than 768px
+  ============================================================ -->
+  <div class="axiom-ad-leaderboard" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ===== GLOSSARY ===== -->
+  <div class="card">
+    <div class="card-title">Key Terms Explained</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <div class="glossary-term">Molar Mass</div>
+        <div class="glossary-def">The mass of one mole of a substance, expressed in g/mol. Numerically equal to the molecular weight in amu.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Molecular Weight</div>
+        <div class="glossary-def">The mass of a single molecule in atomic mass units (amu). In practice, used interchangeably with molar mass.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Atomic Mass Unit (amu)</div>
+        <div class="glossary-def">The standard unit of atomic-scale mass, defined as 1/12 the mass of a carbon-12 atom. Also called Dalton (Da). 1 amu = 1.66054 x 10^-24 g.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Mole</div>
+        <div class="glossary-def">A counting unit equal to 6.022 x 10^23 particles. Like "a dozen" means 12, a mole means 602,200,000,000,000,000,000,000 atoms or molecules.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Avogadro's Number</div>
+        <div class="glossary-def">6.02214076 x 10^23 mol^-1. The number of atoms or molecules in one mole of a substance. Named after Amedeo Avogadro.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Percent Composition</div>
+        <div class="glossary-def">The mass percentage of each element in a compound. Calculated as (element mass contribution / total molar mass) x 100%. Used to verify empirical formulas.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Isotope</div>
+        <div class="glossary-def">Atoms of the same element with different neutron counts, giving slightly different masses. Periodic table values are weighted averages of natural isotope abundances.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Hydrate</div>
+        <div class="glossary-def">A compound with water molecules trapped in its crystal structure, written with a dot or asterisk (e.g., CuSO4 * 5H2O). The water mass is added to the total molar mass.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Diatomic Molecule</div>
+        <div class="glossary-def">A molecule consisting of exactly two atoms, either of the same element (H2, O2, N2, Cl2) or different elements (HCl, CO). The subscript 2 doubles the atomic mass.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EDUCATIONAL SECTION ===== -->
+  <div class="card edu-section">
+    <h2>The Complete Guide to Molar Mass and Molecular Weight</h2>
+
+    <p class="section-intro">Whether you are working through stoichiometry homework, preparing a lab solution, or verifying a synthesis product, knowing the molar mass of your compound is the first and most critical step. This guide explains how the calculation works, how to read a chemical formula correctly, and why the percent composition table is such a powerful analytical tool.</p>
+
+    <h3>How to Use This Calculator</h3>
+    <p>Type a chemical formula in the input field using standard notation: capital letters for element symbols, lowercase for the second letter of two-letter elements (e.g., Na, Cl, Fe), and digits for atom counts (e.g., H2O, NaCl, Fe2O3). Use parentheses for grouped subunits with a multiplier (Al2(SO4)3). Use a dot or asterisk to separate a hydrate's water portion (CuSO4*5H2O or CuSO4.5H2O). The results update instantly as you type. You can also pick a preset molecule from the dropdown to see the format.</p>
+
+    <h3>How the Parser Works</h3>
+    <p>The engine uses a stack-based recursive approach that reads the formula character by character. When it sees an uppercase letter it starts a new element; a following lowercase letter completes the two-letter symbol (so "Co" is cobalt, not carbon + oxygen). A following digit (including multi-digit numbers like "12") sets the atom count for that element. When it encounters an opening parenthesis, it saves the current state to a stack and starts a fresh accumulator. When it hits a closing parenthesis followed by a number, it multiplies all the inner counts by that number and merges them back into the previous level. A dot or asterisk triggers hydrate mode, treating everything that follows as an additive group.</p>
+
+    <h3>Reading the Percent Composition Table</h3>
+    <p>The table shows four columns for each element found in your formula: the element's full name, its symbol, how many atoms of it appear in one formula unit, its total mass contribution in g/mol (atom count multiplied by atomic mass), and its percentage of the total molar mass. The percentages must always sum to 100%. If you are given a percent composition from experiment and want to identify the compound, you can compare those percentages against the table output here for candidate formulas.</p>
+
+    <h3>Common Formula Writing Mistakes to Avoid</h3>
+    <p>The most common error is capitalizing the second letter of a two-letter element (writing "CO" when you mean cobalt, CO being parsed as carbon + oxygen). Another frequent issue is omitting the multiplier after parentheses: Ca3(PO4)2 must include the 2 or the parser treats the group as appearing once. For hydrates, both dot (.) and asterisk (*) are accepted here, but some textbooks use a centered dot that may not paste correctly from a PDF. If you get an unexpected result, check your capitalization and multipliers first.</p>
+
+    <h3>Why Molar Mass Matters in the Lab</h3>
+    <p>Every volumetric preparation starts with molar mass. To make a 1 M solution of sodium chloride (NaCl, 58.443 g/mol) in 500 mL of water, you weigh out 1 mol x 58.443 g/mol x 0.5 L = 29.22 g of NaCl. Without the molar mass, you cannot convert from the grams on your scale to the moles your reaction requires. The molar mass is also the key conversion factor in yield calculations, limiting reagent problems, and gas-law applications using the ideal gas law (PV = nRT, where n is moles).</p>
+
+    <!-- FAQ -->
+    <h3>Frequently Asked Questions</h3>
+
+    <div class="faq-item" id="faq0">
+      <button class="faq-q" onclick="toggleFaq('faq0')" aria-expanded="false">
+        What is the difference between molar mass and molecular weight?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a" role="region">
+        <p>Molar mass and molecular weight refer to the same concept but with slightly different technical meanings. Molecular weight (or molecular mass) is the mass of a single molecule, measured in atomic mass units (amu or Da). Molar mass is the mass of one mole (6.022 x 10^23 molecules) of that substance, expressed in grams per mole (g/mol). Numerically they are identical: the molar mass of water is 18.015 g/mol and the molecular weight of one water molecule is 18.015 amu. In everyday chemistry usage, the terms are interchangeable.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq1">
+      <button class="faq-q" onclick="toggleFaq('faq1')" aria-expanded="false">
+        Why are the atomic masses on the periodic table not whole numbers?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a" role="region">
+        <p>Atomic masses on the periodic table are weighted averages of all naturally occurring isotopes of each element. Isotopes are atoms of the same element with different numbers of neutrons, giving them slightly different masses. Chlorine, for example, exists as Cl-35 (about 75.77% natural abundance) and Cl-37 (about 24.23%), which averages out to the listed 35.45 amu. Because these isotope ratios are consistent throughout nature, the averaged values are exactly what you need for lab calculations involving real-world samples of elements.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq2">
+      <button class="faq-q" onclick="toggleFaq('faq2')" aria-expanded="false">
+        How do you calculate the molar mass of a hydrate?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a" role="region">
+        <p>A hydrate is a compound that has water molecules incorporated into its crystal structure. Its formula is written with a dot or asterisk separating the base salt from the water portion (e.g., CuSO4 * 5H2O). To find the molar mass, calculate the mass of the base salt and then add the mass of the water molecules. For CuSO4 * 5H2O: CuSO4 is 159.609 g/mol, and 5 x H2O is 5 x 18.015 = 90.075 g/mol, giving a total of 249.685 g/mol. This calculator handles the dot or asterisk notation automatically.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq3">
+      <button class="faq-q" onclick="toggleFaq('faq3')" aria-expanded="false">
+        What is percent mass composition?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a" role="region">
+        <p>Percent mass composition tells you what fraction of a compound's total mass comes from each element. It is calculated by dividing the total mass contribution of one element by the overall molar mass of the compound, then multiplying by 100. For water (H2O, molar mass 18.015 g/mol): hydrogen contributes 2 x 1.008 = 2.016 g/mol, so it is 2.016 / 18.015 x 100 = 11.19%; oxygen contributes 15.999 / 18.015 x 100 = 88.81%. Percent composition is essential for verifying empirical formulas and for converting between mass and moles of specific elements in a compound.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" id="faq4">
+      <button class="faq-q" onclick="toggleFaq('faq4')" aria-expanded="false">
+        Why do we use grams per mole (g/mol) as the standard unit?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a" role="region">
+        <p>The gram per mole (g/mol) unit bridges the atomic scale and the laboratory scale. Individual atoms are so tiny that working with single molecules is impractical. A mole (6.022 x 10^23 particles) is defined so that one mole of any element's atoms in grams equals its atomic mass in amu. This means you can directly convert between a readable mass on a scale and the number of molecules you have, using only the molar mass as a conversion factor. It is the fundamental bridge between chemistry at the molecular level and chemistry in the real-world lab.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REFERENCE TABLE ===== -->
+  <div class="card">
+    <div class="card-title">Common Lab Solvents and Reagents: Molar Mass Reference</div>
+    <table class="ref-table">
+      <thead>
+        <tr>
+          <th>Compound</th>
+          <th>Formula</th>
+          <th>Molar Mass (g/mol)</th>
+          <th>Common Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Water</td><td class="ref-sym">H<sub>2</sub>O</td><td class="ref-mass">18.015</td><td>Universal solvent, standard reference</td></tr>
+        <tr><td>Ethanol</td><td class="ref-sym">C<sub>2</sub>H<sub>5</sub>OH</td><td class="ref-mass">46.069</td><td>Organic solvent, disinfectant</td></tr>
+        <tr><td>Acetone</td><td class="ref-sym">C<sub>3</sub>H<sub>6</sub>O</td><td class="ref-mass">58.080</td><td>Polar aprotic solvent, degreaser</td></tr>
+        <tr><td>Methanol</td><td class="ref-sym">CH<sub>3</sub>OH</td><td class="ref-mass">32.042</td><td>Polar solvent, fuel, HPLC mobile phase</td></tr>
+        <tr><td>Hydrochloric Acid</td><td class="ref-sym">HCl</td><td class="ref-mass">36.461</td><td>Acid-base reactions, pH adjustment</td></tr>
+        <tr><td>Sulfuric Acid</td><td class="ref-sym">H<sub>2</sub>SO<sub>4</sub></td><td class="ref-mass">98.079</td><td>Strong acid, dehydrating agent</td></tr>
+        <tr><td>Sodium Hydroxide</td><td class="ref-sym">NaOH</td><td class="ref-mass">39.997</td><td>Strong base, titration standard</td></tr>
+        <tr><td>Sodium Chloride</td><td class="ref-sym">NaCl</td><td class="ref-mass">58.443</td><td>Ionic strength adjustment, buffer</td></tr>
+        <tr><td>Glucose</td><td class="ref-sym">C<sub>6</sub>H<sub>12</sub>O<sub>6</sub></td><td class="ref-mass">180.156</td><td>Cell culture media, osmolarity standard</td></tr>
+        <tr><td>Ethyl Acetate</td><td class="ref-sym">C<sub>4</sub>H<sub>8</sub>O<sub>2</sub></td><td class="ref-mass">88.106</td><td>Extraction solvent, column chromatography</td></tr>
+        <tr><td>Ammonia</td><td class="ref-sym">NH<sub>3</sub></td><td class="ref-mass">17.031</td><td>Base, buffer component</td></tr>
+        <tr><td>Acetic Acid</td><td class="ref-sym">CH<sub>3</sub>COOH</td><td class="ref-mass">60.052</td><td>Buffer (acetate), organic acid</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+     Google AdSense 320x50 - shown on screens 768px and smaller
+============================================================ -->
+<div class="axiom-ad-mobile-anchor" aria-hidden="true">
+  <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+  <!-- Replace this comment with your AdSense ins tag -->
+  Advertisement
+</div>
+
+<script>
+// ============================================================
+// ATOMIC MASS DICTIONARY: all 118 elements, IUPAC 2021 values
+// ============================================================
+const ATOMIC_MASS = {
+  H:1.008, He:4.0026, Li:6.941, Be:9.0122, B:10.811, C:12.011,
+  N:14.007, O:15.999, F:18.998, Ne:20.180, Na:22.990, Mg:24.305,
+  Al:26.982, Si:28.086, P:30.974, S:32.065, Cl:35.453, Ar:39.948,
+  K:39.098, Ca:40.078, Sc:44.956, Ti:47.867, V:50.942, Cr:51.996,
+  Mn:54.938, Fe:55.845, Co:58.933, Ni:58.693, Cu:63.546, Zn:65.38,
+  Ga:69.723, Ge:72.630, As:74.922, Se:78.971, Br:79.904, Kr:83.798,
+  Rb:85.468, Sr:87.62, Y:88.906, Zr:91.224, Nb:92.906, Mo:95.95,
+  Tc:98.000, Ru:101.07, Rh:102.906, Pd:106.42, Ag:107.868, Cd:112.414,
+  In:114.818, Sn:118.711, Sb:121.760, Te:127.60, I:126.904, Xe:131.293,
+  Cs:132.905, Ba:137.327, La:138.905, Ce:140.116, Pr:140.908, Nd:144.242,
+  Pm:145.000, Sm:150.36, Eu:151.964, Gd:157.25, Tb:158.925, Dy:162.500,
+  Ho:164.930, Er:167.259, Tm:168.934, Yb:173.045, Lu:174.967, Hf:178.49,
+  Ta:180.948, W:183.84, Re:186.207, Os:190.23, Ir:192.217, Pt:195.085,
+  Au:196.967, Hg:200.592, Tl:204.383, Pb:207.2, Bi:208.980, Po:209.000,
+  At:210.000, Rn:222.000, Fr:223.000, Ra:226.000, Ac:227.000, Th:232.038,
+  Pa:231.036, U:238.029, Np:237.000, Pu:244.000, Am:243.000, Cm:247.000,
+  Bk:247.000, Cf:251.000, Es:252.000, Fm:257.000, Md:258.000, No:259.000,
+  Lr:262.000, Rf:267.000, Db:268.000, Sg:271.000, Bh:274.000, Hs:277.000,
+  Mt:278.000, Ds:281.000, Rg:282.000, Cn:285.000, Nh:286.000, Fl:289.000,
+  Mc:290.000, Lv:293.000, Ts:294.000, Og:294.000
+};
+
+// Element full names lookup
+const ELEMENT_NAMES = {
+  H:'Hydrogen', He:'Helium', Li:'Lithium', Be:'Beryllium', B:'Boron',
+  C:'Carbon', N:'Nitrogen', O:'Oxygen', F:'Fluorine', Ne:'Neon',
+  Na:'Sodium', Mg:'Magnesium', Al:'Aluminum', Si:'Silicon', P:'Phosphorus',
+  S:'Sulfur', Cl:'Chlorine', Ar:'Argon', K:'Potassium', Ca:'Calcium',
+  Sc:'Scandium', Ti:'Titanium', V:'Vanadium', Cr:'Chromium', Mn:'Manganese',
+  Fe:'Iron', Co:'Cobalt', Ni:'Nickel', Cu:'Copper', Zn:'Zinc',
+  Ga:'Gallium', Ge:'Germanium', As:'Arsenic', Se:'Selenium', Br:'Bromine',
+  Kr:'Krypton', Rb:'Rubidium', Sr:'Strontium', Y:'Yttrium', Zr:'Zirconium',
+  Nb:'Niobium', Mo:'Molybdenum', Tc:'Technetium', Ru:'Ruthenium', Rh:'Rhodium',
+  Pd:'Palladium', Ag:'Silver', Cd:'Cadmium', In:'Indium', Sn:'Tin',
+  Sb:'Antimony', Te:'Tellurium', I:'Iodine', Xe:'Xenon', Cs:'Cesium',
+  Ba:'Barium', La:'Lanthanum', Ce:'Cerium', Pr:'Praseodymium', Nd:'Neodymium',
+  Pm:'Promethium', Sm:'Samarium', Eu:'Europium', Gd:'Gadolinium', Tb:'Terbium',
+  Dy:'Dysprosium', Ho:'Holmium', Er:'Erbium', Tm:'Thulium', Yb:'Ytterbium',
+  Lu:'Lutetium', Hf:'Hafnium', Ta:'Tantalum', W:'Tungsten', Re:'Rhenium',
+  Os:'Osmium', Ir:'Iridium', Pt:'Platinum', Au:'Gold', Hg:'Mercury',
+  Tl:'Thallium', Pb:'Lead', Bi:'Bismuth', Po:'Polonium', At:'Astatine',
+  Rn:'Radon', Fr:'Francium', Ra:'Radium', Ac:'Actinium', Th:'Thorium',
+  Pa:'Protactinium', U:'Uranium', Np:'Neptunium', Pu:'Plutonium', Am:'Americium',
+  Cm:'Curium', Bk:'Berkelium', Cf:'Californium', Es:'Einsteinium', Fm:'Fermium',
+  Md:'Mendelevium', No:'Nobelium', Lr:'Lawrencium', Rf:'Rutherfordium',
+  Db:'Dubnium', Sg:'Seaborgium', Bh:'Bohrium', Hs:'Hassium', Mt:'Meitnerium',
+  Ds:'Darmstadtium', Rg:'Roentgenium', Cn:'Copernicium', Nh:'Nihonium',
+  Fl:'Flerovium', Mc:'Moscovium', Lv:'Livermorium', Ts:'Tennessine', Og:'Oganesson'
+};
+
+// ============================================================
+// PARSER: stack-based, handles nested parens + hydrate dots/asterisks
+// ============================================================
+function parseFormula(formula) {
+  // Normalize hydrate separators: dot (.) and asterisk (*) both treated as '+'
+  // but we parse additive groups by splitting on them first
+  // Strategy: split on '.' or '*' at top level, parse each group, sum counts
+  const groups = splitHydrate(formula);
+  const totalCounts = {};
+  for (const group of groups) {
+    const parsed = parseGroup(group.formula);
+    const mult = group.multiplier;
+    for (const [el, cnt] of Object.entries(parsed)) {
+      totalCounts[el] = (totalCounts[el] || 0) + cnt * mult;
+    }
+  }
+  return totalCounts;
+}
+
+// Split formula on top-level dots/asterisks into hydrate groups
+// e.g. "CuSO4*5H2O" -> [{formula:"CuSO4", multiplier:1}, {formula:"H2O", multiplier:5}]
+function splitHydrate(formula) {
+  const groups = [];
+  let i = 0;
+  let current = '';
+  let depth = 0;
+
+  // First segment has no leading multiplier
+  while (i < formula.length) {
+    const ch = formula[i];
+    if (ch === '(') { depth++; current += ch; i++; }
+    else if (ch === ')') { depth--; current += ch; i++; }
+    else if ((ch === '.' || ch === '*') && depth === 0) {
+      groups.push({ formula: current, multiplier: 1 });
+      current = '';
+      i++;
+      // Read optional leading number for the next hydrate group
+      let numStr = '';
+      while (i < formula.length && /\d/.test(formula[i])) { numStr += formula[i]; i++; }
+      // The multiplier was absorbed; remaining formula is the compound
+      const hydrateMult = numStr ? parseInt(numStr, 10) : 1;
+      // now read the rest of this hydrate group until next dot/asterisk
+      let hGroup = '';
+      while (i < formula.length) {
+        const c2 = formula[i];
+        if (c2 === '(') { depth++; hGroup += c2; i++; }
+        else if (c2 === ')') { depth--; hGroup += c2; i++; }
+        else if ((c2 === '.' || c2 === '*') && depth === 0) { break; }
+        else { hGroup += c2; i++; }
+      }
+      groups.push({ formula: hGroup, multiplier: hydrateMult });
+    } else {
+      current += ch;
+      i++;
+    }
+  }
+  if (current) groups.push({ formula: current, multiplier: 1 });
+  return groups;
+}
+
+// Parse a single formula segment (no hydrate dots) recursively via stack
+function parseGroup(formula) {
+  const stack = [{}];
+  let i = 0;
+
+  while (i < formula.length) {
+    const ch = formula[i];
+
+    if (ch === '(') {
+      stack.push({});
+      i++;
+    } else if (ch === ')') {
+      i++;
+      // Read trailing number
+      let numStr = '';
+      while (i < formula.length && /\d/.test(formula[i])) { numStr += formula[i]; i++; }
+      const mult = numStr ? parseInt(numStr, 10) : 1;
+      const top = stack.pop();
+      const parent = stack[stack.length - 1];
+      for (const [el, cnt] of Object.entries(top)) {
+        parent[el] = (parent[el] || 0) + cnt * mult;
+      }
+    } else if (/[A-Z]/.test(ch)) {
+      // Start of element symbol
+      let sym = ch;
+      i++;
+      // Consume optional lowercase letter(s)
+      while (i < formula.length && /[a-z]/.test(formula[i])) { sym += formula[i]; i++; }
+      // Consume optional number
+      let numStr = '';
+      while (i < formula.length && /\d/.test(formula[i])) { numStr += formula[i]; i++; }
+      const cnt = numStr ? parseInt(numStr, 10) : 1;
+      // Validate element
+      if (!ATOMIC_MASS[sym]) throw new Error('Unknown element: ' + sym);
+      const top = stack[stack.length - 1];
+      top[sym] = (top[sym] || 0) + cnt;
+    } else if (/\d/.test(ch)) {
+      // Stray number - skip (shouldn't appear in valid formulas at start)
+      i++;
+    } else {
+      throw new Error('Unexpected character: ' + ch);
+    }
+  }
+
+  if (stack.length !== 1) throw new Error('Unmatched parentheses');
+  return stack[0];
+}
+
+// ============================================================
+// SUBSCRIPT PREVIEW
+// ============================================================
+function toSubscriptHTML(formula) {
+  // Replace digits not inside element context with <sub> tags
+  // Simple approach: replace every digit sequence with <sub>digits</sub>
+  return formula
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(\d+)/g, '<sub>$1</sub>');
+}
+
+// ============================================================
+// MAIN HANDLER
+// ============================================================
+function onFormulaChange() {
+  const raw = document.getElementById('formula-input').value.trim();
+  const preview = document.getElementById('subscript-preview');
+  const errorEl = document.getElementById('error-msg');
+  const heroEl = document.getElementById('result-hero');
+  const resultVal = document.getElementById('result-value');
+  const compSection = document.getElementById('comp-section');
+  const tbody = document.getElementById('comp-tbody');
+
+  // Subscript preview (always)
+  preview.innerHTML = raw ? toSubscriptHTML(raw) : '';
+
+  if (!raw) {
+    errorEl.textContent = '';
+    heroEl.classList.add('empty');
+    compSection.style.display = 'none';
+    return;
+  }
+
+  let counts;
+  try {
+    counts = parseFormula(raw);
+    errorEl.textContent = '';
+  } catch (e) {
+    errorEl.textContent = 'Error: ' + e.message;
+    heroEl.classList.add('empty');
+    compSection.style.display = 'none';
+    return;
+  }
+
+  // Check for empty result
+  if (Object.keys(counts).length === 0) {
+    errorEl.textContent = 'No elements found. Check your formula.';
+    heroEl.classList.add('empty');
+    compSection.style.display = 'none';
+    return;
+  }
+
+  // Calculate total molar mass
+  let total = 0;
+  for (const [el, cnt] of Object.entries(counts)) {
+    total += ATOMIC_MASS[el] * cnt;
+  }
+
+  // Display hero
+  heroEl.classList.remove('empty');
+  resultVal.textContent = total.toFixed(3);
+
+  // Build composition table - sort by mass contribution descending
+  const rows = Object.entries(counts).map(([el, cnt]) => {
+    const massCont = ATOMIC_MASS[el] * cnt;
+    const pct = (massCont / total) * 100;
+    return { el, cnt, massCont, pct };
+  }).sort((a, b) => b.massCont - a.massCont);
+
+  tbody.innerHTML = '';
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ELEMENT_NAMES[r.el] || r.el}</td>
+      <td class="el-sym">${r.el}</td>
+      <td>${r.cnt}</td>
+      <td>${r.massCont.toFixed(3)}</td>
+      <td class="pct-bar-cell">
+        <div class="pct-bar-wrap">
+          <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${r.pct.toFixed(1)}%"></div></div>
+          <span class="pct-num">${r.pct.toFixed(2)}%</span>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+
+  compSection.style.display = 'block';
+}
+
+// ============================================================
+// PRESET HANDLER
+// ============================================================
+function applyPreset() {
+  const sel = document.getElementById('preset');
+  const val = sel.value;
+  if (!val) return;
+  document.getElementById('formula-input').value = val;
+  onFormulaChange();
+  sel.value = ''; // reset dropdown so the same preset can be re-selected
+}
+
+// ============================================================
+// FAQ ACCORDION
+// ============================================================
+function toggleFaq(id) {
+  const item = document.getElementById(id);
+  const isOpen = item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-item').forEach(el => {
+    el.classList.remove('open');
+    el.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+  });
+  if (!isOpen) {
+    item.classList.add('open');
+    item.querySelector('.faq-q').setAttribute('aria-expanded', 'true');
+  }
+}
+</script>
+
+</body>
+</html>

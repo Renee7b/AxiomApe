@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIP39 Mnemonic Seed Phrase Generator: Create Cryptographic Offline Recovery Phrases | AxiomApe</title>
+  <meta name="description" content="Free BIP39 mnemonic seed phrase generator. Uses window.crypto.getRandomValues() and SHA-256 to create 12 or 24-word cryptographic recovery phrases. 100% client-side, works offline on air-gapped computers. No data ever leaves your browser." />
+  <meta name="keywords" content="BIP39 generator, mnemonic seed phrase, crypto wallet recovery, 24 word seed phrase, 12 word seed phrase, offline seed generator, air-gapped wallet, entropy generator, SHA-256 checksum, cryptocurrency backup, HD wallet seed, BIP39 English wordlist, secure seed phrase" />
+  <link rel="canonical" href="https://axiomape.com/bip39-mnemonic-generator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "BIP39 Mnemonic Seed Phrase Generator",
+        "description": "Free BIP39 mnemonic seed phrase generator. Uses window.crypto.getRandomValues() and SHA-256 to create 12 or 24-word cryptographic recovery phrases. 100% client-side, works offline on air-gapped computers. No data ever leaves your browser.",
+        "url": "https://axiomape.com/bip39-mnemonic-generator/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is an air-gapped computer and why should I use one for seed phrase generation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An air-gapped computer is a device that has never been connected to the internet or any network. Because no network connection exists, malware cannot exfiltrate your seed phrase after it is generated. For maximum security, save this HTML page to a USB drive, transfer it to a computer that has never been online, generate your seed phrase there, write it down on paper, and then power off the machine. This eliminates virtually all digital attack vectors."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if I lose my seed phrase?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "If you lose your BIP39 seed phrase and have no backup, your cryptocurrency is permanently inaccessible. There is no recovery mechanism, no customer support, and no reset option. The seed phrase is the only key to your funds. Store multiple physical copies in separate secure locations such as a fireproof safe, a safety deposit box, or with a trusted person. Never store it digitally or photograph it."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is a 24-word phrase more secure than a 12-word phrase?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A 12-word phrase encodes 128 bits of entropy, and a 24-word phrase encodes 256 bits. An attacker brute-forcing a 12-word phrase must try up to 2 to the power of 128 combinations, which is computationally infeasible with current technology. A 24-word phrase doubles the exponent to 256 bits, providing security against future advances including theoretical quantum computing attacks. For long-term cold storage of significant value, 24 words is the recommended standard."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my seed phrase ever sent to a server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. This tool generates your seed phrase entirely within your browser using JavaScript. The entropy comes from window.crypto.getRandomValues(), which is your operating system's cryptographically secure random number generator. The SHA-256 checksum is computed using the browser's built-in Web Crypto API. Nothing is sent to any server, logged, stored, or transmitted. You can verify this by disconnecting from the internet before generating a phrase."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a BIP39 checksum and why does it matter?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "BIP39 appends a checksum to the entropy before splitting it into 11-bit word indices. For a 12-word phrase, the first 4 bits of the SHA-256 hash of the 128-bit entropy are appended, giving 132 bits total (12 times 11). For a 24-word phrase, the first 8 bits of the SHA-256 hash of 256-bit entropy are appended, giving 264 bits (24 times 11). This checksum lets hardware wallets detect typos when you enter a recovery phrase - an invalid checksum means at least one word was entered incorrectly."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --bg2:         #161b22;
+      --bg3:         #21262d;
+      --card:        #1c2128;
+      --border:      #30363d;
+      --border2:     #444c56;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --gold:        #F59E0B;
+      --gold-dim:    #92610a;
+      --gold-bg:     rgba(245,158,11,0.08);
+      --gold-border: rgba(245,158,11,0.3);
+      --green:       #10B981;
+      --green-dim:   #0a6b4b;
+      --green-bg:    rgba(16,185,129,0.08);
+      --green-border:rgba(16,185,129,0.3);
+      --red:         #f85149;
+      --red-bg:      rgba(248,81,73,0.1);
+      --shadow:      0 8px 32px rgba(0,0,0,0.4);
+      --radius:      12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; color: #fbbf24; }
+
+    /* PAGE HEADER */
+    .page-header {
+      background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      color: #fff;
+      padding: 48px 20px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .page-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      max-width: 780px;
+      margin: 0 auto 14px;
+      background: linear-gradient(135deg, #F59E0B 0%, #fbbf24 50%, #10B981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* LAYOUT */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 16px 0;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* SECURITY ALERT */
+    .security-alert {
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .security-alert .alert-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .security-alert .alert-body {
+      flex: 1;
+    }
+    .security-alert .alert-title {
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+    .security-alert .alert-text {
+      font-size: 0.88rem;
+      color: #c9a84c;
+      line-height: 1.5;
+    }
+
+    /* CONTROLS */
+    .controls-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .control-group {
+      flex: 1;
+      min-width: 180px;
+    }
+    .control-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus { outline: none; border-color: var(--gold); }
+
+    /* GENERATE BUTTON */
+    .btn-generate {
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold) 0%, #d97706 100%);
+      color: #000;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-generate:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(245,158,11,0.4); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* PHRASE DISPLAY */
+    .phrase-panel {
+      margin-top: 24px;
+      display: none;
+    }
+    .phrase-panel.visible { display: block; }
+
+    .phrase-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .phrase-label::before {
+      content: '';
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .phrase-box {
+      background: var(--bg);
+      border: 1px solid var(--green-border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+    .word-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+    .word-num {
+      font-size: 0.68rem;
+      color: var(--muted);
+      min-width: 20px;
+      font-variant-numeric: tabular-nums;
+    }
+    .word-text {
+      font-family: 'JetBrains Mono', 'Courier New', 'Lucida Console', monospace;
+      font-size: 0.92rem;
+      color: var(--green);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .phrase-plain {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: var(--bg2);
+      border-radius: 6px;
+      word-break: break-all;
+      line-height: 1.8;
+    }
+
+    /* ACTION BUTTONS */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      flex: 1;
+      min-width: 140px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-action:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .btn-action.copied { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+
+    /* STATUS */
+    .status-msg {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+    .status-msg.error { color: var(--red); }
+    .status-msg.ok { color: var(--green); }
+
+    /* ENTROPY METER */
+    .entropy-info {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .entropy-chip {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+    .entropy-chip span { color: var(--gold); font-weight: 700; }
+
+    /* AD PLACEMENTS */
+    .axiom-ad-leaderboard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg2);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      height: 90px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) { .axiom-ad-leaderboard { display: none; } }
+    .axiom-ad-mobile-anchor {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.78rem;
+      z-index: 90;
+    }
+    @media (max-width: 768px) { .axiom-ad-mobile-anchor { display: flex; } }
+
+    /* GLOSSARY */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .glossary-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .glossary-term {
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+    }
+    .glossary-def {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* EDU SECTION */
+    .edu-section h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .edu-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 20px 0 8px;
+    }
+    .edu-section p, .edu-section li {
+      font-size: 0.92rem;
+      color: #c9d1d9;
+      line-height: 1.7;
+    }
+    .edu-section ul { padding-left: 20px; margin-bottom: 12px; }
+    .edu-section li { margin-bottom: 6px; }
+    .section-intro {
+      background: var(--bg2);
+      border-left: 3px solid var(--gold);
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 16px;
+      font-weight: 600;
+      font-size: 0.93rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg2);
+      color: var(--text);
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .faq-q:hover { background: var(--bg3); }
+    .faq-q::after {
+      content: '+';
+      font-size: 1.2rem;
+      color: var(--gold);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .faq-item.open .faq-q::after { content: '-'; }
+    .faq-a {
+      display: none;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      background: var(--card);
+    }
+    .faq-item.open .faq-a { display: block; }
+
+    /* DISCLAIMER */
+    .tool-disclaimer {
+      background: var(--red-bg);
+      border: 1px solid rgba(248,81,73,0.25);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.82rem;
+      color: #f0a0a0;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .tool-disclaimer strong { color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <h1>BIP39 Mnemonic Seed Phrase Generator</h1>
+    <p>Create cryptographic offline recovery vectors natively. 100% client-side. Nothing ever leaves your browser.</p>
+  </header>
+
+  <main class="page-wrapper" id="main">
+
+    <!-- SECURITY ALERT -->
+    <div class="security-alert">
+      <div class="alert-icon">&#x1F512;</div>
+      <div class="alert-body">
+        <div class="alert-title">Maximum Security Advisory</div>
+        <div class="alert-text">
+          For maximum security, save this page as an HTML file and run it on an air-gapped, offline computer that has never connected to the internet. Write your seed phrase on paper immediately. Never store it digitally, photograph it, or type it into any device connected to the internet.
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATOR CARD -->
+    <div class="card">
+      <div class="card-title">&#x1F5DD; Seed Phrase Generator</div>
+
+      <div class="controls-row">
+        <div class="control-group">
+          <label for="wordCount">Mnemonic Length</label>
+          <select id="wordCount">
+            <option value="24" selected>24 Words (256-bit entropy - Recommended)</option>
+            <option value="12">12 Words (128-bit entropy)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="english" selected>English (BIP39 Standard)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-generate" id="generateBtn" onclick="generatePhrase()">
+        <span>&#x26A1;</span> Generate Secure Seed Phrase
+      </button>
+
+      <div class="status-msg" id="statusMsg"></div>
+
+      <!-- PHRASE OUTPUT -->
+      <div class="phrase-panel" id="phrasePanel">
+        <div class="phrase-label">Generated Seed Phrase</div>
+        <div class="phrase-box">
+          <div class="word-grid" id="wordGrid"></div>
+          <div class="phrase-plain" id="phrasePlain"></div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-action" id="copyBtn" onclick="copyPhrase()">
+            &#x1F4CB; Copy to Clipboard
+          </button>
+          <button class="btn-action" onclick="downloadPhrase()">
+            &#x2B07; Download as .txt
+          </button>
+        </div>
+
+        <div class="entropy-info" id="entropyInfo"></div>
+      </div>
+    </div>
+
+    <!-- DISCLAIMER -->
+    <div class="tool-disclaimer">
+      <strong>Critical Notice:</strong> This tool is provided for educational and research purposes. Never generate seed phrases for high-value wallets on a network-connected computer. Test your recovery phrase with a small balance before committing significant funds. The developers assume no liability for loss of funds. This tool embeds the BIP39 English wordlist - verify against the official specification at <strong>github.com/trezor/python-mnemonic</strong> before production use.
+    </div>
+
+    <!-- AD PLACEMENT 1 -->
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      Advertisement
+    </div>
+
+    <!-- GLOSSARY -->
+    <div class="card">
+      <div class="card-title">&#x1F4DA; Key Terms Explained</div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">BIP39</div>
+          <div class="glossary-def">Bitcoin Improvement Proposal 39. The standard that defines how a random sequence of words (a mnemonic) encodes the master seed for a hierarchical deterministic cryptocurrency wallet.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Mnemonic Seed Phrase</div>
+          <div class="glossary-def">A human-readable sequence of 12 or 24 words that encodes a cryptographic seed. Used to back up and restore cryptocurrency wallets. Also called a recovery phrase or backup phrase.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Entropy</div>
+          <div class="glossary-def">The raw randomness used to generate a seed phrase. Measured in bits: 128 bits for 12 words, 256 bits for 24 words. Generated by your operating system's CSPRNG via window.crypto.getRandomValues().</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">SHA-256</div>
+          <div class="glossary-def">A cryptographic hash function that produces a 256-bit digest. BIP39 uses it to compute a checksum appended to the entropy, enabling wallets to detect transcription errors when you enter a recovery phrase.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Checksum</div>
+          <div class="glossary-def">In BIP39, the first N bits of the SHA-256 hash of your entropy (4 bits for 12-word phrases, 8 bits for 24-word phrases). Appended to entropy before word selection, allowing error detection during wallet recovery.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Air-Gapped Computer</div>
+          <div class="glossary-def">A computer that has never been connected to the internet or any network. Because there is no network path for malware to exfiltrate data, it is the most secure environment for generating cryptocurrency seed phrases.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Wallet Recovery</div>
+          <div class="glossary-def">The process of restoring access to a cryptocurrency wallet using a seed phrase. Any BIP39-compatible hardware or software wallet can regenerate your complete wallet - including all keys and accounts - from your 12 or 24-word phrase.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">CSPRNG</div>
+          <div class="glossary-def">Cryptographically Secure Pseudo-Random Number Generator. window.crypto.getRandomValues() taps your OS-level CSPRNG, which uses hardware entropy sources. Never use Math.random() for cryptographic applications - it is not cryptographically secure.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATIONAL SECTION -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to BIP39 Mnemonic Seed Phrases</h2>
+
+      <div class="section-intro">
+        <p>If you hold cryptocurrency in a self-custody wallet, your seed phrase is the single most important piece of information in your financial life. Understanding how it is generated, what it encodes, and how to store it safely is not optional - it is the difference between permanent access to your funds and permanent loss.</p>
+      </div>
+
+      <h3>How BIP39 Generation Works</h3>
+      <p>This tool follows the BIP39 specification exactly. When you click Generate, the following cryptographic steps execute entirely within your browser:</p>
+      <ul>
+        <li><strong>Step 1 - Entropy:</strong> Your OS generates 128 bits (12 words) or 256 bits (24 words) of cryptographically secure random data using window.crypto.getRandomValues(). This is the same entropy source used by your operating system for TLS keys and other critical security functions.</li>
+        <li><strong>Step 2 - Checksum:</strong> The SHA-256 hash of the entropy bytes is computed using the browser's Web Crypto API. The first 4 bits (12-word) or 8 bits (24-word) of this hash are appended to the entropy.</li>
+        <li><strong>Step 3 - Word mapping:</strong> The combined bit string is split into 11-bit chunks. Each 11-bit value (0 to 2047) indexes into the BIP39 English word list of 2048 words, producing 12 or 24 human-readable words.</li>
+      </ul>
+
+      <h3>Why You Must Write It Down</h3>
+      <p>The seed phrase is not stored anywhere. It is computed on-the-fly and displayed once. Your browser, this website, and your device retain no copy. When you close this page, the phrase exists only where you have written or saved it. Treat it with the same care as cash. Anyone who obtains your seed phrase has complete, irrevocable access to every wallet and account derived from it.</p>
+
+      <h3>Secure Storage Best Practices</h3>
+      <ul>
+        <li>Write the phrase on paper with a pen. Never type it on a networked device.</li>
+        <li>Store multiple physical copies in geographically separate locations.</li>
+        <li>Consider fireproof and waterproof storage such as a metal backup plate.</li>
+        <li>Never photograph your seed phrase. Phone cameras auto-upload to cloud services.</li>
+        <li>Never email, text, or message your seed phrase under any circumstances.</li>
+        <li>Consider a passphrase (BIP39 optional extension) for an extra layer of security for large holdings.</li>
+      </ul>
+
+      <h3>Frequently Asked Questions</h3>
+
+      <div class="faq-item" id="faq1">
+        <div class="faq-q" onclick="toggleFaq('faq1')">What is an air-gapped computer and why should I use one?</div>
+        <div class="faq-a">An air-gapped computer is a device that has never been connected to the internet or any network. Because no network connection exists, malware cannot exfiltrate your seed phrase after it is generated. For maximum security, save this HTML page to a USB drive, transfer it to a computer that has never been online, generate your seed phrase there, write it down on paper, and then power off the machine. This eliminates virtually all digital attack vectors.</div>
+      </div>
+
+      <div class="faq-item" id="faq2">
+        <div class="faq-q" onclick="toggleFaq('faq2')">What happens if I lose my seed phrase?</div>
+        <div class="faq-a">If you lose your BIP39 seed phrase and have no backup, your cryptocurrency is permanently inaccessible. There is no recovery mechanism, no customer support, and no reset option. The seed phrase is the only key to your funds. Store multiple physical copies in separate secure locations such as a fireproof safe, a safety deposit box, or with a trusted person. Never store it digitally or photograph it.</div>
+      </div>
+
+      <div class="faq-item" id="faq3">
+        <div class="faq-q" onclick="toggleFaq('faq3')">Why is 24 words more secure than 12 words?</div>
+        <div class="faq-a">A 12-word phrase encodes 128 bits of entropy, and a 24-word phrase encodes 256 bits. An attacker brute-forcing a 12-word phrase must try up to 2 to the power of 128 combinations, which is computationally infeasible with current technology. A 24-word phrase doubles the exponent to 256 bits, providing security against future advances including theoretical quantum computing attacks. For long-term cold storage of significant value, 24 words is the recommended standard.</div>
+      </div>
+
+      <div class="faq-item" id="faq4">
+        <div class="faq-q" onclick="toggleFaq('faq4')">Is my seed phrase ever sent to a server?</div>
+        <div class="faq-a">No. This tool generates your seed phrase entirely within your browser using JavaScript. The entropy comes from window.crypto.getRandomValues(), which is your operating system's cryptographically secure random number generator. The SHA-256 checksum is computed using the browser's built-in Web Crypto API (SubtleCrypto). Nothing is sent to any server, logged, stored, or transmitted. You can verify this by disconnecting from the internet before generating a phrase.</div>
+      </div>
+
+      <div class="faq-item" id="faq5">
+        <div class="faq-q" onclick="toggleFaq('faq5')">What is a BIP39 checksum and why does it matter?</div>
+        <div class="faq-a">BIP39 appends a checksum to the entropy before splitting it into 11-bit word indices. For a 12-word phrase, the first 4 bits of the SHA-256 hash of the 128-bit entropy are appended, giving 132 bits total (12 times 11). For a 24-word phrase, the first 8 bits of the SHA-256 hash of 256-bit entropy are appended, giving 264 bits (24 times 11). This checksum lets hardware wallets detect typos when you enter a recovery phrase - an invalid checksum means at least one word was entered incorrectly.</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AD PLACEMENT 2 -->
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    Advertisement
+  </div>
+
+  <script>
+    // =================================================================
+    // BIP39 ENGLISH WORDLIST - 2048 words (complete official BIP39 standard)
+    // Source: BIP-0039 specification / trezor/python-mnemonic
+    // All words have unique 4-character prefixes per BIP39 design rules.
+    // Source verified against: github.com/trezor/python-mnemonic/blob/master/src/mnemonic/wordlist/english.txt
+    // =================================================================
+    const WORDLIST = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual","adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","affair","afford","afraid","again","age","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert","alien","all","alley","allow","almost","alone","alpha","already","also","alter","always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique","anxiety","any","apart","apology","appear","apple","approve","april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest","arrive","arrow","art","artefact","artist","artwork","ask","aspect","assault","asset","assist","assume","asthma","athlete","atom","attack","attend","attitude","attract","auction","audit","august","aunt","author","auto","autumn","average","avocado","avoid","awake","aware","away","awesome","awful","awkward","axis","baby","bachelor","bacon","badge","bag","balance","balcony","ball","bamboo","banana","banner","bar","barely","bargain","barrel","base","basic","basket","battle","beach","bean","beauty","because","become","beef","before","begin","behave","behind","believe","below","belt","bench","benefit","best","betray","better","between","beyond","bicycle","bid","bike","bind","biology","bird","birth","bitter","black","blade","blame","blanket","blast","bleak","bless","blind","blood","blossom","blouse","blue","blur","blush","board","boat","body","boil","bomb","bone","bonus","book","boost","border","boring","borrow","boss","bottom","bounce","box","boy","bracket","brain","brand","brass","brave","bread","breeze","brick","bridge","brief","bright","bring","brisk","broccoli","broken","bronze","broom","brother","brown","brush","bubble","buddy","budget","buffalo","build","bulb","bulk","bullet","bundle","bunker","burden","burger","burst","bus","business","busy","butter","buyer","buzz","cabbage","cabin","cable","cactus","cage","cake","call","calm","camera","camp","can","canal","cancel","candy","cannon","canoe","canvas","canyon","capable","capital","captain","car","carbon","card","cargo","carpet","carry","cart","case","cash","casino","castle","casual","cat","catalog","catch","category","cattle","caught","cause","caution","cave","ceiling","celery","cement","census","century","cereal","certain","chair","chalk","champion","change","chaos","chapter","charge","chase","chat","cheap","check","cheese","chef","cherry","chest","chicken","chief","child","chimney","choice","choose","chronic","chuckle","chunk","churn","cigar","cinnamon","circle","citizen","city","civil","claim","clap","clarify","claw","clay","clean","clerk","clever","click","client","cliff","climb","clinic","clip","clock","clog","close","cloth","cloud","clown","club","clump","cluster","clutch","coach","coast","coconut","code","coffee","coil","coin","collect","color","column","combine","come","comfort","comic","common","company","concert","conduct","confirm","congress","connect","consider","control","convince","cook","cool","copper","copy","coral","core","corn","correct","cost","cotton","couch","country","couple","course","cousin","cover","coyote","crack","cradle","craft","cram","crane","crash","crater","crawl","crazy","cream","credit","creek","crew","cricket","crime","crisp","critic","crop","cross","crouch","crowd","crucial","cruel","cruise","crumble","crunch","crush","cry","crystal","cube","culture","cup","cupboard","curious","current","curtain","curve","cushion","custom","cute","cycle","dad","damage","damp","dance","danger","daring","dash","daughter","dawn","day","deal","debate","debris","decade","december","decide","decline","decorate","decrease","deer","defense","define","defy","degree","delay","deliver","demand","demise","denial","dentist","deny","depart","depend","deposit","depth","deputy","derive","describe","desert","design","desk","despair","destroy","detail","detect","develop","device","devote","diagram","dial","diamond","diary","dice","diesel","diet","differ","digital","dignity","dilemma","dinner","dinosaur","direct","dirt","disagree","discover","disease","dish","dismiss","disorder","display","distance","divert","divide","divorce","dizzy","doctor","document","dog","doll","dolphin","domain","donate","donkey","donor","door","dose","double","dove","draft","dragon","drama","drastic","draw","dream","dress","drift","drill","drink","drip","drive","drop","drum","dry","duck","dumb","dune","during","dust","dutch","duty","dwarf","dynamic","eager","eagle","early","earn","earth","easily","east","easy","echo","ecology","economy","edge","edit","educate","effort","egg","eight","either","elbow","elder","electric","elegant","element","elephant","elevator","elite","else","embark","embody","embrace","emerge","emotion","employ","empower","empty","enable","enact","end","endless","endorse","enemy","energy","enforce","engage","engine","enhance","enjoy","enlist","enough","enrich","enroll","ensure","enter","entire","entry","envelope","episode","equal","equip","era","erase","erode","erosion","error","erupt","escape","essay","essence","estate","eternal","ethics","evidence","evil","evoke","evolve","exact","example","excess","exchange","excite","exclude","excuse","execute","exercise","exhaust","exhibit","exile","exist","exit","exotic","expand","expect","expire","explain","expose","express","extend","extra","eye","eyebrow","fabric","face","faculty","fade","faint","faith","fall","false","fame","family","famous","fan","fancy","fantasy","farm","fashion","fat","fatal","father","fatigue","fault","favorite","feature","february","federal","fee","feed","feel","female","fence","festival","fetch","fever","few","fiber","fiction","field","figure","file","film","filter","final","find","fine","finger","finish","fire","firm","first","fiscal","fish","fit","fitness","fix","flag","flame","flash","flat","flavor","flee","flight","flip","float","flock","floor","flower","fluid","flush","fly","foam","focus","fog","foil","fold","follow","food","foot","force","forest","forget","fork","fortune","forum","forward","fossil","foster","found","fox","fragile","frame","frequent","fresh","friend","fringe","frog","front","frost","frown","frozen","fruit","fuel","fun","funny","furnace","fury","future","gadget","gain","galaxy","gallery","game","gap","garage","garbage","garden","garlic","garment","gas","gasp","gate","gather","gauge","gaze","general","genius","genre","gentle","genuine","gesture","ghost","giant","gift","giggle","ginger","giraffe","girl","give","glad","glance","glare","glass","glide","glimpse","globe","gloom","glory","glove","glow","glue","goat","goddess","gold","good","goose","gorilla","gospel","gossip","govern","gown","grab","grace","grain","grant","grape","grass","gravity","great","green","grid","grief","grit","grocery","group","grow","grunt","guard","guess","guide","guilt","guitar","gun","gym","habit","hair","half","hammer","hamster","hand","happy","harbor","hard","harsh","harvest","hat","have","hawk","hazard","head","health","heart","heavy","hedgehog","height","hello","helmet","help","hen","hero","hidden","high","hill","hint","hip","hire","history","hobby","hockey","hold","hole","holiday","hollow","home","honey","hood","hope","horn","horror","horse","hospital","host","hotel","hour","hover","hub","huge","human","humble","humor","hundred","hungry","hunt","hurdle","hurry","hurt","husband","hybrid","ice","icon","idea","identify","idle","ignore","ill","illegal","illness","image","imitate","immense","immune","impact","impose","improve","impulse","inch","include","income","increase","index","indicate","indoor","industry","infant","inflict","inform","inhale","inherit","initial","inject","injury","inmate","inner","innocent","input","inquiry","insane","insect","inside","inspire","install","intact","interest","into","invest","invite","involve","iron","island","isolate","issue","item","ivory","jacket","jaguar","jar","jazz","jealous","jeans","jelly","jewel","job","join","joke","journey","joy","judge","juice","jump","jungle","junior","junk","just","kangaroo","keen","keep","ketchup","key","kick","kid","kidney","kind","kingdom","kiss","kit","kitchen","kite","kitten","kiwi","knee","knife","knock","know","lab","label","labor","ladder","lady","lake","lamp","language","laptop","large","later","latin","laugh","laundry","lava","law","lawn","lawsuit","layer","lazy","leader","leaf","learn","leave","lecture","left","leg","legal","legend","leisure","lemon","lend","length","lens","leopard","lesson","letter","level","liar","liberty","library","license","life","lift","light","like","limb","limit","link","lion","liquid","list","little","live","lizard","load","loan","lobster","local","lock","logic","lonely","long","loop","lottery","loud","lounge","love","loyal","lucky","luggage","lumber","lunar","lunch","luxury","lyrics","machine","mad","magic","magnet","maid","mail","main","major","make","mammal","man","manage","mandate","mango","mansion","manual","maple","marble","march","margin","marine","market","marriage","mask","mass","master","match","material","math","matrix","matter","maximum","maze","meadow","mean","measure","meat","mechanic","medal","media","melody","melt","member","memory","mention","menu","mercy","merge","merit","merry","mesh","message","metal","method","middle","midnight","milk","million","mimic","mind","minimum","minor","minute","miracle","mirror","misery","miss","mistake","mix","mixed","mixture","mobile","model","modify","mom","moment","monitor","monkey","monster","month","moon","moral","more","morning","mosquito","mother","motion","motor","mountain","mouse","move","movie","much","muffin","mule","multiply","muscle","museum","mushroom","music","must","mutual","myself","mystery","myth","naive","name","napkin","narrow","nasty","nation","nature","near","neck","need","negative","neglect","neither","nephew","nerve","nest","net","network","neutral","never","news","next","nice","night","noble","noise","nominee","noodle","normal","north","nose","notable","note","nothing","notice","novel","now","nuclear","number","nurse","nut","oak","obey","object","oblige","obscure","observe","obtain","obvious","occur","ocean","october","odor","off","offer","office","often","oil","okay","old","olive","olympic","omit","once","one","onion","online","only","open","opera","opinion","oppose","option","orange","orbit","orchard","order","ordinary","organ","orient","original","orphan","ostrich","other","outdoor","outer","output","outside","oval","oven","over","own","owner","oxygen","oyster","ozone","pact","paddle","page","pair","palace","palm","panda","panel","panic","panther","paper","parade","parent","park","parrot","party","pass","patch","path","patient","patrol","pattern","pause","pave","payment","peace","peanut","pear","peasant","pelican","pen","penalty","pencil","people","pepper","perfect","permit","person","pet","phone","photo","phrase","physical","piano","picnic","picture","piece","pig","pigeon","pill","pilot","pink","pioneer","pipe","pistol","pitch","pizza","place","planet","plastic","plate","play","please","pledge","pluck","plug","plunge","poem","poet","point","polar","pole","police","pond","pony","pool","popular","portion","position","possible","post","potato","pottery","poverty","powder","power","practice","praise","predict","prefer","prepare","present","pretty","prevent","price","pride","primary","print","priority","prison","private","prize","problem","process","produce","profit","program","project","promote","proof","property","prosper","protect","proud","provide","public","pudding","pull","pulp","pulse","pumpkin","punch","pupil","puppy","purchase","purity","purpose","purse","push","put","puzzle","pyramid","quality","quantum","quarter","question","quick","quit","quiz","quote","rabbit","raccoon","race","rack","radar","radio","rail","rain","raise","rally","ramp","ranch","random","range","rapid","rare","rate","rather","raven","raw","razor","ready","real","reason","rebel","rebuild","recall","receive","recipe","record","recycle","reduce","reflect","reform","refuse","region","regret","regular","reject","relax","release","relief","rely","remain","remember","remind","remove","render","renew","rent","reopen","repair","repeat","replace","report","require","rescue","resemble","resist","resource","response","result","retire","retreat","return","reunion","reveal","review","reward","rhythm","rib","ribbon","rice","rich","ride","ridge","rifle","right","rigid","ring","riot","ripple","risk","ritual","rival","river","road","roast","robot","robust","rocket","romance","roof","rookie","room","rose","rotate","rough","round","route","royal","rubber","rude","rug","rule","run","runway","rural","sad","saddle","sadness","safe","sail","salad","salmon","salon","salt","salute","same","sample","sand","satisfy","satoshi","sauce","sausage","save","say","scale","scan","scare","scatter","scene","scheme","school","science","scissors","scorpion","scout","scrap","screen","script","scrub","sea","search","season","seat","second","secret","section","security","seed","seek","segment","select","sell","seminar","senior","sense","sentence","series","service","session","settle","setup","seven","shadow","shaft","shallow","share","shed","shell","sheriff","shield","shift","shine","ship","shiver","shock","shoe","shoot","shop","short","shoulder","shove","shrimp","shrug","shuffle","shy","sibling","sick","side","siege","sight","sign","silent","silk","silly","silver","similar","simple","since","sing","siren","sister","situate","six","size","skate","sketch","ski","skill","skin","skirt","skull","slab","slam","sleep","slender","slice","slide","slight","slim","slogan","slot","slow","slush","small","smart","smile","smoke","smooth","snack","snake","snap","sniff","snow","soap","soccer","social","sock","soda","soft","solar","soldier","solid","solution","solve","someone","song","soon","sorry","sort","soul","sound","soup","source","south","space","spare","spatial","spawn","speak","special","speed","spell","spend","sphere","spice","spider","spike","spin","spirit","split","spoil","sponsor","spoon","sport","spot","spray","spread","spring","spy","square","squeeze","squirrel","stable","stadium","staff","stage","stairs","stamp","stand","start","state","stay","steak","steel","stem","step","stereo","stick","still","sting","stock","stomach","stone","stool","story","stove","strategy","street","strike","strong","struggle","student","stuff","stumble","style","subject","submit","subway","success","such","sudden","suffer","sugar","suggest","suit","summer","sun","sunny","sunset","super","supply","supreme","sure","surface","surge","surprise","surround","survey","suspect","sustain","swallow","swamp","swap","swarm","swear","sweet","swift","swim","swing","switch","sword","symbol","symptom","syrup","system","table","tackle","tag","tail","talent","talk","tank","tape","target","task","taste","tattoo","taxi","teach","team","tell","ten","tenant","tennis","tent","term","test","text","thank","that","theme","then","theory","there","they","thing","this","thought","three","thrive","throw","thumb","thunder","ticket","tide","tiger","tilt","timber","time","tiny","tip","tired","tissue","title","toast","tobacco","today","toddler","toe","together","toilet","token","tomato","tomorrow","tone","tongue","tonight","tool","tooth","top","topic","topple","torch","tornado","tortoise","toss","total","tourist","toward","tower","town","toy","track","trade","traffic","tragic","train","transfer","trap","trash","travel","tray","treat","tree","trend","trial","tribe","trick","trigger","trim","trip","trophy","trouble","truck","true","truly","trumpet","trust","truth","try","tube","tuition","tumble","tuna","tunnel","turkey","turn","turtle","twelve","twenty","twice","twin","twist","two","type","typical","ugly","umbrella","unable","unaware","uncle","uncover","under","undo","unfair","unfold","unhappy","uniform","unique","unit","universe","unknown","unlock","until","unusual","unveil","update","upgrade","uphold","upon","upper","upset","urban","urge","usage","use","used","useful","useless","usual","utility","vacant","vacuum","vague","valid","valley","valve","van","vanish","vapor","various","vast","vault","vehicle","velvet","vendor","venture","venue","verb","verify","version","very","vessel","veteran","viable","vibrant","vicious","victory","video","view","village","vintage","violin","virtual","virus","visa","visit","visual","vital","vivid","vocal","voice","void","volcano","volume","vote","voyage","wage","wagon","wait","walk","wall","walnut","want","warfare","warm","warrior","wash","wasp","waste","water","wave","way","wealth","weapon","wear","weasel","weather","web","wedding","weekend","weird","welcome","west","wet","whale","what","wheat","wheel","when","where","whip","whisper","wide","width","wife","wild","will","win","window","wine","wing","wink","winner","winter","wire","wisdom","wise","wish","witness","wolf","woman","wonder","wood","wool","word","work","world","worry","worth","wrap","wreck","wrestle","wrist","write","wrong","yard","year","yellow","you","young","youth","zebra","zero","zone","zoo"];
+
+    // =================================================================
+    // CRYPTOGRAPHIC ENGINE
+    // =================================================================
+
+    let lastPhrase = [];
+
+    async function generatePhrase() {
+      const btn = document.getElementById('generateBtn');
+      const status = document.getElementById('statusMsg');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      status.textContent = '';
+      status.className = 'status-msg';
+
+      try {
+        const wordCount = parseInt(document.getElementById('wordCount').value);
+        const entropyBits = wordCount === 12 ? 128 : 256;
+        const checksumBits = entropyBits / 32;
+
+        // Generate cryptographically secure entropy
+        const entropyBytes = new Uint8Array(entropyBits / 8);
+        window.crypto.getRandomValues(entropyBytes);
+
+        // SHA-256 checksum via SubtleCrypto
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', entropyBytes);
+        const hashBytes = new Uint8Array(hashBuffer);
+
+        // Convert entropy to bit string
+        let bits = '';
+        for (const byte of entropyBytes) {
+          bits += byte.toString(2).padStart(8, '0');
+        }
+
+        // Append checksum bits
+        for (let i = 0; i < checksumBits; i++) {
+          bits += ((hashBytes[Math.floor(i / 8)] >> (7 - (i % 8))) & 1).toString();
+        }
+
+        // Map 11-bit chunks to BIP39 words (indices 0-2047, all valid against 2048-word list)
+        const words = [];
+        for (let i = 0; i < wordCount; i++) {
+          const index = parseInt(bits.slice(i * 11, (i + 1) * 11), 2);
+          words.push({ word: WORDLIST[index], index });
+        }
+
+        lastPhrase = words.map(w => w.word);
+        renderPhrase(words);
+
+        const bitsUsed = entropyBits;
+        document.getElementById('entropyInfo').innerHTML = `
+          <div class="entropy-chip">Entropy: <span>${bitsUsed} bits</span></div>
+          <div class="entropy-chip">Words: <span>${lastPhrase.length}</span></div>
+          <div class="entropy-chip">Checksum: <span>${bitsUsed / 32} bits (SHA-256)</span></div>
+          <div class="entropy-chip">Algorithm: <span>BIP39</span></div>
+        `;
+
+        status.textContent = 'Phrase generated using window.crypto.getRandomValues() + SHA-256.';
+        status.className = 'status-msg ok';
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+        status.className = 'status-msg error';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>&#x26A1;</span> Generate Secure Seed Phrase';
+      }
+    }
+
+    function renderPhrase(words) {
+      const grid = document.getElementById('wordGrid');
+      const plain = document.getElementById('phrasePlain');
+      const panel = document.getElementById('phrasePanel');
+
+      grid.innerHTML = words.map((w, i) =>
+        `<div class="word-cell">
+          <span class="word-num">${String(i+1).padStart(2,'0')}.</span>
+          <span class="word-text">${w.word}</span>
+        </div>`
+      ).join('');
+
+      plain.textContent = words.map(w => w.word).join(' ');
+      panel.classList.add('visible');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function copyPhrase() {
+      if (!lastPhrase.length) return;
+      const btn = document.getElementById('copyBtn');
+      try {
+        await navigator.clipboard.writeText(lastPhrase.join(' '));
+        btn.textContent = '&#x2713; Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = '&#x1F4CB; Copy to Clipboard';
+          btn.classList.remove('copied');
+        }, 2500);
+      } catch {
+        btn.textContent = 'Copy failed - select text manually';
+      }
+    }
+
+    function downloadPhrase() {
+      if (!lastPhrase.length) return;
+      const wordCount = lastPhrase.length;
+      const bits = wordCount === 12 ? 128 : 256;
+      const content = [
+        'BIP39 Mnemonic Seed Phrase',
+        '============================',
+        'Generated: ' + new Date().toISOString(),
+        'Words: ' + wordCount + '  |  Entropy: ' + bits + ' bits',
+        '',
+        'SEED PHRASE:',
+        lastPhrase.join(' '),
+        '',
+        lastPhrase.map((w, i) => (i+1) + '. ' + w).join('\n'),
+        '',
+        'WARNING: Keep this file secure. Delete after writing down.',
+        'Anyone with this phrase has full access to your wallet.',
+      ].join('\n');
+      const blob = new Blob([content], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'seed-phrase-' + wordCount + '-words.txt';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function toggleFaq(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
