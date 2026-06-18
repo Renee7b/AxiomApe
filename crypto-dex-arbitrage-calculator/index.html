@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free crypto DEX arbitrage calculator. Factor in gas fees, DEX trading fees, and slippage to find your true net profit and net ROI on cross-exchange DeFi trades. 100% client-side." />
+  <meta name="keywords" content="crypto arbitrage calculator, DEX arbitrage, DeFi slippage calculator, cross-exchange arbitrage, gas fee calculator, crypto net profit calculator, Uniswap SushiSwap arbitrage, decentralized exchange arbitrage, trading fee calculator, net ROI crypto" />
+  <title>Crypto DEX Arbitrage Calculator: Find True Net Profit After Gas, Fees, and Slippage | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/crypto-dex-arbitrage-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Crypto DEX Arbitrage Calculator",
+        "description": "Free crypto DEX arbitrage calculator. Factor in gas fees, DEX trading fees, and slippage to find your true net profit and net ROI on cross-exchange DeFi trades. 100% client-side.",
+        "url": "https://axiomape.com/crypto-dex-arbitrage-calculator/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is crypto arbitrage?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Crypto arbitrage is the practice of buying a token on one exchange where the price is lower and selling it on another exchange where the price is higher, capturing the difference as profit. On decentralized exchanges (DEXs) like Uniswap and SushiSwap, the same token can trade at slightly different prices at the same moment because each exchange has its own separate liquidity pool. An arbitrage trader exploits that temporary gap. The catch is that the headline price spread is rarely your real profit: network gas fees, the trading fee each DEX charges, and slippage all eat into the margin. This calculator subtracts every one of those hidden costs so you see your true net profit before you commit any capital."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do prices differ between exchanges like Uniswap and SushiSwap?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Each decentralized exchange runs its own independent liquidity pool for a given token pair, and prices are set by the ratio of assets inside that specific pool rather than by a shared global order book. When a large trade hits one pool, it shifts that pool's price while the other pool stays put, creating a temporary gap. Different pools also have different depths of liquidity and attract different trading volume, so they drift apart and re-converge constantly. Arbitrage traders are the mechanism that pushes the two prices back together: by buying from the cheaper pool and selling into the more expensive one, they nudge both prices toward equilibrium and earn the spread for doing so."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is slippage and why does it destroy profits?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Slippage is the difference between the price you expect and the price you actually get when your trade executes. On a DEX, every trade moves the price of the pool it touches, so a large buy pushes the price up against you and a large sell pushes it down. The bigger your trade relative to the pool's liquidity, the worse the slippage, an effect also called price impact. Slippage destroys arbitrage profits because it applies to both legs of the trade and scales with size: a spread that looks generous on a tiny test trade can completely vanish once you trade enough volume to make the gas fees worthwhile. This calculator lets you enter an estimated slippage percentage so you can see exactly how much it subtracts from your net profit."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are gas fees charged even if my arbitrage trade fails?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. On Ethereum and most EVM chains, gas pays the network validators for the computation they perform, and that work happens whether or not your transaction achieves its goal. If your arbitrage transaction reverts because the price moved before it confirmed, because another bot front-ran you, or because your slippage tolerance was exceeded, you still pay the gas for the failed attempt. This is one of the most underestimated risks in DeFi arbitrage: during periods of high network congestion you can burn a meaningful amount in gas on reverted transactions and never complete a single profitable trade. Always treat gas as a sunk cost you may pay even with nothing to show for it, and size your trades so a few failed attempts do not wipe out your edge."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does this crypto arbitrage calculator store my data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Every calculation runs entirely inside your own browser using client-side JavaScript. The investment amount, prices, gas fees, trading fees, and slippage figures you enter are never transmitted, saved, or shared with any server. Nothing you type leaves your device, so your trading strategy stays completely private."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Web3 / DeFi palette */
+      --purple:        #8B5CF6;
+      --purple-deep:   #5B21B6;
+      --cyan:          #06B6D4;
+      --cyan-deep:     #0E7490;
+      --green:         #10B981;
+      --green-light:   #D1FAE5;
+      --green-deep:    #065F46;
+      --red:           #EF4444;
+      --red-deep:      #7F1D1D;
+      --amber:         #F59E0B;
+      --slate:         #64748B;
+
+      /* Dark theme base */
+      --bg:            #0F172A;
+      --bg-card:       #1E293B;
+      --bg-card-hover: #273549;
+      --bg-input:      #0F172A;
+      --border:        #334155;
+      --border-focus:  #8B5CF6;
+      --text:          #F1F5F9;
+      --text-muted:    #94A3B8;
+      --text-light:    #64748B;
+      --white:         #FFFFFF;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.2);
+      --shadow-lg: 0 10px 32px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.3);
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Tool header */
+    .tool-header {
+      background: linear-gradient(135deg, #0F172A 0%, #1E1B3A 50%, #0E2E38 100%);
+      border-bottom: 2px solid var(--purple);
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(20px, 4.5vw, 30px);
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+      color: var(--white);
+    }
+
+    .tool-header h1 span { color: var(--cyan); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .main-content { padding: 32px 0 48px; }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .icon { font-size: 18px; }
+
+    /* Status banner */
+    .status-banner {
+      border-radius: var(--radius);
+      padding: 18px 24px;
+      text-align: center;
+      margin-bottom: 24px;
+      font-weight: 800;
+      font-size: clamp(15px, 3.5vw, 19px);
+      letter-spacing: -.01em;
+      border: 2px solid var(--border);
+      transition: all .3s ease;
+    }
+
+    .status-banner .status-sub {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      margin-top: 6px;
+      opacity: .9;
+    }
+
+    .status-banner.profit {
+      background: linear-gradient(135deg, #0F2B1A 0%, #14331F 100%);
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 0 32px rgba(16,185,129,.18);
+    }
+
+    .status-banner.loss {
+      background: linear-gradient(135deg, #2B1212 0%, #331616 100%);
+      border-color: var(--red);
+      color: var(--red);
+      box-shadow: 0 0 32px rgba(239,68,68,.15);
+    }
+
+    .status-banner.idle {
+      background: var(--bg-card);
+      border-color: var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Hero section: Net Profit is the star, Net ROI beside it */
+    .hero {
+      background: linear-gradient(135deg, #0F2B1A 0%, #1A3520 100%);
+      border: 2px solid var(--green);
+      border-radius: var(--radius);
+      padding: 30px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 32px rgba(16,185,129,.12);
+      transition: all .3s ease;
+    }
+
+    .hero.rekt {
+      background: linear-gradient(135deg, #2B1212 0%, #351818 100%);
+      border-color: var(--red);
+      box-shadow: 0 0 32px rgba(239,68,68,.12);
+    }
+
+    .hero-star { text-align: center; }
+
+    .hero-star .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .hero.rekt .hero-star .hero-label { color: var(--red); }
+
+    .hero-star .hero-value {
+      font-size: clamp(40px, 10vw, 68px);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1;
+      color: var(--green);
+      transition: color .3s ease;
+    }
+
+    .hero.rekt .hero-star .hero-value { color: var(--red); }
+
+    .hero-star .hero-sublabel {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .hero-sub-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    @media (max-width: 420px) { .hero-sub-grid { grid-template-columns: 1fr; } }
+
+    .hero-sub {
+      text-align: center;
+      background: rgba(15,23,42,.4);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+
+    .hero-sub .hs-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .hero-sub .hs-value {
+      font-size: clamp(22px, 5vw, 28px);
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .hero-sub.roi .hs-value { color: var(--green); transition: color .3s ease; }
+    .hero.rekt .hero-sub.roi .hs-value { color: var(--red); }
+
+    /* Input panels */
+    .panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 680px) { .panels-grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+    }
+
+    .panel.trade { border-top: 3px solid var(--cyan); }
+    .panel.costs { border-top: 3px solid var(--purple); }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel.trade .panel-title { color: var(--cyan); }
+    .panel.costs .panel-title { color: var(--purple); }
+
+    .input-group { margin-bottom: 14px; }
+    .input-group:last-child { margin-bottom: 0; }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: .01em;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-prefix, .input-suffix {
+      position: absolute;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-light);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input-prefix { left: 12px; }
+    .input-suffix { right: 12px; }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 11px 14px 11px 24px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .input-wrap input.has-suffix { padding-right: 30px; }
+
+    .input-wrap input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+    }
+
+    .panel.trade .input-wrap input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(6,182,212,.15);
+    }
+
+    .input-wrap input::placeholder { color: var(--text-light); font-weight: 500; }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* Reality Check: hidden costs breakdown */
+    .reality-card {
+      background: linear-gradient(135deg, #1E1B3A 0%, #241F45 100%);
+      border: 1px solid var(--purple);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) { .reality-card { padding: 20px 16px; } }
+
+    .reality-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .reality-head .rc-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -.01em;
+    }
+
+    .reality-head .rc-total {
+      font-size: clamp(22px, 5vw, 28px);
+      font-weight: 800;
+      color: var(--purple);
+      letter-spacing: -.02em;
+    }
+
+    .reality-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+
+    .cost-rows { display: grid; gap: 0; }
+
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(139,92,246,.15);
+      font-size: 14px;
+    }
+
+    .cost-row:last-child { border-bottom: none; }
+
+    .cost-row .cr-label {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cost-row .cr-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .cost-row .cr-value { font-weight: 700; color: var(--text); }
+
+    /* Secondary metric cards */
+    .metric-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 560px) { .metric-cards { grid-template-columns: 1fr; } }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      text-align: center;
+    }
+
+    .metric-card .mc-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-card .mc-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .metric-card .mc-sub {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    /* Disclaimer */
+    .tool-disclaimer {
+      background: rgba(245,158,11,.07);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 520px) { .glossary-grid { grid-template-columns: 1fr; } }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 3px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .section-intro {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: var(--bg);
+      border: none;
+      text-align: left;
+      padding: 14px 18px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background .15s;
+    }
+
+    .faq-q:hover { background: var(--bg-card-hover); }
+
+    .faq-q .faq-arrow {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--cyan);
+      transition: transform .25s;
+    }
+
+    .faq-q[aria-expanded="true"] .faq-arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--bg);
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+
+<body>
+
+  <header class="tool-header">
+    <h1>Crypto DEX Arbitrage Calculator: Find Your <span>True Net Profit</span> After Gas, Fees, and Slippage</h1>
+    <p>Enter your investment and the buy and sell prices across two decentralized exchanges. This free DeFi arbitrage calculator subtracts network gas fees, DEX trading fees, and slippage so you see the real net profit and net ROI you actually take home, not the misleading gross price gap.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- STATUS BANNER -->
+      <div class="status-banner idle" id="status-banner" aria-live="polite" aria-atomic="true">
+        Enter your trade details to check if the arbitrage is profitable
+      </div>
+
+      <!-- HERO: Net Profit is the star, Net ROI beside it -->
+      <div class="hero" id="hero" aria-live="polite" aria-atomic="true">
+        <div class="hero-star">
+          <div class="hero-label">Net Profit (After All Fees)</div>
+          <div class="hero-value" id="out-net-profit">--</div>
+          <div class="hero-sublabel">What you actually keep once gas, trading fees, and slippage are paid</div>
+        </div>
+        <div class="hero-sub-grid">
+          <div class="hero-sub">
+            <div class="hs-label">Total Investment</div>
+            <div class="hs-value" id="out-invested">--</div>
+          </div>
+          <div class="hero-sub roi">
+            <div class="hs-label">Net ROI</div>
+            <div class="hs-value" id="out-roi">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INPUT CARD -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#128202;</span> Trade and Hidden Cost Inputs</div>
+
+        <div class="panels-grid">
+
+          <!-- Trade panel -->
+          <div class="panel trade">
+            <div class="panel-title">Trade Panel</div>
+
+            <div class="input-group">
+              <label for="investment">Total Investment (USD)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="investment" min="0" step="0.01" inputmode="decimal" placeholder="1000" value="1000" oninput="recalc();" onchange="recalc();" />
+              </div>
+              <div class="field-hint">The capital you commit to the arbitrage trade.</div>
+            </div>
+
+            <div class="input-group">
+              <label for="buy-price">Buy Price on DEX A (USD)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="buy-price" min="0" step="0.01" inputmode="decimal" placeholder="100.00" value="100.00" oninput="recalc();" onchange="recalc();" />
+              </div>
+              <div class="field-hint">Price per token on the cheaper exchange.</div>
+            </div>
+
+            <div class="input-group">
+              <label for="sell-price">Sell Price on DEX B (USD)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="sell-price" min="0" step="0.01" inputmode="decimal" placeholder="102.50" value="102.50" oninput="recalc();" onchange="recalc();" />
+              </div>
+              <div class="field-hint">Price per token on the more expensive exchange.</div>
+            </div>
+          </div>
+
+          <!-- Hidden costs panel -->
+          <div class="panel costs">
+            <div class="panel-title">Hidden Costs Panel</div>
+
+            <div class="input-group">
+              <label for="gas-fees">Total Network Gas Fees (USD)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="gas-fees" min="0" step="0.01" inputmode="decimal" placeholder="15.00" value="15.00" oninput="recalc();" onchange="recalc();" />
+              </div>
+              <div class="field-hint">Combined gas cost for both the buy and sell transactions.</div>
+            </div>
+
+            <div class="input-group">
+              <label for="trading-fees">Total Exchange Trading Fees (%)</label>
+              <div class="input-wrap">
+                <input type="number" id="trading-fees" class="has-suffix" min="0" step="0.01" inputmode="decimal" placeholder="0.60" value="0.60" oninput="recalc();" onchange="recalc();" />
+                <span class="input-suffix">%</span>
+              </div>
+              <div class="field-hint">Both DEX fees combined, for example 0.60% means 0.3% per exchange.</div>
+            </div>
+
+            <div class="input-group">
+              <label for="slippage">Estimated Slippage (%)</label>
+              <div class="input-wrap">
+                <input type="number" id="slippage" class="has-suffix" min="0" step="0.01" inputmode="decimal" placeholder="0.50" value="0.50" oninput="recalc();" onchange="recalc();" />
+                <span class="input-suffix">%</span>
+              </div>
+              <div class="field-hint">Expected price impact from trading against pool liquidity.</div>
+            </div>
+          </div>
+
+        </div><!-- end panels-grid -->
+      </div><!-- end input card -->
+
+      <!-- REALITY CHECK: total hidden costs breakdown -->
+      <div class="reality-card" id="reality-card" aria-live="polite" aria-atomic="true">
+        <div class="reality-head">
+          <div class="rc-title">Reality Check: Total Hidden Costs</div>
+          <div class="rc-total" id="out-total-costs">--</div>
+        </div>
+        <div class="reality-sub">The gross price gap is rarely what you take home. Here is everything that comes out of your trade before you see a profit.</div>
+        <div class="cost-rows">
+          <div class="cost-row">
+            <div class="cr-label"><span class="cr-dot" style="background:var(--cyan)"></span> Gross Profit (before costs)</div>
+            <div class="cr-value" id="out-gross-profit">--</div>
+          </div>
+          <div class="cost-row">
+            <div class="cr-label"><span class="cr-dot" style="background:var(--purple)"></span> DEX Trading Fee Deduction</div>
+            <div class="cr-value" id="out-fee-deduction">--</div>
+          </div>
+          <div class="cost-row">
+            <div class="cr-label"><span class="cr-dot" style="background:var(--amber)"></span> Slippage Deduction</div>
+            <div class="cr-value" id="out-slippage-deduction">--</div>
+          </div>
+          <div class="cost-row">
+            <div class="cr-label"><span class="cr-dot" style="background:var(--red)"></span> Network Gas Fees</div>
+            <div class="cr-value" id="out-gas-deduction">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECONDARY METRICS -->
+      <div class="metric-cards">
+        <div class="metric-card">
+          <div class="mc-label">Tokens Bought</div>
+          <div class="mc-value" id="out-tokens">--</div>
+          <div class="mc-sub">Investment divided by buy price</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Gross Value on DEX B</div>
+          <div class="mc-value" id="out-gross-value">--</div>
+          <div class="mc-sub">Tokens sold at the higher price</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Gross Price Spread</div>
+          <div class="mc-value" id="out-spread">--</div>
+          <div class="mc-sub">Headline gap before any costs</div>
+        </div>
+      </div>
+
+      <!-- TOOL DISCLAIMER -->
+      <aside class="tool-disclaimer">
+        <strong>For informational and educational purposes only.</strong> This tool performs arbitrage mathematics only and is not financial, investment, or trading advice. It does not execute trades and is not affiliated with any exchange. Cryptocurrency trading carries substantial risk, including the total loss of capital, and DeFi arbitrage faces extra hazards such as failed transactions, front-running, and rapidly changing prices. Always do your own research and only risk funds you can afford to lose.
+      </aside>
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#128214;</span> Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Arbitrage</div>
+            <div class="glossary-def">Buying an asset where it is cheap and simultaneously selling it where it is more expensive to capture the price difference as profit. In crypto, the two venues are usually different exchanges.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">DEX (Decentralized Exchange)</div>
+            <div class="glossary-def">An exchange like Uniswap or SushiSwap that lets users trade tokens directly from their own wallets through smart contracts, with no central company holding funds or matching orders.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Slippage</div>
+            <div class="glossary-def">The gap between the price you expect and the price you actually get when a trade executes. Larger trades and thinner pools produce more slippage, which directly cuts arbitrage profit.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Gas Fees</div>
+            <div class="glossary-def">The fee paid to the blockchain network to process a transaction. On Ethereum, gas is charged whether the transaction succeeds or fails, making it a real cost even on reverted arbitrage attempts.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Liquidity Pool</div>
+            <div class="glossary-def">A smart-contract reserve of two tokens that a DEX uses to enable trading. The ratio of the two tokens in the pool sets the price, and trades shift that ratio.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Price Impact</div>
+            <div class="glossary-def">How much your own trade moves the pool price against you. It is the structural cause of slippage on a DEX and grows as your trade size approaches the pool's depth.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Spread</div>
+            <div class="glossary-def">The difference between the buy price on one DEX and the sell price on another. The spread is your gross opportunity, but only the portion left after fees, gas, and slippage is real profit.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Net Profit</div>
+            <div class="glossary-def">Your true take-home amount: the gross profit from the spread minus every cost, namely DEX trading fees, slippage, and network gas. This is the headline number this calculator solves for.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Net ROI</div>
+            <div class="glossary-def">Net profit expressed as a percentage of your total investment. A net ROI of 2% on a $1,000 trade means $20 of real profit after all costs.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Front-Running</div>
+            <div class="glossary-def">When a bot spots your pending profitable transaction and submits its own with higher gas to execute first, capturing the opportunity and often leaving your trade to fail.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Crypto DEX Arbitrage and True Net Profit</h2>
+        <p class="section-intro">
+          A two-and-a-half percent price gap between Uniswap and SushiSwap looks like free money, but seasoned DeFi traders know the headline spread is a trap. By the time gas, trading fees, and slippage are paid, a gap that looked profitable can leave you in the red. This guide explains the math behind the cross-exchange arbitrage calculator above, how to read its Reality Check breakdown, and the real risks that make on-chain arbitrage far harder than it first appears.
+        </p>
+
+        <h3>How to Use This DEX Arbitrage Calculator</h3>
+        <p>
+          Start in the Trade Panel. Enter your Total Investment, the buy price of the token on the cheaper exchange (DEX A), and the sell price on the more expensive exchange (DEX B). Then move to the Hidden Costs Panel and enter your combined network gas fees in dollars, your total exchange trading fees as a percentage of the trade, and your estimated slippage as a percentage. Everything recalculates instantly as you type, with no submit button. The hero metric at the top shows your Net Profit after all fees, the Reality Check card itemizes every cost, and the status banner turns green when the spread covers your costs or red when slippage and gas would eat your entire margin.
+        </p>
+
+        <h3>The Arbitrage Math, Step by Step</h3>
+        <p>
+          The engine first divides your total investment by the buy price to find how many tokens you can buy. It multiplies that token count by the sell price to get the gross value on DEX B, then subtracts your investment to get the gross profit, which is the headline opportunity before any costs. Next it calculates the DEX trading fee as a percentage of the gross value and the slippage as a separate percentage of the gross value. It adds those two amounts to your fixed network gas fees to produce the Total Hidden Costs. Finally, it subtracts those total costs from the gross profit to reveal your Net Profit, and expresses that as a Net ROI by dividing by your investment. Every dollar figure is rounded to exact cents using floating-point-safe arithmetic so the numbers always add up.
+        </p>
+
+        <h3>A Worked Example</h3>
+        <p>
+          Suppose you invest $1,000, buy a token at $100.00 on DEX A, and sell at $102.50 on DEX B. You acquire 10 tokens whose gross value on DEX B is $1,025, for a gross profit of $25. Now apply the costs: a combined 0.60% trading fee on $1,025 is about $6.15, an estimated 0.50% slippage is about $5.13, and gas fees are $15.00, for total hidden costs near $26.28. Subtracting those from the $25 gross profit leaves a net loss of roughly $1.28, a negative net ROI. This is the lesson the calculator drives home: a 2.5% gross spread that looks attractive turns into a small loss once real-world costs are counted, which is exactly why so many beginner arbitrage attempts quietly lose money.
+        </p>
+
+        <h3>Why On-Chain Arbitrage Is Harder Than It Looks</h3>
+        <p>
+          Profitable spreads on liquid pairs are usually tiny and vanish in seconds because automated bots compete to close them. To overcome fixed gas costs you often need a large trade, but a large trade causes more slippage, which erodes the very profit you were chasing. Gas spikes during network congestion can turn a winning trade into a loser between the moment you see the opportunity and the moment your transaction confirms. And because the blockchain charges gas even for failed transactions, a string of reverted attempts can bleed your capital with nothing to show for it. The calculator above is designed to make these trade-offs visible before you risk a single dollar.
+        </p>
+
+        <h3>Reading the Status Banner and Reality Check</h3>
+        <p>
+          A green banner means your net profit is positive: the price spread is wide enough to cover all network and trading costs, leaving real take-home profit. A red banner means the trade is unprofitable, so slippage and gas fees would consume your entire margin and then some. The Reality Check card below the hero exists to teach a single hard truth: the gross profit at the top of the breakdown is almost never what you keep. Watch how the trading fee, slippage, and gas rows stack up against that gross figure, and you will quickly develop an instinct for which spreads are actually worth trading.
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What is crypto arbitrage?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Crypto arbitrage is the practice of buying a token on one exchange where the price is lower and selling it on another exchange where the price is higher, capturing the difference as profit. On decentralized exchanges (DEXs) like Uniswap and SushiSwap, the same token can trade at slightly different prices at the same moment because each exchange has its own separate liquidity pool. An arbitrage trader exploits that temporary gap. The catch is that the headline price spread is rarely your real profit: network gas fees, the trading fee each DEX charges, and slippage all eat into the margin. This calculator subtracts every one of those hidden costs so you see your true net profit before you commit any capital.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Why do prices differ between exchanges like Uniswap and SushiSwap?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Each decentralized exchange runs its own independent liquidity pool for a given token pair, and prices are set by the ratio of assets inside that specific pool rather than by a shared global order book. When a large trade hits one pool, it shifts that pool's price while the other pool stays put, creating a temporary gap. Different pools also have different depths of liquidity and attract different trading volume, so they drift apart and re-converge constantly. Arbitrage traders are the mechanism that pushes the two prices back together: by buying from the cheaper pool and selling into the more expensive one, they nudge both prices toward equilibrium and earn the spread for doing so.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What is slippage and why does it destroy profits?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Slippage is the difference between the price you expect and the price you actually get when your trade executes. On a DEX, every trade moves the price of the pool it touches, so a large buy pushes the price up against you and a large sell pushes it down. The bigger your trade relative to the pool's liquidity, the worse the slippage, an effect also called price impact. Slippage destroys arbitrage profits because it applies to both legs of the trade and scales with size: a spread that looks generous on a tiny test trade can completely vanish once you trade enough volume to make the gas fees worthwhile. This calculator lets you enter an estimated slippage percentage so you can see exactly how much it subtracts from your net profit.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Are gas fees charged even if my arbitrage trade fails?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Yes. On Ethereum and most EVM chains, gas pays the network validators for the computation they perform, and that work happens whether or not your transaction achieves its goal. If your arbitrage transaction reverts because the price moved before it confirmed, because another bot front-ran you, or because your slippage tolerance was exceeded, you still pay the gas for the failed attempt. This is one of the most underestimated risks in DeFi arbitrage: during periods of high network congestion you can burn a meaningful amount in gas on reverted transactions and never complete a single profitable trade. Always treat gas as a sunk cost you may pay even with nothing to show for it, and size your trades so a few failed attempts do not wipe out your edge.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Does this crypto arbitrage calculator store my data?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            No. Every calculation runs entirely inside your own browser using client-side JavaScript. The investment amount, prices, gas fees, trading fees, and slippage figures you enter are never transmitted, saved, or shared with any server. Nothing you type leaves your device, so your trading strategy stays completely private.
+          </div>
+        </div>
+
+      </div><!-- end edu-section -->
+
+    </div><!-- end container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* Round to exact cents with floating-point error prevention */
+    function round2(value) {
+      return Math.round((value + Number.EPSILON) * 100) / 100;
+    }
+
+    function num(id) {
+      var v = parseFloat(document.getElementById(id).value);
+      return isNaN(v) ? null : v;
+    }
+
+    function fmtUSD(n) {
+      if (isNaN(n) || !isFinite(n)) return '--';
+      var v = round2(n);
+      var sign = v < 0 ? '-' : '';
+      return sign + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function resetOutputs() {
+      ['out-net-profit','out-invested','out-roi','out-total-costs','out-gross-profit',
+       'out-fee-deduction','out-slippage-deduction','out-gas-deduction',
+       'out-tokens','out-gross-value','out-spread'].forEach(function(id){
+        document.getElementById(id).textContent = '--';
+      });
+      document.getElementById('hero').classList.remove('rekt');
+      var banner = document.getElementById('status-banner');
+      banner.className = 'status-banner idle';
+      banner.textContent = 'Enter your trade details to check if the arbitrage is profitable';
+    }
+
+    /* Core crypto arbitrage engine, 100% client-side */
+    function recalc() {
+      var investment = num('investment');
+      var buyPrice   = num('buy-price');
+      var sellPrice  = num('sell-price');
+      var gasFees    = num('gas-fees');
+      var tradingPct = num('trading-fees');
+      var slipPct    = num('slippage');
+
+      /* Validate: need positive investment and buy price; others default to 0 */
+      if (investment === null || buyPrice === null || sellPrice === null ||
+          investment <= 0 || buyPrice <= 0 || sellPrice < 0) {
+        resetOutputs();
+        return;
+      }
+      if (gasFees === null)    gasFees = 0;
+      if (tradingPct === null) tradingPct = 0;
+      if (slipPct === null)    slipPct = 0;
+
+      /* Engine */
+      var tokensBought = investment / buyPrice;
+      var grossValue   = tokensBought * sellPrice;
+      var grossProfit  = grossValue - investment;
+
+      var feeDeduction      = grossValue * (tradingPct / 100);
+      var slippageDeduction = grossValue * (slipPct / 100);
+      var totalCosts        = feeDeduction + slippageDeduction + gasFees;
+
+      var netProfit = grossProfit - totalCosts;
+      var netRoi    = (netProfit / investment) * 100;
+      var spread    = ((sellPrice - buyPrice) / buyPrice) * 100;
+
+      /* Round currency outputs to exact cents */
+      grossProfit       = round2(grossProfit);
+      feeDeduction      = round2(feeDeduction);
+      slippageDeduction = round2(slippageDeduction);
+      var gasRounded    = round2(gasFees);
+      totalCosts        = round2(totalCosts);
+      netProfit         = round2(netProfit);
+
+      /* Render hero */
+      document.getElementById('out-net-profit').textContent = (netProfit >= 0 ? '+' : '') + fmtUSD(netProfit);
+      document.getElementById('out-invested').textContent   = fmtUSD(investment);
+      document.getElementById('out-roi').textContent        = (netRoi >= 0 ? '+' : '') + netRoi.toFixed(2) + '%';
+
+      /* Render reality check */
+      document.getElementById('out-total-costs').textContent       = fmtUSD(totalCosts);
+      document.getElementById('out-gross-profit').textContent      = (grossProfit >= 0 ? '+' : '') + fmtUSD(grossProfit);
+      document.getElementById('out-fee-deduction').textContent     = '-' + fmtUSD(feeDeduction);
+      document.getElementById('out-slippage-deduction').textContent = '-' + fmtUSD(slippageDeduction);
+      document.getElementById('out-gas-deduction').textContent     = '-' + fmtUSD(gasRounded);
+
+      /* Render secondary metrics */
+      document.getElementById('out-tokens').textContent      = tokensBought.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+      document.getElementById('out-gross-value').textContent = fmtUSD(grossValue);
+      document.getElementById('out-spread').textContent      = (spread >= 0 ? '+' : '') + spread.toFixed(2) + '%';
+
+      /* Status + theme */
+      var hero = document.getElementById('hero');
+      var banner = document.getElementById('status-banner');
+
+      if (netProfit > 0) {
+        hero.classList.remove('rekt');
+        banner.className = 'status-banner profit';
+        banner.innerHTML = 'Profitable Arbitrage: The price spread covers all network and trading costs. <span class="status-sub">Net profit ' + fmtUSD(netProfit) + ' at ' + netRoi.toFixed(2) + '% net ROI</span>';
+      } else {
+        hero.classList.add('rekt');
+        banner.className = 'status-banner loss';
+        banner.innerHTML = 'Unprofitable Trade: Slippage and gas fees will eat your entire profit margin. <span class="status-sub">Net result ' + (netProfit >= 0 ? '+' : '') + fmtUSD(netProfit) + ' at ' + netRoi.toFixed(2) + '% net ROI</span>';
+      }
+    }
+
+    /* FAQ accordion */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      answer.style.display = expanded ? 'none' : 'block';
+    }
+
+    /* Run once on load so the default state is shown */
+    recalc();
+  </script>
+
+</body>
+</html>

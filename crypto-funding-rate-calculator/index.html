@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free crypto funding rate calculator for the delta neutral strategy. Find your exact spot and short allocations, calculate perpetual futures funding fees, and project your passive APY and annual income. 100% client-side." />
+  <meta name="keywords" content="crypto funding rate calculator, delta neutral strategy, perpetual futures funding fee, cash and carry arbitrage, funding rate calculator, delta neutral calculator, perpetual futures calculator, funding fee calculator, crypto passive income calculator, crypto APY calculator, basis trade calculator, funding interval calculator" />
+  <title>Crypto Funding Rate Calculator: Delta Neutral Strategy APY and Passive Income | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/crypto-funding-rate-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Crypto Funding Rate Calculator",
+        "description": "Free crypto funding rate calculator for the delta neutral strategy. Find your exact spot and short allocations, calculate perpetual futures funding fees, and project your passive APY and annual income. 100% client-side.",
+        "url": "https://axiomape.com/crypto-funding-rate-calculator/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a crypto funding rate and why does it exist?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A funding rate is a small periodic payment exchanged between traders who hold perpetual futures contracts. Unlike traditional futures, a perpetual contract never expires, so exchanges use the funding rate to keep the contract price tethered to the real spot price of the underlying asset. When the perpetual trades above spot, the funding rate is positive and long traders pay short traders. When it trades below spot, the rate is negative and short traders pay longs. The rate is usually quoted as a percentage charged every 8 hours, though some exchanges settle every 1 or 4 hours. In a delta neutral strategy you hold the short side specifically to collect this funding payment, which is why a positive funding rate becomes a source of passive income."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does delta neutral mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Delta is a measure of how much your position value changes when the price of the asset moves. A delta neutral position is built so those price movements cancel out, leaving your total portfolio value roughly flat whether the asset goes up or down. In this strategy you buy an asset on the spot market and simultaneously open an equal sized short on the perpetual futures market. If the price rises, your spot holding gains exactly what your short loses, and if the price falls, your short gains exactly what your spot loses. Because the two legs offset, you are not betting on direction. You are simply positioned to harvest the funding rate while the market noise washes out."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do I have to split my money between spot and futures?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Splitting your capital evenly is what makes the strategy both market neutral and safe from liquidation. Half of your money buys the asset on the spot market, and the other half backs an equal sized short position at 1x leverage on perpetual futures. Matching the dollar size of both legs is what cancels out price risk, so a move in either direction does not change your net worth. Funding the short with the full other half of your capital keeps the leverage at 1x, which means there is effectively no liquidation price the market can realistically reach. If you instead used high leverage to short with only a sliver of capital, a sharp price rise could liquidate the short and break the hedge. The fifty fifty split trades away some yield for the security of never being forced out of your position."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I lose money doing this delta neutral strategy?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, this strategy is lower risk than directional trading but it is not risk free. The main risk is that the funding rate turns negative. When that happens the short side has to pay the funding fee instead of receiving it, so your passive income reverses into a recurring cost that slowly drains your capital. Funding rates change every interval and can flip negative during bearish stretches, so the projected APY shown here assumes the current rate holds, which it will not do forever. Other real costs include trading fees and spreads when you open and close both legs, the risk that one exchange has technical or solvency problems, and the small tracking differences that can appear between the spot price and the perpetual price. You should monitor the live funding rate and be ready to unwind both legs if it stays negative."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does this funding rate calculator store my data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Every calculation runs entirely inside your own browser using client-side JavaScript. The capital amount, funding rate, and interval you enter are never transmitted, saved, or shared with any server. Nothing you type leaves your device, so your trading plan stays completely private."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Delta neutral palette */
+      --green:         #10B981;
+      --green-light:   #D1FAE5;
+      --green-hover:   #059669;
+      --green-deep:    #065F46;
+      --slate:         #64748B;
+      --slate-light:   #94A3B8;
+      --slate-deep:    #334155;
+      --amber:         #F59E0B;
+      --blue:          #3B82F6;
+      --red:           #EF4444;
+
+      /* Dark theme base */
+      --bg:            #0F172A;
+      --bg-card:       #1E293B;
+      --bg-card-hover: #273549;
+      --bg-input:      #0F172A;
+      --border:        #334155;
+      --border-focus:  #10B981;
+      --text:          #F1F5F9;
+      --text-muted:    #94A3B8;
+      --text-light:    #64748B;
+      --white:         #FFFFFF;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.2);
+      --shadow-lg: 0 10px 32px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.3);
+      --radius:    16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Tool header */
+    .tool-header {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F2B1A 100%);
+      border-bottom: 2px solid var(--green);
+      padding: 48px 20px 40px;
+      text-align: center;
+    }
+
+    .tool-header h1 {
+      font-size: clamp(20px, 4.5vw, 30px);
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+      color: var(--white);
+    }
+
+    .tool-header h1 span { color: var(--green); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .main-content { padding: 32px 0 48px; }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 480px) { .card { padding: 20px 16px; } }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .icon { font-size: 18px; }
+
+    /* Hero: Projected APY and Annual Passive Income are the twin star metrics */
+    .hero {
+      background: linear-gradient(135deg, #0F2B1A 0%, #1A3520 100%);
+      border: 2px solid var(--green);
+      border-radius: var(--radius);
+      padding: 30px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 32px rgba(16,185,129,.12);
+      transition: all .3s ease;
+    }
+
+    .hero.flat {
+      background: var(--bg-card);
+      border-color: var(--red);
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero-twin {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (max-width: 480px) { .hero-twin { grid-template-columns: 1fr; gap: 24px; } }
+
+    .hero-star { text-align: center; }
+
+    .hero-star + .hero-star {
+      border-left: 1px solid rgba(255,255,255,.08);
+    }
+
+    @media (max-width: 480px) {
+      .hero-star + .hero-star { border-left: none; border-top: 1px solid rgba(255,255,255,.08); padding-top: 22px; }
+    }
+
+    .hero-star .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .hero.flat .hero-star .hero-label { color: var(--red); }
+
+    .hero-star .hero-value {
+      font-size: clamp(38px, 9vw, 60px);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1;
+      color: var(--green);
+      transition: color .3s ease;
+    }
+
+    .hero.flat .hero-star .hero-value { color: var(--red); }
+
+    .hero-star .hero-sublabel {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .hero-warning {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .hero-warning.danger { color: var(--red); font-weight: 600; }
+
+    /* Input grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 680px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: .01em;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-prefix, .input-suffix {
+      position: absolute;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-light);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input-prefix { left: 12px; }
+    .input-suffix { right: 12px; }
+
+    .input-wrap input,
+    .input-wrap select {
+      width: 100%;
+      padding: 11px 14px 11px 24px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .input-wrap input.suffix-pad { padding: 11px 30px 11px 14px; }
+    .input-wrap select { padding-left: 14px; cursor: pointer; appearance: none; }
+
+    .input-wrap input:focus,
+    .input-wrap select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+    }
+
+    .input-wrap input::placeholder { color: var(--text-light); font-weight: 500; }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* How To Trade It: dual card layout (slate gray = low risk position sizing) */
+    .trade-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 560px) { .trade-grid { grid-template-columns: 1fr; } }
+
+    .trade-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--slate);
+      border-radius: var(--radius-sm);
+      padding: 22px 20px;
+    }
+
+    .trade-card .tc-step {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--slate-light);
+      margin-bottom: 6px;
+    }
+
+    .trade-card .tc-action {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+
+    .trade-card .tc-amount {
+      font-size: clamp(28px, 7vw, 36px);
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--slate-light);
+      line-height: 1;
+    }
+
+    .trade-card .tc-detail {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    /* Income Tape: receipt-style breakdown */
+    .tape {
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 22px;
+    }
+
+    .tape-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 14px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .tape-row:last-child { border-bottom: none; }
+
+    .tape-row .tape-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .tape-row .tape-value {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      color: var(--green);
+      transition: color .3s ease;
+    }
+
+    .tape-row.year .tape-value { font-size: 24px; }
+    .tape.negative .tape-value { color: var(--red); }
+
+    /* Secondary metric cards */
+    .metric-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 560px) { .metric-cards { grid-template-columns: 1fr; } }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      text-align: center;
+    }
+
+    .metric-card .mc-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-card .mc-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .metric-card .mc-sub {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    /* Disclaimer */
+    .tool-disclaimer {
+      background: rgba(245,158,11,.07);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 520px) { .glossary-grid { grid-template-columns: 1fr; } }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 3px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational */
+    .edu-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .section-intro {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0 8px;
+    }
+
+    .edu-section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      width: 100%;
+      background: var(--bg);
+      border: none;
+      text-align: left;
+      padding: 14px 18px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: background .15s;
+    }
+
+    .faq-q:hover { background: var(--bg-card-hover); }
+
+    .faq-q .faq-arrow {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--green);
+      transition: transform .25s;
+    }
+
+    .faq-q[aria-expanded="true"] .faq-arrow { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--bg);
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+
+<body>
+
+  <header class="tool-header">
+    <h1>Crypto Funding Rate Calculator: Build a <span>Delta Neutral</span> Position and Project Your Passive APY</h1>
+    <p>This free delta neutral calculator finds your exact spot and short allocations, calculates perpetual futures funding fees, and projects the passive APY and annual income you could earn by collecting the funding rate.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- HERO: Projected APY and Annual Passive Income are the twin star metrics -->
+      <div class="hero" id="hero" aria-live="polite" aria-atomic="true">
+        <div class="hero-twin">
+          <div class="hero-star">
+            <div class="hero-label">Projected APY</div>
+            <div class="hero-value" id="out-apy">--</div>
+            <div class="hero-sublabel">Annual percentage yield on your total capital</div>
+          </div>
+          <div class="hero-star">
+            <div class="hero-label">Annual Passive Income</div>
+            <div class="hero-value" id="out-annual">--</div>
+            <div class="hero-sublabel">Funding collected over 365 days at this rate</div>
+          </div>
+        </div>
+        <div class="hero-warning" id="hero-warning">Projection assumes the current funding rate holds steady. Live rates change every interval.</div>
+      </div>
+
+      <!-- INPUT CARD -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#9878;</span> Enter Your Position Inputs</div>
+
+        <div class="form-grid">
+
+          <div class="input-group">
+            <label for="capital">Total Capital to Invest (USD)</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="text" id="capital" inputmode="numeric" placeholder="1,000" value="1,000" oninput="formatCurrency(this); recalc();" onchange="recalc();" />
+            </div>
+            <div class="field-hint">The full amount you will deploy. It is split evenly across the spot buy and the short.</div>
+          </div>
+
+          <div class="input-group">
+            <label for="rate">Current Funding Rate (%)</label>
+            <div class="input-wrap">
+              <input type="number" id="rate" class="suffix-pad" step="0.001" inputmode="decimal" placeholder="0.01" value="0.01" oninput="recalc();" onchange="recalc();" />
+              <span class="input-suffix">%</span>
+            </div>
+            <div class="field-hint">The funding rate paid each interval. A positive rate pays the short side that you hold.</div>
+          </div>
+
+          <div class="input-group">
+            <label for="interval">Funding Interval</label>
+            <div class="input-wrap">
+              <select id="interval" onchange="recalc();">
+                <option value="8" selected>Every 8 Hours (Standard)</option>
+                <option value="4">Every 4 Hours</option>
+                <option value="1">Every 1 Hour</option>
+              </select>
+            </div>
+            <div class="field-hint">How often the exchange settles funding. This sets the number of daily payouts.</div>
+          </div>
+
+        </div><!-- end form-grid -->
+      </div><!-- end input card -->
+
+      <!-- HOW TO TRADE IT: dual card layout -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#128221;</span> How to Trade It: Your Exact Allocations</div>
+        <div class="trade-grid">
+
+          <div class="trade-card">
+            <div class="tc-step">Step 1</div>
+            <div class="tc-action">Buy Spot (Hold in Wallet)</div>
+            <div class="tc-amount" id="out-spot">--</div>
+            <div class="tc-detail">Buy this dollar amount of the asset on the spot market and hold it. This is the long leg of your hedge.</div>
+          </div>
+
+          <div class="trade-card">
+            <div class="tc-step">Step 2</div>
+            <div class="tc-action">Open 1x Short (Perpetual Futures)</div>
+            <div class="tc-amount" id="out-short">--</div>
+            <div class="tc-detail">Open an equal sized short at 1x leverage on the perpetual contract. This collects the funding rate with no liquidation risk.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- INCOME TAPE: receipt-style breakdown -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#129534;</span> The Income Tape: Funding Collected</div>
+        <div class="tape" id="tape">
+          <div class="tape-row">
+            <span class="tape-label">Per Payout</span>
+            <span class="tape-value" id="out-payout">--</span>
+          </div>
+          <div class="tape-row">
+            <span class="tape-label">Per Day</span>
+            <span class="tape-value" id="out-day">--</span>
+          </div>
+          <div class="tape-row">
+            <span class="tape-label">Per Month</span>
+            <span class="tape-value" id="out-month">--</span>
+          </div>
+          <div class="tape-row year">
+            <span class="tape-label">Per Year</span>
+            <span class="tape-value" id="out-year">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECONDARY METRICS -->
+      <div class="metric-cards">
+        <div class="metric-card">
+          <div class="mc-label">Short Position Size</div>
+          <div class="mc-value" id="out-shortsize">--</div>
+          <div class="mc-sub">The half that earns funding</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Daily Payouts</div>
+          <div class="mc-value" id="out-payouts">--</div>
+          <div class="mc-sub">Settlements per 24 hours</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Fee Per Interval</div>
+          <div class="mc-value" id="out-feeinterval">--</div>
+          <div class="mc-sub">Funding at each settlement</div>
+        </div>
+      </div>
+
+      <!-- TOOL DISCLAIMER -->
+      <aside class="tool-disclaimer">
+        <strong>For informational and educational purposes only.</strong> This tool performs trading mathematics only and is not investment, trading, or financial advice. It does not place trades and is not affiliated with any exchange. Funding rates change constantly and can turn negative, which would mean you pay the fee instead of receiving it. Cryptocurrency trading carries real financial risk including the potential loss of capital, exchange failure, and counterparty risk, and may be restricted in your jurisdiction. Past or projected yields do not guarantee future results. Do your own research and only risk what you can afford to lose.
+      </aside>
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#128214;</span> Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Funding Rate</div>
+            <div class="glossary-def">A small periodic payment swapped between long and short traders on a perpetual futures contract. It keeps the perpetual price tethered to spot. When positive, the short side you hold gets paid.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Delta Neutral</div>
+            <div class="glossary-def">A position built so price moves cancel out. By holding equal sized spot and short legs, your net value stays roughly flat whether the asset rises or falls, leaving the funding rate as your profit.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Perpetual Futures</div>
+            <div class="glossary-def">A futures contract with no expiry date. Because it never settles to delivery, exchanges use the funding rate mechanism to keep its price aligned with the underlying spot market.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Spot Market</div>
+            <div class="glossary-def">The market where you buy and own the actual asset for immediate delivery, holding it in your wallet. In this strategy the spot purchase is the long leg that offsets your short.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">APY (Annual Percentage Yield)</div>
+            <div class="glossary-def">The yearly return on your capital expressed as a percentage. Here it is the projected annual funding income divided by your total capital, assuming the current rate holds.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Cash and Carry Arbitrage</div>
+            <div class="glossary-def">A market neutral trade where you buy an asset in the spot market and sell a derivative against it to capture a pricing difference. Collecting perpetual funding is a popular crypto version of this classic strategy.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">1x Leverage</div>
+            <div class="glossary-def">Sizing a futures position so it equals the cash backing it, with no borrowing multiplier. At 1x there is effectively no liquidation price the market can realistically reach, which is what keeps the short leg safe.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Funding Interval</div>
+            <div class="glossary-def">How often an exchange settles the funding payment. The standard is every 8 hours, which is 3 payouts a day, though some venues use 4 hour or 1 hour intervals for more frequent settlement.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Short Position</div>
+            <div class="glossary-def">A bet that profits when price falls. In a delta neutral funding trade the short is not a directional bet, it is simply the leg that collects the funding rate while your spot holding offsets the price risk.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Liquidation</div>
+            <div class="glossary-def">The forced closure of a leveraged position when losses exhaust its margin. Using 1x leverage and backing the short with a full half of your capital is what keeps liquidation off the table.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to the Delta Neutral Funding Rate Strategy</h2>
+        <p class="section-intro">
+          The delta neutral funding strategy, sometimes called a cash and carry trade or basis trade, is one of the most popular ways to earn passive yield in crypto without betting on price direction. The idea is simple: you buy an asset on the spot market, short the same dollar amount on perpetual futures, and collect the funding rate that long traders pay to shorts. This guide explains the math behind the calculator above, how to read its results, and the real risks involved.
+        </p>
+
+        <h3>How to Use This Funding Rate Calculator</h3>
+        <p>
+          Enter the Total Capital you plan to deploy, the Current Funding Rate quoted by your exchange as a percentage, and the Funding Interval the exchange uses to settle payments. Everything updates instantly as you type, with no submit button to press. The calculator splits your capital in half, sizes the spot buy and the short equally, and projects your funding income per payout, per day, per month, and per year. The two star metrics at the top are your Projected APY and your Annual Passive Income.
+        </p>
+
+        <h3>The Delta Neutral Engine, Step by Step</h3>
+        <p>
+          First the engine splits your capital evenly: the Spot Allocation is your total capital divided by two, and the Short Position Size is the other half. Matching these two dollar amounts is what cancels out price risk and keeps the short at 1x leverage. Next it works out the fee earned at each settlement, which is the short position size multiplied by the funding rate as a decimal. It then converts the interval into daily payouts: an 8 hour interval is 3 payouts a day, a 4 hour interval is 6, and a 1 hour interval is 24. Daily income is the fee per interval times the daily payouts, annual income is the daily figure times 365, and the APY is annual income divided by total capital, shown as a percentage.
+        </p>
+
+        <h3>A Worked Example</h3>
+        <p>
+          Suppose you deploy 1,000 dollars at a funding rate of 0.01 percent on a standard 8 hour interval. Your capital splits into a 500 dollar spot buy and a 500 dollar short. The fee per interval is 500 times 0.0001, which is 5 cents. With 3 payouts a day that is 15 cents of daily income, about 4.56 dollars a month, and roughly 54.75 dollars a year. Dividing the annual income by your 1,000 dollars of capital gives a projected APY of about 5.48 percent, all collected without taking a directional view on the market.
+        </p>
+
+        <h3>Why the Fifty Fifty Split Keeps You Safe</h3>
+        <p>
+          The even split is the heart of the strategy. Because the spot and short legs are the same dollar size, a rise in price gains on the spot side exactly what it loses on the short, and a fall does the reverse. Your net worth barely moves, so you are market neutral. Funding the short with a full half of your capital also keeps it at 1x leverage, meaning there is no realistic liquidation price. Traders who chase higher headline yields by shorting with high leverage give up this safety, because a sharp price spike can liquidate the short and break the hedge entirely.
+        </p>
+
+        <h3>The Single Biggest Risk to Watch</h3>
+        <p>
+          The projection assumes the funding rate stays positive and steady, but in reality it changes every interval and can turn negative. When the rate is negative, the short side has to pay funding instead of receiving it, so your passive income reverses into a recurring cost. This is the main way the strategy loses money. You should monitor the live funding rate, factor in trading fees and spreads on both legs, and be prepared to unwind the position if the rate stays negative for an extended stretch.
+        </p>
+
+        <h3>Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What is a crypto funding rate and why does it exist?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            A funding rate is a small periodic payment exchanged between traders who hold perpetual futures contracts. Unlike traditional futures, a perpetual contract never expires, so exchanges use the funding rate to keep the contract price tethered to the real spot price of the underlying asset. When the perpetual trades above spot, the funding rate is positive and long traders pay short traders. When it trades below spot, the rate is negative and short traders pay longs. The rate is usually quoted as a percentage charged every 8 hours, though some exchanges settle every 1 or 4 hours. In a delta neutral strategy you hold the short side specifically to collect this funding payment, which is why a positive funding rate becomes a source of passive income.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            What does delta neutral mean?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Delta is a measure of how much your position value changes when the price of the asset moves. A delta neutral position is built so those price movements cancel out, leaving your total portfolio value roughly flat whether the asset goes up or down. In this strategy you buy an asset on the spot market and simultaneously open an equal sized short on the perpetual futures market. If the price rises, your spot holding gains exactly what your short loses, and if the price falls, your short gains exactly what your spot loses. Because the two legs offset, you are not betting on direction. You are simply positioned to harvest the funding rate while the market noise washes out.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Why do I have to split my money between spot and futures?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Splitting your capital evenly is what makes the strategy both market neutral and safe from liquidation. Half of your money buys the asset on the spot market, and the other half backs an equal sized short position at 1x leverage on perpetual futures. Matching the dollar size of both legs is what cancels out price risk, so a move in either direction does not change your net worth. Funding the short with the full other half of your capital keeps the leverage at 1x, which means there is effectively no liquidation price the market can realistically reach. If you instead used high leverage to short with only a sliver of capital, a sharp price rise could liquidate the short and break the hedge. The fifty fifty split trades away some yield for the security of never being forced out of your position.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Can I lose money doing this delta neutral strategy?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Yes, this strategy is lower risk than directional trading but it is not risk free. The main risk is that the funding rate turns negative. When that happens the short side has to pay the funding fee instead of receiving it, so your passive income reverses into a recurring cost that slowly drains your capital. Funding rates change every interval and can flip negative during bearish stretches, so the projected APY shown here assumes the current rate holds, which it will not do forever. Other real costs include trading fees and spreads when you open and close both legs, the risk that one exchange has technical or solvency problems, and the small tracking differences that can appear between the spot price and the perpetual price. You should monitor the live funding rate and be ready to unwind both legs if it stays negative.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+            Does this funding rate calculator store my data?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            No. Every calculation runs entirely inside your own browser using client-side JavaScript. The capital amount, funding rate, and interval you enter are never transmitted, saved, or shared with any server. Nothing you type leaves your device, so your trading plan stays completely private.
+          </div>
+        </div>
+
+      </div><!-- end edu-section -->
+
+    </div><!-- end container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* Currency input formatter (thousands separators, integer dollars) */
+    function formatCurrency(el) {
+      var raw = el.value.replace(/[^0-9]/g, '');
+      if (raw === '') { el.value = ''; return; }
+      el.value = parseInt(raw, 10).toLocaleString('en-US');
+    }
+
+    function parseCurrency(str) {
+      if (!str) return 0;
+      var n = parseFloat(String(str).replace(/,/g, ''));
+      return isNaN(n) ? 0 : n;
+    }
+
+    /* Round to exact cents with floating-point error prevention */
+    function round2(value) {
+      return Math.round((value + Number.EPSILON) * 100) / 100;
+    }
+
+    function fmtUSD(n) {
+      if (isNaN(n) || !isFinite(n)) return '--';
+      var v = round2(n);
+      var sign = v < 0 ? '-' : '';
+      return sign + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* Daily payouts per funding interval */
+    var PAYOUTS = { '8': 3, '4': 6, '1': 24 };
+
+    var OUT_IDS = ['out-apy','out-annual','out-spot','out-short','out-payout','out-day','out-month','out-year','out-shortsize','out-payouts','out-feeinterval'];
+
+    function resetOutputs() {
+      OUT_IDS.forEach(function(id){ document.getElementById(id).textContent = '--'; });
+      document.getElementById('hero').classList.remove('flat');
+      document.getElementById('tape').classList.remove('negative');
+      var hw = document.getElementById('hero-warning');
+      hw.classList.remove('danger');
+      hw.textContent = 'Projection assumes the current funding rate holds steady. Live rates change every interval.';
+    }
+
+    /* Core delta neutral engine, 100% client-side */
+    function recalc() {
+      var capital = parseCurrency(document.getElementById('capital').value);
+      var rateRaw = document.getElementById('rate').value;
+      var rate = parseFloat(rateRaw);
+      var intervalKey = document.getElementById('interval').value;
+      var dailyPayouts = PAYOUTS[intervalKey];
+
+      if (capital <= 0 || rateRaw.trim() === '' || isNaN(rate)) { resetOutputs(); return; }
+
+      /* The 50/50 split (1x leverage safety) */
+      var spotAllocation = round2(capital / 2);
+      var shortPositionSize = round2(capital / 2);
+
+      /* Funding math */
+      var feePerInterval = round2(shortPositionSize * (rate / 100));
+      var dailyIncome = round2(feePerInterval * dailyPayouts);
+      var annualIncome = round2(dailyIncome * 365);
+      var monthlyIncome = round2(annualIncome / 12);
+      var apy = round2((annualIncome / capital) * 100);
+
+      /* Hero star metrics */
+      document.getElementById('out-apy').textContent = (apy >= 0 ? '' : '-') + Math.abs(apy).toFixed(2) + '%';
+      document.getElementById('out-annual').textContent = (annualIncome >= 0 ? '' : '-') + '$' + Math.abs(annualIncome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      /* How to trade it */
+      document.getElementById('out-spot').textContent = fmtUSD(spotAllocation);
+      document.getElementById('out-short').textContent = fmtUSD(shortPositionSize);
+
+      /* Income tape */
+      document.getElementById('out-payout').textContent = fmtUSD(feePerInterval);
+      document.getElementById('out-day').textContent = fmtUSD(dailyIncome);
+      document.getElementById('out-month').textContent = fmtUSD(monthlyIncome);
+      document.getElementById('out-year').textContent = fmtUSD(annualIncome);
+
+      /* Secondary metrics */
+      document.getElementById('out-shortsize').textContent = fmtUSD(shortPositionSize);
+      document.getElementById('out-payouts').textContent = dailyPayouts + ' / day';
+      document.getElementById('out-feeinterval').textContent = fmtUSD(feePerInterval);
+
+      /* Negative funding rate state: income reverses into a cost */
+      var hero = document.getElementById('hero');
+      var tape = document.getElementById('tape');
+      var hw = document.getElementById('hero-warning');
+      if (rate < 0) {
+        hero.classList.add('flat');
+        tape.classList.add('negative');
+        hw.classList.add('danger');
+        hw.textContent = 'Warning: a negative funding rate means you PAY the funding fee instead of receiving it. These figures are a recurring cost, not income.';
+      } else {
+        hero.classList.remove('flat');
+        tape.classList.remove('negative');
+        hw.classList.remove('danger');
+        hw.textContent = 'Projection assumes the current funding rate holds steady. Live rates change every interval.';
+      }
+    }
+
+    /* FAQ accordion */
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      answer.style.display = expanded ? 'none' : 'block';
+    }
+
+    /* Run once on load so the default profitable state is shown */
+    recalc();
+  </script>
+
+</body>
+</html>
