@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free Stripe fee calculator. Estimate Stripe payment processing fees, see your exact net payout, and calculate how much to charge a customer to receive a specific net amount after fees. 100% client-side." />
+  <meta name="keywords" content="Stripe fee calculator, Stripe processing fees, pass Stripe fee to customer, payment gateway calculator, Stripe pricing calculator, Stripe payment fees, net payout calculator, gross up calculator, credit card processing fee, international card fee" />
+  <title>Stripe Fee Calculator: Estimate Processing Costs and Pass Fees to Customers | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/stripe-fee-calculator/" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Stripe Fee Calculator",
+        "description": "Free Stripe fee calculator. Estimate Stripe payment processing fees, see your exact net payout, and calculate how much to charge a customer to receive a specific net amount after fees. 100% client-side.",
+        "url": "https://axiomape.com/stripe-fee-calculator/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What are Stripe's standard fees for credit cards?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Stripe's standard published rate for online credit and debit card payments in the United States is 2.9% of the transaction amount plus a fixed 30 cent fee per successful charge. So on a 100 dollar charge you pay 2.90 dollars in percentage fees plus 0.30 cents, for a total fee of 3.20 dollars and a net payout of 96.80 dollars. Stripe adds an extra 1% for cards issued outside the United States (an international or cross-border card), and another 1% when a currency conversion is required. That pushes the maximum standard percentage rate to 4.9% plus the same 30 cent fixed fee. Custom or negotiated Interchange Plus pricing is available for high volume businesses and may differ."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I pass the Stripe processing fee to my customer?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "To receive an exact net amount after fees, you cannot simply add 2.9% and 30 cents to your price, because the fee is charged on the higher total, not on your original amount. You have to gross up. Switch this calculator to the second mode, Invoice a specific net amount, and enter the amount you want to land in your bank account. The tool applies the formula Required Charge = (Net Amount + 0.30) divided by (1 minus the percentage rate). For a 100 dollar net at the US standard rate, you would charge 103.30 dollars. The customer pays the fee for you, and you net exactly what you intended. Note that some jurisdictions and card network rules restrict or regulate surcharging, so confirm what is permitted where you operate."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Stripe refund processing fees if I issue a refund to my customer?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. When you refund a charge, Stripe returns the full amount to your customer, but the original processing fee (the 2.9% plus 30 cents, plus any international or conversion add-ons) is not returned to you. This means a refunded transaction actually costs you the entire fee out of pocket. For a 100 dollar charge that you fully refund, you are out the 3.20 dollar fee with nothing collected. This is an important reason to be careful with refund-heavy business models and to factor expected refunds into your pricing."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is an international or cross-border fee?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "An international or cross-border fee is an extra charge Stripe applies when the customer's card was issued by a bank outside your own country. Stripe adds approximately 1% on top of the standard rate for these cards. A separate 1% currency conversion fee applies when the charge must be converted from one currency to another (for example, a customer paying in euros into a US dollar account). Both add-ons can apply at the same time, which is why the maximum standard percentage rate reaches 4.9%. Use the International Card and Currency Conversion checkboxes above to model these scenarios."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the fixed 30 cent fee matter so much on small transactions?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The 30 cent fixed fee is charged on every successful transaction regardless of size, so it dominates the effective rate on small charges. On a 100 dollar sale, 30 cents is only 0.3% of the total and the effective fee rate is about 3.2%. But on a 2 dollar sale, that same 30 cents is 15% of the transaction, pushing the effective rate above 18%. This is why micro-transactions are expensive to process and why many businesses set minimum order values or batch small payments together."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      /* Stripe Blurple brand palette */
+      --blurple:        #635BFF;
+      --blurple-dark:   #4B45D6;
+      --blurple-bg:     rgba(99,91,255,.14);
+      --blurple-pale:   rgba(99,91,255,.22);
+      --green:          #10B981;
+      --green-dark:     #0E9F70;
+      --green-bg:       rgba(16,185,129,.13);
+      --green-pale:     rgba(16,185,129,.22);
+      --red:            #EF4444;
+      --red-bg:         rgba(239,68,68,.15);
+      --slate:          #94A3B8;
+      --slate-bg:       rgba(148,163,184,.12);
+
+      /* Dark theme chrome */
+      --bg:             #0E1520;
+      --bg-card:        #18243A;
+      --bg-card2:       #1F2E47;
+      --bg-card3:       #16202F;
+      --border:         #2A3E5C;
+      --border-light:   #3A5070;
+
+      /* Text */
+      --text:           #E8EFF8;
+      --text-muted:     #8BA3C0;
+      --text-dim:       #5E7A99;
+
+      --radius:    14px;
+      --radius-sm: 9px;
+      --shadow:    0 4px 24px rgba(0,0,0,.45);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--blurple); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--blurple-dark); }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Hero */
+    .tool-header {
+      background: linear-gradient(135deg, #080F1C 0%, #0E1B32 45%, #161E40 100%);
+      padding: 54px 20px 46px;
+      text-align: center;
+      border-bottom: 3px solid var(--blurple);
+    }
+    .tool-header h1 {
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.025em;
+      color: #fff;
+    }
+    .tool-header h1 span { color: var(--blurple); }
+    .tool-header p {
+      font-size: 15px;
+      color: #8FB3D6;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    @media (max-width: 600px) { .card { padding: 22px 18px; } }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--blurple);
+    }
+    .card-label::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      background: var(--blurple);
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: var(--bg-card3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px;
+      margin-bottom: 22px;
+    }
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 12px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      line-height: 1.3;
+    }
+    .mode-btn:hover { color: var(--text); }
+    .mode-btn.active {
+      background: var(--blurple);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(99,91,255,.35);
+    }
+
+    /* Inputs */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: .02em;
+    }
+    .input-wrap { position: relative; }
+    .input-wrap .prefix {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg-card3);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 12px 12px 26px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: var(--blurple);
+      box-shadow: 0 0 0 3px var(--blurple-bg);
+    }
+    input[type="text"]::placeholder { color: var(--text-dim); font-weight: 400; }
+    .helper { font-size: 11px; color: var(--text-dim); margin-top: 5px; line-height: 1.4; }
+
+    /* Checkbox options */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    @media (max-width: 540px) { .options-grid { grid-template-columns: 1fr; } }
+    .check-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      background: var(--bg-card3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 14px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .check-option:hover { border-color: var(--border-light); }
+    .check-option.checked {
+      border-color: var(--blurple);
+      background: var(--blurple-bg);
+    }
+    .check-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .check-box {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      border: 2px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #fff;
+      margin-top: 1px;
+      transition: background .15s, border-color .15s;
+    }
+    .check-option.checked .check-box { background: var(--blurple); border-color: var(--blurple); }
+    .check-text { font-size: 13px; font-weight: 600; color: var(--text); }
+    .check-text .sub { display: block; font-size: 11px; font-weight: 500; color: var(--text-dim); margin-top: 2px; }
+
+    /* Hero output metric */
+    .hero-output {
+      background: linear-gradient(135deg, #0B1628 0%, #14253F 100%);
+      border: 2px solid var(--green);
+      border-radius: var(--radius);
+      padding: 32px 28px 28px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px rgba(16,185,129,.12);
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .hero-output.charge-mode {
+      border-color: var(--blurple);
+      box-shadow: 0 0 40px rgba(99,91,255,.14);
+    }
+    .hero-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    .hero-output.charge-mode .hero-label { color: var(--blurple); }
+    .hero-value {
+      font-size: clamp(38px, 9vw, 58px);
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -.03em;
+      line-height: 1;
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-output.charge-mode .hero-value { color: var(--blurple); }
+    .hero-sub { font-size: 13px; color: var(--text-muted); }
+
+    /* Status banner */
+    .status-banner {
+      background: var(--slate-bg);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--slate);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .status-banner strong { color: #fff; font-variant-numeric: tabular-nums; }
+
+    /* Visual receipt */
+    .receipt {
+      background: var(--bg-card3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 22px 22px;
+      margin-top: 6px;
+    }
+    .receipt-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 9px 0;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+    .receipt-row .r-label { color: var(--text-muted); }
+    .receipt-row .r-val { font-weight: 700; color: var(--text); }
+    .receipt-row.charge .r-label { color: var(--text); font-weight: 600; }
+    .receipt-row.charge .r-val { color: var(--text); }
+    .receipt-row.deduction .r-label,
+    .receipt-row.deduction .r-val { color: var(--red); }
+    .receipt-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .receipt-divider.dashed { background: none; border-top: 1px dashed var(--border-light); }
+    .receipt-row.net {
+      padding-top: 14px;
+      font-size: 16px;
+    }
+    .receipt-row.net .r-label { color: var(--text); font-weight: 700; }
+    .receipt-row.net .r-val { color: var(--green); font-weight: 800; font-size: 20px; }
+
+    /* Ad placements */
+    .axiom-ad-leaderboard {
+      text-align: center;
+      margin: 8px 0 24px;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+    .axiom-ad-mobile-anchor {
+      text-align: center;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .glossary-item {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .glossary-term { font-size: 13px; font-weight: 700; color: var(--blurple); margin-bottom: 4px; }
+    .glossary-def { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Educational section */
+    .edu-section h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 16px; }
+    .section-intro { font-size: 15px; color: var(--text-muted); line-height: 1.7; margin-bottom: 24px; }
+    .edu-section h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 24px 0 10px; }
+    .edu-section p { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px; }
+
+    /* Formula box */
+    .formula-box {
+      background: var(--bg-card3);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--blurple);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin: 14px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: var(--blurple);
+      line-height: 1.8;
+    }
+
+    /* FAQ */
+    .faq-item { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+    .faq-q {
+      width: 100%;
+      background: var(--bg-card2);
+      border: none;
+      padding: 16px 18px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-family: inherit;
+      transition: background .15s;
+    }
+    .faq-q:hover { background: var(--bg-card3); }
+    .faq-q .chevron {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      transition: transform .2s, background .15s;
+    }
+    .faq-q.open .chevron { transform: rotate(180deg); background: var(--blurple-bg); color: var(--blurple); }
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--bg-card2);
+    }
+    .faq-a.open { display: block; }
+
+    /* Tool disclaimer */
+    .tool-disclaimer {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- site-chrome.js injects header, privacy badge, disclaimer, and footer -->
+
+  <main class="page-wrapper" id="main">
+
+    <header class="tool-header">
+      <h1>Stripe Fee Calculator: <span>Know Your Real Payout</span></h1>
+      <p>Estimate your Stripe payment processing fees in real time, see your exact net payout, and find out precisely how much to charge a customer so you receive the amount you want after fees.</p>
+    </header>
+
+    <div class="container" style="padding-top:32px;">
+
+      <!-- INPUT CARD -->
+      <div class="card">
+        <div class="card-label">Payment Processing Calculator</div>
+
+        <div class="mode-toggle" role="tablist" aria-label="Calculation mode">
+          <button class="mode-btn active" id="modeCharge" role="tab" aria-selected="true" onclick="setMode('charge')">Calculate fees on a charge</button>
+          <button class="mode-btn" id="modeNet" role="tab" aria-selected="false" onclick="setMode('net')">Invoice a specific net amount (Pass fees to client)</button>
+        </div>
+
+        <div class="field">
+          <label for="amount" id="amountLabel">Transaction Amount ($)</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="text" id="amount" value="100.00" inputmode="decimal" oninput="formatAndCalc(this)" onchange="commitAndCalc(this)" autocomplete="off" aria-describedby="amountHelper" />
+          </div>
+          <div class="helper" id="amountHelper">In "Calculate fees on a charge" mode this is what the customer is billed. In "Invoice a specific net amount" mode this is the amount you want to receive in your bank account.</div>
+        </div>
+
+        <div class="options-grid">
+          <label class="check-option" id="intlOption" for="intlCard">
+            <input type="checkbox" id="intlCard" onchange="toggleCheck(this); calculate();" />
+            <span class="check-box" aria-hidden="true">&#10003;</span>
+            <span class="check-text">International Card (+1%)<span class="sub">Card issued outside the United States (cross-border)</span></span>
+          </label>
+
+          <label class="check-option" id="convOption" for="currencyConv">
+            <input type="checkbox" id="currencyConv" onchange="toggleCheck(this); calculate();" />
+            <span class="check-box" aria-hidden="true">&#10003;</span>
+            <span class="check-text">Currency Conversion Required (+1%)<span class="sub">Charge converted between two currencies</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- HERO OUTPUT -->
+      <div class="hero-output" id="heroOutput">
+        <div class="hero-label" id="heroLabel">Your Net Payout</div>
+        <div class="hero-value" id="heroValue">$96.80</div>
+        <div class="hero-sub" id="heroSub">Amount deposited to your bank after Stripe fees</div>
+      </div>
+
+      <!-- STATUS BANNER -->
+      <div class="status-banner" id="statusBanner">
+        Your effective processing fee is <strong id="effRate">3.20%</strong> of the total transaction.
+      </div>
+
+      <!-- VISUAL RECEIPT -->
+      <div class="card">
+        <div class="card-label">Visual Fee Breakdown</div>
+        <div class="receipt">
+          <div class="receipt-title">Stripe Transaction Receipt</div>
+
+          <div class="receipt-row charge">
+            <span class="r-label">Total Customer Charge</span>
+            <span class="r-val" id="rCharge">$100.00</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-row deduction">
+            <span class="r-label" id="rPctLabel">- Stripe Percentage Fee (2.9%)</span>
+            <span class="r-val" id="rPctVal">-$2.90</span>
+          </div>
+          <div class="receipt-row deduction">
+            <span class="r-label">- Stripe Fixed Fee (30&cent;)</span>
+            <span class="r-val" id="rFixedVal">-$0.30</span>
+          </div>
+
+          <div class="receipt-divider dashed"></div>
+
+          <div class="receipt-row net">
+            <span class="r-label">Net Payout to Your Bank</span>
+            <span class="r-val" id="rNet">$96.80</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- GLOSSARY -->
+      <div class="card">
+        <div class="card-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Merchant Account</div>
+            <div class="glossary-def">A type of bank account that lets a business accept and hold funds from card payments. With Stripe, the merchant account function is built into your Stripe account, so you do not need to open one separately with a bank.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Payment Gateway</div>
+            <div class="glossary-def">The technology that securely transmits card details from your checkout to the card networks and back. Stripe acts as both the gateway and the payment processor, handling authorization, capture, and settlement.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Fixed Fee vs. Percentage Fee</div>
+            <div class="glossary-def">Stripe charges two components per transaction: a percentage of the amount (2.9% standard) plus a flat fixed fee (30 cents). The percentage scales with sale size, while the fixed fee is the same on every charge and weighs heaviest on small transactions.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Net Payout</div>
+            <div class="glossary-def">The money that actually lands in your bank account after Stripe deducts its fees from the customer charge. This is the number that matters for your real revenue, not the sticker price.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Gross-Up</div>
+            <div class="glossary-def">The practice of raising the price you charge so that, after the processor takes its cut, you are left with the exact net amount you intended. The math is not a simple add-on because the fee applies to the higher total.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Chargeback</div>
+            <div class="glossary-def">When a cardholder disputes a charge with their bank and the funds are forcibly reversed. Stripe typically charges a dispute fee on top of returning the disputed amount, making chargebacks costly to merchants.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Cross-Border Fee</div>
+            <div class="glossary-def">An extra charge (about 1%) applied when the customer's card was issued in a different country than your account. It reflects the higher cost and risk of processing international cards.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Currency Conversion Fee</div>
+            <div class="glossary-def">An additional fee (about 1%) charged when a payment must be converted from one currency to another before settling into your account, such as a euro payment settling into a US dollar balance.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Effective Fee Rate</div>
+            <div class="glossary-def">The total fee expressed as a percentage of the full transaction. Because of the fixed 30 cent component, the effective rate is always higher than the headline percentage and rises sharply on small charges.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- EDUCATIONAL SECTION -->
+      <div class="card edu-section">
+        <h2>The Complete Guide to Stripe Processing Fees</h2>
+
+        <p class="section-intro">
+          Stripe makes accepting card payments simple, but the headline rate of 2.9% plus 30 cents hides a few details that quietly shape your real revenue. This guide explains exactly how Stripe fees are calculated, how to find your true net payout, and how to charge the right amount when you want to pass the processing fee to your customer.
+        </p>
+
+        <h3>How to Use This Stripe Fee Calculator</h3>
+        <p>Start by choosing a mode at the top of the calculator. In "Calculate fees on a charge" mode, you enter what the customer pays and the tool shows your net payout after fees. In "Invoice a specific net amount" mode, you enter the amount you want to keep, and the tool grosses up the price to tell you exactly how much to charge so the fee comes out of the customer's pocket instead of yours. Tick the International Card box if the customer's card was issued abroad, and the Currency Conversion box if the payment crosses currencies. Every result updates instantly with no submit button.</p>
+
+        <h3>Stripe's Standard Fee Structure</h3>
+        <p>For online card payments in the United States, Stripe's standard pricing is 2.9% of the transaction plus a fixed 30 cent fee on every successful charge. Two optional add-ons can raise the percentage: roughly 1% more for an international (cross-border) card, and roughly 1% more when a currency conversion is needed. Stacking both brings the maximum standard rate to 4.9% plus the same 30 cent fixed fee.</p>
+
+        <div class="formula-box">
+          Variable Percent = 2.9% + (International ? 1% : 0) + (Conversion ? 1% : 0)<br>
+          Total Fee = (Charge * Variable Percent / 100) + 0.30<br>
+          Net Payout = Charge - Total Fee
+        </div>
+
+        <h3>How to Pass the Stripe Fee to Your Customer (the Gross-Up)</h3>
+        <p>A common mistake is to simply add 2.9% and 30 cents to your price. That undercharges you, because Stripe takes its percentage on the new, higher total, not on your original amount. The correct approach is to gross up using algebra that solves for the charge whose fee leaves you with exactly your target net.</p>
+
+        <div class="formula-box">
+          Required Charge = (Net Amount + 0.30) / (1 - Variable Percent / 100)<br>
+          Total Fee = Required Charge - Net Amount<br>
+          Net Payout = Net Amount (exactly what you wanted)
+        </div>
+
+        <p>For example, to receive a clean 100 dollars at the US standard rate, you would charge the customer 103.30 dollars. They cover the fee, and you net your full 100. Before surcharging, check the rules in your region and your card network agreements, since some jurisdictions limit or regulate passing fees to customers.</p>
+
+        <h3>Why the 30 Cent Fixed Fee Hurts Small Charges</h3>
+        <p>Because the 30 cent fee is flat, it makes up a tiny slice of a large sale but a huge slice of a small one. On a 100 dollar charge the effective rate is about 3.2%, but on a 2 dollar charge it balloons past 18%. If your business runs on small payments, consider setting a minimum order value, bundling purchases, or building the fixed cost into your pricing.</p>
+
+        <h3>Refunds Do Not Return Your Fees</h3>
+        <p>One detail that surprises many merchants: when you refund a customer, Stripe gives them their money back but keeps the original processing fee. A fully refunded 100 dollar sale leaves you 3.20 dollars out of pocket with zero revenue collected. Factor expected refunds into your margins, especially in return-heavy categories.</p>
+
+        <!-- FAQ -->
+        <h3 style="margin-top:28px;">Frequently Asked Questions</h3>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What are Stripe's standard fees for credit cards?
+            <span class="chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            Stripe's standard published rate for online credit and debit card payments in the United States is 2.9% of the transaction amount plus a fixed 30 cent fee per successful charge. So on a 100 dollar charge you pay 2.90 dollars in percentage fees plus 0.30 cents, for a total fee of 3.20 dollars and a net payout of 96.80 dollars. Stripe adds an extra 1% for cards issued outside the United States (an international or cross-border card), and another 1% when a currency conversion is required. That pushes the maximum standard percentage rate to 4.9% plus the same 30 cent fixed fee. Custom or negotiated Interchange Plus pricing is available for high volume businesses and may differ.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            How do I pass the Stripe processing fee to my customer?
+            <span class="chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            To receive an exact net amount after fees, you cannot simply add 2.9% and 30 cents to your price, because the fee is charged on the higher total, not on your original amount. You have to gross up. Switch this calculator to the second mode, Invoice a specific net amount, and enter the amount you want to land in your bank account. The tool applies the formula Required Charge = (Net Amount + 0.30) divided by (1 minus the percentage rate). For a 100 dollar net at the US standard rate, you would charge 103.30 dollars. The customer pays the fee for you, and you net exactly what you intended. Note that some jurisdictions and card network rules restrict or regulate surcharging, so confirm what is permitted where you operate.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Does Stripe refund processing fees if I issue a refund to my customer?
+            <span class="chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            No. When you refund a charge, Stripe returns the full amount to your customer, but the original processing fee (the 2.9% plus 30 cents, plus any international or conversion add-ons) is not returned to you. This means a refunded transaction actually costs you the entire fee out of pocket. For a 100 dollar charge that you fully refund, you are out the 3.20 dollar fee with nothing collected. This is an important reason to be careful with refund-heavy business models and to factor expected refunds into your pricing.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            What is an international or cross-border fee?
+            <span class="chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            An international or cross-border fee is an extra charge Stripe applies when the customer's card was issued by a bank outside your own country. Stripe adds approximately 1% on top of the standard rate for these cards. A separate 1% currency conversion fee applies when the charge must be converted from one currency to another (for example, a customer paying in euros into a US dollar account). Both add-ons can apply at the same time, which is why the maximum standard percentage rate reaches 4.9%. Use the International Card and Currency Conversion checkboxes above to model these scenarios.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Why does the fixed 30 cent fee matter so much on small transactions?
+            <span class="chevron">&#9660;</span>
+          </button>
+          <div class="faq-a">
+            The 30 cent fixed fee is charged on every successful transaction regardless of size, so it dominates the effective rate on small charges. On a 100 dollar sale, 30 cents is only 0.3% of the total and the effective fee rate is about 3.2%. But on a 2 dollar sale, that same 30 cents is 15% of the transaction, pushing the effective rate above 18%. This is why micro-transactions are expensive to process and why many businesses set minimum order values or batch small payments together.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TOOL DISCLAIMER -->
+      <div class="tool-disclaimer">
+        This calculator is an independent tool and is not affiliated with, endorsed by, or sponsored by Stripe, Inc. It uses Stripe's standard published US pricing (2.9% plus 30 cents, with optional 1% international and 1% currency conversion add-ons) for estimates only. Your actual fees may differ based on your country, negotiated or custom pricing, product type, and current Stripe terms. Always confirm exact rates in your Stripe dashboard. This is not financial or legal advice; surcharging and fee pass-through rules vary by jurisdiction.
+      </div>
+
+    </div><!-- /.container -->
+
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    var currentMode = 'charge'; /* 'charge' = Mode 1, 'net' = Mode 2 */
+    var FIXED = 0.30;
+
+    /* Round to exact cents, preventing floating point drift */
+    function round2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
+
+    /* Parse the amount input to a non-negative float */
+    function parseVal(id) {
+      var raw = document.getElementById(id).value.replace(/,/g, '').trim();
+      var n = parseFloat(raw);
+      return (isNaN(n) || raw === '' || n < 0) ? 0 : n;
+    }
+
+    /* Format a number as 1,234.56 */
+    function fmtMoney(n) {
+      return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* Light live formatting: add thousands separators without disturbing mid-typing decimals */
+    function formatField(input) {
+      var raw = input.value;
+      if (/\.$/.test(raw) || /\.\d{0,2}$/.test(raw.replace(/,/g, ''))) {
+        /* user may be typing the decimal portion, leave it alone except commas */
+      }
+      var cleaned = raw.replace(/[^0-9.]/g, '');
+      var parts = cleaned.split('.');
+      if (parts.length > 2) { cleaned = parts[0] + '.' + parts.slice(1).join(''); parts = cleaned.split('.'); }
+      var intPart = parts[0];
+      var intNum = parseInt(intPart, 10);
+      var grouped = isNaN(intNum) ? '' : intNum.toLocaleString('en-US');
+      input.value = (parts.length === 2) ? grouped + '.' + parts[1].slice(0, 2) : grouped;
+    }
+
+    /* On blur, snap to two decimals */
+    function commitField(input) {
+      var n = parseFloat(input.value.replace(/,/g, ''));
+      if (!isNaN(n) && input.value.trim() !== '') {
+        input.value = n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('modeCharge').classList.toggle('active', mode === 'charge');
+      document.getElementById('modeNet').classList.toggle('active', mode === 'net');
+      document.getElementById('modeCharge').setAttribute('aria-selected', mode === 'charge');
+      document.getElementById('modeNet').setAttribute('aria-selected', mode === 'net');
+      var lbl = document.getElementById('amountLabel');
+      if (mode === 'charge') {
+        lbl.textContent = 'Transaction Amount ($)';
+      } else {
+        lbl.textContent = 'Net Amount You Want to Receive ($)';
+      }
+      calculate();
+    }
+
+    function toggleCheck(cb) {
+      var option = cb.closest('.check-option');
+      if (option) option.classList.toggle('checked', cb.checked);
+    }
+
+    function calculate() {
+      var amount = parseVal('amount');
+      var intl = document.getElementById('intlCard').checked;
+      var conv = document.getElementById('currencyConv').checked;
+
+      var variablePercent = 2.9;
+      if (intl) variablePercent += 1;
+      if (conv) variablePercent += 1;
+      if (variablePercent > 4.9) variablePercent = 4.9; /* hard cap */
+
+      var rate = variablePercent / 100;
+
+      var charge, totalFee, netPayout, pctFee, effRate;
+
+      if (currentMode === 'charge') {
+        /* Mode 1: fees calculated on the customer charge */
+        charge = amount;
+        pctFee = round2(charge * rate);
+        totalFee = round2(charge * rate + FIXED);
+        netPayout = round2(charge - totalFee);
+        effRate = charge > 0 ? (totalFee / charge) * 100 : 0;
+      } else {
+        /* Mode 2: gross-up so the merchant nets the entered amount */
+        netPayout = amount;
+        charge = round2((amount + FIXED) / (1 - rate));
+        pctFee = round2(charge * rate);
+        totalFee = round2(charge - amount);
+        effRate = charge > 0 ? (totalFee / charge) * 100 : 0;
+      }
+
+      /* Hero metric */
+      var hero = document.getElementById('heroOutput');
+      var heroLabel = document.getElementById('heroLabel');
+      var heroValue = document.getElementById('heroValue');
+      var heroSub = document.getElementById('heroSub');
+
+      if (currentMode === 'charge') {
+        hero.classList.remove('charge-mode'); /* green net payout hero */
+        heroLabel.textContent = 'Your Net Payout';
+        heroValue.textContent = '$' + fmtMoney(netPayout);
+        heroSub.textContent = 'Amount deposited to your bank after Stripe fees';
+      } else {
+        hero.classList.add('charge-mode'); /* blurple charge hero */
+        heroLabel.textContent = 'Amount You Need to Charge';
+        heroValue.textContent = '$' + fmtMoney(charge);
+        heroSub.textContent = 'Bill the customer this so you net $' + fmtMoney(netPayout) + ' after fees';
+      }
+
+      /* Status banner */
+      document.getElementById('effRate').textContent = effRate.toFixed(2) + '%';
+
+      /* Receipt */
+      document.getElementById('rCharge').textContent = '$' + fmtMoney(charge);
+      document.getElementById('rPctLabel').textContent = '- Stripe Percentage Fee (' + (variablePercent % 1 === 0 ? variablePercent.toFixed(0) : variablePercent.toFixed(1)) + '%)';
+      document.getElementById('rPctVal').textContent = '-$' + fmtMoney(pctFee);
+      document.getElementById('rFixedVal').textContent = '-$' + fmtMoney(FIXED);
+      document.getElementById('rNet').textContent = '$' + fmtMoney(netPayout);
+    }
+
+    function formatAndCalc(input) { formatField(input); calculate(); }
+    function commitAndCalc(input) { commitField(input); calculate(); }
+
+    function toggleFaq(btn) {
+      var answer = btn.nextElementSibling;
+      var isOpen = btn.classList.contains('open');
+      document.querySelectorAll('.faq-q.open').forEach(function (b) {
+        b.classList.remove('open');
+        b.nextElementSibling.classList.remove('open');
+      });
+      if (!isOpen) { btn.classList.add('open'); answer.classList.add('open'); }
+    }
+
+    /* Initial render */
+    calculate();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Free reorder point and safety stock calculator. Enter your average and maximum daily sales plus supplier lead times to instantly find your exact safety stock level, lead time demand, and the reorder point that triggers a new purchase order before you sell out. 100% client-side." />
+  <meta name="keywords" content="reorder point calculator, safety stock calculator, inventory ROP formula, lead time demand calculator, when to reorder inventory, stockout prevention, reorder point formula, safety stock formula, inventory reorder calculator, supply chain calculator, purchase order trigger, lead time variance" />
+  <title>Reorder Point Calculator: Safety Stock and When to Reorder Inventory | AxiomApe</title>
+  <link rel="canonical" href="https://axiomape.com/inventory-reorder-point-calculator/" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Reorder Point and Safety Stock Calculator",
+        "description": "Free reorder point and safety stock calculator. Enter your average and maximum daily sales plus supplier lead times to instantly find your exact safety stock level, lead time demand, and the reorder point that triggers a new purchase order before you sell out. 100% client-side.",
+        "url": "https://axiomape.com/inventory-reorder-point-calculator/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any (Web Browser)",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the Reorder Point (ROP) formula?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The Reorder Point equals Lead Time Demand plus Safety Stock. Lead Time Demand is your Average Daily Sales multiplied by your Average Lead Time in days, which is how many units you will sell while waiting for new stock to arrive. Safety Stock is your emergency buffer, calculated as (Maximum Daily Sales times Maximum Lead Time) minus (Average Daily Sales times Average Lead Time). Add the two together and you get the exact inventory level that should trigger a new purchase order. When your on-hand stock drops to that number, you order again."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do I need safety stock if my supplier is usually on time?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Safety stock protects you against the two things that go wrong at the same time: a demand spike and a delivery delay. Your supplier being usually on time is not the same as always on time. A single late shipment that lands during an unexpected sales surge is exactly the scenario that empties a warehouse. Safety stock is sized using your maximum daily sales and maximum lead time, so it covers the worst realistic combination of both. Without it, your reorder point only covers an average day, and roughly half of all cycles run worse than average."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I calculate Maximum Daily Sales?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Maximum Daily Sales is not your single best day ever, which is usually a fluke. Pull at least 90 days of unit sales for the product and look at the busiest realistic days: a strong promotion day, a payday weekend, or a seasonal peak. A common, defensible approach is to use roughly the 90th to 95th percentile of your daily sales, or your average daily sales plus a buffer that reflects how volatile demand is. The goal is a number you genuinely could hit on a busy day, not a once-a-year record and not just your quiet-Tuesday average."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens if I set my Reorder Point too high or too low?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Too low and you reorder late, which means you risk a stockout: empty shelves, lost sales, and customers who buy from a competitor instead. Too high and you reorder too early, which ties up cash in stock that sits in the warehouse longer than needed and runs up holding costs, storage, and obsolescence risk. The reorder point produced here is the balance point: high enough to cover demand and delays through the full lead time, but not padded beyond the buffer your own sales and lead time variance justify."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Brand palette */
+      --logistics-blue:      #3B82F6;
+      --logistics-blue-dark: #2563EB;
+      --logistics-blue-bg:   rgba(59,130,246,.10);
+
+      --warning-yellow:      #F59E0B;
+      --warning-yellow-bg:   rgba(245,158,11,.12);
+
+      --action-red:          #EF4444;
+      --action-red-bg:       rgba(239,68,68,.12);
+
+      /* Page chrome */
+      --bg:         #0F1623;
+      --bg-card:    #1A2235;
+      --bg-card2:   #202C42;
+      --border:     #2D3F5C;
+      --border-light:#3A5070;
+
+      /* Text */
+      --text:       #E8EFF8;
+      --text-muted: #8BA3C0;
+      --text-dim:   #5E7A99;
+
+      /* Status */
+      --green:      #10B981;
+      --green-bg:   rgba(16,185,129,.12);
+
+      --radius:    14px;
+      --radius-sm: 9px;
+      --shadow:    0 4px 20px rgba(0,0,0,.4);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Hero header */
+    .tool-header {
+      background: linear-gradient(135deg, #0F2956 0%, #1A3A6E 50%, #1E4080 100%);
+      padding: 52px 20px 44px;
+      text-align: center;
+      border-bottom: 3px solid var(--logistics-blue);
+    }
+
+    .tool-header h1 {
+      font-size: clamp(22px, 5vw, 33px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.025em;
+      color: #fff;
+    }
+
+    .tool-header h1 span { color: var(--warning-yellow); }
+
+    .tool-header p {
+      font-size: 15px;
+      color: #93B4D8;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--logistics-blue);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 16px;
+      background: var(--logistics-blue);
+      border-radius: 2px;
+    }
+
+    /* Input panels */
+    .panel {
+      margin-bottom: 22px;
+    }
+    .panel:last-of-type { margin-bottom: 0; }
+
+    .panel-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-label .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--logistics-blue);
+      flex-shrink: 0;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 540px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .02em;
+    }
+
+    label span.unit {
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    label .hint {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 400;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color .18s, box-shadow .18s;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--logistics-blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    }
+
+    /* Hero output: Reorder Point star metric */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+
+    .hero-rop {
+      text-align: center;
+      padding: 30px 20px 26px;
+      background: linear-gradient(135deg, rgba(239,68,68,.16) 0%, rgba(239,68,68,.05) 100%);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: var(--radius);
+    }
+
+    .hero-ss {
+      text-align: center;
+      padding: 30px 20px 26px;
+      background: linear-gradient(135deg, rgba(245,158,11,.16) 0%, rgba(245,158,11,.05) 100%);
+      border: 1px solid rgba(245,158,11,.35);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hero-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-value {
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .hero-rop .hero-value {
+      font-size: clamp(46px, 11vw, 76px);
+      color: var(--action-red);
+    }
+
+    .hero-ss .hero-value {
+      font-size: clamp(32px, 7vw, 46px);
+      color: var(--warning-yellow);
+    }
+
+    .hero-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .hero-tag {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      background: var(--action-red-bg);
+      color: var(--action-red);
+      border: 1px solid rgba(239,68,68,.3);
+    }
+
+    /* Status banner */
+    .status-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 18px;
+      background: var(--logistics-blue-bg);
+      border: 1px solid rgba(59,130,246,.3);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .status-banner .sb-icon {
+      font-size: 20px;
+      line-height: 1.3;
+      flex-shrink: 0;
+    }
+
+    .status-banner b { color: var(--logistics-blue); }
+
+    /* Action plan receipt */
+    .action-plan {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .ap-step {
+      display: flex;
+      gap: 16px;
+      padding: 18px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .ap-step:last-child { border-bottom: none; }
+
+    .ap-num {
+      width: 30px; height: 30px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .ap-step.s1 .ap-num { background: var(--action-red); }
+    .ap-step.s2 .ap-num { background: var(--logistics-blue); }
+    .ap-step.s3 .ap-num { background: var(--warning-yellow); }
+
+    .ap-body { font-size: 14.5px; color: var(--text-muted); line-height: 1.6; }
+    .ap-body strong { color: var(--text); font-weight: 700; }
+    .ap-body .v-red { color: var(--action-red); font-weight: 800; }
+    .ap-body .v-blue { color: var(--logistics-blue); font-weight: 800; }
+    .ap-body .v-yellow { color: var(--warning-yellow); font-weight: 800; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .empty-state .es-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+      opacity: .5;
+    }
+
+    /* Glossary */
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 540px) {
+      .glossary-grid { grid-template-columns: 1fr; }
+    }
+
+    .glossary-item {
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--logistics-blue);
+    }
+
+    .glossary-term {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--logistics-blue);
+      margin-bottom: 5px;
+    }
+
+    .glossary-def {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Educational section */
+    .edu-section h2 {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: -.02em;
+    }
+
+    .section-intro {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 22px;
+    }
+
+    .edu-section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 22px 0 10px;
+    }
+
+    .edu-section p {
+      font-size: 14.5px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .formula-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--warning-yellow);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      margin: 14px 0 18px;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.8;
+    }
+    .formula-box code {
+      color: var(--warning-yellow);
+      font-weight: 600;
+    }
+
+    /* See also */
+    .see-also {
+      background: var(--logistics-blue-bg);
+      border: 1px solid rgba(59,130,246,.3);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .see-also a {
+      color: var(--logistics-blue);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .see-also a:hover { text-decoration: underline; }
+
+    /* FAQ accordion */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .faq-q {
+      padding: 16px 18px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-card2);
+      transition: background .18s;
+    }
+
+    .faq-q:hover { background: var(--bg-card); }
+
+    .faq-chevron {
+      font-size: 12px;
+      color: var(--logistics-blue);
+      transition: transform .25s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    .faq-a {
+      display: none;
+      padding: 16px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-item.open .faq-a { display: block; }
+
+    /* Tool disclaimer */
+    .tool-disclaimer {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 14px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+
+    main.main-content {
+      padding: 32px 0 60px;
+    }
+
+    .section-gap { margin-top: 24px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Tool header - no role="banner" (site-chrome.js provides the page banner) -->
+  <header class="tool-header">
+    <h1>Reorder Point and Safety Stock <span>Calculator</span></h1>
+    <p>Find your exact safety stock level and know precisely when to reorder inventory before you sell out. Enter your sales velocity and supplier lead times for instant results - no signup needed.</p>
+  </header>
+
+  <main class="main-content" id="main">
+    <div class="container">
+
+      <!-- == INPUT CARD =========================================== -->
+      <div class="card section-gap">
+        <div class="card-title">Sales Velocity and Lead Time Inputs</div>
+
+        <!-- Panel 1: Sales Velocity -->
+        <div class="panel">
+          <div class="panel-label"><span class="dot"></span> Sales Velocity</div>
+          <div class="input-grid">
+
+            <div class="field">
+              <label for="avg-sales">Average Daily Sales <span class="unit">(units)</span>
+                <span class="hint">Units you sell on a typical day</span>
+              </label>
+              <input type="text" id="avg-sales" value="20" oninput="fmtInteger(this); recalculate()" onchange="recalculate()" />
+            </div>
+
+            <div class="field">
+              <label for="max-sales">Maximum Daily Sales <span class="unit">(units)</span>
+                <span class="hint">Units on a busy, high-traffic day</span>
+              </label>
+              <input type="text" id="max-sales" value="35" oninput="fmtInteger(this); recalculate()" onchange="recalculate()" />
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Panel 2: Supplier Lead Time -->
+        <div class="panel">
+          <div class="panel-label"><span class="dot"></span> Supplier Lead Time</div>
+          <div class="input-grid">
+
+            <div class="field">
+              <label for="avg-lead">Average Lead Time <span class="unit">(days)</span>
+                <span class="hint">Usual time for stock to arrive after ordering</span>
+              </label>
+              <input type="text" id="avg-lead" value="14" oninput="fmtInteger(this); recalculate()" onchange="recalculate()" />
+            </div>
+
+            <div class="field">
+              <label for="max-lead">Maximum Lead Time <span class="unit">(days)</span>
+                <span class="hint">Time to arrive if there are shipping delays</span>
+              </label>
+              <input type="text" id="max-lead" value="21" oninput="fmtInteger(this); recalculate()" onchange="recalculate()" />
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /input card -->
+
+      <!-- == OUTPUT CARD ========================================== -->
+      <div class="card" id="output-card">
+
+        <div id="empty-state" class="empty-state" style="display:none">
+          <span class="es-icon">&#128230;</span>
+          Enter your daily sales and lead times above to see your reorder point.
+        </div>
+
+        <div id="results">
+
+          <!-- Hero metrics: Reorder Point (star) + Safety Stock -->
+          <div class="hero-grid">
+            <div class="hero-rop">
+              <div class="hero-label">Reorder Point (Units)</div>
+              <div class="hero-value" id="hero-rop">--</div>
+              <div class="hero-sub">Place a new order at this stock level</div>
+              <span class="hero-tag">Time to Buy</span>
+            </div>
+            <div class="hero-ss">
+              <div class="hero-label">Safety Stock Buffer (Units)</div>
+              <div class="hero-value" id="hero-ss">--</div>
+              <div class="hero-sub">Your emergency reserve</div>
+            </div>
+          </div>
+
+          <!-- Status banner -->
+          <div class="status-banner" id="status-banner">
+            <span class="sb-icon">&#128202;</span>
+            <span id="status-text"></span>
+          </div>
+
+          <!-- Inventory Action Plan receipt -->
+          <div class="card action-plan" style="margin-bottom:0; box-shadow:none; background:var(--bg-card2)">
+            <div class="card-title">Your Inventory Action Plan</div>
+
+            <div class="ap-step s1">
+              <div class="ap-num">1</div>
+              <div class="ap-body" id="ap-step1"></div>
+            </div>
+            <div class="ap-step s2">
+              <div class="ap-num">2</div>
+              <div class="ap-body" id="ap-step2"></div>
+            </div>
+            <div class="ap-step s3">
+              <div class="ap-num">3</div>
+              <div class="ap-body" id="ap-step3"></div>
+            </div>
+
+          </div>
+
+        </div><!-- /results -->
+
+      </div><!-- /output card -->
+
+      <!-- ============================================================
+           AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+           Google AdSense 728x90 - shown on screens larger than 768px
+      ============================================================ -->
+      <div class="axiom-ad-leaderboard" aria-hidden="true">
+        <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+        <!-- Replace this comment with your AdSense ins tag -->
+        Advertisement
+      </div>
+
+      <!-- See also cross-reference -->
+      <div class="see-also section-gap">
+        See also: work out how much to order each time with the <a href="/economic-order-quantity-eoq-calculator/">Economic Order Quantity (EOQ) Calculator</a>, and measure how efficiently you sell through that stock with the <a href="/inventory-turnover-ratio/">Inventory Turnover Ratio Calculator</a>.
+      </div>
+
+      <!-- ============================================================
+           GLOSSARY
+      ============================================================ -->
+      <div class="card section-gap">
+        <div class="card-title">Key Terms Explained</div>
+        <div class="glossary-grid">
+
+          <div class="glossary-item">
+            <div class="glossary-term">Reorder Point (ROP)</div>
+            <div class="glossary-def">The exact on-hand inventory level that triggers a new purchase order. When stock drops to the ROP, you order again so fresh inventory arrives before you run out.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Safety Stock</div>
+            <div class="glossary-def">An emergency buffer of extra units held to protect against demand spikes and supplier delays. It is the difference between your worst-case and average lead time demand.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Lead Time Demand</div>
+            <div class="glossary-def">How many units you expect to sell while waiting for a new order to arrive. Calculated as Average Daily Sales multiplied by Average Lead Time.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Lead Time</div>
+            <div class="glossary-def">The number of days between placing a purchase order and receiving the goods into your warehouse, ready to sell.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Stockout</div>
+            <div class="glossary-def">When a product is completely sold out and unavailable to buy. Stockouts cause lost sales, frustrated customers, and costly emergency reorders.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">SKU (Stock Keeping Unit)</div>
+            <div class="glossary-def">A unique code identifying one specific product variant. Each SKU has its own sales velocity and lead time, so reorder points are calculated per SKU.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Supply Chain Variance</div>
+            <div class="glossary-def">The natural variation in both customer demand and supplier delivery times. Higher variance means you need a larger safety stock to stay protected.</div>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-term">Cycle Stock</div>
+            <div class="glossary-def">The portion of inventory you expect to sell through during normal operations between deliveries, separate from the safety stock buffer held in reserve.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============================================================
+           EDUCATIONAL SECTION
+      ============================================================ -->
+      <div class="card edu-section section-gap">
+        <h2>The Complete Guide to Reorder Points and Safety Stock</h2>
+
+        <p class="section-intro">Running out of a best-selling product is one of the most expensive mistakes in inventory management: you lose the sale, you may lose the customer to a competitor, and you damage your search ranking and seller metrics on marketplaces. The reorder point is the simple, powerful number that prevents it. It tells you the precise stock level at which to place your next purchase order so new inventory lands just as the old stock runs low.</p>
+
+        <h3>How to use this calculator</h3>
+        <p>Enter four numbers and read your results instantly, with no submit button. In the Sales Velocity panel, type your Average Daily Sales (a typical day) and your Maximum Daily Sales (a realistic busy day). In the Supplier Lead Time panel, enter your Average Lead Time (how long delivery usually takes) and your Maximum Lead Time (how long it takes when there are delays). The calculator immediately returns your Reorder Point, your Safety Stock buffer, and a step-by-step action plan.</p>
+
+        <h3>The formulas behind the numbers</h3>
+        <div class="formula-box">
+          <code>Lead Time Demand = Average Daily Sales &times; Average Lead Time</code><br>
+          <code>Safety Stock = (Max Daily Sales &times; Max Lead Time) &minus; (Avg Daily Sales &times; Avg Lead Time)</code><br>
+          <code>Reorder Point = Lead Time Demand + Safety Stock</code>
+        </div>
+        <p>Lead Time Demand covers an average cycle: the units you will sell while you wait for a normal delivery. Safety Stock covers the gap between an average cycle and a worst-case cycle, where a demand spike and a shipping delay happen at the same time. Because you cannot order a fraction of a product, every result is rounded up to the next whole unit.</p>
+
+        <h3>Why the maximum values matter</h3>
+        <p>If you only planned around averages, your inventory would run out roughly half the time, because by definition half of all days and deliveries are worse than average. Safety stock uses your maximum daily sales and maximum lead time precisely to cover that downside. The bigger the gap between your average and maximum figures, the more volatile your supply chain is, and the larger the buffer this calculator will recommend.</p>
+
+        <h3>Reading your safety buffer in days</h3>
+        <p>The status banner translates your safety stock into days of cover by dividing it by your average daily sales. A buffer worth several weeks of sales gives you breathing room to absorb a late shipment; a buffer worth only a day or two means even a small disruption could cause a stockout. If the buffer feels too thin, revisit your maximum lead time, since supplier reliability is usually the biggest driver of required safety stock.</p>
+
+        <!-- FAQ -->
+        <h3 style="margin-top:28px">Frequently Asked Questions</h3>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            What is the Reorder Point (ROP) formula?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">The Reorder Point equals Lead Time Demand plus Safety Stock. Lead Time Demand is your Average Daily Sales multiplied by your Average Lead Time in days, which is how many units you will sell while waiting for new stock to arrive. Safety Stock is your emergency buffer, calculated as (Maximum Daily Sales times Maximum Lead Time) minus (Average Daily Sales times Average Lead Time). Add the two together and you get the exact inventory level that should trigger a new purchase order. When your on-hand stock drops to that number, you order again.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            Why do I need safety stock if my supplier is usually on time?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">Safety stock protects you against the two things that go wrong at the same time: a demand spike and a delivery delay. Your supplier being usually on time is not the same as always on time. A single late shipment that lands during an unexpected sales surge is exactly the scenario that empties a warehouse. Safety stock is sized using your maximum daily sales and maximum lead time, so it covers the worst realistic combination of both. Without it, your reorder point only covers an average day, and roughly half of all cycles run worse than average.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            How do I calculate Maximum Daily Sales?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">Maximum Daily Sales is not your single best day ever, which is usually a fluke. Pull at least 90 days of unit sales for the product and look at the busiest realistic days: a strong promotion day, a payday weekend, or a seasonal peak. A common, defensible approach is to use roughly the 90th to 95th percentile of your daily sales, or your average daily sales plus a buffer that reflects how volatile demand is. The goal is a number you genuinely could hit on a busy day, not a once-a-year record and not just your quiet-Tuesday average.</div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+          <div class="faq-q">
+            What happens if I set my Reorder Point too high or too low?
+            <span class="faq-chevron">&#9660;</span>
+          </div>
+          <div class="faq-a">Too low and you reorder late, which means you risk a stockout: empty shelves, lost sales, and customers who buy from a competitor instead. Too high and you reorder too early, which ties up cash in stock that sits in the warehouse longer than needed and runs up holding costs, storage, and obsolescence risk. The reorder point produced here is the balance point: high enough to cover demand and delays through the full lead time, but not padded beyond the buffer your own sales and lead time variance justify.</div>
+        </div>
+
+      </div><!-- /edu-section -->
+
+      <div class="tool-disclaimer section-gap">
+        This calculator is for informational and planning purposes only. Results are estimates based on the values you enter and a deterministic min-max model. For high-stakes inventory decisions, consult a qualified supply chain or operations professional.
+      </div>
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <script>
+    /* ============================================================
+       UTILITY: integer input cleanup and parsing
+    ============================================================ */
+    function fmtInteger(el) {
+      el.value = el.value.replace(/[^0-9]/g, '');
+    }
+
+    function parseVal(id) {
+      const raw = document.getElementById(id).value.replace(/[^0-9.]/g, '');
+      return parseFloat(raw) || 0;
+    }
+
+    function u(n) {
+      return n.toLocaleString('en-US') + (n === 1 ? ' unit' : ' units');
+    }
+
+    function d(n) {
+      return n.toLocaleString('en-US') + (n === 1 ? ' day' : ' days');
+    }
+
+    /* ============================================================
+       MAIN SUPPLY CHAIN ENGINE (100% client-side)
+    ============================================================ */
+    function recalculate() {
+      const avgSales = parseVal('avg-sales');
+      const maxSales = parseVal('max-sales');
+      const avgLead  = parseVal('avg-lead');
+      const maxLead  = parseVal('max-lead');
+
+      const emptyState = document.getElementById('empty-state');
+      const results    = document.getElementById('results');
+
+      // Need positive average sales and average lead time at minimum
+      if (avgSales <= 0 || avgLead <= 0) {
+        emptyState.style.display = 'block';
+        results.style.display    = 'none';
+        return;
+      }
+
+      /* -- Core math (integer-safe, round up since you cannot order a fraction of a unit) -- */
+      const leadTimeDemand = Math.ceil(avgSales * avgLead);
+      // Safety stock cannot drop below 0
+      const safetyStockRaw = (maxSales * maxLead) - (avgSales * avgLead);
+      const safetyStock    = Math.max(0, Math.ceil(safetyStockRaw));
+      const reorderPoint   = leadTimeDemand + safetyStock;
+
+      // Safety buffer expressed in days of average sales
+      const bufferDays = avgSales > 0 ? Math.round(safetyStock / avgSales) : 0;
+
+      /* -- Render hero metrics -- */
+      document.getElementById('hero-rop').textContent = reorderPoint.toLocaleString('en-US');
+      document.getElementById('hero-ss').textContent  = safetyStock.toLocaleString('en-US');
+
+      /* -- Status banner -- */
+      document.getElementById('status-text').innerHTML =
+        'Your current lead time demand is <b>' + u(leadTimeDemand) + '</b>. ' +
+        'Your safety stock of <b>' + u(safetyStock) + '</b> represents roughly a <b>' +
+        bufferDays + '-day</b> emergency buffer at your average sales pace.';
+
+      /* -- Inventory Action Plan receipt -- */
+      document.getElementById('ap-step1').innerHTML =
+        'When your warehouse stock drops to exactly <span class="v-red">' + u(reorderPoint) +
+        '</span>, place a new purchase order. This is your reorder point.';
+
+      document.getElementById('ap-step2').innerHTML =
+        'While you wait <span class="v-blue">' + d(avgLead) +
+        '</span> for the delivery, you will sell roughly <span class="v-blue">' + u(leadTimeDemand) +
+        '</span> (your lead time demand).';
+
+      document.getElementById('ap-step3').innerHTML =
+        'Even if a shipping delay or demand spike hits, you still hold <span class="v-yellow">' + u(safetyStock) +
+        '</span> in reserve to prevent a stockout, about ' + bufferDays + ' extra days of cover.';
+
+      emptyState.style.display = 'none';
+      results.style.display    = 'block';
+    }
+
+    /* ============================================================
+       FAQ ACCORDION
+    ============================================================ */
+    function toggleFaq(el) {
+      el.classList.toggle('open');
+    }
+
+    /* Initial render with default values */
+    recalculate();
+  </script>
+
+</body>
+</html>

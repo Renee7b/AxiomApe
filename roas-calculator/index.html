@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROAS Calculator: Measure Ad Campaign Profitability and Break-Even ROAS | AxiomApe</title>
+  <meta name="description" content="Free ROAS calculator to measure your ad campaign profitability, calculate net profit, and find your exact break-even ROAS target. Works for Facebook ads, Google ads, and any paid marketing campaign." />
+  <meta name="keywords" content="ROAS calculator, return on ad spend, break even ROAS, Facebook ads ROAS calculator, calculate marketing ROI, net profit calculator, ad spend calculator, ecommerce ROAS" />
+  <link rel="canonical" href="https://axiomape.com/roas-calculator/" />
+  <script src="/js/site-chrome.js?v=6" defer></script>
+
+  <style>
+    /* ===================================================
+       RESET & BASE
+    =================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1420;
+      --bg-2:        #161d2e;
+      --card:        #1a2235;
+      --card-2:      #212c43;
+      --border:      #2c3a55;
+      --text:        #e7ecf5;
+      --muted:       #9aa9c4;
+      --fb-blue:     #1877F2;
+      --purple:      #8B5CF6;
+      --green:       #10B981;
+      --green-soft:  rgba(16,185,129,0.14);
+      --yellow:      #F59E0B;
+      --yellow-soft: rgba(245,158,11,0.14);
+      --red:         #EF4444;
+      --red-soft:    rgba(239,68,68,0.14);
+      --radius:      14px;
+      --shadow:      0 10px 40px rgba(0,0,0,0.45);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    a { color: #7fb2ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===================================================
+       PAGE HEADER
+    =================================================== */
+    .page-header {
+      background: radial-gradient(circle at 30% 20%, rgba(24,119,242,0.22), transparent 55%),
+                  radial-gradient(circle at 75% 30%, rgba(139,92,246,0.20), transparent 55%),
+                  var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      padding: 52px 20px 44px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(1.55rem, 4vw, 2.4rem);
+      font-weight: 800;
+      line-height: 1.28;
+      max-width: 800px;
+      margin: 0 auto 14px;
+      letter-spacing: -0.01em;
+    }
+    .page-header h1 .accent { color: var(--green); }
+    .page-header p {
+      font-size: 1.06rem;
+      color: var(--muted);
+      max-width: 660px;
+      margin: 0 auto;
+    }
+
+    /* ===================================================
+       MAIN LAYOUT
+    =================================================== */
+    .page-wrapper {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 16px 0;
+    }
+
+    /* ===================================================
+       CARD
+    =================================================== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 30px;
+      margin-bottom: 26px;
+    }
+    @media (max-width: 600px) { .card { padding: 22px 18px; } }
+
+    .card-title {
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 22px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title .icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--fb-blue), var(--purple));
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-title .icon svg { fill: #fff; width: 17px; height: 17px; }
+
+    /* ===================================================
+       INPUT PANELS
+    =================================================== */
+    .panel {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 20px;
+      margin-bottom: 20px;
+    }
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel.metrics .panel-title { color: #6fa8ff; }
+    .panel.reality .panel-title { color: #b79bff; }
+    .panel-title .pip { width: 9px; height: 9px; border-radius: 50%; }
+    .panel.metrics .pip { background: var(--fb-blue); }
+    .panel.reality .pip { background: var(--purple); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 22px;
+    }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .label-hint {
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .input-wrap { position: relative; margin-top: 4px; }
+    .input-wrap .affix {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 1rem;
+      pointer-events: none;
+    }
+    .input-wrap .affix.prefix { left: 14px; }
+    .input-wrap .affix.suffix { right: 14px; }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg-2);
+      transition: border-color 0.16s, box-shadow 0.16s;
+      -webkit-appearance: none;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .input-wrap.has-prefix input { padding-left: 30px; }
+    .input-wrap.has-suffix input { padding-right: 36px; }
+
+    .panel.metrics input:focus {
+      outline: none;
+      border-color: var(--fb-blue);
+      box-shadow: 0 0 0 3px rgba(24,119,242,0.25);
+    }
+    .panel.reality input:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.25);
+    }
+
+    /* ===================================================
+       STATUS BANNER
+    =================================================== */
+    .status-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+      border: 1.5px solid transparent;
+      font-size: 0.96rem;
+    }
+    .status-banner .sb-icon {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .status-banner .sb-icon svg { width: 24px; height: 24px; }
+    .status-banner strong { display: block; font-size: 1.02rem; margin-bottom: 2px; }
+    .status-banner.profit  { background: var(--green-soft);  border-color: var(--green);  color: #c5f3e2; }
+    .status-banner.profit strong  { color: var(--green); }
+    .status-banner.profit .sb-icon svg  { stroke: var(--green); }
+    .status-banner.even    { background: var(--yellow-soft); border-color: var(--yellow); color: #f6e3bd; }
+    .status-banner.even strong    { color: var(--yellow); }
+    .status-banner.even .sb-icon svg    { stroke: var(--yellow); }
+    .status-banner.loss    { background: var(--red-soft);    border-color: var(--red);    color: #f6c9c9; }
+    .status-banner.loss strong    { color: var(--red); }
+    .status-banner.loss .sb-icon svg    { stroke: var(--red); }
+
+    /* ===================================================
+       HERO METRICS
+    =================================================== */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 640px) { .hero-grid { grid-template-columns: 1fr; } }
+
+    .hero-box {
+      border-radius: 14px;
+      padding: 26px 24px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .hero-box.roas {
+      background: linear-gradient(140deg, rgba(24,119,242,0.18), rgba(139,92,246,0.18));
+    }
+    .hero-box.profit {
+      background: var(--green-soft);
+      border-color: rgba(16,185,129,0.4);
+    }
+    .hero-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .hero-value {
+      font-size: clamp(2.3rem, 7vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .hero-box.roas .hero-value { color: var(--text); }
+    .hero-box.profit .hero-value { color: var(--green); }
+    .hero-value.negative { color: var(--red) !important; }
+    .hero-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    .hero-box.roas .hero-sub { color: #9fc4ff; }
+
+    /* ===================================================
+       BREAK-EVEN TARGET CARD
+    =================================================== */
+    .breakeven-card {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 22px;
+      margin-bottom: 22px;
+    }
+    .breakeven-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .breakeven-card .be-intro {
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .be-compare {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 560px) {
+      .be-compare { grid-template-columns: 1fr; }
+      .be-vs { display: none; }
+    }
+    .be-stat {
+      text-align: center;
+      padding: 16px 12px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-2);
+    }
+    .be-stat.current { border-color: var(--fb-blue); }
+    .be-stat.target  { border-color: var(--muted); }
+    .be-stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+    .be-stat-value { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+    .be-stat.current .be-stat-value { color: #6fa8ff; }
+    .be-stat.target  .be-stat-value { color: var(--text); }
+    .be-vs { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+
+    /* Breathing-room meter */
+    .room-track {
+      position: relative;
+      height: 16px;
+      border-radius: 8px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .room-fill {
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      border-radius: 8px;
+      transition: width 0.25s ease, background 0.25s ease;
+    }
+    .room-marker {
+      position: absolute;
+      top: -4px; bottom: -4px;
+      width: 2px;
+      background: var(--text);
+    }
+    .room-marker::after {
+      content: "Break-even";
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .room-caption { font-size: 0.85rem; color: var(--muted); }
+    .room-caption b { color: var(--text); }
+
+    /* ===================================================
+       SECONDARY METRICS ROW
+    =================================================== */
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 600px) { .metric-row { grid-template-columns: 1fr; } }
+    .metric-box {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 16px;
+      text-align: center;
+    }
+    .metric-box-label { font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+    .metric-box-value { font-size: 1.4rem; font-weight: 800; color: var(--text); }
+    .metric-box-value.green { color: var(--green); }
+    .metric-box-value.red { color: var(--red); }
+
+    /* ===================================================
+       EDUCATIONAL SECTION
+    =================================================== */
+    .edu-section h2 { font-size: 1.55rem; font-weight: 800; margin-bottom: 8px; }
+    .edu-section .section-intro {
+      font-size: 1rem; color: var(--muted); margin-bottom: 26px;
+      border-bottom: 1px solid var(--border); padding-bottom: 18px;
+    }
+    .edu-section h3 { font-size: 1.12rem; font-weight: 700; margin: 24px 0 8px; }
+    .edu-section p { margin-bottom: 12px; }
+
+    /* FAQ accordions */
+    .faq-item { border: 1px solid var(--border); border-radius: 11px; margin-bottom: 12px; overflow: hidden; }
+    .faq-question {
+      width: 100%; background: none; border: none; padding: 17px 18px;
+      text-align: left; font-size: 1rem; font-weight: 700; color: var(--text);
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; transition: background 0.15s;
+    }
+    .faq-question:hover { background: var(--card-2); }
+    .faq-question.open { background: var(--card-2); }
+    .faq-chevron { flex-shrink: 0; width: 20px; height: 20px; transition: transform 0.25s; stroke: var(--muted); }
+    .faq-question.open .faq-chevron { transform: rotate(180deg); }
+    .faq-answer { display: none; padding: 0 18px 18px; font-size: 0.95rem; color: var(--text); background: var(--bg-2); border-top: 1px solid var(--border); }
+    .faq-answer.open { display: block; }
+    .faq-answer p { margin-top: 14px; margin-bottom: 0; }
+    .faq-answer strong { color: var(--text); }
+    .faq-answer table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.85rem; }
+    .faq-answer th, .faq-answer td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+    .faq-answer th { background: var(--card-2); color: var(--text); font-weight: 700; }
+    .faq-answer ul { margin: 10px 0 0 18px; }
+    .faq-answer li { margin-bottom: 6px; }
+
+    /* ===================================================
+       GLOSSARY
+    =================================================== */
+    .glossary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .glossary-grid { grid-template-columns: 1fr; } }
+    .glossary-item { background: var(--card-2); border: 1px solid var(--border); border-radius: 11px; padding: 15px 17px; }
+    .glossary-term { font-size: 0.86rem; font-weight: 700; color: #9fc4ff; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+    .glossary-def { font-size: 0.88rem; color: var(--text); line-height: 1.5; }
+
+    /* ===================================================
+       TOOL-SPECIFIC DISCLAIMER
+    =================================================== */
+    .disclaimer-box {
+      background: var(--yellow-soft); border: 1px solid rgba(245,158,11,0.4);
+      border-radius: 12px; padding: 18px 20px; font-size: 0.85rem; color: #f0dcb4;
+      line-height: 1.6; margin-bottom: 26px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .disclaimer-box p { margin-top: 8px; }
+    .disclaimer-box p:first-of-type { margin-top: 0; }
+    .disclaimer-icon { flex-shrink: 0; margin-top: 2px; }
+  </style>
+
+  <!-- ============================================================
+       JSON-LD STRUCTURED DATA
+       SoftwareApplication identifies this page as a free tool.
+       FAQPage marks up the on-page FAQ accordion.
+  ============================================================ -->
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "ROAS Calculator",
+      "description": "Free ROAS calculator to measure your ad campaign profitability, calculate net profit, and find your exact break-even ROAS target. Works for Facebook ads, Google ads, and any paid marketing campaign.",
+      "url": "https://axiomape.com/roas-calculator/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the difference between ROAS and ROI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ROAS (Return on Ad Spend) measures revenue generated for every dollar spent on advertising. It is calculated as total revenue divided by total ad spend, and it only looks at the advertising side of the equation. ROI (Return on Investment) measures actual profit relative to your total cost, so it factors in the cost of the product itself, not just the ad spend. A campaign can show a strong ROAS of 5.00x and still produce a poor ROI if your product margins are thin. ROAS answers the question how efficiently are my ads turning spend into revenue, while ROI answers the question am I actually making money after all costs. ROAS is a marketing efficiency metric; ROI is a true profitability metric."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is a good ROAS for an e-commerce store?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A common benchmark for e-commerce is a ROAS between 3.00x and 4.00x, meaning you earn three to four dollars in revenue for every dollar of ad spend. However, good is entirely relative to your profit margin. A store with high margins (for example, digital products or premium goods) can be profitable at a ROAS of 2.00x, while a low-margin store reselling commodity products might need a ROAS of 5.00x or higher just to break even. The 3x to 4x range is a useful starting reference, but the only number that truly matters is whether your current ROAS comfortably exceeds your break-even ROAS, which this calculator finds for you based on your actual profit margin."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I calculate my break-even ROAS?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Break-even ROAS is calculated as 1 divided by your profit margin expressed as a decimal. If your average product profit margin is 40 percent, the calculation is 1 divided by 0.40, which equals 2.50x. That means you must earn at least 2.50 dollars in revenue for every dollar of ad spend just to cover both the ad cost and the cost of the product, with zero net profit left over. Any ROAS above your break-even point is genuine profit; anything below it means you are losing money. Lower margins push your break-even ROAS higher, which is why margin is the single most important number when judging whether a campaign is healthy."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why am I losing money even though my ROAS is above 1.0x?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A ROAS of 1.0x only means your revenue exactly equals your ad spend. It completely ignores the cost of the product you sold. If it costs you 60 dollars to produce and ship a product that sells for 100 dollars, you only keep 40 dollars of gross profit per sale, so a 1.0x ROAS still loses you 60 dollars on every 100 dollars of revenue once product costs are counted. To actually break even you need your ROAS to reach 1 divided by your profit margin. This is the most common and costly misunderstanding in paid advertising: profitable ads must cover the product cost and the ad cost, not just the ad cost alone."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is net profit from ads calculated in this tool?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Net profit is calculated in two steps. First, gross profit before ads equals your total revenue from ads multiplied by your profit margin percentage. For example, 2,500 dollars in revenue at a 40 percent margin produces 1,000 dollars of gross profit. Second, net profit after ads equals that gross profit minus your total ad spend. Using the same example with 500 dollars of ad spend, net profit is 1,000 minus 500, which equals 500 dollars. A positive net profit means the campaign made money after both product costs and ad costs; a negative net profit means it lost money."
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+
+  <!-- ============================================================
+       PAGE HEADER (site-chrome.js injects the banner, privacy
+       badge, global disclaimer, and footer automatically)
+  ============================================================ -->
+  <header class="page-header">
+    <h1>ROAS Calculator: Measure Ad Campaign Profitability and Find Your <span class="accent">Break-Even ROAS</span></h1>
+    <p>Free return on ad spend calculator. Enter your ad spend, revenue, and profit margin to instantly calculate your current ROAS, net profit, and the exact break-even ROAS your campaign needs to stay profitable.</p>
+  </header>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <main class="page-wrapper" id="main">
+
+    <!-- ============================================================
+         INPUT CARD
+    ============================================================ -->
+    <div class="card" id="calculator-card">
+      <div class="card-title">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h2v16h16v2H3V3zm14.5 3L19 7.5l-5 5-3-3-4.5 4.5L8 15.5l3-3 3 3 6.5-6.5z"/></svg>
+        </span>
+        Enter Your Campaign Numbers
+      </div>
+
+      <!-- Campaign Metrics Panel -->
+      <div class="panel metrics">
+        <div class="panel-title"><span class="pip"></span> Campaign Metrics</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="ad-spend">Total Ad Spend ($)</label>
+            <div class="label-hint">Everything you paid the ad platform for this campaign.</div>
+            <div class="input-wrap has-prefix">
+              <span class="affix prefix">$</span>
+              <input type="number" id="ad-spend" value="500.00" min="0" step="0.01" inputmode="decimal" oninput="recalc()" onchange="recalc()" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="ad-revenue">Total Revenue Generated from Ads ($)</label>
+            <div class="label-hint">Gross sales revenue attributed to this ad campaign.</div>
+            <div class="input-wrap has-prefix">
+              <span class="affix prefix">$</span>
+              <input type="number" id="ad-revenue" value="2500.00" min="0" step="0.01" inputmode="decimal" oninput="recalc()" onchange="recalc()" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Reality Panel -->
+      <div class="panel reality">
+        <div class="panel-title"><span class="pip"></span> Product Reality</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="profit-margin">Average Product Profit Margin (%)</label>
+            <div class="label-hint">Excluding ad costs, what is your margin?</div>
+            <div class="input-wrap has-suffix">
+              <input type="number" id="profit-margin" value="40.00" min="0" max="100" step="0.01" inputmode="decimal" oninput="recalc()" onchange="recalc()" />
+              <span class="affix suffix">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /.card (inputs) -->
+
+    <!-- ============================================================
+         RESULTS CARD
+    ============================================================ -->
+    <div class="card" id="results-card">
+      <div class="card-title">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h4v8H3v-8zm7-9h4v17h-4V4zm7 5h4v12h-4V9z"/></svg>
+        </span>
+        Your Campaign Results
+      </div>
+
+      <!-- Dynamic Status Banner -->
+      <div class="status-banner profit" id="status-banner" role="status" aria-live="polite">
+        <div class="sb-icon" id="status-icon" aria-hidden="true"></div>
+        <div>
+          <strong id="status-title">Profitable Campaign</strong>
+          <span id="status-text">Your ads are generating enough revenue to cover product costs and marketing spend.</span>
+        </div>
+      </div>
+
+      <!-- Hero Metrics: Current ROAS + Net Profit -->
+      <div class="hero-grid">
+        <div class="hero-box roas">
+          <div class="hero-label">Current ROAS</div>
+          <div class="hero-value" id="roas-multiplier">5.00x</div>
+          <div class="hero-sub" id="roas-percent">500% return on ad spend</div>
+        </div>
+        <div class="hero-box profit">
+          <div class="hero-label">Net Profit from Ads</div>
+          <div class="hero-value" id="net-profit">$500.00</div>
+          <div class="hero-sub" id="net-profit-sub">after product and ad costs</div>
+        </div>
+      </div>
+
+      <!-- Break-Even Target Breakdown -->
+      <div class="breakeven-card">
+        <h3>Break-Even Target Breakdown</h3>
+        <p class="be-intro">This is how much breathing room your campaign has before it starts burning cash.</p>
+        <div class="be-compare">
+          <div class="be-stat current">
+            <div class="be-stat-label">Your Current ROAS</div>
+            <div class="be-stat-value" id="be-current">5.00x</div>
+          </div>
+          <div class="be-vs">vs</div>
+          <div class="be-stat target">
+            <div class="be-stat-label">Break-Even ROAS</div>
+            <div class="be-stat-value" id="be-target">2.50x</div>
+          </div>
+        </div>
+        <div class="room-track" aria-hidden="true">
+          <div class="room-fill" id="room-fill" style="width:50%; background:var(--green);"></div>
+          <div class="room-marker" id="room-marker" style="left:50%;"></div>
+        </div>
+        <div class="room-caption" id="room-caption">Your ROAS is <b>2.50x above</b> break-even. Healthy headroom.</div>
+      </div>
+
+      <!-- Secondary Metrics -->
+      <div class="metric-row">
+        <div class="metric-box">
+          <div class="metric-box-label">ROAS Percentage</div>
+          <div class="metric-box-value" id="m-roas-pct">500%</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-label">Gross Profit (Before Ads)</div>
+          <div class="metric-box-value" id="m-gross">$1,000.00</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-label">Net Profit (After Ads)</div>
+          <div class="metric-box-value green" id="m-net">$500.00</div>
+        </div>
+      </div>
+    </div><!-- /.card (results) -->
+
+    <!-- ============================================================
+         AD PLACEMENT 1: In-Content Leaderboard (desktop/tablet only)
+         Google AdSense 728x90 - shown on screens larger than 768px
+    ============================================================ -->
+    <div class="axiom-ad-leaderboard" aria-hidden="true">
+      <!-- Google AdSense Ad Unit - 728x90 Leaderboard -->
+      <!-- Replace this comment with your AdSense ins tag -->
+      Advertisement
+    </div>
+
+    <!-- ============================================================
+         GLOSSARY CARD
+    ============================================================ -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 1 0 20A10 10 0 0 1 12 2zm0 2a8 8 0 1 0 0 16A8 8 0 0 0 12 4zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm-1 4h2v6h-2v-6z"/></svg>
+        </span>
+        Key Terms Explained
+      </div>
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="glossary-term">ROAS (Return on Ad Spend)</div>
+          <div class="glossary-def">Revenue earned for every dollar spent on advertising, shown as a multiplier (5.00x) or percentage (500%). It measures advertising efficiency, not true profit, because it ignores the cost of the product itself.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">ROI (Return on Investment)</div>
+          <div class="glossary-def">Actual profit relative to total cost, including both ad spend and product costs. ROI is a true profitability metric, while ROAS only describes how efficiently ads convert spend into revenue.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Break-Even ROAS</div>
+          <div class="glossary-def">The minimum ROAS needed to cover both product costs and ad spend with zero profit left over. Calculated as 1 divided by your profit margin. A 40% margin gives a break-even ROAS of 2.50x.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Profit Margin</div>
+          <div class="glossary-def">The percentage of each sale you keep after the cost of the product, but before advertising costs. A 40% margin means you keep 40 cents of gross profit on every dollar of revenue.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">CAC (Customer Acquisition Cost)</div>
+          <div class="glossary-def">The total marketing and sales cost to acquire one new customer. Closely related to ROAS: a higher ROAS generally means a lower effective cost to acquire each paying customer.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">CPA (Cost Per Action)</div>
+          <div class="glossary-def">The average cost for each desired action, such as a purchase, lead, or signup. Unlike CAC, which counts only new customers, CPA can track any conversion event you choose to optimize for.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Gross Profit</div>
+          <div class="glossary-def">Revenue multiplied by your profit margin, before advertising costs are subtracted. It represents the cash available to pay for ads and still leave a profit.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="glossary-term">Net Profit</div>
+          <div class="glossary-def">Gross profit minus total ad spend. This is the real money the campaign made or lost after both product and advertising costs are accounted for.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         EDUCATIONAL SECTION
+    ============================================================ -->
+    <div class="card edu-section">
+      <h2>The Complete Guide to Return on Ad Spend</h2>
+      <p class="section-intro">ROAS is the fastest way to judge whether a paid campaign is working, but on its own it can be dangerously misleading. This guide explains how to read your ROAS correctly, why break-even ROAS matters more than any benchmark, and how to turn these numbers into better spending decisions.</p>
+
+      <h3>How to use this ROAS calculator</h3>
+      <p>Enter three numbers and the results update instantly, with no submit button. In the Campaign Metrics panel, add your <strong>Total Ad Spend</strong> (everything you paid the platform) and your <strong>Total Revenue Generated from Ads</strong> (the sales those ads drove). In the Product Reality panel, enter your <strong>Average Product Profit Margin</strong>, which is the percentage of each sale you keep after the cost of the product but before advertising. The calculator then shows your current ROAS as both a multiplier and a percentage, your net profit, and the exact break-even ROAS your margin demands.</p>
+
+      <h3>Why break-even ROAS is the number that matters</h3>
+      <p>Most advertisers obsess over hitting a benchmark ROAS, but a benchmark means nothing without your margin. Break-even ROAS, calculated as 1 divided by your profit margin, tells you the precise point where a campaign stops losing money. If your margin is 40%, you need a 2.50x ROAS just to break even. If your margin is 25%, you need 4.00x. Comparing your current ROAS to this target is the single clearest signal of campaign health, which is exactly what the Break-Even Target Breakdown above shows you.</p>
+
+      <h3>Frequently asked questions</h3>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is the difference between ROAS and ROI?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p><strong>ROAS (Return on Ad Spend)</strong> measures revenue generated for every dollar spent on advertising. It is calculated as total revenue divided by total ad spend, and it only looks at the advertising side of the equation.</p>
+          <p><strong>ROI (Return on Investment)</strong> measures actual profit relative to your total cost, so it factors in the cost of the product itself, not just the ad spend. A campaign can show a strong ROAS of 5.00x and still produce a poor ROI if your product margins are thin.</p>
+          <p>ROAS answers the question how efficiently are my ads turning spend into revenue, while ROI answers the question am I actually making money after all costs. ROAS is a marketing efficiency metric; ROI is a true profitability metric.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          What is a good ROAS for an e-commerce store?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>A common benchmark for e-commerce is a ROAS between <strong>3.00x and 4.00x</strong>, meaning you earn three to four dollars in revenue for every dollar of ad spend. However, good is entirely relative to your profit margin.</p>
+          <p>A store with high margins (for example, digital products or premium goods) can be profitable at a ROAS of 2.00x, while a low-margin store reselling commodity products might need a ROAS of 5.00x or higher just to break even.</p>
+          <p>The 3x to 4x range is a useful starting reference, but the only number that truly matters is whether your current ROAS comfortably exceeds your break-even ROAS, which this calculator finds for you based on your actual profit margin.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How do I calculate my break-even ROAS?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Break-even ROAS is calculated as <strong>1 divided by your profit margin expressed as a decimal</strong>. If your average product profit margin is 40 percent, the calculation is 1 divided by 0.40, which equals 2.50x.</p>
+          <p>That means you must earn at least 2.50 dollars in revenue for every dollar of ad spend just to cover both the ad cost and the cost of the product, with zero net profit left over. Any ROAS above your break-even point is genuine profit; anything below it means you are losing money.</p>
+          <p>Lower margins push your break-even ROAS higher, which is why margin is the single most important number when judging whether a campaign is healthy.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          Why am I losing money even though my ROAS is above 1.0x?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>A ROAS of 1.0x only means your revenue exactly equals your ad spend. It completely ignores the cost of the product you sold.</p>
+          <p>If it costs you 60 dollars to produce and ship a product that sells for 100 dollars, you only keep 40 dollars of gross profit per sale, so a 1.0x ROAS still loses you 60 dollars on every 100 dollars of revenue once product costs are counted. To actually break even you need your ROAS to reach 1 divided by your profit margin.</p>
+          <p>This is the most common and costly misunderstanding in paid advertising: profitable ads must cover the product cost and the ad cost, not just the ad cost alone.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+          How is net profit from ads calculated in this tool?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Net profit is calculated in two steps. First, <strong>gross profit before ads</strong> equals your total revenue from ads multiplied by your profit margin percentage. For example, 2,500 dollars in revenue at a 40 percent margin produces 1,000 dollars of gross profit.</p>
+          <p>Second, <strong>net profit after ads</strong> equals that gross profit minus your total ad spend. Using the same example with 500 dollars of ad spend, net profit is 1,000 minus 500, which equals 500 dollars.</p>
+          <p>A positive net profit means the campaign made money after both product costs and ad costs; a negative net profit means it lost money.</p>
+        </div>
+      </div>
+    </div><!-- /.card (edu) -->
+
+    <!-- ============================================================
+         TOOL-SPECIFIC DISCLAIMER
+    ============================================================ -->
+    <div class="disclaimer-box" role="note" aria-label="Disclaimer">
+      <div class="disclaimer-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0c860" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <p><strong>Disclaimer:</strong> This tool is independent and is not affiliated with, endorsed by, or sponsored by Meta, Facebook, or Google. Product names are referenced strictly for descriptive and educational purposes.</p>
+        <p>All ROAS, profit, and break-even figures produced by this calculator are estimates based on the numbers you enter. Actual results depend on factors outside this tool's scope, including returns, refunds, shipping, overhead, taxes, and attribution accuracy. This tool is for educational purposes and is not financial advice.</p>
+      </div>
+    </div>
+
+  </main><!-- /.page-wrapper -->
+
+  <!-- ============================================================
+       AD PLACEMENT 2: Mobile Sticky Anchor (mobile only)
+       Google AdSense 320x50 - shown on screens 768px and smaller
+  ============================================================ -->
+  <div class="axiom-ad-mobile-anchor" aria-hidden="true">
+    <!-- Google AdSense Ad Unit - 320x50 Mobile Anchor -->
+    <!-- Replace this comment with your AdSense ins tag -->
+    Advertisement
+  </div>
+
+  <!-- ============================================================
+       JAVASCRIPT (100% client-side)
+  ============================================================ -->
+  <script>
+    /* ===================================================
+       UTILITIES
+    =================================================== */
+    // Robust rounding to 2 decimals, avoiding floating-point drift.
+    function round2(value) {
+      return Math.round((value + Number.EPSILON) * 100) / 100;
+    }
+
+    function formatCurrency(n) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: 'USD',
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      }).format(n);
+    }
+
+    function parseNum(id) {
+      const v = parseFloat(document.getElementById(id).value);
+      return isNaN(v) ? 0 : v;
+    }
+
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    const ICON_EVEN  = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    const ICON_LOSS  = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+    /* ===================================================
+       CORE CALCULATION ENGINE (client-side)
+    =================================================== */
+    function recalc() {
+      const adSpend = parseNum('ad-spend');
+      const revenue = parseNum('ad-revenue');
+      const margin  = parseNum('profit-margin');   // percent
+
+      // ---- Current ROAS ----
+      const hasSpend = adSpend > 0;
+      const roasMult = hasSpend ? round2(revenue / adSpend) : 0;
+      const roasPct  = hasSpend ? Math.round((revenue / adSpend) * 100) : 0;
+
+      // ---- Break-even ROAS ----
+      const hasMargin = margin > 0;
+      const breakEven = hasMargin ? round2(1 / (margin / 100)) : 0;
+
+      // ---- Profit ----
+      const grossProfit = round2(revenue * (margin / 100));
+      const netProfit   = round2(grossProfit - adSpend);
+
+      // ---- Hero: Current ROAS ----
+      document.getElementById('roas-multiplier').textContent = hasSpend ? roasMult.toFixed(2) + 'x' : '-';
+      document.getElementById('roas-percent').textContent    = hasSpend ? roasPct + '% return on ad spend' : 'Enter ad spend above $0';
+
+      // ---- Hero: Net Profit ----
+      const netEl = document.getElementById('net-profit');
+      netEl.textContent = formatCurrency(netProfit);
+      netEl.classList.toggle('negative', netProfit < 0);
+
+      // ---- Secondary metrics ----
+      document.getElementById('m-roas-pct').textContent = hasSpend ? roasPct + '%' : '-';
+      document.getElementById('m-gross').textContent    = formatCurrency(grossProfit);
+      const mNet = document.getElementById('m-net');
+      mNet.textContent = formatCurrency(netProfit);
+      mNet.classList.toggle('green', netProfit >= 0);
+      mNet.classList.toggle('red', netProfit < 0);
+
+      // ---- Break-even breakdown ----
+      document.getElementById('be-current').textContent = hasSpend ? roasMult.toFixed(2) + 'x' : '-';
+      document.getElementById('be-target').textContent  = hasMargin ? breakEven.toFixed(2) + 'x' : '-';
+
+      updateRoomMeter(roasMult, breakEven, hasSpend, hasMargin);
+      updateStatusBanner(roasMult, breakEven, hasSpend, hasMargin);
+    }
+
+    /* ===================================================
+       BREATHING-ROOM METER
+    =================================================== */
+    function updateRoomMeter(roas, breakEven, hasSpend, hasMargin) {
+      const fill   = document.getElementById('room-fill');
+      const marker = document.getElementById('room-marker');
+      const cap    = document.getElementById('room-caption');
+
+      if (!hasSpend || !hasMargin) {
+        fill.style.width = '0%';
+        marker.style.left = '50%';
+        cap.innerHTML = 'Enter your ad spend, revenue, and profit margin to see your headroom.';
+        return;
+      }
+
+      // Scale so the break-even point always sits at the 50% mark.
+      const scaleMax = breakEven * 2;
+      const roasPos  = Math.max(0, Math.min(100, (roas / scaleMax) * 100));
+      marker.style.left = '50%';
+      fill.style.width = roasPos + '%';
+
+      const diff = round2(roas - breakEven);
+      if (diff > 0.005) {
+        fill.style.background = 'var(--green)';
+        cap.innerHTML = 'Your ROAS is <b>' + diff.toFixed(2) + 'x above</b> break-even. Healthy headroom before you lose money.';
+      } else if (diff < -0.005) {
+        fill.style.background = 'var(--red)';
+        cap.innerHTML = 'Your ROAS is <b>' + Math.abs(diff).toFixed(2) + 'x below</b> break-even. The campaign is burning cash.';
+      } else {
+        fill.style.background = 'var(--yellow)';
+        cap.innerHTML = 'Your ROAS is sitting <b>exactly at break-even</b>. No profit, no loss.';
+      }
+    }
+
+    /* ===================================================
+       DYNAMIC STATUS BANNER
+    =================================================== */
+    function updateStatusBanner(roas, breakEven, hasSpend, hasMargin) {
+      const banner = document.getElementById('status-banner');
+      const icon   = document.getElementById('status-icon');
+      const title  = document.getElementById('status-title');
+      const text   = document.getElementById('status-text');
+
+      banner.classList.remove('profit', 'even', 'loss');
+
+      if (!hasSpend || !hasMargin) {
+        banner.classList.add('even');
+        icon.innerHTML = ICON_EVEN;
+        title.textContent = 'Waiting for Your Numbers';
+        text.textContent = 'Enter an ad spend, revenue, and profit margin above to see whether this campaign is profitable.';
+        return;
+      }
+
+      const diff = round2(roas - breakEven);
+      if (diff > 0.005) {
+        banner.classList.add('profit');
+        icon.innerHTML = ICON_CHECK;
+        title.textContent = 'Profitable Campaign';
+        text.textContent = 'Your ads are generating enough revenue to cover product costs and marketing spend.';
+      } else if (diff < -0.005) {
+        banner.classList.add('loss');
+        icon.innerHTML = ICON_LOSS;
+        title.textContent = 'Unprofitable Campaign';
+        text.textContent = 'Your ROAS is below your break-even target. You are losing money on these ads.';
+      } else {
+        banner.classList.add('even');
+        icon.innerHTML = ICON_EVEN;
+        title.textContent = 'Breaking Even';
+        text.textContent = 'You are acquiring customers for free, but not making any net profit.';
+      }
+    }
+
+    /* ===================================================
+       FAQ ACCORDION TOGGLE
+    =================================================== */
+    function toggleFaq(btn) {
+      const answer = btn.nextElementSibling;
+      const isOpen = btn.classList.contains('open');
+      document.querySelectorAll('.faq-question.open').forEach(function (el) {
+        el.classList.remove('open');
+        el.setAttribute('aria-expanded', 'false');
+        el.nextElementSibling.classList.remove('open');
+      });
+      if (!isOpen) {
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        answer.classList.add('open');
+      }
+    }
+
+    /* ===================================================
+       INITIAL RENDER
+    =================================================== */
+    recalc();
+  </script>
+</body>
+</html>
